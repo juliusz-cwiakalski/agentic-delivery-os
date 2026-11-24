@@ -4,60 +4,94 @@ tier:
   name: full
   escalationTriggers:
     - "a `--flat` alias byte delta (payload or text) observed at any phase boundary is a change DEFECT: the pinned pre-change literals in tests/behaviour/projects-flat-alias.test.ts are never regenerated in this change — stop, fix the wording change that drifted the alias, re-run; a golden update is never the remedy (NFR-3, TC-DPKUI-003)"
-    - "a pre-existing suite that cannot be greened wording-only (a payload assertion, field name, or expectation value would have to change to pass) is evidence of a rename — forbidden (NG-1, NFR-5, DEC-2): stop and report to PM via a pm-notes entry; never weaken or delete the assertion to go green"
+    - "a pre-existing suite that cannot be greened wording-only (a payload assertion, persisted-field name, or expectation value would have to change to pass) is evidence of a forbidden rename of a base-delivered identifier (NG-1, NFR-5, DEC-2): stop and report to PM via a pm-notes entry; never weaken or delete the assertion to go green; the amendment-directed renames of THIS change's own new-code exports (DECLARED_PRODUCT_KEY_PATTERN, isDeclaredProductKey) are NOT this trigger — they ride their owning phases with their inventory-row updates (owner comment 7138707234, spec v1.1 DEC-6)"
     - "a clean-tree conformance failure whose correction cannot be stated in the vocabulary table's nouns inside the Appendix B scope, or whose fix appears to need a new exception: the four named exceptions are frozen until GH-408 — stop and report; never relax, extend, or re-shape the exception set to force the pass (F-6, NFR-4)"
     - "the naming check's committed base constant (22b15d31) unreachable at run time means the check fails closed: stop and report — the constant is re-pointed only deliberately through review, never silently, and never widened to make the tree pass (F-7, TC-DPKNAM-001)"
     - "a new file that cannot carry its bare-token baseline reason is a naming-rule defect: the entry is mandatory reason-bearing (NFR-6) — stop and report rather than land an unexplained entry or an unspecified token use"
 # ---------------------------------------------------------------------------
-# Plan-level decision record (spec §15 DEC-1..DEC-5): the owner's delivery
-# brief (comment 7122871259) is authoritative and supersedes comment
-# 7117829140 and the ticket body's AC list (DEC-1); NOTHING is renamed in
-# this change — the repos family, repoKey and projectKey keep their
-# identifiers and denote the clone identity as named exceptions until
-# GH-408's mechanical rename (DEC-2, NG-1); the clone identity is named
+# Plan-level decision record (spec §15 DEC-1..DEC-6): the owner's sources are
+# authoritative in the order ticket body < delivery brief (comment
+# 7122871259) < VOCABULARY AMENDMENT (comment 7138707234); the brief
+# supersedes comment 7117829140 and the body's AC list (DEC-1), and the
+# amendment supersedes the brief where they differ (DEC-6). NOTHING at the
+# base is renamed in this change — the repos family, repoKey and projectKey
+# keep their identifiers and denote the clone identity as named exceptions
+# until GH-408's mechanical rename (DEC-2, NG-1); the clone identity is named
 # *clone identity*, never *checkout identity* (DEC-3); the local groups.v1
 # layer keeps "group keys carry no public pattern" and nothing migrates
 # (DEC-4, NG-4); ODR-0006 lands in this change as status Proposed with
 # decision_date null — never Accepted; the owner accepts or rejects the
 # vocabulary at the pull request, and no earlier decision record is edited
-# (DEC-5, NG-5). ODR-0006 is the next free decision id, reserved by the
-# brief (pm-notes; ODR-0001..0005 exist at base 22b15d31).
+# (DEC-5, NG-5). DEC-6 (the amendment, applied end to end in rev 3): the
+# top-level noun is PRODUCT; the vocabulary term is PRODUCT KEY; the code
+# names keep the *declared* qualifier (DECLARED_PRODUCT_KEY_PATTERN,
+# isDeclaredProductKey, declaredProductKey) while the legacy
+# PROJECT_KEY_PATTERN/projectKey exist, because PRODUCT and PROJECT are two
+# letters apart (GH-408 may drop the qualifier with the legacy names);
+# CLONE_KEY_PATTERN and cloneKey are UNCHANGED; `projects list` keeps its
+# locked command name (ODR-0003 DC-4) and prints PRODUCT / REPOSITORY;
+# "project" is RETIRED from the model's own vocabulary ("Jira project" for
+# the tracker's word); slugs, folder, branch, suite file names, the changeset
+# file name and the change title field stay as the change's own records —
+# identifiers are not vocabulary (amendment §G). ODR-0006 is the next free
+# decision id, reserved by the brief (pm-notes; ODR-0001..0005 exist at base
+# 22b15d31).
 #
-# Constants fixed by this plan (spec F-2/F-3/F-5, DM-1/DM-2, NFR-1/NFR-2;
-# observed at base 22b15d31):
+# Constants fixed by this plan (spec v1.1 F-2/F-3/F-5, DM-1/DM-2,
+# NFR-1/NFR-2; observed at base 22b15d31; amendment comment 7138707234):
 #   - base commit:            22b15d31 (pm-notes state detection) — encoded
 #                             as a committed constant in the naming check;
 #                             the check asserts tree-vs-pinned-base, a legal
 #                             permanent invariant, never a moving-base diff
-#   - declared-key grammar:   ^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$ — exactly
+#   - product-key grammar:    DECLARED_PRODUCT_KEY_PATTERN (renamed from the
+#                             delivered DECLARED_PROJECT_KEY_PATTERN by the
+#                             amendment; same change, same value) is
+#                             ^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$ — exactly
 #                             2..64 characters, lowercase alphanumerics and
 #                             hyphens, no leading/trailing hyphen
 #                             (path-safe by construction); the PREDICATE,
-#                             not the bare regex, additionally refuses the
-#                             reserved state segments `unbound` and
-#                             `projects`, exact-match on the whole key —
-#                             substring-containing keys (projects-x,
-#                             my-unbound) are accepted (spec §21,
-#                             TC-DPKKEY-002)
-#   - clone-key pattern:      CLONE_KEY_PATTERN is the NEW NAME of the
-#                             DELIVERED clone-identity pattern value
+#                             isDeclaredProductKey (renamed from the
+#                             delivered declaredProjectKeyVerdict), not the
+#                             bare regex, additionally refuses the reserved
+#                             state segments `unbound` and `projects`,
+#                             exact-match on the whole key — substring-
+#                             containing keys (projects-x, my-unbound) are
+#                             accepted (spec §21, TC-DPKKEY-002); the
+#                             reserved segment `projects` keeps its name — a
+#                             state-layout segment, not model vocabulary
+#   - clone-key pattern:      CLONE_KEY_PATTERN is the NAME of the DELIVERED
+#                             clone-identity pattern value
 #                             /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[0-9a-f]{8}$/u
-#                             (packages/core/src/contracts/projects.ts:52 at
-#                             base) — never a new grammar; PROJECT_KEY_PATTERN
-#                             stays exported as the same-value alias
-#                             (String-equal, 0 difference, NFR-2)
-#   - header literals:        `projects list` group table GROUP→PROJECT and
-#                             MEMBER→PROJECT REPOSITORY
+#                             (packages/core/src/contracts/projects.ts at
+#                             base) — never a new grammar; the legacy
+#                             PROJECT_KEY_PATTERN stays exported as the
+#                             same-value alias (String-equal, 0 difference,
+#                             NFR-2 — the alias pair is
+#                             PROJECT_KEY_PATTERN ≡ CLONE_KEY_PATTERN;
+#                             DECLARED_PRODUCT_KEY_PATTERN is pinned to its
+#                             OWN grammar value and no cross-value equality
+#                             to the clone-key pattern is asserted: disjoint
+#                             contracts, DM-1 vs DM-2); cloneKey (accessor)
+#                             is unchanged by the amendment
+#   - header literals:        `projects list` group table GROUP→PRODUCT (the
+#                             product's own key) and MEMBER→REPOSITORY (the
+#                             member declaration's selector or locator)
 #                             (packages/cli/src/output/projects-text.ts
-#                             GROUP_HEADER :19); `repos list` KEY→CLONE
-#                             (packages/cli/src/output/repos-text.ts HEADER
-#                             :16); the flat-alias HEADER in the SAME file
-#                             (projects-text.ts :17) is untouched byte for
+#                             GROUP_HEADER); PROJECT and PROJECT REPOSITORY
+#                             are ASSERTED-ABSENT headers — PROJECT
+#                             REPOSITORY is prose-only contrast, never a
+#                             header; `repos list` KEY→CLONE
+#                             (packages/cli/src/output/repos-text.ts, as
+#                             delivered); the flat-alias HEADER in the SAME
+#                             file (projects-text.ts) is untouched byte for
 #                             byte — it IS the `--flat` text surface
 #   - suite file names:       the five new suites, the check, and its
 #                             mutation suite are pinned VERBATIM from test
 #                             plan §7 (constraint (a) satisfied by adoption —
-#                             no deviation, no reconciliation notes owed):
+#                             no deviation, no reconciliation notes owed);
+#                             file names are IDENTIFIERS and are NOT renamed
+#                             by the amendment (§G) — the delivered names
+#                             stay even where they contain "project":
 #                             tests/structure/declared-project-key.test.ts,
 #                             tests/structure/delivery-vocabulary.test.ts,
 #                             tests/structure/vocabulary-conformance.test.ts,
@@ -67,68 +101,105 @@ tier:
 #                             tests/checks/new-code-naming.test.ts
 #   - naming baseline:        scripts/checks/new-code-naming.baseline.json —
 #                             committed, reason per entry (follows the
-#                             forbidden-literals.registry.json precedent)
+#                             forbidden-literals.registry.json precedent); the
+#                             guarded token stays the bare legacy `projectKey`
+#                             (amendment item C: unchanged)
 #   - changeset:              .changeset/gh-406-delivery-vocabulary-declared-project-key-minor.md
-#                             declaring the five fixed-group packages
-#                             (@delivery-os/core, adapters, cli, mcp,
-#                             opencode) at minor (spec front matter
-#                             version_impact: minor; lockstep config)
+#                             (file name kept — an identifier) declaring the
+#                             five fixed-group packages (@delivery-os/core,
+#                             adapters, cli, mcp, opencode) at minor (spec
+#                             front matter version_impact: minor; lockstep
+#                             config); the delivered BODY carries the
+#                             pre-amendment nouns and export name and is
+#                             re-worded in phase 8's amendment commit
 #
 # Plan-wide delivery fences (binding), in force on every phase below:
-#   - Zero-rename fence (NG-1, NFR-5, AC-F10-1): no command name, subcommand,
-#     payload field, envelope key, or persisted field (identity-marker field,
-#     host-index field, `--flat` alias payload field) is renamed, removed, or
-#     re-keyed anywhere in this change. The four named exceptions survive
-#     untouched: the `projects.*` error-code family, the `<host root>/projects/`
-#     container, `--project-root`, and the `--flat` alias. `board --project`
-#     keeps its flag name and its never-group-scoped behaviour (NG-6); only its
-#     HELP wording changes (it says clone identity). The header/help text
-#     renderings are the ONLY operator-visible change.
+#   - Amendment fence (owner comment 7138707234, spec v1.1, rev 3): the
+#     amendment is authoritative (body < brief < amendment) and is applied
+#     end to end in the phases below; the vocabulary nouns are product /
+#     repository / product key, with "project" retired from the model's own
+#     vocabulary and "Jira project" written where the tracker's own word is
+#     meant; "product repository" is a prose-only contrast form, never a
+#     header; the "the tool" prose rule (where the docs say "the product"
+#     meaning the tool itself, they say "the tool") is applied to the pages
+#     this change already touches — the migration guide, the local-install
+#     guide, the m4 install page, the m2 attempts page, the three m2
+#     repos/projects/board pages, and any page the phase-6 walk covers —
+#     while the ~45-line remainder sweep is routed to GH-408; public examples
+#     in the amended docs are neutral only (acme, example.com — no real
+#     company, nothing private); the change's own identifiers (slug, folder,
+#     branch, suite file names, the baseline file, the changeset file name)
+#     stay as delivered.
+#   - Zero-rename fence (NG-1, NFR-5, AC-F10-1): no BASE-delivered command
+#     name, subcommand, payload field, envelope key, or persisted field
+#     (identity-marker field, host-index field, `--flat` alias payload field)
+#     is renamed, removed, or re-keyed anywhere in this change. The four
+#     named exceptions survive untouched: the `projects.*` error-code family,
+#     the `<host root>/projects/` container, `--project-root`, and the
+#     `--flat` alias. `board --project` keeps its flag name and its never-
+#     group-scoped behaviour (NG-6); only its HELP wording changes (it says
+#     clone identity). The legacy PROJECT_KEY_PATTERN/projectKey and
+#     CLONE_KEY_PATTERN/cloneKey keep their delivered identifiers. The ONE
+#     directed exception is the amendment's rename of THIS change's own
+#     new-code exports (DECLARED_PROJECT_KEY_PATTERN →
+#     DECLARED_PRODUCT_KEY_PATTERN; the delivered predicate
+#     declaredProjectKeyVerdict → isDeclaredProductKey, with its supporting
+#     new-code names following) — these were introduced by this change, are
+#     not payload or persisted surfaces, and rename exactly as the owner
+#     directs, with their inventory rows. The header/help text renderings
+#     remain the ONLY operator-visible change.
 #   - --flat byte-identity fence (NFR-3, constraint (d)): the alias payload AND
 #     text stay byte-identical to the pre-change output; verification lives in
 #     phase 3 — the one phase that touches the header code (the flat HEADER
 #     constant sits in the same file as the changed group header); the pinned
 #     pre-change literals in tests/behaviour/projects-flat-alias.test.ts are
-#     never regenerated; a delta is a defect, never a golden update.
+#     never regenerated; a delta is a defect, never a golden update. The
+#     amendment does not touch the alias surface.
 #   - Additive-contracts fence (F-2..F-4, NG-4, DEC-4, §8.5): the contracts are
 #     purely additive; the local groups.v1 layer enforces NO pattern (its
 #     no-public-pattern contract stands unamended); nothing migrates and no
-#     schema changes; the declared-key ENFORCEMENT POINTS are not created here —
-#     credential audiences/bindings/store scope/workspace base (GH-396/397/399)
-#     and manifest write/import (GH-401) consume the contract this change
-#     delivers; the declared key and the clone identity stay in disjoint
-#     namespaces and are never compared (spec §21).
+#     schema changes; the declared-product-key ENFORCEMENT POINTS are not
+#     created here — credential audiences/bindings/store scope/workspace base
+#     (GH-396/397/399) and manifest write/import (GH-401, the manifest names
+#     the key `product.key`) consume the contract this change delivers; the
+#     declared product key and the clone identity stay in disjoint namespaces
+#     and are never compared (spec §21).
 #   - Wording-only pin-update fence (constraint (b), F-10, TC-DPKPIN-001):
 #     every pre-existing suite update is wording-only — header-string literals,
-#     additive exported-name inventory entries, describe titles, wording
-#     comments — never a payload assertion, field name, or expectation value;
-#     pin updates land in the SAME phase as the wording they pin, so the tree
-#     is green at every phase boundary (spec §18); existing TC IDs from other
-#     changes (TC-GRPBOUND-002, TC-GRPSREAD-003, and all others) keep their IDs
-#     and intent — only their pinned wording refreshes; a pin that turns out to
-#     be unnameable in the new wording is the STOP trigger above, never a
-#     silent weakening.
+#     exported-name inventory entries, describe titles, wording comments —
+#     never a payload assertion, field name, or expectation value; pin updates
+#     land in the SAME phase as the wording they pin, so the tree is green at
+#     every phase boundary (spec §18); existing TC IDs from other changes
+#     (TC-GRPBOUND-002, TC-GRPSREAD-003, and all others) keep their IDs and
+#     intent — only their pinned wording refreshes; a pin that turns out to be
+#     unnameable in the new wording is the STOP trigger above, never a silent
+#     weakening. Export-name inventory rows (content-inventory,
+#     v1-contract-inventory) FOLLOW the amendment's renamed exports — updating
+#     the name a row pins is the rename's own consequence, not a payload
+#     change; no row is dropped.
 #   - Conditional-sweep rule (TC-DPKPIN-001 step 4): if a suite NOT declared in
-#     any scope below (candidates observed at base: tests/structure/state-scope.test.ts,
-#     tests/structure/projects-state-scope-policy.test.ts, tests/behaviour/entrypoint-help*.test.ts,
-#     the board-* contract suites) trips on the additive contracts or the noun
-#     corrections, its wording-only re-pin lands in the SAME phase as the change
-#     that tripped it, with the trip and the wording-only verdict recorded as a
-#     pm-notes notes: entry — never as plan progress, never deferred to a later
-#     phase (that would strand a red boundary).
+#     any scope below trips on the renamed exports or the noun corrections,
+#     its wording-only re-pin lands in the SAME phase as the change that
+#     tripped it, with the trip and the wording-only verdict recorded as a
+#     pm-notes notes: entry — never as plan progress, never deferred to a
+#     later phase (that would strand a red boundary). Two trips observed in
+#     the delivered run are now DECLARED surfaces: the port-contract
+#     inventory rows (phase 2) and the projects-groups-list header pins
+#     (phase 3).
 #   - Naming-rule fence (F-7, NFR-6, constraint (c)): the check, its committed
 #     reason-bearing baseline, its gate-chain wiring, and its mutation tests
-#     land as ONE commit (phase 1) and stay green at every later boundary; the
-#     rule is file-existence-at-the-pinned-base based — a file absent at
-#     22b15d31 may not contain the bare token `projectKey` without a baseline
-#     entry, pre-base files are exempt with no per-file counts consulted; every
-#     baseline entry carries a non-empty reason and is review-visible. The
-#     baseline's INITIAL entries cover the check's own forbidden-token literal
-#     and the mutation suite's injected token; later phases extend it only when
-#     a new file must spell the delivered persisted field names to pin them
-#     unchanged (expected: zero production-source entries; at most the new test
-#     suites' field-name assertions), each extension in the same commit as the
-#     file it covers.
+#     landed as ONE commit (phase 1, delivered at 0b49e404) and stay green at
+#     every later boundary; the rule is file-existence-at-the-pinned-base
+#     based — a file absent at 22b15d31 may not contain the bare token
+#     `projectKey` without a baseline entry, pre-base files are exempt with no
+#     per-file counts consulted; every baseline entry carries a non-empty
+#     reason and is review-visible. The baseline's entries cover the check's
+#     own forbidden-token literal, the mutation suite's injected token, and
+#     the delivered field-name-pinning suites; later phases extend it only
+#     when a re-authored file must spell a delivered persisted field name,
+#     each extension in the same commit as the file it covers. The amendment
+#     changes NO part of this surface: the guarded token is the bare legacy
+#     `projectKey` and stays (amendment item C).
 #   - Conformance fence (F-6, NFR-4, Appendix B): scope is exactly CLI help
 #     summaries; the text headers of `projects list` and `repos list`; the
 #     guides tree; the tools documentation tree; the overview tree; every
@@ -140,12 +211,19 @@ tier:
 #     --project-root, --flat) are frozen until GH-408 and proven individually
 #     exempt; near-miss strings outside the list still flag. The scanner's
 #     detection core is a PURE FUNCTION callable over injected input
-#     text/files — the negative proof lives entirely in synthetic in-memory
-#     inputs and test-created temp trees under the session temp root; NO
-#     violation is ever planted in the committed tree (git status unchanged by
-#     any test). The scanner lands AFTER the overview (phase 4) and CLI/reference
-#     (phase 3) corrections and TOGETHER WITH the guides/tools sweep, so its
-#     clean-tree pass is truthful and meaningful at the phase boundary.
+#     text/files, matching whitespace-normalized text with an original-line
+#     map (delivered phase-9 hardening — wrapped arms stay); the negative
+#     proof lives entirely in synthetic in-memory inputs and test-created temp
+#     trees under the session temp root; NO violation is ever planted in the
+#     committed tree (git status unchanged by any test). The scanner's sense
+#     rules speak the amendment's vocabulary: a clone identity presented as
+#     the product or as a product key flags; the declared-term sense is
+#     product key; the tracker sense reads "Jira project"; the reserved
+#     segment `projects` and the exceptions stay state-layout/command-surface
+#     identifiers, not model vocabulary. The scanner lands AFTER the overview
+#     (phase 4) and CLI/reference (phase 3) corrections and TOGETHER WITH the
+#     guides/tools sweep, so its clean-tree pass is truthful and meaningful at
+#     the phase boundary.
 #   - Decision-record fence (F-9, NG-5, AC-F9-1): under doc/decisions/ only
 #     ODR-0006 and its 00-index.md row are touched; no earlier record is
 #     edited; doc/decisions/00-register.md is NOT touched — no AC, spec
@@ -154,11 +232,17 @@ tier:
 #     standing (TC-DPKODR-001's unedited-earlier-records half is the review-time
 #     diff inspection). ODR-0006 carries no ados_distribution header (project-
 #     specific decision record, per the distribution marker rules and pm-notes).
-#   - Review-time evidence fence: TC-DPKODR-001 step 5 (earlier-records diff),
+#     The re-worded record states the vocabulary with the amendment's product
+#     nouns AND the retirement clause ("project" is retired from the model's
+#     own vocabulary; "Jira project" for the tracker's word), still status
+#     Proposed with decision_date null; the index-row mechanism is unchanged.
+#   - Review-time evidence fence: TC-DPKODR-001 step 6 (earlier-records diff),
 #     TC-DPKPIN-001 step 3 (wording-only diff discipline), and TC-DPKPIN-002
 #     (zero-rename diff inspection vs base 22b15d31) execute at the
 #     review/quality-gate boundary, NOT inside any plan phase; their verdicts
-#     are logged in the test plan §10 and pm-notes.
+#     are logged in the test plan §10 and pm-notes. The re-opened lifecycle
+#     re-runs review and the full quality gates over the amended delivery, and
+#     the verdicts are re-recorded there.
 #   - Fixture fence (F-8, NFR-7, Appendix C): fixtures G-1..G-3 build on the
 #     tests/fixtures/projects/ helpers (temp repositories, identity markers,
 #     host fixtures, host-index readers, groups configuration), run entirely
@@ -166,30 +250,69 @@ tier:
 #     TMPDIR=$PWD/tmp/tmpdir), use no network, no wall clock, no hostname, and
 #     write nothing outside the temp root; G-3's legacy configuration case uses
 #     a committed case definition plus its grammar-valid twin; the committed
-#     tree stays clean.
+#     tree stays clean. G-2's wording is the amendment's: two clones of one
+#     repository resolve the SAME PRODUCT KEY with different clone identities
+#     and state roots; the mechanism is unchanged.
 #   - Phase-gate fence: each phase below is ONE commit through the commit
 #     primitive on branch feat/GH-406/delivery-vocabulary-declared-project-key,
 #     and each phase boundary is green under TMPDIR=$PWD/tmp/tmpdir pnpm check
 #     (narrow suites during iteration; the full gate at the boundary); the PR
 #     targeting main-tools, merge authority, tracker transitions, and the
 #     lifecycle review/quality-gates phases belong to the lifecycle, not this
-#     plan; no doc edit outside a declared phase scope may leak into any commit.
+#     plan; no doc edit outside a declared phase scope may leak into any
+#     commit.
+#   - Amendment re-execution accounting (rev 3, owner-directed reopen of the
+#     delivery phases): the delivered run's commits (1 0b49e404, 2 0a780df4,
+#     3 b9354594, 4 bc6f64cc, 5 4ab411fd, 6 bb7aa6ce, 7 732a16ea, 8 24dfdd07,
+#     9 5e57e3af) remain recorded evidence in pm-notes for the surfaces they
+#     delivered. The amendment's NEW work lands as NEW commits in the phases
+#     that own each touched surface (phases 2, 3, 4, 5, 6, 7, 8 below) — one
+#     amendment commit per phase, each with its own gate evidence, and the
+#     per-phase completion accounting is recorded ONLY as pm-notes notes:
+#     entries (phase id, new commit hash, gate result), never in this plan.
+#     Phases 1 and 9 are amendment-INDEPENDENT (verified: the naming check's
+#     guarded token is the bare legacy `projectKey`, unchanged; phase 9's
+#     wrapped-phrase and normalization mechanics carry no model-vocabulary
+#     noun) and carry their delivered commits and evidence without
+#     re-execution — if the coder finds an amendment-driven touch is needed
+#     in either, that is a finding to report, not planned work. The PR title
+#     and body are updated and the branch pushed (including the unpushed
+#     evidence commit e6490b82) in the lifecycle, not here.
 #   - Documentation-split fence: the overview/glossary/feature-spec/reference/
 #     guides doc edits that ACs AC-F1-1, AC-F5-1, AC-F6-1 assert through
 #     automated suites ARE delivery work and land in their declared phases
 #     below; phase 8's doc/spec/features entries are DECLARATION ONLY — the
-#     residual contract-truth reconciliation (grammar, alias, accessor wording
-#     beyond the AC-edits of phase 4) is executed by doc-syncer in the lifecycle
-#     system_spec_update phase; no coder task edits them in phase 8's commit
-#     (the changeset file is that commit's only artifact).
+#     residual contract-truth reconciliation (the amendment's product/
+#     repository/product-key nouns, the mapping row product = a group with
+#     named exceptions, the renamed contract-name mentions, the grammar,
+#     alias, accessor wording beyond the AC-edits of phase 4) is executed by
+#     doc-syncer in the lifecycle system_spec_update phase; no coder task
+#     edits them in phase 8's commit (the amended changeset file is that
+#     commit's release artifact).
 # ---------------------------------------------------------------------------
 phases:
   - id: 1
     title: New-code naming invariant — check, committed reason-bearing baseline, mutation tests, gate-chain wiring
     kind: delivery
     summary: "land the new-code naming rule as scripts/checks/new-code-naming.ts — a SOURCE FILE that did not exist at the committed base constant 22b15d31 may not contain the bare token `projectKey` unless a committed baseline entry covers it; the check's governed surface is declared SOURCE FILES ONLY — TypeScript under packages/** (all workspace package sources and tests), tests/**, and scripts/checks/**, extension .ts plus .tsx where such files exist in those trees; markdown/docs (doc/**, INCLUDING this change folder's own artifacts — the spec, plan and pm-notes legitimately quote the token in prose and contract identifiers, so a repo-wide scan would be Day-1 red), JSON/YAML config, generated trees (.ados-claude/**), node_modules and tmp/** are NOT swept; the declared source-file surface is what makes the check meaningful — it governs the new cli/tests/scripts/core code this change creates — and green; baseline entries are source-file paths only; the core accepts injected file-map/baseline inputs (test seam, forbidden-literals readRegistry precedent) so mutation cases need no repository writes; failures exit non-zero and name the offending file and baseline entry; pre-base files are exempt and no per-file counts are read for them; the committed baseline scripts/checks/new-code-naming.baseline.json lands in the SAME commit, every entry carrying a non-empty reason (initial entries: the check's own forbidden-token literal; the mutation suite's injected token) — and register it in the pnpm check aggregate via package.json, refreshing the three chain-pinning suites whose exact-string pins enumerate the chain (tests/checks/license-ci-binding.test.ts PINNED_CHECK, tests/checks/ci-checks.test.ts, tests/checks/privacy-ci-wiring.test.ts AGGREGATE — chain literal gains the new entry; the negative pins — no error-table-sync/exit-code-literals in the chain, no privacy entry — stay true) and the milestone-gate check-script enumeration if it trips; prove the check itself with tests/checks/new-code-naming.test.ts: reason-less baseline rejected naming the entry, unknown post-base offender rejected naming the file, pre-base file exempt with no counts consulted, clean post-base file accepted — all over injected inputs, no committed-tree writes"
+    # AMENDMENT STATUS (rev 3): amendment-INDEPENDENT — verified against the
+    # delivered tree. The check's guarded token is the bare legacy `projectKey`
+    # (scripts/checks/new-code-naming.ts TOKEN literal), which the amendment
+    # keeps unchanged (item C: the legacy PROJECT_KEY_PATTERN/projectKey stay
+    # as the named exceptions and the guarded token); the check's file
+    # surface, the base constant 22b15d31, the baseline file, and the chain
+    # wiring carry no model-vocabulary noun. The amendment declares NO
+    # re-execution commit for this phase: it CARRIES its delivered commit
+    # 0b49e404 and boundary evidence (pm-notes: gate 13/13 green, OK
+    # new-code-naming 2500/0/2). Any amendment-driven touch of this phase's
+    # files during the re-executed run is a finding to report, not planned
+    # work.
     # TC ownership: TC-DPKNAM-001, TC-DPKNAM-002 (F-7, AC-F7-1, NFR-6, RSK-4).
-    # Constraint (c): the baseline (reason per entry) lands with the check in this ONE commit. Constraint F-7 sequencing: the check exists BEFORE any later phase creates files, so every subsequent new file is governed from birth; later baseline extensions (if a new suite must spell the delivered persisted field names) are reason-bearing and land in the same commit as the file they cover.
+    # Constraint (c): the baseline (reason per entry) landed with the check in
+    # this ONE commit. Constraint F-7 sequencing: the check existed BEFORE any
+    # later phase created files, so every subsequent new file is governed from
+    # birth; later baseline extensions are reason-bearing and land in the same
+    # commit as the file they cover.
     # Ordering: first delivery phase by design — everything this change creates afterwards is subject to the standing rule (TC-DPKNAM-001 note: tree-vs-pinned-base is a legal permanent invariant after merge).
     # Fences in force: the committed base constant 22b15d31 is never silently re-pointed; no per-file counts on existing files; the chain refresh is pin-literal-only (wording-only discipline); the scan surface stays the declared source-file set (packages/**, tests/**, scripts/checks/** — .ts plus .tsx where present) — no repo-wide or docs sweep, whose token hits in the change artifacts would be Day-1 red by construction.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/new-code-naming.ts; bun test tests/checks/new-code-naming.test.ts; bun test tests/checks/license-ci-binding.test.ts tests/checks/ci-checks.test.ts tests/checks/privacy-ci-wiring.test.ts tests/checks/milestone-gate.test.ts; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed.
@@ -204,13 +327,18 @@ phases:
         - tests/checks/privacy-ci-wiring.test.ts
         - tests/checks/milestone-gate.test.ts
   - id: 2
-    title: Additive core contracts — declared-project-key pattern and predicate, CLONE_KEY_PATTERN name, same-value alias, served cloneKey accessor
+    title: Additive core contracts — DECLARED_PRODUCT_KEY_PATTERN with predicate isDeclaredProductKey (renamed to the amendment's names), CLONE_KEY_PATTERN name, same-value legacy alias, served cloneKey accessor
     kind: delivery
-    summary: "extend packages/core/src/contracts/projects.ts purely additively — export DECLARED_PROJECT_KEY_PATTERN with the exact literal ^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$ and its predicate that refuses the reserved state segments `unbound` and `projects` exact-match on the whole key (substring keys accepted; refusal reasons name the violated rule — length, charset, hyphen position, or reserved segment), export CLONE_KEY_PATTERN as the NAME of the delivered clone-identity pattern value (/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[0-9a-f]{8}$/u, unchanged), and keep PROJECT_KEY_PATTERN exported as the same-value alias with its value untouched; re-export the new names through packages/core/src/contracts/index.ts beside the delivered PROJECT_KEY_PATTERN re-export; serve `cloneKey` on the resolved project scope in packages/core/src/app/state-scope.ts — a served read of the clone identity, writing nothing: the marker field, the host-index field, and the alias payload field keep their delivered names; extend tests/structure/content-inventory.test.ts additively (new export entries ONLY for exports that actually change — projects.ts gains DECLARED_PROJECT_KEY_PATTERN and CLONE_KEY_PATTERN, while state-scope.ts gains an entry ONLY IF the served cloneKey accessor is exported from that module's public surface, and NO entry for it if the accessor is served without a new export there; no existing entry dropped — the delivered TC-GRPBOUND-002 contracts pins stay true because no pinned literal changes); prove the contracts at introduction in tests/structure/declared-project-key.test.ts — the grammar boundary matrix (exact string pin of the pattern; accept 2-char and 64-char keys, lowercase alnum, internal single and doubled hyphens; reject empty, 1-char, 65-char, uppercase, non-alphanumeric, leading/trailing hyphen, hyphen-only, each failure naming its rule), the reserved-segment refusals (unbound and projects refused despite being grammar-valid, case-exactness via the lowercase grammar rule, substring acceptance), the alias identity (String(PROJECT_KEY_PATTERN) === String(CLONE_KEY_PATTERN), 0 difference), and the accessor unit half (the resolved scope exposes cloneKey equal to the identity the marker carries, stable across repeated reads, no persisted field appearing)"
-    # TC ownership: TC-DPKKEY-001, TC-DPKKEY-002 (F-2, AC-F2-1, DM-1, NFR-1), TC-DPKALI-001 (F-3, AC-F3-1, DM-2, NFR-2), TC-DPKACC-001 unit half (F-4, AC-F4-1, DM-3).
-    # Ordering: contracts before the suites that import them — the unit suite lands in the SAME commit so the boundary is proven, not merely compiled.
-    # Fences in force: purely additive — the delivered PROJECT_KEY_PATTERN value, the marker/host-index/alias persisted names, and every TC-GRPBOUND-002 pinned literal are unchanged; the local groups.v1 layer gains no grammar (NG-4); enforcement points are consumer changes (GH-396/397/399/401), none created here; if the new suite must spell a delivered persisted field name verbatim, its reason-bearing baseline entry lands in this same commit (naming-rule fence).
-    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/declared-project-key.test.ts tests/structure/content-inventory.test.ts tests/structure/naming-boundary.test.ts; bun run scripts/checks/new-code-naming.ts; pnpm typecheck; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed.
+    summary: "AMENDED RE-EXECUTION (rev 3) — rename this change's own new-code contract exports to the owner amendment's names, values and behaviour unchanged: packages/core/src/contracts/projects.ts renames DECLARED_PROJECT_KEY_PATTERN (the delivered export) to DECLARED_PRODUCT_KEY_PATTERN keeping the exact literal ^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$ (string pin kept) and renames the delivered predicate declaredProjectKeyVerdict to isDeclaredProductKey (asserted BY NAME per amended AC-F2-1) with its supporting new-code names following the rename (the internal DECLARED_PROJECT_KEY_REGEX const and the DeclaredProjectKeyRejection/DeclaredProjectKeyVerdict types — all introduced by this change, none of them base identifiers or persisted surfaces); the predicate keeps refusing the reserved state segments `unbound` and `projects` exact-match on the whole key (substring keys accepted; refusal reasons name the violated rule — length, charset, hyphen position, or reserved segment; the segment `projects` keeps its name, a state-layout segment not model vocabulary); CLONE_KEY_PATTERN and the legacy PROJECT_KEY_PATTERN are UNTOUCHED — the NFR-2 alias assertion stays the same-value pair PROJECT_KEY_PATTERN ≡ CLONE_KEY_PATTERN (String-equal, 0 difference) and DECLARED_PRODUCT_KEY_PATTERN is pinned to its OWN grammar value with NO cross-value equality to the clone-key pattern (disjoint contracts DM-1 vs DM-2); the *declared* qualifier STAYS while the legacy names exist (PRODUCT vs PROJECT are two letters apart; GH-408 may drop it with the legacy names); re-export the renamed names through packages/core/src/contracts/index.ts beside the delivered PROJECT_KEY_PATTERN re-export; the served `cloneKey` accessor on the resolved product scope in packages/core/src/app/state-scope.ts is UNCHANGED (cloneKey keeps its delivered name; a served read writing nothing — the marker field, the host-index field, and the alias payload field keep their delivered names); update the export-name inventory rows that pin these exports — tests/structure/content-inventory.test.ts (projects.ts gains DECLARED_PRODUCT_KEY_PATTERN and CLONE_KEY_PATTERN, no existing entry dropped) and tests/fixtures/ports/v1-contract-inventory.json (the delivered additive rows carry the pre-amendment export name; the rows follow the renamed exports, nothing removed; the delivered state-scope disclosure stands: no inventory entry for the served cloneKey accessor, which is served without a new export there) — inventory rows are wording-only pin surfaces whose pinned names follow the rename; prove the contracts at tests/structure/declared-project-key.test.ts (file name KEPT — an identifier per amendment §G, never read as drift): the grammar boundary matrix (exact string pin; accept 2-char and 64-char keys, lowercase alnum, internal single and doubled hyphens; reject empty, 1-char, 65-char, uppercase, non-alphanumeric, leading/trailing hyphen, hyphen-only, each failure naming its rule), the reserved-segment refusals with exact-match substring acceptance, the predicate asserted under the name isDeclaredProductKey, and the PROJECT_KEY_PATTERN ≡ CLONE_KEY_PATTERN alias pair; extend the naming-rule baseline ONLY if a re-authored file must spell a delivered persisted field name (reason-bearing, same commit); every renamed name is verified zero-residue after this phase — no DECLARED_PROJECT_KEY_PATTERN or declaredProjectKeyVerdict identifier remains anywhere in the governed source surface"
+    # AMENDMENT STATUS (rev 3): RE-EXECUTED — the amendment renames this
+    # phase's delivered exports (the delegation: "phase 2 renames the
+    # new-code exports"). The delivered commit 0a780df4 stays recorded in
+    # pm-notes; the amendment work lands as a NEW commit in this phase with
+    # fresh gate evidence.
+    # TC ownership: TC-DPKKEY-001, TC-DPKKEY-002 (F-2, AC-F2-1, DM-1, NFR-1), TC-DPKALI-001 (F-3, AC-F3-1, DM-2, NFR-2 — resolved NFR-2 reading: the alias pair is legacy PROJECT_KEY_PATTERN ≡ CLONE_KEY_PATTERN; DECLARED_PRODUCT_KEY_PATTERN is pinned to its own grammar value; no cross-value equality), TC-DPKACC-001 unit half (F-4, AC-F4-1, DM-3).
+    # Ordering: contracts before the suites that import them — the renamed exports and the re-asserting suite land in the SAME commit so the boundary is proven, not merely compiled.
+    # Fences in force: purely additive at the base — the delivered PROJECT_KEY_PATTERN value, CLONE_KEY_PATTERN, cloneKey, the marker/host-index/alias persisted names, and every TC-GRPBOUND-002 pinned literal are unchanged; the local groups.v1 layer gains no grammar (NG-4); enforcement points are consumer changes (GH-396/397/399/401), none created here; the export rename is the amendment's directed exception to the zero-rename fence and touches only this change's own new-code identifiers plus their inventory rows.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/declared-project-key.test.ts tests/structure/content-inventory.test.ts tests/structure/naming-boundary.test.ts; bun run scripts/checks/new-code-naming.ts; pnpm typecheck; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed; grep confirms no pre-amendment export identifier remains in packages/**, tests/**.
     scope:
       files:
         - packages/core/src/contracts/projects.ts
@@ -218,6 +346,7 @@ phases:
         - packages/core/src/app/state-scope.ts
         - tests/structure/declared-project-key.test.ts
         - tests/structure/content-inventory.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
     interactions:
       - kind: contract-file
         target: packages/core/src/contracts/projects.ts
@@ -226,13 +355,18 @@ phases:
         target: packages/core/src/app/state-scope.ts
         role: consumer
   - id: 3
-    title: CLI noun corrections — list headers, board help, reference pages; wording-only pin updates with the --flat byte-identity verification
+    title: CLI noun corrections — PRODUCT and REPOSITORY list headers with PROJECT and PROJECT REPOSITORY asserted absent, board help, reference pages; wording-only pin updates with the --flat byte-identity verification
     kind: delivery
-    summary: "correct the user-facing nouns where they live — packages/cli/src/output/projects-text.ts: the group-table header GROUP_HEADER becomes PROJECT and PROJECT REPOSITORY (the project's declared key; the member declaration's selector or locator) while the flat-alias HEADER constant in the SAME file is untouched byte for byte; packages/cli/src/output/repos-text.ts: the list header KEY becomes CLONE; packages/cli/src/help.ts: the board `--project` option help states the value is a clone identity (flag name and never-group-scoped behaviour unchanged), and the repos/projects-family summaries and option rows are swept so no help text calls a clone identity a project or a project key and no `primary checkout` wording remains (main checkout is the term); the milestone command-reference pages doc/planning/oss-tooling/milestones/m2/commands/repos.md, projects.md, board.md carry the same noun corrections; update the pins in the SAME commit — tests/behaviour/repos-list-contract.test.ts (header CLONE, envelope repos.v1 unchanged, exit 0), tests/behaviour/projects-list-contract.test.ts (headers PROJECT / PROJECT REPOSITORY, no GROUP/MEMBER residue, envelope project-groups.v1 unchanged), tests/behaviour/projects-flat-alias.test.ts (run the byte-identity verification HERE — payload and text byte-identical to the pinned pre-change literals, 0-byte delta both modes; the suite's own diff touches no payload or text assertion), tests/behaviour/repos-help.test.ts and tests/behaviour/projects-help.test.ts and tests/behaviour/board-help.test.ts and tests/behaviour/board-selection-project.test.ts (help-summary pins refreshed wording-only where they trip; zero-diff acceptable), and tests/structure/naming-boundary.test.ts (TC-GRPSREAD-003's board-page pins refresh to the clone-identity wording with the intent intact — takes-a-clone-identity, never enumerates groups, and the group-scoped negative scan stay true; TC-GRPBOUND-001's flat/group boundary sentences on the repos/projects pages and the migration guide stay true untouched)"
+    summary: "AMENDED RE-EXECUTION (rev 3) — the `projects list` group-table headers become PRODUCT (the product's own key) and REPOSITORY (the member declaration's selector or locator) — NOT PROJECT / PROJECT REPOSITORY: packages/cli/src/output/projects-text.ts carries GROUP_HEADER as the two literals PRODUCT and REPOSITORY while the flat-alias HEADER constant in the SAME file stays untouched byte for byte (it IS the `--flat` text surface); packages/cli/src/output/repos-text.ts keeps header CLONE (delivered, unchanged); packages/cli/src/help.ts keeps the board `--project` option help stating the value is a clone identity (delivered; flag name and never-group-scoped behaviour unchanged) and keeps the repos/projects-family summaries speaking the table's nouns with no help text presenting a clone identity as the product or a product key; PROJECT and PROJECT REPOSITORY are ASSERTED-ABSENT headers — tests/behaviour/projects-list-contract.test.ts asserts PRODUCT/REPOSITORY present and GROUP/MEMBER/PROJECT/PROJECT REPOSITORY all absent (PROJECT REPOSITORY is prose-only contrast, never a header) with the project-groups.v1 envelope and exit 0 unchanged, tests/behaviour/repos-list-contract.test.ts asserts CLONE with the repos.v1 envelope unchanged, and tests/behaviour/projects-flat-alias.test.ts runs the byte-identity verification HERE — constraint (d): this is the phase touching the header code; payload and text byte-identical to the pinned pre-change literals, 0-byte delta both modes, the suite's own diff touches no payload or text assertion; the m2 reference pages doc/planning/oss-tooling/milestones/m2/commands/repos.md, projects.md, board.md re-pin their header examples to PRODUCT/REPOSITORY/CLONE, apply the 'the tool' prose rule where they say 'the product' meaning the tool itself, and state any example neutrally only (acme, example.com); update the pins in the SAME commit — tests/behaviour/projects-groups-list.test.ts (the delivered conditional-sweep surface: its header pins carry the pre-amendment literals and refresh wording-only again; payload assertions untouched; the trip and wording-only verdict recorded as a pm-notes entry per the conditional-sweep rule), tests/behaviour/repos-help.test.ts and tests/behaviour/projects-help.test.ts and tests/behaviour/board-help.test.ts and tests/behaviour/board-selection-project.test.ts (help-summary pins refreshed wording-only where they trip; zero-diff acceptable), and tests/structure/naming-boundary.test.ts (TC-GRPSREAD-003's board-page pins keep the clone-identity intent — takes-a-clone-identity, never enumerates groups, group-scoped negative scan stays true; TC-GRPBOUND-001's flat/group boundary sentences keep their intent in the table's nouns; TC-GRPBOUND-002's contracts literals are untouched and stay green)"
+    # AMENDMENT STATUS (rev 3): RE-EXECUTED — the delivered headers were
+    # PROJECT / PROJECT REPOSITORY (commit b9354594); the amendment's header
+    # item D changes exactly this surface, plus its pins and page examples.
+    # The delivered commit stays recorded in pm-notes; the amendment work
+    # lands as a NEW commit in this phase with fresh gate evidence.
     # TC ownership: TC-DPKUI-001, TC-DPKUI-002 (help/reference half), TC-DPKUI-003 (F-5, AC-F5-1, NFR-3), TC-DPKPIN-001 automated half for these suites (F-10, AC-F10-1, NFR-5).
     # Constraint (b): every pin update rides the wording it pins in this ONE commit. Constraint (d): the --flat byte-identity verification runs in THIS phase because the flat HEADER lives in the file whose group header changes (projects-text.ts) — the pinned literals are never regenerated; a delta is a defect (escalation trigger 1).
-    # Fences in force: zero-rename — envelopes, payload fields, exit codes, the --project flag name and its behaviour are unchanged; wording-only discipline on every suite diff; TC-GRPBOUND-002 (contracts literals) needs no change here and stays green.
-    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/repos-list-contract.test.ts tests/behaviour/projects-list-contract.test.ts tests/behaviour/projects-flat-alias.test.ts tests/behaviour/repos-help.test.ts tests/behaviour/projects-help.test.ts tests/behaviour/board-help.test.ts tests/behaviour/board-selection-project.test.ts tests/structure/naming-boundary.test.ts; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed.
+    # Fences in force: zero-rename — envelopes, payload fields, exit codes, the --project flag name and its behaviour are unchanged; the header literals are the amendment's (PRODUCT/REPOSITORY), with the legacy header strings asserted ABSENT, not renamed-into-place; wording-only discipline on every suite diff; TC-GRPBOUND-002 (contracts literals) needs no change here and stays green.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/repos-list-contract.test.ts tests/behaviour/projects-list-contract.test.ts tests/behaviour/projects-flat-alias.test.ts tests/behaviour/repos-help.test.ts tests/behaviour/projects-help.test.ts tests/behaviour/board-help.test.ts tests/behaviour/board-selection-project.test.ts tests/behaviour/projects-groups-list.test.ts tests/structure/naming-boundary.test.ts; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed.
     scope:
       files:
         - packages/cli/src/output/projects-text.ts
@@ -248,14 +382,20 @@ phases:
         - tests/behaviour/projects-help.test.ts
         - tests/behaviour/board-help.test.ts
         - tests/behaviour/board-selection-project.test.ts
+        - tests/behaviour/projects-groups-list.test.ts
         - tests/structure/naming-boundary.test.ts
   - id: 4
-    title: Vocabulary documentation — the eight-term table, the two reversed sentences, the feature-spec links
+    title: Vocabulary documentation — the amended eight-term table (product, repository, product key), the retirement of project, the prose rules, the feature-spec links
     kind: delivery
-    summary: "establish the owner's delivery vocabulary in the system spec and glossary — doc/overview/ubiquitous-language.md gains the eight-term table (project, project repository, main checkout, worktree, lane, work item, clone identity, declared project key) with the brief's meanings and lifetimes (worktree and lane temporary; project, project repository, work item and declared key durable; main checkout durable per worker; clone identity per clone) and the two committed sentences are REVERSED — 'a repository is one checkout and the delivery unit' and 'the identifier `project key` keeps its repository meaning' are corrected to the table's claims; the noun *repository* is reassigned to the project repository and *clone identity* (never *checkout identity*) names the shared marker; doc/overview/glossary.md carries the same eight entries with lifetimes while the distinct 'Repository key' (host/owner/name) concept is retained unchanged (NG-7); doc/spec/features/feature-projects.md links the table, stops naming the clone identity 'the project key' in its checkout-identity section, and makes no repository-is-one-checkout claim; doc/spec/features/feature-project-groups.md links the table with the declared-key mapping and drops the same claim; prove it at introduction in tests/structure/delivery-vocabulary.test.ts (new suite, naming-boundary tree-invariant precedent): all eight terms defined in BOTH documents with the spec's lifetime classifications (presence plus lifetime, not verbatim prose equality), the forbidden-claim substrings absent from the overview, both feature specs linking the table, and the Repository key concept still present"
+    summary: "AMENDED RE-EXECUTION (rev 3) — re-author the vocabulary rows to the owner amendment's table in doc/overview/ubiquitous-language.md and doc/overview/glossary.md: the eight terms are PRODUCT (one or more repositories that together form a single deliverable, planned and delivered as one; durable), REPOSITORY (one git repository belonging to exactly one product; the long form 'product repository' used only for contrast in prose and never as a header; durable), main checkout (durable per worker), worktree (temporary; never includes the main checkout), lane (temporary; keyed <ref>@<cloneKey> through the delivered dispatch.lane record), work item (durable in the tracker), clone identity (per clone; never 'checkout identity'), and PRODUCT KEY (the product's own key — groupKey in the local groups.v1 layer today, product.key in the GH-401 portable manifest; the contract names keep the *declared* qualifier while the legacy names exist; durable); the retirement clause is recorded in BOTH documents — 'project' is retired from the model's own vocabulary, and where the tracker's own word is meant the documentation writes 'Jira project' (existing names containing 'project' are named legacy exceptions, not vocabulary); the vocabulary notes record the TWO prose rules: where this repository's documentation says 'the product' to mean the tool itself it says 'the tool' — applied on the pages this change already touches in phases 3 and 6, with the ~45-line remainder sweep routed to GH-408 — and public examples are neutral only (acme, example.com; no real company, nothing private); the two reversed sentences stay corrected ('a repository is one checkout and the delivery unit' and 'the identifier `project key` keeps its repository meaning' remain gone) and the noun *repository* is reassigned to the product member; the glossary's distinct 'Repository key' (host/owner/name) concept is retained unchanged (NG-7); doc/spec/features/feature-projects.md and doc/spec/features/feature-project-groups.md link the table, speak product/repository/product key, and make no repository-is-one-checkout claim; prove it at tests/structure/delivery-vocabulary.test.ts (file name KEPT — an identifier): all eight amended terms with the spec's lifetime classifications in BOTH documents (presence plus lifetime, not verbatim prose equality), forbidden-claim substrings absent, the retirement clause and both prose rules asserted as recorded (TC-DPKVOC-002), both feature specs linking the table, and the Repository key concept still present"
+    # AMENDMENT STATUS (rev 3): RE-EXECUTED — the delivered table (commit
+    # bc6f64cc) carries the pre-amendment nouns (project, project repository,
+    # declared key); the amendment's rows A/E/F replace them. The delivered
+    # commit stays recorded in pm-notes; the amendment work lands as a NEW
+    # commit in this phase with fresh gate evidence.
     # TC ownership: TC-DPKVOC-001, TC-DPKVOC-002 (F-1, AC-F1-1, G-1).
     # Ordering: before the conformance scanner (phase 6) — the overview tree is scanner scope, so its corrections must be in place for the scanner's clean-tree pass to be truthful; the ODR record (phase 5) references this table.
-    # Fences in force: no behavioural change rides with the docs; the glossary's Repository key concept stays (NG-7); the conditional-sweep rule covers any undeclared suite that reads these documents.
+    # Fences in force: no behavioural change rides with the docs; the glossary's Repository key concept stays (NG-7); "Jira project" is the tracker's word, "project" otherwise retired; neutral examples only (acme, example.com); the conditional-sweep rule covers any undeclared suite that reads these documents.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/delivery-vocabulary.test.ts; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed.
     scope:
       files:
@@ -265,10 +405,16 @@ phases:
         - doc/spec/features/feature-project-groups.md
         - tests/structure/delivery-vocabulary.test.ts
   - id: 5
-    title: Decision record ODR-0006 and the decision-index row
+    title: Decision record ODR-0006 and the decision-index row — re-worded to the amendment's product nouns with the retirement clause
     kind: delivery
-    summary: "land the governing record as doc/decisions/ODR-0006-delivery-vocabulary-declared-project-key.md with status Proposed and decision_date null — never Accepted; acceptance is the owner's act at the pull request — carrying the vocabulary, the mapping of the locked names onto it (spec Appendix A: project ≡ groupKey and the groups.v1/manifest schemas; project repository ≡ the members[] declaration with root/repoKey as clone locators and `member` naming the declaration entry; clone identity ≡ repoKey and projectKey same value across the marker field, host-index key, public repos.v1 field, plan/closeout member refs, queue lane and lease keys, verify-gate rows, board --project, group member locators, per-clone state root; main checkout ≡ the flat record set keyed by clone identity with root as the last invoking checkout), the declared project key with its grammar and reserved-segment refusal, and how ODR-0003 DC-4 and ODR-0004 C-2..C-5 read under the new vocabulary WITHOUT any rename or amendment; add its row to doc/decisions/00-index.md (no ados_distribution header on the record — project-specific decision artifact; no earlier record and not 00-register.md is touched); extend tests/structure/delivery-vocabulary.test.ts with TC-DPKODR-001's structural arms — the record exists, its front matter carries status Proposed and decision_date null, the index lists it, and its body references the vocabulary, the locked-name mapping, the grammar, and its reading of ODR-0003 DC-4 and ODR-0004 C-2..C-5 (presence-of-section assertions, not prose equality)"
-    # TC ownership: TC-DPKODR-001 automated half (F-9, AC-F9-1, NG-5); step 5 (earlier-records diff inspection) is review-time, executed at the review/quality-gate boundary per the review-time evidence fence — never inside this phase.
+    summary: "AMENDED RE-EXECUTION (rev 3) — re-word the governing record doc/decisions/ODR-0006-delivery-vocabulary-declared-project-key.md (file name KEPT — an identifier) to state the vocabulary with the amendment's product nouns AND the retirement clause: 'project' is retired from the model's own vocabulary and 'Jira project' names the tracker's own word — still with status Proposed and decision_date null, never Accepted; the owner accepts or rejects the vocabulary at the pull request; the mapping of the locked names keeps its delivered mechanism with the amendment's row A: product ≡ a group (groupKey, the delivery.projects.groups.v1 schema, the <configDirectoryName>/projects.yaml file — NAMED EXCEPTIONS denoting a product; renaming them is GH-408), repository ≡ the members[] declaration with root/repoKey as clone locators and `member` naming the declaration entry, clone identity ≡ repoKey and projectKey same value across the marker field, host-index key, public repos.v1 field, plan/closeout member refs, queue lane and lease keys, verify-gate rows, board --project, group member locators, per-clone state root, main checkout ≡ the flat record set keyed by clone identity with root as the last invoking checkout; the product key with its grammar and reserved-segment refusal (DECLARED_PRODUCT_KEY_PATTERN, isDeclaredProductKey); and how ODR-0003 DC-4 and ODR-0004 C-2..C-5 read under the new vocabulary WITHOUT any rename or amendment; the decision-index row in doc/decisions/00-index.md keeps its delivered mechanism unchanged (no ados_distribution header on the record — project-specific decision artifact; no earlier record and not 00-register.md is touched); extend tests/structure/delivery-vocabulary.test.ts with TC-DPKODR-001's structural arms — the record exists, its front matter carries status Proposed and decision_date null, the index lists it, and its body references the vocabulary with the product nouns, the locked-name mapping, the grammar, the RETIREMENT clause, and its reading of ODR-0003 DC-4 and ODR-0004 C-2..C-5 (presence-of-section assertions, not prose equality)"
+    # AMENDMENT STATUS (rev 3): RE-EXECUTED — the delivered record (commit
+    # 4ab411fd) states the pre-amendment nouns; amendment item E directs the
+    # re-word with the retirement clause. Status Proposed / decision_date
+    # null and the index-row mechanism are unchanged. The delivered commit
+    # stays recorded in pm-notes; the amendment work lands as a NEW commit in
+    # this phase with fresh gate evidence.
+    # TC ownership: TC-DPKODR-001 automated half (F-9, AC-F9-1, NG-5); step 6 (earlier-records diff inspection) is review-time, executed at the review/quality-gate boundary per the review-time evidence fence — never inside this phase.
     # Ordering: after phase 4 (the record references the vocabulary table the docs phase establishes); before phase 6 (no dependency, but the decision content is settled before the standing sweep begins).
     # Fences in force: decision-record fence — only ODR-0006 and its index row change under doc/decisions/; the review-time diff inspection is the enforcement of the unedited-earlier-records claim.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/delivery-vocabulary.test.ts; git status confirms only the three declared paths changed.
@@ -278,12 +424,23 @@ phases:
         - doc/decisions/00-index.md
         - tests/structure/delivery-vocabulary.test.ts
   - id: 6
-    title: Vocabulary conformance scanner — narrowed scope, named exceptions, synthetic negative proofs — with the guides/tools sweep
+    title: Vocabulary conformance scanner — amendment sense rules, narrowed scope, named exceptions, synthetic negative proofs — with the guides/tools sweep residue
     kind: delivery
-    summary: "land the narrowed conformance test as tests/structure/vocabulary-conformance.test.ts with the scanner's detection core co-located as a PURE FUNCTION callable over injected input text/files and a tree-walking entrypoint over the real Appendix B surfaces (CLI help summaries; the text headers of projects list and repos list; the guides tree; the tools documentation tree; the overview tree; and every command reference page under the full commands glob doc/planning/oss-tooling/milestones/*/commands/** — all milestones' command pages, 42 at base: m1 28, m2 12, m4 2, not a selected subset; the three m2 pages are pin surfaces (§F), a subset of the sweep, never its definition), implementing exactly the four named exceptions — the projects.* error-code family, the <host root>/projects/ container, --project-root, and the --flat alias — frozen until GH-408; the suite proves the clean tree passes (TC-DPKCONF-001), the negative proof via synthetic in-memory violation texts and a test-created temp-tree fixture under the session temp root fails non-zero naming input and match with NO violation ever written into the committed tree (TC-DPKCONF-002), and each named exception is individually exempt while near-miss strings (a different flag spelling, an error-code outside the projects.* family) still flag (TC-DPKCONF-003); and land IN THE SAME COMMIT the guides/tools/overview sweep the clean pass demands — the known in-scope mislabels observed at base are doc/guides/migrating-to-per-repository-state.md (primary checkout wording and project key used for the clone identity) and doc/guides/local-install.md (primary checkout wording), and the m4 command page doc/planning/oss-tooling/milestones/m4/commands/install.md:84 — its primary checkout wording becomes main checkout, a wording edit in THIS commit (brief §D; in scope under the full commands glob) — corrected to the table's nouns while the migration guide's pinned boundary sentences (repos list flat record set / projects list group surface / --flat transition alias) stay true so TC-GRPBOUND-001 remains green — the sweep extends to the rest of the declared trees as the scanner demands, each correction stated in the table's nouns"
+    summary: "AMENDED RE-EXECUTION (rev 3) — keep the narrowed conformance test tests/structure/vocabulary-conformance.test.ts exactly as delivered in mechanics and update its vocabulary to the amendment: the scanner keeps its delivered hardening (pure detection core matching whitespace-normalized text with an original-line map, wrapped-violation / wrapped-mislabel / wrapped-exception arms, real line numbers via the map, sense exemptions reading the ORIGINAL line at the match's start so normalization never widens the exceptions) and its tree walk over the Appendix B surfaces (CLI help summaries; the text headers of projects list and repos list; the guides tree; the tools documentation tree; the overview tree; every command reference page under doc/planning/oss-tooling/milestones/*/commands/** — all milestones' command pages, 42 at base: m1 28, m2 12, m4 2, not a selected subset; the three m2 pages are pin surfaces (§F), a subset of the sweep, never its definition); the SENSE RULES speak the amendment's vocabulary — a clone identity presented as 'the product' or as a product key flags, the declared-term sense is product key, the tracker sense reads 'Jira project', and the reserved segment `projects` plus the four named exceptions stay state-layout/command-surface identifiers, not model vocabulary; the LIVE header assertions pin PRODUCT/REPOSITORY present and GROUP/MEMBER/PROJECT/PROJECT REPOSITORY absent on `projects list`, CLONE on `repos list`, and the flat-alias KEY byte-identical; the four named exceptions (projects.* error codes, <host root>/projects/ container, --project-root, --flat) stay frozen until GH-408, individually exempt single-line and wrapped, with near-misses still flagging (TC-DPKCONF-002/003 via synthetic in-memory texts and test-created temp trees under the session temp root — NO violation ever written into the committed tree); and land IN THE SAME COMMIT the sweep's amendment residue on the pages this change already touches: the 'the tool' prose rule applied wherever those pages say 'the product' meaning the tool itself — doc/guides/migrating-to-per-repository-state.md, doc/guides/local-install.md, doc/planning/oss-tooling/milestones/m4/commands/install.md, the m2 attempts page, the three m2 command pages of phase 3, and any page the walk covers — and neutral public examples (acme, example.com) wherever those pages state examples; the delivered wrapped-phrase fix and normalization hardening (phase 9, commit 5e57e3af) are PRESERVED, not reverted; the clean-tree pass must be truthful at this boundary — every in-scope surface carries the amendment's nouns when this phase lands"
+    # AMENDMENT STATUS (rev 3): RE-EXECUTED — the delivered scanner (commits
+    # bb7aa6ce + 5e57e3af) pins the pre-amendment headers as present
+    # (PROJECT/PROJECT REPOSITORY) and its sense rules speak the pre-amendment
+    # declared terms; the amendment changes the header pins to
+    # PRODUCT/REPOSITORY with the legacy headers asserted absent, the sense
+    # vocabulary to product/repository/product key with the "Jira project"
+    # tracker sense, and adds the "the tool" prose-rule application plus
+    # neutral examples on the swept pages. The delivered commits stay recorded
+    # in pm-notes; the amendment work lands as a NEW commit in this phase with
+    # fresh gate evidence. The phase-9 hardening mechanics are preserved
+    # verbatim — the re-execution edits vocabulary, never the normalization.
     # TC ownership: TC-DPKCONF-001, TC-DPKCONF-002, TC-DPKCONF-003 (F-6, AC-F6-1, NFR-4, RSK-3); TC-DPKUI-002's conformance half (help/reference nouns, no primary-checkout wording in scope, reference pages under the standing sweep).
-    # Ordering: AFTER phases 3 and 4 — every in-scope surface the scanner walks is already corrected (help summaries and headers and the three m2 reference pages in phase 3, overview and feature specs in phase 4 — the remaining command pages' known violation, the m4 install page, is corrected in THIS phase with the sweep), so the clean-tree pass at this boundary is truthful and meaningful, and every later phase's content is born under the standing check; the scanner exists WITH the last docs it scans (the guides/tools sweep) per the sequencing constraint.
-    # Fences in force: conformance fence — exceptions frozen, synthetic-only negative proof, committed tree clean (git status unchanged by any test run); the sweep is confined to the declared folders; a correction that cannot be stated in the table's nouns is the STOP trigger, never an exception edit.
+    # Ordering: AFTER phases 3 and 4 — every in-scope surface the scanner walks is already corrected to the amendment's nouns (help summaries and headers and the three m2 reference pages in phase 3, overview and feature specs in phase 4 — the sweep residue of this phase carries the guides/tools/m4 pages), so the clean-tree pass at this boundary is truthful and meaningful, and every later phase's content is born under the standing check.
+    # Fences in force: conformance fence — exceptions frozen, synthetic-only negative proof, committed tree clean (git status unchanged by any test run); the sweep is confined to the declared folders; a correction that cannot be stated in the table's nouns is the STOP trigger, never an exception edit; normalization never widens the exception set.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/vocabulary-conformance.test.ts tests/structure/naming-boundary.test.ts; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths/folders changed and the tree carries no planted violation.
     scope:
       files:
@@ -297,12 +454,18 @@ phases:
         - doc/planning/oss-tooling/milestones/m2/commands
         - doc/planning/oss-tooling/milestones/m4/commands
   - id: 7
-    title: Behaviour proof — the served accessor through the production path and the clone-identity fixtures G-1..G-3
+    title: Behaviour proof — the served accessor through the production path and the clone-identity fixtures G-1..G-3 (product-key wording, mechanism unchanged)
     kind: delivery
-    summary: "prove the resolved-scope and identity semantics through the production harness over fixture git repositories — tests/behaviour/projects-clone-key.test.ts (new): resolve the project scope for a fixture clone carrying the git-directory identity marker through the production resolution path and assert the served cloneKey matches what the marker and the host index carry, assert the persisted surfaces are unchanged by name (marker field, host-index field, alias payload field repoKey — the direct field-name assertion alongside the phase 2 unit half), and assert cloneKey is a served read: resolving twice yields the identical value and writes nothing (no new persisted field in host index or marker); then tests/behaviour/clone-identity-fixtures.test.ts (new, built on the tests/fixtures/projects/ helpers — temp repositories, identity markers, host-index readers, groups configuration — everything under the session-scoped temp root, no network): G-1 a linked worktree resolves the SAME clone identity as its main checkout through the production path, stable across repeated reads; G-2 one project repository cloned twice into two temp directories resolves the SAME declared project key from the groups.v1 declaration while the two clone identities and the two per-clone state roots differ, with the declared key never compared against the clone identity (disjoint fields/parent directories as delivered); G-3 an existing-shape groups.v1 configuration whose group key is OUTSIDE the declared-key grammar (uppercase or leading hyphen) loads unchanged through the production configuration path — group and members enumerate as declared, exit 0, no classified validation error, the configuration bytes on disk unchanged after the load, no rewritten or re-keyed configuration anywhere — and a grammar-valid twin loads identically, proving the local layer enforces no pattern (no-public-pattern contract preserved, DEC-4)"
-    # TC ownership: TC-DPKACC-001 behaviour half (F-4, AC-F4-1, DM-3), TC-DPKFIX-001 (F-8, AC-F8-1, DM-3, NFR-7), TC-DPKFIX-002 (F-8, AC-F8-2, DM-1, NFR-7), TC-DPKFIX-003 (F-8, AC-F8-3, NFR-5, DEC-4, NG-4).
-    # Ordering: fixtures LAST among the new behaviour suites — they exercise the resolved accessor (phase 2) and the declared-key contract against delivered identity semantics; helper extensions stay within tests/fixtures/projects/ without new isolation patterns (test plan §8.2 assumption).
-    # Fences in force: fixture fence — session-scoped temp root, deterministic (no wall-clock/hostname/network), committed tree clean; zero-rename — the persisted field-name assertions pin the delivered names, never new ones; if a fixture suite must spell a delivered persisted field name verbatim, its reason-bearing baseline entry lands in this same commit (naming-rule fence).
+    summary: "AMENDED RE-EXECUTION (rev 3) — keep the behaviour proof mechanism exactly as delivered and update its vocabulary and imports to the amendment: tests/behaviour/projects-clone-key.test.ts (TC-DPKACC-001 behaviour half: the production path serves cloneKey matching what the git-directory marker and the host index carry; the direct field-name assertions pin the delivered marker/host-index field names; resolving twice yields the identical value and writes nothing — no new persisted field in host index or marker) and tests/behaviour/clone-identity-fixtures.test.ts (built on the tests/fixtures/projects/ helpers — temp repositories, identity markers, host-index readers, groups configuration — everything under the session-scoped temp root, no network): G-1 a linked worktree resolves the SAME clone identity as its main checkout through the production path, stable across repeated reads; G-2 two clones of one repository resolve the SAME PRODUCT KEY from the groups.v1 declaration while the two clone identities and the two per-clone state roots differ, with the product key never compared against the clone identity (disjoint fields/parent directories as delivered); G-3 an existing-shape groups.v1 configuration whose group key is OUTSIDE the declared product key grammar (uppercase or leading hyphen) loads unchanged through the production configuration path — group and members enumerate as declared, exit 0, no classified validation error, the configuration bytes on disk unchanged after the load, no rewritten or re-keyed configuration anywhere — and a grammar-valid twin loads identically, proving the local layer enforces no pattern (no-public-pattern contract preserved, DEC-4); any import of the renamed exports updates to DECLARED_PRODUCT_KEY_PATTERN / isDeclaredProductKey; `cloneKey` and every persisted name are untouched; the NFR-7 double-run spot check (the fixture suite run twice) stays part of the gate evidence"
+    # AMENDMENT STATUS (rev 3): RE-EXECUTED — the delivered suites (commit
+    # 732a16ea) carry the pre-amendment nouns ("declared key") and may import
+    # the renamed exports; the amendment's G-2 noun swap and the phase-2
+    # export rename touch this surface. The mechanism is unchanged. The
+    # delivered commit stays recorded in pm-notes; the amendment work lands
+    # as a NEW commit in this phase with fresh gate evidence.
+    # TC ownership: TC-DPKACC-001 behaviour half (F-4, AC-F4-1, DM-3), TC-DPKFIX-001 (F-8, AC-F8-1, DM-3, NFR-7), TC-DPKFIX-002 (F-8, AC-F8-2, DM-1, NFR-7 — amendment noun: the same PRODUCT key), TC-DPKFIX-003 (F-8, AC-F8-3, NFR-5, DEC-4, NG-4).
+    # Ordering: fixtures LAST among the new behaviour suites — they exercise the resolved accessor (phase 2) and the renamed declared-product-key contract against delivered identity semantics; helper extensions stay within tests/fixtures/projects/ without new isolation patterns (test plan §8.2 assumption).
+    # Fences in force: fixture fence — session-scoped temp root, deterministic (no wall-clock/hostname/network), committed tree clean; zero-rename — the persisted field-name assertions pin the delivered names, never new ones; if a re-authored suite must spell a delivered persisted field name verbatim, its reason-bearing baseline entry lands in this same commit (naming-rule fence).
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/projects-clone-key.test.ts tests/behaviour/clone-identity-fixtures.test.ts (run the fixture suite twice when recording gate evidence — NFR-7 spot check); bun run scripts/checks/new-code-naming.ts; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths/folders changed and no residue outside the temp root.
     scope:
       files:
@@ -318,35 +481,45 @@ phases:
         target: tests/behaviour/clone-identity-fixtures.test.ts
         role: consumer
   - id: 8
-    title: Release changeset and the system-spec reconciliation declaration (doc-syncer scope)
+    title: Release changeset (amendment wording ride) and the system-spec reconciliation declaration (doc-syncer scope)
     kind: delivery
-    summary: "declare the release and the reconciliation boundary — commit .changeset/gh-406-delivery-vocabulary-declared-project-key-minor.md declaring the five fixed-group packages (@delivery-os/core, @delivery-os/adapters, @delivery-os/cli, @delivery-os/mcp, @delivery-os/opencode) at minor per the lockstep configuration (spec front matter version_impact: minor), and declare the system-spec reconciliation scope for the lifecycle system_spec_update phase: doc/spec/features/feature-projects.md and doc/spec/features/feature-project-groups.md carry the residual contract-truth reconciliation beyond phase 4's AC edits — the declared-key grammar and reserved-segment refusal, the CLONE_KEY_PATTERN name with the PROJECT_KEY_PATTERN same-value alias, and the served cloneKey accessor recorded as current truth with the zero-rename and no-migration posture — the entries below are DECLARATION ONLY: doc-syncer executes them in the lifecycle phase; no coder task edits them in this phase's commit, whose only artifact is the changeset file"
-    # Execution ownership (binding): the changeset file is this phase's release artifact committed through the commit primitive; the two feature-spec entries are doc-syncer's lifecycle scope declared here so the reconciliation lands inside the declared boundary (GH-394 phase-7 precedent); the PR targeting main-tools, merge authority, and tracker transitions belong to the lifecycle phases, not this plan.
-    # Scope note: phase 4 already landed the AC-asserted wording in these two files (TC-DPKVOC-002 runs green from that commit); this declaration covers only the residual contract-truth wording so doc-syncer's pass stays inside a declared scope.
-    # Verify: the changeset file parses as YAML front matter declaring the five fixed-group packages at minor; the phase commit contains exactly the changeset file; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary.
+    summary: "AMENDED RE-EXECUTION (rev 3) — re-word the changeset BODY only: .changeset/gh-406-delivery-vocabulary-declared-project-key-minor.md keeps its file name (an identifier per amendment §G) and its five-package minor front matter (@delivery-os/core, @delivery-os/adapters, @delivery-os/cli, @delivery-os/mcp, @delivery-os/opencode at minor per the lockstep configuration, spec front matter version_impact: minor), and its prose is re-worded to the amendment's vocabulary — the eight-term table with product / repository / product key and the retired 'project', the contract named DECLARED_PRODUCT_KEY_PATTERN with predicate isDeclaredProductKey, the headers PRODUCT and REPOSITORY with CLONE — because the delivered body names the pre-amendment export DECLARED_PROJECT_KEY_PATTERN and the pre-amendment header literals, which cease to be true the moment phase 2's rename and phase 3's header change land; this wording ride keeps the release artifact truthful (wording-only; zero-rename untouched); and declare the system-spec reconciliation scope for the lifecycle system_spec_update phase: doc/spec/features/feature-projects.md and doc/spec/features/feature-project-groups.md speak product/repository/product key with the mapping row product = a group with named exceptions (groupKey, the delivery.projects.groups.v1 schema, the projects.yaml file), and their delivered contract-name mentions (feature-projects.md and feature-project-groups.md carry the pre-amendment export name in the delivered tree) state DECLARED_PRODUCT_KEY_PATTERN after reconciliation, with the declared-product-key grammar and reserved-segment refusal, the CLONE_KEY_PATTERN name with the PROJECT_KEY_PATTERN same-value alias, and the served cloneKey accessor recorded as current truth under the zero-rename and no-migration posture — the feature-spec entries are DECLARATION ONLY: doc-syncer executes them in the lifecycle phase; no coder task edits them in this phase's commit, whose artifact is the amended changeset file (plus the pm-notes evidence ride per the disclosed pattern every phase commit uses)"
+    # AMENDMENT STATUS (rev 3): RE-EXECUTED — the delegation names phase 8's
+    # declaration as an amendment surface (feature-spec reconciliation rows),
+    # and the delivered changeset body verifiably carries the pre-amendment
+    # export name and nouns; leaving it would name exports and headers that no
+    # longer exist after phases 2 and 3. The delivered commit 24dfdd07 stays
+    # recorded in pm-notes; the amendment work lands as a NEW commit in this
+    # phase (the changeset body wording plus the pm-notes evidence ride) with
+    # fresh gate evidence. TC-RELEASE-001 stays green throughout: the
+    # changeset already exists on the branch, so the publishable-diff
+    # precondition holds at every amendment boundary.
+    # Execution ownership (binding): the changeset file is this phase's release artifact committed through the commit primitive; the two feature-spec entries are doc-syncer's lifecycle scope declared here so the reconciliation lands inside the declared boundary (GH-394 phase-7 precedent); the PR update (title and body re-stated to the amendment), branch push including the unpushed evidence commit, merge authority, and tracker transitions belong to the lifecycle phases, not this plan.
+    # Scope note: phase 4 already re-lands the AC-asserted wording in these two files (TC-DPKVOC-002 runs green from that commit); this declaration covers only the residual contract-truth wording — the amendment's nouns, the product = a group mapping row with named exceptions, and the renamed contract-name mentions — so doc-syncer's pass stays inside a declared scope.
+    # Verify: the changeset file parses as YAML front matter declaring the five fixed-group packages at minor and its body names DECLARED_PRODUCT_KEY_PATTERN with the amendment's nouns; the phase commit contains exactly the changeset file (plus the pm-notes evidence ride); TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary.
     scope:
       files:
         - .changeset/gh-406-delivery-vocabulary-declared-project-key-minor.md
         - doc/spec/features/feature-projects.md
         - doc/spec/features/feature-project-groups.md
-  # Plan revision log:
-  #   rev 2 — 2026-11-24: review iteration 1 remediation (verdict
-  #           code-review/review-iter-1.yaml, FAIL; findings F-1..F-4, F-1
-  #           blocking, F-2/F-3/F-4 non-blocking). Phase 9 appended: reword the
-  #           line-wrapped "primary checkout" residue on the m4 install
-  #           reference page (spec §16 m4-install-page row, F-5/brief §D,
-  #           conformance fence's truthful-clean-pass rationale — the scanner's
-  #           single-line matching cannot see the wrap at lines 81-83), with a
-  #           PM-optional detection-core normalization companion and a
-  #           PM-optional fail-closed hardening of the naming check (F-2).
-  #           Review-time evidence TC-DPKODR-001 step 5, TC-DPKPIN-001 step 3,
-  #           TC-DPKPIN-002 all PASS (verdicts in review-iter-1.yaml).
   - id: 9
     title: Code Review Remediation (Iteration 1)
     kind: delivery
-    summary: "review-iter-1 (FAIL) remediation — (1) MANDATORY, clears the FAIL: doc/planning/oss-tooling/milestones/m4/commands/install.md:81-83 reword 'Build and install from the primary checkout or a prepared directory holding a released artifact; a lane worktree is deleted after merge.' to the main-checkout sentence already delivered verbatim in the four sibling renderings (error-table.ts remediationHint, feature-result-contract.md row, install.ts refusal body, local-install.md) — the banned phrase survives only because the markdown line wrap hides it from the conformance scanner's single-line matching (F-1; spec §16 in-scope wording completeness, F-5/brief §D); (2) PM-OPTIONAL companion, same commit if taken: whitespace-normalize the vocabulary-conformance detection core's input (match across wraps; the four named exceptions and near-miss semantics unchanged) and add a synthetic wrapped-violation arm to TC-DPKCONF-002 so the blind spot cannot recur — if declined, record the decline and its reason as a pm-notes notes: entry; (3) PM-OPTIONAL companion: fail-closed hardening of scripts/checks/new-code-naming.ts listGovernedFiles (return a failure outcome instead of [] on git ls-files non-zero, or assert scanned > 0 at the entrypoint) plus one mutation arm for the injected listFiles-failure seam (F-2) — if declined, record the decline as a pm-notes notes: entry; (4) record the review iteration 1 verdict and the review-time evidence results (TC-DPKODR-001 step 5, TC-DPKPIN-001 step 3, TC-DPKPIN-002 — all PASS) as pm-notes notes: entries per the review-time evidence fence"
-    # TC ownership: TC-DPKCONF-001/002 re-run (F-1); TC-DPKNAM-001/002 extension arm if (3) is taken.
-    # Fences in force: zero-rename (the fix is wording only); the four named exceptions stay frozen — the optional normalization adds NO exception; no doc edit outside the declared scope; the committed tree stays violation-free after the fix (a wrap-tolerant scope scan must return zero hits).
+    summary: "review-iter-1 (FAIL) remediation — (1) MANDATORY, clears the FAIL: doc/planning/oss-tooling/milestones/m4/commands/install.md:81-83 reword 'Build and install from the primary checkout...' to the main-checkout sentence already delivered verbatim in the four sibling renderings (error-table.ts remediationHint, feature-result-contract.md row, install.ts refusal body, local-install.md) — the banned phrase survives only because the markdown line wrap hides it from the conformance scanner's single-line matching (F-1; spec §16 in-scope wording completeness, F-5/brief §D); (2) PM-OPTIONAL companion, same commit if taken: whitespace-normalize the vocabulary-conformance detection core's input (match across wraps; the four named exceptions and near-miss semantics unchanged) and add a synthetic wrapped-violation arm to TC-DPKCONF-002 so the blind spot cannot recur — if declined, record the decline and its reason as a pm-notes notes: entry; (3) PM-OPTIONAL companion: fail-closed hardening of scripts/checks/new-code-naming.ts listGovernedFiles (return a failure outcome instead of [] on git ls-files non-zero, or assert scanned > 0 at the entrypoint) plus one mutation arm for the injected listFiles-failure seam (F-2) — if declined, record the decline as a pm-notes notes: entry; (4) record the review iteration 1 verdict and the review-time evidence results (TC-DPKODR-001 step 5, TC-DPKPIN-001 step 3, TC-DPKPIN-002 — all PASS) as pm-notes notes: entries per the review-time evidence fence"
+    # AMENDMENT STATUS (rev 3): amendment-INDEPENDENT and DELIVERED — the
+    # delegation confirms this phase's content (wrapped-phrase fix + scanner
+    # hardening) carries no model-vocabulary noun, and the delivered state is
+    # recorded: commit 5e57e3af (blast radius exactly 50548c42 + 5e57e3af per
+    # review iter-2), PM accepted companion (2) (normalization + wrapped
+    # arms), declined companion (3) with reason (review F-2 deferred), review
+    # iter-2 verdict PASS closing F-1 at instance and class level, full gate
+    # green (13/13, bun test 12848 pass / 4 skip / 0 fail). This phase CARRIES
+    # its delivered commit and evidence; the amendment declares NO
+    # re-execution commit here. Phase 6's re-execution must PRESERVE the
+    # delivered normalization and wrapped arms (they are this phase's output,
+    # re-affirmed by the amended test plan TC-DPKCONF-002/003).
+    # TC ownership: TC-DPKCONF-001/002 re-run (F-1); TC-DPKNAM-001/002 extension arm if (3) is taken (declined; deferred with reason in pm-notes).
+    # Fences in force: zero-rename (the fix is wording only); the four named exceptions stay frozen — the normalization adds NO exception; no doc edit outside the declared scope; the committed tree stays violation-free after the fix (a wrap-tolerant scope scan must return zero hits).
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/vocabulary-conformance.test.ts tests/behaviour/install-admission.test.ts; bun run scripts/checks/new-code-naming.ts; a newline-normalized scan of the declared scope returns zero primary-checkout/checkout-identity hits; TMPDIR=$PWD/tmp/tmpdir pnpm check green; git status confirms only the declared paths changed.
     scope:
       files:
@@ -355,3 +528,73 @@ phases:
         - scripts/checks/new-code-naming.ts
         - tests/checks/new-code-naming.test.ts
         - doc/changes/2026-11/2026-11-24--GH-406--delivery-vocabulary-declared-project-key/chg-GH-406-pm-notes.yaml
+# Plan revision log:
+#   rev 1 — 2026-11-24: initial nine-phase plan from spec v1.0 + test plan v1.0
+#           (DoR iter-1 NOT_READY; two majors: conformance scope narrowed to
+#           the three m2 pages instead of the full commands glob, and phase 1
+#           missing the 'source file' qualifier).
+#   rev 2 — 2026-11-24: DoR iter-1 remediation + review iteration 1
+#           remediation (verdict code-review/review-iter-1.yaml, FAIL;
+#           findings F-1..F-4, F-1 blocking). Conformance scope restored to
+#           the full commands glob (42 pages) across fence/phase 6; phase 1
+#           scan-surface declaration; phase 9 appended: wrapped "primary
+#           checkout" residue on the m4 install page + PM-optional
+#           normalization and fail-closed companions. Review-time evidence
+#           TC-DPKODR-001 step 5, TC-DPKPIN-001 step 3, TC-DPKPIN-002 all
+#           PASS. DoR iter-2 READY; the delivered run completed all nine
+#           phases (commits 0b49e404, 0a780df4, b9354594, bc6f64cc,
+#           4ab411fd, bb7aa6ce, 732a16ea, 24dfdd07, 5e57e3af), review iter-2
+#           PASS, gates green, PR #411 opened.
+#   rev 3 — 2026-11-24: OWNER VOCABULARY AMENDMENT (comment 7138707234)
+#           applied end to end; delivery_planning reopened for this directed
+#           correction (upstream spec v1.1 at 0db66558 and test plan v1.1 at
+#           6b241d3f are amended and landed; the test plan §2 flagged this
+#           plan's pre-amendment vocabulary — reconciled here). Vocabulary
+#           re-authoring of the existing nine-phase declaration — NO new
+#           phase, phase ids and ordering preserved: code names renamed to
+#           the amendment's (DECLARED_PRODUCT_KEY_PATTERN, predicate
+#           isDeclaredProductKey — renamed from the delivered
+#           declaredProjectKeyVerdict —, declaredProductKey in new code;
+#           CLONE_KEY_PATTERN and cloneKey UNCHANGED; the legacy
+#           PROJECT_KEY_PATTERN/projectKey stay as the named exceptions and
+#           the guarded token, baseline token unchanged; the *declared*
+#           qualifier stays while legacy names exist, GH-408 may drop it);
+#           vocabulary nouns product / repository ('product repository'
+#           contrast-only in prose) / product key, 'project' retired from the
+#           model's own vocabulary with 'Jira project' for the tracker's
+#           word; headers PRODUCT and REPOSITORY delivered (NOT PROJECT
+#           REPOSITORY) with PROJECT and PROJECT REPOSITORY asserted absent;
+#           pinned-suite wording follows (projects-list-contract:
+#           PRODUCT/REPOSITORY present + GROUP/MEMBER/PROJECT/PROJECT
+#           REPOSITORY absent; repos-list-contract CLONE; flat alias
+#           byte-identity untouched); new amendment work items added to the
+#           phases that own each surface: the amended vocabulary rows +
+#           retirement clause + 'the tool' prose rule + neutral public
+#           examples (acme, example.com) recorded and applied (phases 4, 3,
+#           6), ODR-0006 re-worded with product nouns and the retirement
+#           clause (phase 5), feature-spec reconciliation rows speaking
+#           product/repository/product key with the mapping row product = a
+#           group with named exceptions (phase 8 declaration + doc-syncer),
+#           and the changeset body re-worded to the amendment's nouns and
+#           renamed export (phase 8 — its delivered body names the
+#           pre-amendment export, verified in the tree); the export-name
+#           inventory rows follow the rename (phase 2 scope gains
+#           tests/fixtures/ports/v1-contract-inventory.json; phase 3 scope
+#           gains the delivered conditional-sweep surface
+#           tests/behaviour/projects-groups-list.test.ts); NFR-2 resolved
+#           reading pinned (alias pair legacy PROJECT_KEY_PATTERN ≡
+#           CLONE_KEY_PATTERN; DECLARED_PRODUCT_KEY_PATTERN pinned to its own
+#           grammar value; no cross-value equality) in phase 2; amendment
+#           re-execution accounting declared (phase-gate fence): phases 2-8
+#           re-execute as NEW amendment commits with fresh gate evidence,
+#           per-phase completion recorded only in pm-notes; phase 1 verified
+#           amendment-independent (guarded token unchanged) and phase 9
+#           amendment-independent and DELIVERED (5e57e3af, review iter-2
+#           PASS) — both carry their existing evidence; constraints (a)-(d)
+#           remain served: (a) suite file names pinned verbatim unchanged
+#           (identifiers per amendment §G), (b) green-at-every-boundary via
+#           the wording-only + phase-gate fences, (c) the naming baseline
+#           stays co-landed with its check (delivered), (d) the --flat
+#           byte-identity verification stays inside phase 3, the
+#           header-touching phase; the amendment's ~45-line 'the tool'
+#           remainder and all identifier renames stay routed to GH-408.
