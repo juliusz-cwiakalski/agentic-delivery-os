@@ -15,7 +15,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-24T05:20:35.607Z }
   quality_gates: { started: null, completed: 2026-11-24T05:59:49.218Z }
   dod_check: { started: null, completed: 2026-11-24T06:01:50.695Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-24T06:07:21.480Z }
 decisions:
   - text: "Authority chain fixed at intake: the ticket BODY is superseded by the
       owner's six comments. Read order per owner comment 4 (2026-11-23T21:50Z):
@@ -876,4 +876,18 @@ notes:
       confirmation post-merge; TC-DAEMON-121 flake observation; owner residuals
       F-11/F-13/F-14/F-15/F-12 disposition via PR description."
     type: decision
+    date: "2026-11-24"
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/409 (base
+      main-tools, head feat/GH-394/credential-owner-strategies @ 70f40014, 32
+      commits pushed; LARGE diff 96 files +11,641/−329; title feat(GH-394):
+      credential strategies — resolve from the credential's owner (gh CLI,
+      harness store), never a copied env (M4-S28)). Body carries all nine
+      mandated sections incl. the ADR-0014 accept/reject ask
+      (Proposed/decision_date null), the 37-to-46 site-map delta, owner
+      residuals F-11..F-15, gate evidence, the TC-DAEMON-121 flake observation,
+      and the post-merge obligations. CI at report time: 21 pass / 27 pending /
+      0 failures. PR left OPEN for owner review — merge authority is the human
+      owner; no agent merges."
+    type: info
     date: "2026-11-24"
