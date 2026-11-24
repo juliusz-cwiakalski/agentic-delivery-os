@@ -147,7 +147,11 @@ const oneLineMaterial = (
   stdout: string,
 ): { ok: true; value: string } | { ok: false; reason: "empty-output" | "shape-drift" } => {
   const stripped = stdout.replace(/[\r\n]+$/, "");
-  if (stripped.length === 0) return { ok: false, reason: "empty-output" };
+  // Empty output after stripping is a refusal, and whitespace-only output is
+  // empty for the one-line material rule (the token form's declared oracle).
+  if (stripped.length === 0 || stripped.trim().length === 0) {
+    return { ok: false, reason: "empty-output" };
+  }
   if (stripped.includes("\n") || stripped.includes("\r"))
     return { ok: false, reason: "shape-drift" };
   return { ok: true, value: stripped };
@@ -180,7 +184,10 @@ export const resolveCommandSource = (
   const requestedTimeout = sourceKey.timeoutMs ?? COMMAND_TIMEOUT_DEFAULT_MS;
   const timeoutMs = Math.min(requestedTimeout, COMMAND_TIMEOUT_MAX_MS);
   const run = input.runChild({
-    argv: constructArgv(entry, match.parsed),
+    // The child runner's argv carries the allowlisted program first: the
+    // production runner executes argv[0] directly, so the executed file is
+    // exactly the declared program, never an argument reinterpreted as one.
+    argv: [sourceKey.program, ...constructArgv(entry, match.parsed)],
     environment: reducedChildEnvironment(input.parentEnvironment),
     timeoutMs,
     stdoutMaxBytes: COMMAND_STDOUT_MAX_BYTES,
@@ -249,7 +256,7 @@ export const runHarnessExport = (input: {
   }
   const requestedTimeout = input.timeoutMs ?? COMMAND_TIMEOUT_DEFAULT_MS;
   const run = input.runChild({
-    argv: constructArgv(match.entry, match.parsed),
+    argv: [input.programPath, ...constructArgv(match.entry, match.parsed)],
     environment: reducedChildEnvironment(input.parentEnvironment),
     timeoutMs: Math.min(requestedTimeout, COMMAND_TIMEOUT_MAX_MS),
     stdoutMaxBytes: COMMAND_STDOUT_MAX_BYTES,

@@ -2084,3 +2084,34 @@ describe("TC-SYNC-001 the residual pin floor is exact and non-vacuous", () => {
     }
   });
 });
+
+describe("GH-394 the credential projection stays off the row", () => {
+  test("the failure variant's three fields are never columns on the bound row", () => {
+    // The row object for the delivered code carries exactly its documented
+    // keys; the projection fields ride the failure variant, not the table.
+    const row = (ERROR_TABLE as readonly Record<string, unknown>[]).find(
+      (entry) => entry.code === "config.credential.missing",
+    );
+    expect(row).toBeDefined();
+    if (row === undefined) return;
+    for (const projectionField of ["source", "reason", "remedy"]) {
+      expect(Object.keys(row)).not.toContain(projectionField);
+    }
+    // The delivered six row-bound fields stay byte-identical on the variant:
+    // the type-level snapshot is pinned by the vocabulary-invariants suite;
+    // this arm pins the table side of the same invariant.
+    expect(Object.keys(row)).toEqual(
+      [
+        "code",
+        "domainKind",
+        "category",
+        "retryable",
+        "consequence",
+        "remediationHint",
+        "projectionClass",
+        "summary",
+        "exit",
+      ].filter((key) => key in row),
+    );
+  });
+});

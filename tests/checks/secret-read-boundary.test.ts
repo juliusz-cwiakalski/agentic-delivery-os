@@ -171,13 +171,54 @@ describe("TC-SECRET-003 allowlist mutations fail closed", () => {
     ).toBe(true);
   });
 
+  test("GH-394 strategy internals: a direct ambient read inside a strategy module fails", () => {
+    // The extended rule: the credential-material directory's exemption covers
+    // only the documented production wrapper module. A strategy module with a
+    // direct ambient read fires even though its directory is allowlisted.
+    const testCase = SECRET_READ_CASES.find(
+      (entry) => entry.id === "gh394-strategy-internals-violation",
+    );
+    if (testCase === undefined) throw new Error("strategy-internals violation fixture is missing");
+    const root = materialize(testCase);
+    try {
+      const violations = scan(root);
+      expect(
+        violations.some(
+          (violation) => violation.file === "packages/adapters/src/credentials/command-strategy.ts",
+        ),
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("GH-394 strategy internals: the wrapper module keeps its sanctioned read", () => {
+    // The clean control for the extended rule: the wrapper module's documented
+    // ambient read stays sanctioned and a strategy module with no ambient read
+    // is scanned clean.
+    const testCase = SECRET_READ_CASES.find(
+      (entry) => entry.id === "gh394-strategy-internals-clean",
+    );
+    if (testCase === undefined) throw new Error("strategy-internals clean fixture is missing");
+    const root = materialize(testCase);
+    try {
+      expect(
+        scan(root).filter((violation) =>
+          violation.file.startsWith("packages/adapters/src/credentials/"),
+        ),
+      ).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("mutation B: an undeclared provider credential read fails naming the path", () => {
     const testCase = SECRET_READ_CASES[0];
     if (testCase === undefined) throw new Error("planted fixture is missing");
     const root = materialize({
       ...testCase,
       files: {
-        "packages/adapters/src/github/provider.ts": "export const secret = process.env.SECRET;\n",
+        "packages/adapters/src/github/provider.ts": "export const planted = process.env.SECRET;\n",
       },
     });
     try {
