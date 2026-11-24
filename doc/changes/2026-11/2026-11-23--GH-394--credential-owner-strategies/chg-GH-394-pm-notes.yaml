@@ -245,3 +245,132 @@ notes:
       11: disclose the 37-to-46 delta in the PR description."
     type: info
     date: "2026-11-24"
+  - text: "Plan phase 1 complete: commit 374aa159. Contract widening additive in
+      packages/core/src/contracts/credentials.ts (four closed styles with
+      per-style explicit keys per ADR impl item 1; failure variant gains
+      exactly source?/reason?/remedy?; closed ten-member
+      CREDENTIAL_FAILURE_REASONS with resolution-pending reserved; operation
+      and union shape unchanged), doctor.ts presence variant gains the same
+      three fields, testkit mock-tenant decodeSourceKey decodes the four-style
+      union, credential-port.test.ts extended (row identity + never-material,
+      constructed-failure projection, ten-member union, reserved-token
+      unobservable), golden capture entry
+      tests/fixtures/credentials/golden-capture.ts + committed
+      tests/golden/credential-resolution-goldens.json (28 shipped fixtures,
+      deterministic, re-run byte-stable). Verify: credential-port +
+      conformance-coverage 55 pass; error-table-sync + credential-constants
+      green; git status exactly the six declared paths. DEVIATION (amended
+      pre-push, same phase): the first phase-1 commit was soft-reset and
+      re-landed because two authored assertions over-pinned pre-change shape
+      (exact failure key set; reason-undefined) and would contradict phase 2's
+      required born-with-fields behavior — final assertions are
+      phase-2-stable. Deferred-by-design: pnpm typecheck red on exactly the
+      three consumer sites (adapters resolveCredentialSourceKey; cli edge.ts;
+      cli doctor.ts) — repairs owned by phases 2 and 4 per the contracts-first
+      ordering."
+    type: info
+    date: "2026-11-24"
+  - text: "Plan phase 2 complete: commit 36fa3eeb. Strategies landed in
+      packages/adapters/src/credentials/: allowlist.ts (closed two-entry
+      table gh->auth token [--hostname <host>] and
+      opencode->auth export [--standalone] <integrationID>; slot grammars with
+      the plan's named constants 253/64; -- terminator argv construction;
+      per-entry (reason,style) remedy selection with the owner-pinned
+      host-aware/neutral/program-unavailable texts verbatim; binding-supplied
+      slot exception stated inertly), command-strategy.ts (symlink resolution
+      to a regular executable target or program-unavailable; direct spawnSync,
+      no shell, closed stdin, stdout bounded 256 KiB, stderr size-only,
+      reduced child environment exactly PATH/HOME/DBUS_SESSION_BUS_ADDRESS/
+      XDG_RUNTIME_DIR when present; 15 s default / 30 s bound cap; one-line
+      material rule), harness-store-strategy.ts (identity match or
+      source-not-supported cold; target-selector export; pinned-shape parsing
+      with shape-drift naming harness+field at the classification level;
+      exactly-one-active or ambiguous-account; empty store is empty-output
+      zero fall-through; oauth-excluded; keys registered before selection and
+      before any throw; HARNESS_CLI_VERSION_WINDOW >=2.3.2 <3.0.0; read-only),
+      resolver rework in index.ts over the four construction-input seams with
+      per-process memo and register-on-materialize. Verify:
+      credential-port suite green (byte-identical env styles), full
+      tests/conformance 515 pass, secret-read-boundary clean, resolver smoke
+      green over injected seams. DEVIATIONS (disclosed, primitive-flagged
+      scope drift): packages/core/src/contracts/index.ts gained the one-line
+      additive type re-export CredentialFailureReason — the barrel is the
+      declared import surface and phase-2 consumers must name the union.
+      Known deferral: typecheck red on exactly the two phase-4-owned cli sites
+      (edge.ts envVar derivation, doctor.ts sourceKeyDisplay); adapters
+      compiles clean."
+    type: info
+    date: "2026-11-24"
+  - text: "Plan phase 3 complete: commit e57832fb. catalog.ts admits the four
+      closed styles with per-style explicit keys and declares the github
+      branch (credential.sourceKey, DM-5); defaults.ts declares the tracker
+      reference default byte-identical to today's literal/GITHUB_TOKEN;
+      validate.ts hosts the shared parseCredentialSourceKey (unknown style,
+      missing required fields, slot grammars with core named bounds
+      253/64/30000 ms, --hostname host-slot grammar in argv, absolute program
+      path) consumed by parseCredential for the provider credential map and
+      exported for the github branch. Verify: config-default-positions +
+      golden/config-output green (plan's verify path
+      tests/behaviour/config-output.test.ts corrected to
+      tests/golden/config-output.test.ts — the named behaviour file does not
+      exist); goldens re-captured byte-stable; validator smoke 14/14
+      semantics. COMPANION UPDATES (disclosed, primitive-flagged drift; all
+      permanent invariants whose github-half this change legitimately
+      supersedes while their adapter-absence half is preserved):
+      contract-baseline configurationKeyCount 80->91; dispatch-contract ten
+      declared branches; port-contract-inventory fixture
+      (+CredentialFailureReason, +CREDENTIAL_FAILURE_REASONS); content
+      inventory (file set + executable allowances for the new/changed
+      credential modules); harness-imports child_process site gains
+      command-strategy.ts; provider-legacy-absence sourceKey field set grows
+      to the eight per-style keys (no value leaf, substance kept);
+      config-contract + reference-behavior admit the github branch. DESIGN
+      CORRECTION: parseCredentialSourceKey keeps the raw parser tolerant of
+      unknown extra keys — TC-POL-SEC-002 pins the two-layer semantic (raw
+      parser ignores, config layer refuses); the style-conditional strict
+      pass belongs to the composition layer (phase 4 wiring). Deferred
+      failures (4, all build/changeset-dependent, not source defects):
+      TC-BIN-084 + exports-parity + TC-RELEASE-002 need the cli build that
+      the two deferred phase-4 type errors blocked; TC-RELEASE-001 needs the
+      phase-7 changeset. Battery: 3651 pass / 4 deferred fail."
+    type: info
+    date: "2026-11-24"
+  - text: "Plan phase 4 IN PROGRESS (partial progress commit f89499db; phase NOT
+      complete). LANDED AND VERIFIED (typecheck fully green — the last two
+      deferred cli sites repaired; provider-credentials +
+      status-credential-prerequisite + harness-spawn-credential +
+      credential-port 35 pass): doctor.ts sourceKeyDisplay shows the source
+      identity for all four styles with envVar only for the two environment
+      styles; edge.ts doctor runtime forwards source/reason/remedy from the
+      resolved failure into DoctorCredentialPresence; ProviderFailureLike
+      widened + credentialProjectionOf forwarding at providerReadFailure,
+      credentialRefusal, providerFailure (status + verify-gates surfaces);
+      StatusReadFailure and VerifyGatesReadFailure carry the projection as a
+      nested credential member (their existing reason member is the read
+      classification, so the three fields travel nested); contracts/
+      credentials.ts gained the additive CredentialFailureProjection type
+      (barrel re-exported); LIVE REDACTION REGISTRY (DM-7): index.ts
+      SecretRegistry register/values + createSecretRegistry, CliDependencies
+      .secrets is now the registry and every render consults values()
+      render-time; entrypoint keeps static environment-style registration and
+      never resolves (registry built from entrypointSecrets); the two
+      registerEdgeSecrets sites join the same registry; ConfigProgramResult
+      .secrets widened. REMAINING FOR PHASE 4 (all mapped, none started):
+      production.ts resolver wiring (four-seam createCredentialResolver
+      replacing createProcessCredentialPort, storeFacts over runHarnessExport,
+      registerSecret into the live registry, declared tracker reference from
+      github.credential with load-time validation via
+      parseCredentialSourceKey + matchCommandDeclaration at the composition
+      edge, the five literal sites forwarding); engine.ts :291/:306/:799
+      forwarding via an in-process condition carrier (park-record shape and
+      pending-park semantics untouched) + announcements.ts message deriving
+      from the code plus the reason token; harness-spawn-env 2 sites;
+      inference 1 site; serve.ts 4 sites (placeholders gain the reason);
+      simulate.ts :438; merge chain (merge.ts :89 envelope,
+      merge-transaction.ts MergeFailureEvidence/MergeFailure + landing-fault
+      mapping + renderMergeFailure, merge-text.ts pass-through); dispatch
+      chain (dispatch.ts :69, app/dispatch.ts :153/:385); companion refreshes
+      if any rendered-failure golden breaks. NO lifecycle phase complete was
+      run (delivery continues)."
+    type: info
+    date: "2026-11-24"
