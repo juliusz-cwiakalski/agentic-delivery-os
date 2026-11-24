@@ -142,7 +142,7 @@ export const admissionRefusal = (admission: {
     "install.target.worktree",
     `refused: the install target ${String(admission.target)} is a linked git worktree ` +
       `(git dir ${String(admission.gitDir)} differs from common dir ${String(admission.commonDir)}). ` +
-      "Install from the primary checkout or a prepared directory holding a released artifact; " +
+      "Install from the main checkout or a prepared directory holding a released artifact; " +
       "a lane worktree is deleted after merge. Nothing was written.",
   );
 };

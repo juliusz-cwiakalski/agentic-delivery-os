@@ -1931,7 +1931,7 @@ export const ERROR_TABLE = [
     retryable: false,
     consequence: "not_landed",
     remediationHint:
-      "Build and install from the primary checkout or a prepared directory holding a released artifact; a lane worktree is deleted after merge, so nothing is written from it.",
+      "Build and install from the main checkout or a prepared directory holding a released artifact; a lane worktree is deleted after merge, so nothing is written from it.",
     projectionClass: "user-validation",
     summary: "The install target resolves inside a linked git worktree.",
   },

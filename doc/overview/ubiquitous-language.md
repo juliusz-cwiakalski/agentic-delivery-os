@@ -8,7 +8,7 @@ owners: [engineering]
 area: domain
 document_classification: working-analysis
 links:
-  related_changes: [GH-200, GH-231, GH-225, GH-233, GH-232, GH-234, GH-240, GH-309]
+  related_changes: [GH-200, GH-231, GH-225, GH-233, GH-232, GH-234, GH-240, GH-309, GH-406]
 summary: "Thin tooling vocabulary relationship map and disambiguation draft for Gate 4."
 ---
 
@@ -68,6 +68,19 @@ domain and keeps its glossary meaning. The delivered names that denote the
 clone identity (`repoKey`, `projectKey`, the marker field, the host-index key)
 keep their identifiers until the mechanical rename (GH-408); the vocabulary
 names the concepts, not yet the identifiers.
+
+The vocabulary is standing enforcement, not prose convention. The conformance
+suite (`tests/structure/vocabulary-conformance.test.ts`) sweeps the CLI help
+summaries, the `projects list` and `repos list` text headers, the guides,
+tools-documentation, and overview trees, and every command reference page under
+`doc/planning/oss-tooling/milestones/*/commands/**`; four named exceptions stay
+frozen until the mechanical rename (GH-408): the `projects.*` error-code
+family, the `<host root>/projects/` container, `--project-root`, and the
+`--flat` alias. The new-code naming check (`scripts/checks/new-code-naming.ts`,
+a stage of the aggregate check) holds that a source file absent at the check's
+committed base may not contain the bare token `projectKey` unless a committed,
+reason-bearing baseline entry covers it; new code names the two concepts
+`cloneKey` and `declaredProjectKey`.
 
 ## Disambiguation at boundaries
 

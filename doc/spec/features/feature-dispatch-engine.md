@@ -770,8 +770,8 @@ the twice-enforced repository scope — are recorded in
 - **Read-only posture.** Zero attempt, divergence, handover, or authority
   appends and zero fence acquisitions; the store's delivery-evidence bytes,
   modes, and mtimes are unchanged. The inherited store-opening effects are the
-  host-index maintenance write (zero when unchanged) and the create-once project
-  checkout identity marker.
+  host-index maintenance write (zero when unchanged) and the create-once clone
+  identity marker.
 - **Empty history.** A verified read that matches no record is success at exit
   `0` with `attempts: []`, `matched: 0`, and `hasMore: false`. A torn,
   unreadable, or permission-denied store keeps its delivered `state.*` identity
@@ -870,7 +870,7 @@ Whole-change parity means the eleven classes and the shell's supervision semanti
 
 `scripts/lib/dispatch-authority.sh` reads the derived authority document as a plain file with ordinary shell tooling. It performs no typed CLI invocation, PATH lookup, network, or model call. `deliver-ticket.sh`, `batch-deliver.sh`, `pm-liveness.sh`, and `ceo-loop.sh` source it at startup.
 
-The resolver resolves the **project state root** before locating the document: the host root comes from the environment override first, then the repository-local default, then the home default, and the project root is `<host root>/projects/<project key>` with the key read from the checkout identity marker in the git common directory. The document therefore sits at `<project root>/documents.<workspace>/dispatch-authority.json` and the resolver's search bound stays `-maxdepth 2`; widening the search instead of resolving the root would make the fallback read the pre-migration host-root document and stay permanently `dual-run`. An absent marker, an absent project root, or a document placed at the old host-root location resolves to `dual-run` exactly as before.
+The resolver resolves the **project state root** before locating the document: the host root comes from the environment override first, then the repository-local default, then the home default, and the project root is `<host root>/projects/<project key>` with the key read from the clone identity marker in the git common directory. The document therefore sits at `<project root>/documents.<workspace>/dispatch-authority.json` and the resolver's search bound stays `-maxdepth 2`; widening the search instead of resolving the root would make the fallback read the pre-migration host-root document and stay permanently `dual-run`. An absent marker, an absent project root, or a document placed at the old host-root location resolves to `dual-run` exactly as before.
 
 The typed side writes and reads the same derived view under the same project root: the production dispatch state root is the policy-derived project state root, so the engine and the fallback agree about where authority lives.
 

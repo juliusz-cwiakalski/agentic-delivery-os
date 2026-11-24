@@ -6,9 +6,9 @@ created: 2026-11-14
 last_updated: 2026-11-24
 owners: ["engineering"]
 service: delivery-os
-summary: "Project groups: the configuration-only membership document (`<configDirectoryName>/projects.yaml`, schema `delivery.projects.groups.v1`) as an operator-local, git-ignored overlay with load-time validation and its three classified identities, the optional workspace discovery root that locates declared member clones only, the `projects list` group surface under `project-groups.v1` with the closed five-value member health vocabulary and the closed daemon-reachability reasons, the one aggregation clause with its four per-member outcomes and the `data.partial`/`data.degradedMembers[]` projection, and the additive group-scoped `queue list --project` and `status --project` reads; the group is never a change's member set, which a cross-repository change declares in its plan."
+summary: "Project groups: the configuration-only membership document (`<configDirectoryName>/projects.yaml`, schema `delivery.projects.groups.v1`) as an operator-local, git-ignored overlay with load-time validation and its three classified identities, the optional workspace discovery root that locates declared member clones only, the group key as the project's declared key under the additive declared-project-key contract that consumer changes enforce while the local layer keeps no public pattern, the `projects list` group surface under `project-groups.v1` with its `PROJECT` / `PROJECT REPOSITORY` table, the closed five-value member health vocabulary and the closed daemon-reachability reasons, the one aggregation clause with its four per-member outcomes and the `data.partial`/`data.degradedMembers[]` projection, and the additive group-scoped `queue list --project` and `status --project` reads; the group is never a change's member set, which a cross-repository change declares in its plan."
 links:
-  related_changes: ["GH-309", "GH-310", "GH-365"]
+  related_changes: ["GH-309", "GH-310", "GH-365", "GH-406"]
   related_decisions: ["ODR-0004", "TDR-0022", "TDR-0074"]
   contracts:
     - "packages/core/src/contracts/projects.ts"
@@ -30,7 +30,11 @@ The delivery vocabulary — project, project repository, main checkout, worktree
 lane, work item, clone identity, declared project key — is defined once in the
 [ubiquitous language](../../overview/ubiquitous-language.md#the-delivery-vocabulary)
 delivery vocabulary table; the declared project key is the group's own
-`groupKey`, and the members' `repoKey` values are clone identities.
+`groupKey` in the local `groups.v1` layer (`project.key` names it in the
+portable manifest, GH-401), and the members' `repoKey` values are clone
+identities. The two keys are different contracts in disjoint namespaces and are
+never compared: a clone identity differs per clone, the declared key names the
+project.
 
 `projects list [--json]` renders every configured group with its member
 repositories, their state, their health, and their daemon reachability under the
@@ -115,6 +119,18 @@ group. The validation rules are closed:
 non-empty strings, unique per document, and no regex constrains them. The three
 group identities are declared in the [Result Contract](feature-result-contract.md).
 
+The declared-project-key contract exists beside this local layer and does not
+amend it: `DECLARED_PROJECT_KEY_PATTERN`
+(`^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$` — 2–64 characters, lowercase
+alphanumerics and hyphens, no leading or trailing hyphen) with its predicate
+refusing the reserved state segments `unbound` and `projects` exact-match is
+exported from the core contracts, and it binds only the consumer changes that
+use a key as a declared key — the credential, workspace, and manifest
+write/import surfaces. The local `groups.v1` layer enforces no pattern and
+nothing migrates: a group key outside the grammar loads unchanged
+([Repositories and the Host Overview](feature-projects.md) states the
+contracts; ODR-0006 records the vocabulary and the mapping).
+
 A group-scoped read outside any git work tree has no scope to resolve the
 document from and is refused with `projects.scope-unavailable` at exit `2`; the
 flat record set keeps its own declared `unbound` scope at exit `0`.
@@ -124,7 +140,7 @@ flat record set keeps its own declared `unbound` scope at exit `0`.
 A group may declare a `workspaceRoot`. Registering that directory enables a
 read-only scan that **locates** the group's declared member clones inside it: the
 walk descends into every non-symbolic child directory, never enters a `.git`
-directory, and admits a candidate only when its durable repository key is a
+directory, and admits a candidate only when its durable clone identity is a
 declared `repoKey` selector or its root is a declared `root` selector. An
 undeclared clone is never a member, at any depth, and the scan creates, moves,
 and removes nothing.
@@ -201,9 +217,9 @@ grammar classification — the alias takes no group scoping and is never silentl
 coerced to either synopsis form. Any verb other than `list` is refused through
 the shared invocation classification before the document is read.
 
-Text output is a deterministic table with the columns `group`, `member`,
+Text output is a deterministic table with the columns `project`, `project repository`,
 `tracker`, `state`, `health`, `daemon`: one row per declared member in declared
-order, with the group key repeated. Two runs over unchanged state are
+order, with the project key repeated. Two runs over unchanged state are
 byte-identical.
 
 ## The aggregation clause
@@ -251,9 +267,10 @@ An unknown group key is refused with `projects.unknown-group` at exit `1` on
 every group-scoped surface — one refusal rule, including when the configuration
 document is absent or declares zero groups. Within the queue family,
 `--project` is accepted on `queue list` only, and no other surface gains group
-scoping: `board --project` remains a repository key, and spend, brief, and the
-remaining reads stay repository-scoped. The unscoped `queue list` and `status`
-forms are unchanged.
+scoping: `board --project` takes a clone identity and the board is never
+group-scoped, and spend, brief, and the remaining reads stay scoped to one
+project repository. The
+unscoped `queue list` and `status` forms are unchanged.
 
 ## Read-only posture
 
@@ -283,7 +300,7 @@ configuration problem is always one of the rows above.
 |---|---|---|
 | Behaviour | Configuration validation, scoped and default group reads, workspace discovery parity, aggregation, group-scoped queue and status, read-only posture | `tests/behaviour/projects-config.test.ts`, `projects-groups-list.test.ts`, `queue-status-project-scope.test.ts`, `projects-read-only-audit.test.ts` |
 | Structure | The `project-groups.v1` envelope, the closed outcome and health vocabularies, and the full delivered envelope set | `tests/structure/projects-groups-envelope.test.ts` |
-| Boundary | `repos` = flat record set and `projects` = groups across help, the reference pages, and the migration guide; the board is never group-scoped | `tests/structure/naming-boundary.test.ts` |
+| Boundary | `repos` = flat record set and `projects` = groups across help, the reference pages, and the migration guide; the board is never group-scoped | `tests/structure/naming-boundary.test.ts`; the delivery-vocabulary sweep `tests/structure/vocabulary-conformance.test.ts` (see the [delivery vocabulary](../../overview/ubiquitous-language.md#the-delivery-vocabulary)) |
 
 ## Related
 

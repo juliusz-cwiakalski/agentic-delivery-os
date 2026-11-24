@@ -56,7 +56,7 @@ A grammar violation — an unknown flag, any positional, `--all` together with `
 | Invocation | Meaning |
 |---|---|
 | `board` | The invoking checkout alone; zero host-index reads |
-| `board --project <repoKey>` | One managed repository by repository key |
+| `board --project <repoKey>` | One managed repository by clone identity (the delivered `repoKey` field) |
 | `board --all` | Every managed repository on the host, under the 128 cap |
 | `board --json` | The machine envelope instead of the human screen |
 
@@ -104,7 +104,7 @@ The managed set is the host index's recorded checkouts whose root still exists, 
 
 `--project <repoKey>` resolves against the full managed set, not the retained subset, so a key beyond the ascending cap is still a valid target. A key outside that set is refused as `board.repository-unknown` at exit `1`, with no section or repository row rendered.
 
-The default form reads no host index. When the invocation is outside any work tree, or its checkout identity cannot be derived, the board resolves the declared `unbound` scope: `scope: "unbound"`, `repositories: []`, empty sections, the delivered bounded unbound-scope warning where the invocation resolves outside a work tree, and exit `0` — never an error, never a host-index fallback, and never a claim about a repository. `--all` and `--project` always report `scope: "repository"`, even when `repositories[]` is empty.
+The default form reads no host index. When the invocation is outside any work tree, or its clone identity cannot be derived, the board resolves the declared `unbound` scope: `scope: "unbound"`, `repositories: []`, empty sections, the delivered bounded unbound-scope warning where the invocation resolves outside a work tree, and exit `0` — never an error, never a host-index fallback, and never a claim about a repository. `--all` and `--project` always report `scope: "repository"`, even when `repositories[]` is empty.
 
 ### Repository cap and retained set
 
@@ -193,7 +193,7 @@ Every cap drop increments `omitted` and its `omittedBySection` counter and sets 
 
 ### Read-only posture and write carve-out
 
-The board is read-only apart from one declared, bounded, idempotent write: when a `waiver` gate at or past 72 h has no decision record, the run appends exactly one `owner-gate.decision` record for that repository. A record that already exists is honored and nothing is appended, so a repeat run writes nothing. No index maintenance, prune, edit, or delete occurs; the only other side effects are the two delivered store-opening effects every composed command performs (the create-once checkout identity marker and the removal of a leftover read-only store sibling). The board belongs to the read-only `maintainsIndex` exception set, so a board run never maintains the host index.
+The board is read-only apart from one declared, bounded, idempotent write: when a `waiver` gate at or past 72 h has no decision record, the run appends exactly one `owner-gate.decision` record for that repository. A record that already exists is honored and nothing is appended, so a repeat run writes nothing. No index maintenance, prune, edit, or delete occurs; the only other side effects are the two delivered store-opening effects every composed command performs (the create-once clone identity marker and the removal of a leftover read-only store sibling). The board belongs to the read-only `maintainsIndex` exception set, so a board run never maintains the host index.
 
 The board makes no LLM call, issues no non-GET provider request, starts no timer, loop, or daemon, and commits no product or binary literal.
 
