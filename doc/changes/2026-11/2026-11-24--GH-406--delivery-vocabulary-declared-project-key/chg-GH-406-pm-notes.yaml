@@ -14,7 +14,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-24T18:04:21.007Z }
   review_fix: { started: null, completed: 2026-11-24T18:47:57.274Z }
   quality_gates: { started: null, completed: 2026-11-24T19:07:40.291Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-24T19:08:36.498Z }
   pr_creation: { started: null, completed: null }
 decisions: []
 open_questions: []
@@ -474,6 +474,23 @@ notes:
       stage 4 (branch-switch + fixture SHA lines) confirmed as test behavior,
       not failures; working tree remained on the change branch."
     type: info
+    date: "2026-11-24"
+  - text: "DoD check PASS (lifecycle phase 10). Ledger: 9/9 prior lifecycle phases
+      completed with verified timestamps; plan completion: all 9 declared plan
+      phases carry pm-notes entries with plan-phase id, commit hash, and test
+      result (1 0b49e404, 2 0a780df4, 3 b9354594, 4 bc6f64cc, 5 4ab411fd, 6
+      bb7aa6ce, 7 732a16ea, 8 24dfdd07, 9 5e57e3af); all 12 spec ACs satisfied
+      per the delivery AC evidence map, re-verified by review iter-2 PASS (F-1
+      closed instance+class, standing evidence reaffirmed, three review-time
+      rows PASS); current-truth documentation complete — doc-syncer zero
+      unresolved gaps re-verified post-phase-9 (111/111 doc battery); gates
+      green (full battery 13/13 exit 0, range lint PASS 22 commits 0 offending).
+      Non-blocking residuals dispositioned, none block DoD: F-5 dead-helper lint
+      warning (reviewer follow-up disposition), F-6 exemption-window delta (pin
+      at next suite touch), GH-408 routed deferrals (install-model.md, TDR-0046,
+      repository-key prose), TC-RELEASE-001 boundary deferral resolved
+      full-green at plan phase 8."
+    type: decision
     date: "2026-11-24"
   - text: "Review iter-2 verdict PASS (code-review/review-iter-2.yaml; no
       remediation phase appended). F-1 closed at both levels and independently
