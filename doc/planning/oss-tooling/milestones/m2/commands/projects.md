@@ -20,7 +20,7 @@ repositories, health, and state.
 
 ## DESCRIPTION
 
-Read-only group view. A project is a named group of repositories that belong
+Read-only group view. A product is a named group of repositories that belong
 together, and its membership is declared in configuration rather than inferred
 from a directory. `projects list` renders every configured group with its
 member repositories, their health, and their state, under the
@@ -60,7 +60,7 @@ the project-scoped aggregation clause; all three are in
 ## OUTPUT
 
 Text: a group block per group with one member line per repository and the
-columns `project`, `project repository`, `tracker`, `state`, `health`, `daemon`.
+columns `product`, `repository`, `tracker`, `state`, `health`, `daemon`.
 
 Envelope `data.groups[]` carries exactly one entry per configured group, and
 each entry carries a `groupKey`. Each entry holds:
@@ -103,7 +103,7 @@ invoking scope cannot be read.
 
 ```
 $ <binary> projects list
-PROJECT      PROJECT REPOSITORY        TRACKER  STATE   HEALTH    DAEMON
+PRODUCT      REPOSITORY                TRACKER  STATE   HEALTH    DAEMON
 platform    delivery-a-1a2b3c4d       github   engine  healthy   reachable
 platform    delivery-b-5e6f7a8b       github   engine  degraded  unreachable
 ```

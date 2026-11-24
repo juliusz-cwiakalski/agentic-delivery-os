@@ -564,6 +564,36 @@ notes:
       reopen)."
     type: decision
     date: "2026-11-24"
+  - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 2 complete (commit
+      e3cf6d34): this change's own new-code contract exports renamed to the
+      amendment's names in packages/core/src/contracts/projects.ts and the
+      contracts index - DECLARED_PRODUCT_KEY_PATTERN (value pin unchanged
+      ^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$, string pin kept), the internal regex
+      const, DECLARED_PRODUCT_KEY_REJECTIONS, the
+      DeclaredProductKeyRejection/DeclaredProductKeyVerdict types, and the
+      delivered predicate declaredProjectKeyVerdict renamed
+      isDeclaredProductKey (asserted BY NAME per amended AC-F2-1; behaviour
+      identical: length, charset, hyphen-position, reserved-segment refusals
+      exact-match on the whole key). CLONE_KEY_PATTERN and cloneKey UNTOUCHED;
+      the NFR-2 alias assertion stays the same-value pair PROJECT_KEY_PATTERN
+      = CLONE_KEY_PATTERN with NO cross-value equality to the product-key
+      pattern; the served cloneKey accessor and state-scope.ts carry no
+      amendment touch. Export-name inventory rows followed the rename
+      additively: tests/fixtures/ports/v1-contract-inventory.json (10 rows
+      renamed, none removed) and tests/structure/content-inventory.test.ts
+      (the four GH-406 allowance entries). Evidence: first boundary-gate run
+      211834-pnpm-check-gh406-amend-phase2.log short-circuited at the test
+      stage on ONE load-flaky failure (TC-DAEMON-121 foreground stop latency,
+      251.004ms vs the 250ms budget - daemon timing, no causal path to the
+      contract renames; green twice standalone), documented limited retry
+      214213-pnpm-check-gh406-amend-phase2-retry.log then ran the FULL chain
+      green: exit 0, 13/13 stages, bun test 12848 pass / 4 skip / 0 fail, OK
+      new-code-naming 2505 governed file(s) scanned, 0 violations, 4 baseline
+      entry(ies). Narrow ladder before the gate: declared-project-key +
+      content-inventory + naming-boundary 36/36, port-contract-inventory
+      16/16, pnpm typecheck clean."
+    type: info
+    date: "2026-11-24"
   - text: "DoR iter-4 verdict READY (focused closure gate, 10/10 facets PASS, 0
       blocking): iter-3 finding 1 verified remediated — renamed tracker title
       adopted byte-exact in spec front matter, test-plan H1, plan header; DEC-6

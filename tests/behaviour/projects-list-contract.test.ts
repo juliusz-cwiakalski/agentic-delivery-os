@@ -1,7 +1,10 @@
 /**
  * GH-288 TC-PROJ-011, TC-PROJ-012, TC-PROJ-013 and TC-PROJ-041 — the
  * `projects list` contract: envelope shape, deterministic table, exit matrix
- * with the DEC-16 naming rule, and the read-only posture.
+ * with the DEC-16 naming rule, and the read-only posture. GH-406 TC-DPKUI-001
+ * appends the amended group-table header pins: PRODUCT and REPOSITORY, with
+ * the legacy GROUP / MEMBER / PROJECT / PROJECT REPOSITORY headers asserted
+ * absent.
  */
 import { describe, expect, test } from "bun:test";
 import {
@@ -24,6 +27,11 @@ import {
   HOST_INDEX_SCHEMA,
   PROJECT_IDENTITY_MARKER_NAME,
 } from "../../packages/core/src/contracts/projects";
+import {
+  createMemberCheckout,
+  projectGroupsDocument,
+  writeProjectGroupsConfig,
+} from "../fixtures/projects/groups";
 import {
   hostIndexEntriesOf,
   hostIndexRevisionOf,
@@ -715,6 +723,60 @@ describe("F-9 a present but unreadable directory is classified, not discovered l
     } finally {
       for (const record of harnesses) record.dispose();
       removeDirectory(base);
+      host.dispose();
+    }
+  });
+});
+
+describe("TC-DPKUI-001 the amended group-table headers (GH-406)", () => {
+  test("the text table prints PRODUCT and REPOSITORY with every legacy header absent", async () => {
+    const host = createHostFixture("dpkui-001");
+    const workspace = `${host.hostRoot}-workspace`;
+    mkdirSync(workspace, { recursive: true });
+    const member = createMemberCheckout(workspace, "member-a", host);
+    const controller = createRepository(`${host.hostRoot}-controller`, "controller");
+    const harness = createProductionProjectsHarness({
+      label: "dpkui-001-controller",
+      host,
+      workingDirectory: controller,
+    });
+    try {
+      writeProjectGroupsConfig(
+        harness,
+        projectGroupsDocument({
+          groupKey: "platform",
+          members: [{ selector: "repoKey", value: member.repoKey }],
+        }),
+      );
+
+      const run = await harness.run(["projects", "list"]);
+      expect(run.exitCode, run.stderr).toBe(0);
+
+      // The envelope shape is unchanged: project-groups.v1 data, exit 0.
+      const jsonRun = await harness.run(["projects", "list", "--json"]);
+      expect(jsonRun.exitCode, jsonRun.stderr).toBe(0);
+      const data = envelopeOf(jsonRun)?.data;
+      expect(Array.isArray(data?.groups)).toBe(true);
+      expect(data && "projects" in data).toBe(false);
+
+      // Headers exactly PRODUCT / REPOSITORY; the legacy headers are asserted
+      // ABSENT, not merely the new ones present — PROJECT REPOSITORY is
+      // prose-only contrast, never a header.
+      const lines = run.stdout.trimEnd().split("\n");
+      expect(lines[0]).toBe("PRODUCT  REPOSITORY  TRACKER  STATE  HEALTH  DAEMON");
+      for (const legacy of ["GROUP", "MEMBER", "PROJECT", "PROJECT REPOSITORY"]) {
+        expect(lines[0]?.includes(legacy), legacy).toBe(false);
+      }
+
+      // The PRODUCT column carries the product's own key (groupKey); the
+      // REPOSITORY column carries the member declaration's locator.
+      const cells = lines[1]?.split(/\s{2,}/u) ?? [];
+      expect(cells[0]).toBe("platform");
+      expect(cells[1]).toBe(member.repoKey);
+    } finally {
+      harness.dispose();
+      removeDirectory(workspace);
+      removeDirectory(`${host.hostRoot}-controller`);
       host.dispose();
     }
   });

@@ -221,9 +221,13 @@ describe("TC-DPKCONF-001 the clean tree passes the narrowed sweep", () => {
     expect(outcome.filesScanned).toBeGreaterThan(42);
   });
 
-  test("the live list headers read PROJECT / PROJECT REPOSITORY / CLONE, alias byte-identical", () => {
+  test("the live list headers read PRODUCT / REPOSITORY / CLONE, alias byte-identical", () => {
     const headers = listHeaders();
-    expect(headers.groups).toBe("PROJECT  PROJECT REPOSITORY  TRACKER  STATE  HEALTH  DAEMON");
+    expect(headers.groups).toBe("PRODUCT  REPOSITORY  TRACKER  STATE  HEALTH  DAEMON");
+    expect(headers.groups).not.toContain("GROUP");
+    expect(headers.groups).not.toContain("MEMBER");
+    expect(headers.groups).not.toContain("PROJECT");
+    expect(headers.groups).not.toContain("PROJECT REPOSITORY");
     expect(headers.repos).toBe("CLONE  ROOT  STATE  DAEMON  HANDOVER");
     expect(headers.flatAlias).toBe("KEY  ROOT  STATE  DAEMON  HANDOVER");
   });
