@@ -125,10 +125,10 @@ describe("TC-GRPBOUND-002 the permanent repository vocabulary is unchanged", () 
 });
 
 describe("TC-GRPSREAD-003 the board is never group-scoped", () => {
-  test("board --project is documented as a repository key", () => {
+  test("board --project is documented as a clone identity", () => {
     const board = read(BOARD_PAGE);
-    expect(board).toContain("`--project <key>` takes a repository key");
-    expect(board).toContain("| `--project <key>` | Narrow to one repository key. |");
+    expect(board).toContain("`--project <key>` takes a clone identity");
+    expect(board).toContain("| `--project <key>` | Narrow to one clone identity. |");
     expect(board).toContain("never enumerates groups");
   });
 

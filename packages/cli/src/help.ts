@@ -952,7 +952,7 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     usage: ["<binary> board [--all] [--project <key>] [--json]"],
     options: [
       ["--all", "Span every managed repository (bounded to 128, overflow counted)"],
-      ["--project <key>", "Narrow to one managed repository key"],
+      ["--project <key>", "Narrow to one clone identity"],
       ...GLOBAL_OPTIONS,
     ],
     examples: [

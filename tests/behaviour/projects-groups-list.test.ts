@@ -337,8 +337,8 @@ describe("TC-GRPSURF-001 the group envelope carries member mechanics and closed 
       expect(text.exitCode, text.stderr).toBe(0);
       const lines = text.stdout.trimEnd().split("\n");
       expect(lines[0]?.split(/\s{2,}/u)).toEqual([
-        "GROUP",
-        "MEMBER",
+        "PROJECT",
+        "PROJECT REPOSITORY",
         "TRACKER",
         "STATE",
         "HEALTH",

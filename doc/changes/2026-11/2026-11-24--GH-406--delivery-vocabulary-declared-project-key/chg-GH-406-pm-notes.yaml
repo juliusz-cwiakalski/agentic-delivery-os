@@ -150,3 +150,40 @@ notes:
       tmp/run-logs-runner/2026-11-24/115614-pnpm-check-aggregate-gate.log."
     type: info
     date: "2026-11-24"
+  - text: "Plan phase 2 complete (commit 0a780df4): additive core contracts landed -
+      DECLARED_PROJECT_KEY_PATTERN (exact string pin, as const per the delivered
+      contracts idiom), the predicate refusing reserved segments unbound and
+      projects exact-match with the closed four-reason vocabulary, CLONE_KEY_PATTERN
+      as the same-value alias of the untouched PROJECT_KEY_PATTERN declaration
+      (TC-GRPBOUND-002 literal intact), and the served cloneKey field on the
+      resolved project scope constructed in state-scope.ts (no new export there).
+      Conditional-sweep disclosures: tests/fixtures/ports/v1-contract-inventory.json
+      gained the 6 additive export entries (port-contract-inventory suite tripped
+      on the new exports; additive entries only, none removed) and the
+      DECLARED_PROJECT_KEY_PATTERN declaration aligned to the delivered
+      contracts string-constant idiom (branding-seam string-constant rule);
+      baseline entry added for tests/structure/declared-project-key.test.ts
+      (pins the delivered marker field name; naming-rule fence). Evidence:
+      TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary - 13/13 stages,
+      bun test 12805 pass / 4 skip / 0 fail; gate log
+      tmp/run-logs-runner/2026-11-24/130123-pnpm-check-quality-gate.log."
+    type: info
+    date: "2026-11-24"
+  - text: "Plan phase 3 boundary finding (ESCALATION, trigger-2 shape): the phase-3
+      gate (run tmp/run-logs-runner/2026-11-24/133513-quality-gate-pnpm-check.log)
+      is green except ONE suite - tests/checks/privacy-release.test.ts
+      TC-RELEASE-001 (12804 pass / 4 skip / 1 fail; stages 5-13 short-circuited by
+      the && chain). The suite asserts a BRANCH-level release property: with no
+      changeset added on the branch vs origin/main-tools, the publishable diff
+      must be empty. Phases 2 (core) and 3 (cli) committed publishable changes;
+      the five-package minor changeset is plan phase 8's only artifact. The
+      suite cannot be greened wording-only (its expectation is the release
+      property itself) and weakening it is forbidden. The suite turns green at
+      the phase-8 boundary when the changeset lands. The phase-gate fence's
+      green-at-every-boundary letter and the phase-8 changeset sequencing are
+      mutually incompatible under TC-RELEASE-001; surfaced to the caller for the
+      boundary-discipline decision. No red commit was made; phase-3 work sits
+      uncommitted and green on every declared suite (59 pass across the nine
+      declared/conditional suites; flat-alias byte-identity 0-delta verified)."
+    type: info
+    date: "2026-11-24"

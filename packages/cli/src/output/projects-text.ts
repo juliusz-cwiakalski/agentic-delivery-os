@@ -16,7 +16,14 @@ const SEPARATOR = "  ";
 
 const HEADER = ["KEY", "ROOT", "STATE", "DAEMON", "HANDOVER"] as const;
 
-const GROUP_HEADER = ["GROUP", "MEMBER", "TRACKER", "STATE", "HEALTH", "DAEMON"] as const;
+const GROUP_HEADER = [
+  "PROJECT",
+  "PROJECT REPOSITORY",
+  "TRACKER",
+  "STATE",
+  "HEALTH",
+  "DAEMON",
+] as const;
 
 /** The daemon cell: the reason token when unreachable, never a bare negative. */
 export const daemonCell = (value: DaemonReachability): string =>
@@ -49,8 +56,9 @@ export const renderProjectsText = (data: ProjectsListData): string => {
 
 /**
  * Render the deterministic group table (GH-309 F-4): one row per declared
- * member, member order preserved exactly as configured, `group` repeated on
- * every row. No clock, locale, width, or map-iteration order participates.
+ * member, member order preserved exactly as configured, the project's
+ * declared key repeated on every row. No clock, locale, width, or
+ * map-iteration order participates.
  */
 export const renderProjectGroupsText = (data: ProjectGroupsListData): string => {
   const rows: string[] = [];
