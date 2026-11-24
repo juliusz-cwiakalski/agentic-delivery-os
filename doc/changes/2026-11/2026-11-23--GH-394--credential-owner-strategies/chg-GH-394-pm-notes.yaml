@@ -12,7 +12,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-23T23:23:25.941Z }
   delivery: { started: null, completed: 2026-11-24T01:35:13.451Z }
   system_spec_update: { started: null, completed: 2026-11-24T05:11:32.927Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-24T05:20:35.607Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -798,5 +798,28 @@ notes:
       deterministic template subject (no inference transport in this
       environment); the branch-range commit-message gate owns the verdict. No
       phase complete was run (review_fix closes on re-review PASS)."
+    type: info
+    date: "2026-11-24"
+  - text: "Review iter-3: PASS (code-review/review-iter-3.yaml; 0c/0h/0m/1l/4i — all
+      non-blocking). All five iter-2 findings verified FIXED on the current
+      tree: F-5 anchor re-pin + RECLASSIFIED annotations; F-6 exemption exactly
+      as narrow as claimed (explicit paths outside the stub root and ambient
+      bare names still intercepted; TC-HERM-001 teeth green; 10 arms restored);
+      F-7 pins assert the delivered chain, none weakened (no-privacy-chain and
+      exports-parity-tail kept true); F-8 sentinels renamed, proof
+      name-independent (asserts the reduced key set EXACTLY), registry entry
+      gh-184-scoped exact, rule classes untouched (privacy 5299/0); F-9 both
+      sites render the harness-inclusive identity identically, TC-DOCTOR-022
+      real (commandCoreOnly forces the inline mechanism). Spot-verified green:
+      106/0, 75/0, 89/0, 78/0, typecheck 0, privacy 5299/0, tripwire 111,
+      exports-parity 5, boundary 489. Fences hold; plan 9/9 evidenced. Owner
+      residuals for the PR description: F-13 ADR-0014:471 example ACCEPTED per
+      the (d) precedent (one-line owner acceptance edit offered); F-14
+      resolveCredentialSourceKey comment ACCEPTED AS-IS (deliberately distinct
+      helper, unreachable arms, fail-closed); F-15 short-form credential-source
+      line beside the conformant credential-identity line at the merge
+      truth-read (baseline-preserved site, identifier-only, unification may ride
+      #396 merge-facts); F-11 origins-aware trimming (follow-up candidate); F-12
+      spec DM-2 e.g. cosmetic (optional). review_fix closes on this PASS."
     type: info
     date: "2026-11-24"
