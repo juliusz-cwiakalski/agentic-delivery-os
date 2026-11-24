@@ -11,7 +11,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-23T23:19:37.091Z }
   dor_check: { started: null, completed: 2026-11-23T23:23:25.941Z }
   delivery: { started: null, completed: 2026-11-24T01:35:13.451Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-24T01:47:49.191Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -517,5 +517,20 @@ notes:
       than blind-fixed here. All seven plan phases are complete: 374aa159 (1),
       36fa3eeb (2), e57832fb (3), f89499db + d5b5d3de (4), 3847363a (5),
       f20a78d7 (6), 7da08fb4 (7)."
+    type: info
+    date: "2026-11-24"
+  - text: "PM validated the coder completion report against the plan: all 7 plan
+      phases executed and evidenced; delivery boundary complete landed by coder
+      (ae26fb15) per the coder lifecycle contract. Deviations reviewed and
+      accepted (all disclosed, primitive-flagged): CliDependencies.secrets union
+      fix (a real silent-unredacted regression the partial caused — good catch),
+      core/provider barrel companion, the phase-2 argv defect remediation
+      (serious catch — prefix-only argv would have executed 'auth' as program),
+      boundary-fixture rename for the secret scanner, memoized
+      declared-credential load. CARRIED into phase 9: exports-parity +
+      TC-RELEASE-002 red, reproduced pre-existing at c1854932 (adapters attw
+      subpath) — must be dispositioned at quality_gates (fix or owner-visible
+      pre-existing-defect record; never a silent waive). Next:
+      system_spec_update via @doc-syncer."
     type: info
     date: "2026-11-24"

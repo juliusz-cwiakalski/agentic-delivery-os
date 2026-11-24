@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-DOCTOR
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-16
+last_updated: 2026-11-24
 owners: ["engineering"]
 service: delivery-os
-summary: "The read-only doctor command and its bounded delivery.doctor.v1 report: five checks in fixed order (repo, tracker, provider, state, ci), the closed ok/fail/unreachable verdicts, eleven evidence sources, four evidence outcomes, twenty-three reasons, one closed hint template per condition, the structured httpStatus credential-rejection classification, read limits of 50 tracker items and 20 check runs, machine/human bounds, the doctor.check.failed error identity with its deterministic failure summary, per-check containment, quota-free provider diagnosis, the delivery, retro-registry, and action-registry store verdicts in the state check, and zero-write execution."
+summary: "The read-only doctor command and its bounded delivery.doctor.v1 report: five checks in fixed order (repo, tracker, provider, state, ci), the closed ok/fail/unreachable verdicts, eleven evidence sources, four evidence outcomes, twenty-three reasons, one closed hint template per condition, the structured httpStatus credential-rejection classification, credential presence facts carrying the classified source/reason/remedy projection with the source identity displayed for all four declared source styles, read limits of 50 tracker items and 20 check runs, machine/human bounds, the doctor.check.failed error identity with its deterministic failure summary, per-check containment, quota-free provider diagnosis, the delivery, retro-registry, and action-registry store verdicts in the state check, and zero-write execution."
 links:
-  related_changes: ["GH-224", "GH-229", "GH-232", "GH-236", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-287"]
+  related_changes: ["GH-224", "GH-229", "GH-232", "GH-236", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-287", "GH-394"]
   related_decisions: ["ADR-0003", "TDR-0005", "TDR-0019"]
   contracts:
     - "packages/core/src/contracts/doctor.ts"
@@ -141,7 +141,11 @@ Every non-ok condition has exactly one verdict and exactly one hint template. Te
 
 Detail lines are factual and bounded: a clean repo reports `clean work tree on <branch> at <shortSha>` or `detached HEAD at <shortSha>`; a dirty repo says the working tree has uncommitted changes; tracker and CI successes report the observed item or run count (or an explicitly empty page); a credential park names the subject, cause, and expiry; a neutral park names the subject, cause, expiry, and the `provider quota --provider <name>` directive; provider announcements are listed by their closed codes (at most three).
 
-The `tracker.credential-unavailable` and `ci.credential-unavailable` fix hints substitute the resolved environment variable name: a literal reference reports its declared name and an environment-prefixed reference reports prefix plus suffix, never the bare suffix. The fix hint names the key only and never a value. Doctor is not part of the declared prompt-required command set, and the production composer supplies no `DoctorComposition`, so the production binary does not register `doctor`; its behaviour, inventory, and help surface are unchanged, and its parity is pinned by a regression test.
+The `tracker.credential-unavailable` and `ci.credential-unavailable` fix hints substitute the resolved source identity: a literal reference reports its declared name and an environment-prefixed reference reports prefix plus suffix, never the bare suffix; a `command` or `harness-store` reference reports its style-prefixed source identity (`command:<program>`, `harness-store:<integrationID>`) (GH-394). The fix hint names the key only and never a value.
+
+A credential presence failure carries the classified projection beside the delivered identity: the tracker and CI credential presence facts gain the three optional fields `source`, `reason`, and `remedy` from the port failure (GH-394), keeping the environment variable name (`envVar`) only for the two environment styles. The provider credential presence reports the source identity for all four declared styles — the variable name for a literal or environment-prefixed reference, `command:<program>` or `harness-store:<integrationID>` for the execution styles — as the `{sourceKey}` substitution in its fix hint. Every display is identifier-only and derives no requirement: doctor reports presence and the failure's own fields, and derives no provisioning step from a declared source.
+
+Doctor is not part of the declared prompt-required command set, and the production composer supplies no `DoctorComposition`, so the production binary does not register `doctor`; its behaviour, inventory, and help surface are unchanged, and its parity is pinned by a regression test.
 
 ### Provider check semantics
 

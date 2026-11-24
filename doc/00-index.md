@@ -87,7 +87,7 @@ ados_distribution: redistributable
 | [Provider Conditions and Parks](guides/provider-conditions-and-parks.md) | Provider pauses: the declared-zone basis, condition kinds and park causes, expiry semantics, budget ceilings with their parked-versus-failed split and pre-spawn bound, watch freshness, fail-loud announcements, configuration pointer |
 | [Ceremony Runner](guides/ceremony-runner.md) | Operator guide: the four verbs, the declaration document and vocabularies, a worked project declaration, notes and windows, dry-run/`--apply`, catch-up, artifacts, and the measurement record |
 | [Migrating to Per-Repository Delivery State](guides/migrating-to-per-repository-state.md) | One-step, reversible move of an existing single delivery store into a per-repository project state root |
-| [Tracker Credential Provisioning](guides/tracker-credential-provisioning.md) | Provision the truth-read key (`GITHUB_TOKEN`), the explicit `gh` bridge, least privilege, rotation, and the 404 scope check |
+| [Tracker Credential Provisioning](guides/tracker-credential-provisioning.md) | Provision the declared truth-read reference over the four source styles (default `GITHUB_TOKEN`), the explicit `gh` bridge and the allowlisted token read, least privilege, rotation, and the 404 scope check |
 | [Tools Convention](guides/tools-convention.md) | Standard for building CLI tools |
 
 ## Tools

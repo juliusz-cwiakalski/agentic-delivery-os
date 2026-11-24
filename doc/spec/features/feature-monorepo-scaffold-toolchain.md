@@ -56,7 +56,7 @@ The authoritative design decision is [ADR-0003](../../decisions/ADR-0003-oss-mon
 | Package | Declared entrypoints | Role |
 |---------|----------------------|------|
 | `@delivery-os/core` | `.`, `./contracts`, `./state`, `./branding`, `./provider` | Runtime-neutral application services, contracts, state layer, branding seam, and the pure provider engine |
-| `@delivery-os/adapters` | `./git`, `./gitlab`, `./jira`, `./github`, `./azure`, `./ci`, `./registry`, `./repo`, `./file`, `./host`, `./session`, `./legacy`, `./credentials`, `./provider-quota`, `./inference`, `./time-zone` | Tracker, VCS, CI, registry, per-I/O adapters, the dedicated git seam for branch/checkout and commit operations, the opencode-CLI-backed session-database admin, the environment-backed credential port, the quota transport, the inference network edge, and the single `Intl`-backed provider zone port |
+| `@delivery-os/adapters` | `./git`, `./gitlab`, `./jira`, `./github`, `./azure`, `./ci`, `./registry`, `./repo`, `./file`, `./host`, `./session`, `./legacy`, `./credentials`, `./provider-quota`, `./inference`, `./time-zone` | Tracker, VCS, CI, registry, per-I/O adapters, the dedicated git seam for branch/checkout and commit operations, the opencode-CLI-backed session-database admin, the credential-strategy resolver over the closed four-style source vocabulary at `./credentials`, the quota transport, the inference network edge, and the single `Intl`-backed provider zone port |
 | `@delivery-os/cli` | `.` | Command-line surface |
 | `@delivery-os/mcp` | `.`, `./serve` | MCP surface: the pure catalog, toolset, and payload contract at the package root, and the Node-hosted stdio serve entry |
 | `@delivery-os/opencode` | `.` | OpenCode host integration surface |
