@@ -1,0 +1,199 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-406
+branch: feat/GH-406/delivery-vocabulary-declared-project-key
+status: FAIL
+summary: >
+  The delivery is faithful to the brief and the plan: all eight phases landed
+  with per-phase evidence, the additive contracts are correct and purely
+  additive (CLONE_KEY_PATTERN same-value alias by reference, closed four-reason
+  predicate, served cloneKey with zero persisted-name change), the zero-rename
+  and --flat byte-identity fences hold under full-diff inspection, the naming
+  rule is well built and mutation-tested, the ODR-0006 and decision-tree fences
+  hold, and every deferred review-time evidence row passes. One blocking gap:
+  the m4 install reference page still renders "Build and install from the
+  primary checkout" — the banned phrase survives line-wrapped across lines
+  81-83, invisible to the conformance scanner's single-line matching, so the
+  standing clean-tree pass (NFR-4) is not truthful for wrapped phrasing and the
+  spec's in-scope wording-completeness clause (F-5, §16 m4 install page row) is
+  only partially delivered. Remediation is a three-line doc edit mirroring the
+  four sibling corrections already made to the same sentence.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 1
+  info: 2
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: doc/planning/oss-tooling/milestones/m4/commands/install.md:81
+    message: >
+      The m4 install reference page still carries the banned wording "Build and
+      install from the primary checkout or a prepared directory holding a
+      released artifact" — split across the markdown line wrap ("...from the
+      primary / checkout...", lines 81-83), directly above the bullet the change
+      did correct (line 84, "A main checkout is recorded verified"). The phrase
+      is inside the declared conformance scope (milestones/*/commands/**), was
+      named for exactly this correction by spec §16 and plan phase 6, and is the
+      fifth rendering of the same remediation sentence already corrected in
+      error-table.ts:1934, feature-result-contract.md:310, install.ts:145 and
+      local-install.md. It survives because the vocabulary-conformance detection
+      core matches single lines only (PRIMARY_CHECKOUT = /primary checkout/gi
+      never sees the wrap), so TC-DPKCONF-001's clean-tree pass is not truthful
+      for wrapped phrasing — violating the conformance fence's "clean-tree pass
+      is truthful and meaningful" rationale (plan header, phase 6 ordering).
+    suggestion: >
+      Mandatory: reword lines 81-83 to "Build and install from the main checkout
+      or a prepared directory holding a released artifact; a lane worktree is
+      deleted after merge." (verbatim the sentence already delivered in the four
+      sibling renderings). Recommended companion (PM-optional, same or follow-up
+      commit): whitespace-normalize the detection core's input (match across
+      wraps) and add a synthetic wrapped-violation arm to TC-DPKCONF-002 so the
+      blind spot cannot recur; the four named exceptions and near-miss semantics
+      are unchanged by normalization.
+    suppressed: false
+  - id: F-2
+    severity: low
+    confidence: high
+    category: correctness
+    location: scripts/checks/new-code-naming.ts:228
+    message: >
+      listGovernedFiles returns [] when `git ls-files` exits non-zero, which
+      would print "OK new-code-naming: 0 governed file(s) scanned" — a fail-open
+      path inconsistent with the check's fail-closed design (its own header and
+      escalation trigger 4 fail closed on base-commit unreachability).
+      Practically unreachable in the gate chain (git ls-tree already succeeded
+      one call earlier in scanTree), hence low severity.
+    suggestion: >
+      Optional hardening riding the remediation commit: return a failure
+      outcome (or assert scanned > 0 in the import.meta.main block) so the
+      check is uniformly fail-closed; add one mutation arm for the injected
+      listFiles-failure seam.
+    suppressed: false
+  - id: F-3
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/planning/oss-tooling/milestones/m2/commands/repos.md:114
+    message: >
+      The STATE section renders the clone-identity pattern as
+      ^[a-z0-9][a-z0-9-]*-[0-9a-f]{8}$, which differs from the delivered
+      PROJECT_KEY_PATTERN /^^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[0-9a-f]{8}$/u
+      (the doc form admits a trailing double hyphen like alpha--1a2b3c4d). The
+      approximation is pre-existing at base 22b15d31; this change re-worded
+      around it without correcting it.
+    suggestion: >
+      Opportunistic correction here or at GH-408: quote the delivered constant
+      verbatim.
+    suppressed: false
+  - id: F-4
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/structure/vocabulary-conformance.test.ts:169
+    message: >
+      expect(outcome.commandPages).toBe(42) hard-pins the command-page count;
+      any future milestone command page trips the suite. This is the plan's
+      deliberate full-glob tripwire ("42 pages asserted", plan phase 6), not a
+      defect — recorded so the future trip is read as the pin it is.
+    suggestion: >
+      No action. When a milestone gains a command page, update the count pin in
+      the same commit as the page.
+    suppressed: false
+review_time_evidence:
+  tc_dpkodr_001_step5:
+    verdict: PASS
+    evidence: >
+      git diff --name-status 22b15d31...HEAD -- doc/decisions/ shows exactly
+      M doc/decisions/00-index.md (one added ODR-0006 row) and
+      A doc/decisions/ODR-0006-delivery-vocabulary-declared-project-key.md.
+      No earlier record and not 00-register.md touched (decision-record fence).
+  tc_dpkpin_001_step3:
+    verdict: PASS
+    evidence: >
+      Every pre-existing suite diff touches literal pins only: repos-list-contract
+      (2 header strings KEY->CLONE), projects-groups-list (2 header strings
+      GROUP/MEMBER->PROJECT/PROJECT REPOSITORY), projects-migration (1 required
+      fragment + re-pin comment), install-admission (1 summary literal),
+      doc-conformance (1 required literal), naming-boundary (2 board-page pins +
+      test title, never-group-scoped intent pin intact), ci-checks /
+      license-ci-binding / privacy-ci-wiring (chain literals + re-pin comments;
+      the negative pins stay), milestone-gate (comment, test title, chain-index
+      pins, scan-member count), content-inventory (4 additive entries),
+      v1-contract-inventory.json (6 additive entries, 0 removals). Zero payload
+      assertions, field names, or expectation values changed. The flat-alias
+      suite and its golden fixture have zero diff — the pinned pre-change
+      literals were NOT regenerated (fence 2 verified both by diff absence and
+      by the untouched suite passing live).
+  tc_dpkpin_002:
+    verdict: PASS
+    evidence: >
+      Full-branch diff vs 22b15d31: every removed line in packages/** is a
+      header literal, option-description wording, doc comment, or the two
+      remediation sentences — 0 renamed command names, 0 payload fields, 0
+      envelope keys, 0 persisted fields (marker field, host-index field, alias
+      payload repoKey unchanged; projects-clone-key.test.ts asserts the names
+      directly). The four named exceptions survive untouched: projects.* error
+      codes (error-table.ts:1692ff), PROJECTS_CONTAINER_SEGMENT "projects",
+      --project-root (edge.ts:5270, config.ts:116), --flat
+      (production.ts:1226, help.ts:878/890). board --project keeps its flag
+      name; only its help wording changed.
+fences:
+  zero_rename: PASS
+  flat_alias_byte_identity: PASS
+  additive_contracts_same_value_alias: PASS
+  groups_v1_no_grammar: PASS
+  conformance_exceptions_and_synthetic_negatives: PASS_WITH_FINDING
+  naming_check_surface_and_baseline: PASS
+  decision_record_fence: PASS
+  vocabulary_ac_coverage: PASS
+fence_notes: >
+  Fence 5 carries F-1: exceptions are exact, near-misses flag, negative proofs
+  are synthetic-only (memory + OS-temp via TMPDIR), the committed tree is
+  clean — but the single-line matcher leaves the wrapped-phrase blind spot the
+  clean-tree pass claims not to have. All other fences hold under direct diff
+  and tree inspection; all 12 ACs trace to delivered suites (AC-F1-1
+  TC-DPKVOC-001/002; AC-F5-1 header pins + live-header/conformance arms;
+  AC-F6-1 TC-DPKCONF-001/002/003; AC-F2-1/F3-1 declared-project-key suite;
+  AC-F4-1 unit + behaviour halves; AC-F7-1 new-code-naming tests; AC-F8-1/2/3
+  fixtures run twice 3/3; AC-F9-1 ODR structural arms + step 5; AC-F10-1 pin
+  suites + TC-DPKPIN-001/002).
+independent_verification:
+  vocabulary_conformance: "bun test tests/structure/vocabulary-conformance.test.ts — 14 pass / 0 fail"
+  eight_suite_ladder: "bun test declared-project-key delivery-vocabulary projects-clone-key clone-identity-fixtures projects-flat-alias repos-list-contract projects-groups-list doc-conformance — 120 pass / 0 fail"
+  fixtures_determinism: "clone-identity-fixtures run twice, 3/3 both runs (NFR-7 spot check)"
+  naming_check: "bun run scripts/checks/new-code-naming.ts — 2505 governed files, 0 violations, 4 baseline entries"
+  error_table_sync: "bun run scripts/checks/error-table-sync.ts — OK (A-extended lockstep holds)"
+  doc_distribution: "bash scripts/.tests/test-doc-distribution.sh — OK, no drift (96 in-scope docs)"
+  wrap_tolerant_scope_scan: >
+    A newline-normalized sweep of the entire declared scope (guides, tools,
+    overview, all milestones' commands trees) for primary checkout / checkout
+    identity found exactly one residual: F-1's install.md lines 81-83. A
+    wrap-tolerant project-key sweep found only legitimate senses (declared
+    project key, tracker configuration keys, per-project config key).
+  gate_logs: >
+    Cited evidence logs exist (tmp/run-logs-runner/2026-11-24/171247-pnpm-check-gh406-gate.log,
+    182704-pnpm-check-gh406-quality-gate.log); TC-RELEASE-001 boundary deferral
+    resolved full-green at phase 8 as recorded.
+plan_audit:
+  open_phases: none
+  evidence_missing: none
+  scope_deviations: >
+    All disclosed and within plan rules: two conditional-sweep re-pins
+    (projects-groups-list.test.ts phase 3; projects-migration.test.ts phase 6),
+    phase-2 fixture registrations (v1-contract-inventory.json, content-inventory
+    additive entries), two naming-baseline extensions (phases 2 and 7),
+    TC-RELEASE-001 boundary deferral (resolved at phase 8), and the PM-decided
+    A-extended remediation 444093ac outside declared scope — reviewed on its
+    merits here: wording-only rendered-remediation text across all four
+    renderings of install.target.worktree, error-table-sync byte-equality
+    verified OK, zero-rename fence intact, pins re-pinned wording-only.
+    Advisory scopeDrift acceptance recorded in pm-notes; no further action.
+reviewed_at: 2026-11-24T18:10:39Z
+next_step: EXECUTE_REMEDIATION_PHASE

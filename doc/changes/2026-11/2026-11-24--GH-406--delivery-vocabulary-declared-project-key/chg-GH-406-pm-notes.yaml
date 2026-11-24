@@ -12,7 +12,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-24T10:48:55.722Z }
   delivery: { started: null, completed: 2026-11-24T16:40:57.684Z }
   system_spec_update: { started: null, completed: 2026-11-24T18:04:21.007Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-24T18:47:57.274Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -409,36 +409,36 @@ notes:
       m4/commands/install.md:81-83 still renders 'Build and install from the
       primary checkout...' SPLIT ACROSS A MARKDOWN LINE WRAP — invisible to the
       vocabulary-conformance scanner's single-line matching (reviewer verified
-      via newline-normalized sweep of the whole declared scope: exactly this
-      one residual); line 84 was corrected but the wrapped sentence above it
-      was not. All three deferred review-time evidence rows PASS
-      (TC-DPKODR-001 step 5, TC-DPKPIN-001 step 3, TC-DPKPIN-002 — zero-rename
-      verified over the full diff, flat-alias suite zero-diff). All eight
-      fences otherwise hold; A-extended commit reviewed clean on its merits.
-      Non-blocking: F-2 (low) naming check fail-open arm on ls-files failure
-      (practically unreachable — DEFERRED with this reason, not remediated in
-      phase 9); F-3/F-4 informational (pre-existing m2 repos.md simplified
-      pattern; the deliberate 42-page tripwire pin). Remediation phase 9 ADDED
-      to the plan by the reviewer; plan still validates. PM accepted the
-      companion hardening: whitespace-normalize the scanner detection core +
-      synthetic wrapped-violation arm in TC-DPKCONF-002 — fixing only the
-      instance leaves the blind spot that let it through (NFR-4 intent).
-      Retro: a line-based text scanner's negative proofs must include wrapped
-      and multi-line violations, or its clean-tree pass is only as truthful as
-      the matcher's normalization — the wrapped phrasing sat directly beside a
-      corrected line and both author sweep and gate missed it."
+      via newline-normalized sweep of the whole declared scope: exactly this one
+      residual); line 84 was corrected but the wrapped sentence above it was
+      not. All three deferred review-time evidence rows PASS (TC-DPKODR-001 step
+      5, TC-DPKPIN-001 step 3, TC-DPKPIN-002 — zero-rename verified over the
+      full diff, flat-alias suite zero-diff). All eight fences otherwise hold;
+      A-extended commit reviewed clean on its merits. Non-blocking: F-2 (low)
+      naming check fail-open arm on ls-files failure (practically unreachable —
+      DEFERRED with this reason, not remediated in phase 9); F-3/F-4
+      informational (pre-existing m2 repos.md simplified pattern; the deliberate
+      42-page tripwire pin). Remediation phase 9 ADDED to the plan by the
+      reviewer; plan still validates. PM accepted the companion hardening:
+      whitespace-normalize the scanner detection core + synthetic
+      wrapped-violation arm in TC-DPKCONF-002 — fixing only the instance leaves
+      the blind spot that let it through (NFR-4 intent). Retro: a line-based
+      text scanner's negative proofs must include wrapped and multi-line
+      violations, or its clean-tree pass is only as truthful as the matcher's
+      normalization — the wrapped phrasing sat directly beside a corrected line
+      and both author sweep and gate missed it."
     type: retro
     date: "2026-11-24"
   - text: "Plan phase 9 complete (review remediation, review iter-1 F-1): the
       wrapped primary-checkout residual on the m4 install page cleared - the
       bullet now reads the canonical delivered sentence verbatim ('Build and
-      install from the main checkout or a prepared directory holding a
-      released artifact; a lane worktree is deleted after merge, so nothing is
-      written from it.' - the error-table.ts:1934 / feature-result-contract.md:310
-      form; the page's other required literals preserved). Scanner hardening
-      companion (PM-accepted): the vocabulary-conformance detection core now
-      matches whitespace-normalized text with an original-line map (wrapped
-      'primary\u23cecheckout' found, findings keep real line numbers; R3 sense
+      install from the main checkout or a prepared directory holding a released
+      artifact; a lane worktree is deleted after merge, so nothing is written
+      from it.' - the error-table.ts:1934 / feature-result-contract.md:310 form;
+      the page's other required literals preserved). Scanner hardening companion
+      (PM-accepted): the vocabulary-conformance detection core now matches
+      whitespace-normalized text with an original-line map (wrapped
+      'primary⏎checkout' found, findings keep real line numbers; R3 sense
       exemptions read the original line at the match's start so normalization
       never widens the four named exceptions). New synthetic arms:
       wrapped-violation (primary-checkout across a markdown wrap, named with
@@ -447,13 +447,32 @@ notes:
       existing arms byte-intact; the 42-page pin and live header assertions
       unchanged. Sweep check: the real-tree pass is clean under normalization -
       NO additional wrapped residuals surfaced anywhere in the declared scope
-      (the onboarding tracker-config exemption held; the m4 install page was
-      the only wrapped residual). Boundary evidence: narrow ladder
+      (the onboarding tracker-config exemption held; the m4 install page was the
+      only wrapped residual). Boundary evidence: narrow ladder
       vocabulary-conformance 17 pass / 0 fail (incl. the new wrapped arms),
       delivery-vocabulary + doc-conformance 81 pass / 0 fail; full gate
-      TMPDIR=$PWD/tmp/tmpdir pnpm check green end-to-end, 13/13 in-chain,
-      exit 0, bun test 12848 pass / 4 skip / 0 fail, OK new-code-naming
-      2505/0/4; gate log
+      TMPDIR=$PWD/tmp/tmpdir pnpm check green end-to-end, 13/13 in-chain, exit
+      0, bun test 12848 pass / 4 skip / 0 fail, OK new-code-naming 2505/0/4;
+      gate log
       tmp/run-logs-runner/2026-11-24/191658-pnpm-check-quality-gate-gh406.log."
+    type: decision
+    date: "2026-11-24"
+  - text: "Review iter-2 verdict PASS (code-review/review-iter-2.yaml; no
+      remediation phase appended). F-1 closed at both levels and independently
+      verified: reviewer's own newline-normalized sweep over all 83 in-scope
+      files returned zero primary-checkout and zero checkout-identity hits with
+      a positive control; scanner class-level closure verified (normalization
+      cannot widen the four named exceptions — the direction only narrows/flags
+      more; R3 offset fix correct via lineAt lookup, not raw-offset slicing).
+      Phase-9 blast radius exactly 50548c42 + 5e57e3af; standing evidence
+      reaffirmed (flat-alias suite + fixture zero-diff vs base; no
+      payload/persisted/pin/rename surface touched post-iter-1). Non-blocking
+      residuals recorded with reviewer disposition: F-5 (low) dead
+      originalLineAt helper at vocabulary-conformance.test.ts:77 — the repo's
+      only new lint warning (delta exactly this), fix is a follow-up deletion,
+      NOT remediated in this change per the PASS verdict; F-6 (info)
+      normalization widens the config-key sense-exemption window to the wrapped
+      form (moves toward R3 intent; real tree unaffected; pin the delta at the
+      next suite touch)."
     type: decision
     date: "2026-11-24"

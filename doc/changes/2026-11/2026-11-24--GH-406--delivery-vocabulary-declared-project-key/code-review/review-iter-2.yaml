@@ -1,0 +1,187 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-406
+branch: feat/GH-406/delivery-vocabulary-declared-project-key
+status: PASS
+summary: >
+  Re-review after remediation iteration 1 (commits 50548c42 plan+pm-notes trail,
+  5e57e3af remediation content): PASS. Blocking F-1 is closed at both levels.
+  Instance level — doc/planning/oss-tooling/milestones/m4/commands/install.md:80-83
+  now carries the canonical delivered sentence verbatim ("Build and install from
+  the main checkout or a prepared directory holding a released artifact; a lane
+  worktree is deleted after merge, so nothing is written from it." — byte-equal to
+  the error-table.ts:1934 / feature-result-contract.md:310 form), and this
+  reviewer's own independent newline-normalized sweep of all 83 in-scope files
+  (guides, tools, overview, every milestones/*/commands tree) returns ZERO
+  primary-checkout and ZERO checkout-identity hits, with a positive control
+  proving the sweep technique live. Class level — the PM-accepted companion
+  landed: the detection core matches whitespace-normalized text with a real-line
+  map (wrapped "primary⏎checkout" found, findings report the original line of the
+  match's start), the three synthetic wrapped arms are added (violation named with
+  line 2, project-key mislabel, wrapped exception strings stay exempt), all 14
+  pre-existing arms are byte-intact (the diff is core-rewrite + pure insertion),
+  the suite is 17 pass / 0 fail live, and the R3 sense-exemption offset fix is
+  correct: exemptions read the ORIGINAL line at the match's start via
+  lineAt -> originalLines[lineNumber-1], since matching happens in normalized
+  space where raw-offset slicing would misalign. The wrapped-exception arm proves
+  normalization does not widen the four named exceptions. Phase-9 blast radius is
+  exactly the two commits: m4 install page (2/2 lines) + scanner suite (94/14) +
+  pm-notes ride, plus the plan phase-9 append — zero packages/**, zero
+  doc/decisions/**, so every iter-1 PASS verdict (zero-rename, flat-alias
+  byte-identity, pins, ODR fence) stands unconditionally; the flat-alias suite is
+  zero-diff vs base and passes live 6/0; doc-conformance is 61/0 with the m4 page
+  required literals intact. The optional F-2 hardening was declined exactly per
+  the plan's conditional (decline + reason recorded as a pm-notes entry). Two new
+  non-blocking observations, neither gate-relevant: dead helper originalLineAt
+  (the only new lint warning in the repo: 133 -> 134) and a wrap-tolerance delta
+  in the config-key sense-exemption window that moves toward R3's stated intent
+  and leaves the real tree unchanged.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-5
+    severity: low
+    confidence: high
+    category: code-quality
+    location: tests/structure/vocabulary-conformance.test.ts:77
+    message: >
+      The helper originalLineAt (lines 77-81) is dead code — defined but never
+      called; the R3 sense exemption was implemented with
+      originalLines[lineNumber - 1] indexing instead. Biome flags it as an unused
+      variable, the only new warning in the repository (gate logs: 133 warnings
+      at the iter-1-era 182704 log, 134 at the phase-9 191658 log — the delta is
+      exactly this). It is also a latent trap: it slices the ORIGINAL text with
+      an offset, which is the wrong operation once offsets live in normalized
+      space (the very mismatch the lineAt map exists to avoid); wiring it back in
+      would reintroduce the misalignment. Non-fatal: warnings are non-gating in
+      this repository, so the pm-notes green-gate claim (exit 0) is truthful.
+    suggestion: >
+      Delete lines 77-81 in a follow-up commit (may ride the next change on this
+      branch or GH-408). No behavior change; the suite stays 17/0 and repo lint
+      warnings return to 133.
+    suppressed: false
+  - id: F-6
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/structure/vocabulary-conformance.test.ts:104
+    message: >
+      Whitespace normalization subtly changes the config-key sense-exemption
+      window: the fixed slice(offset, offset + match.length + 2) is evaluated on
+      normalized text, so forms with two or more spaces — or a wrap — between
+      "project key" and the naming backtick (e.g. "project key  `foo`") were
+      flagged pre-change (window held raw spaces, no backtick) and are exempt
+      post-change (collapsed to one space, backtick inside the window). This
+      moves toward R3's stated intent (the pattern itself already allows \s*
+      before the backtick) and the real tree is unaffected (sweep clean,
+      clean-tree pass green), so no exception among the four named strings is
+      widened — recorded so the delta is known and pinned if the exemption is
+      ever revisited.
+    suggestion: >
+      No action required. At the next touch of this suite, optionally add one
+      synthetic arm pinning the multi-space config-key form as exempt (or as a
+      finding, if the PM prefers the strict pre-change semantics), so the window
+      semantics are asserted rather than incidental.
+    suppressed: false
+review_time_evidence:
+  f1_instance_closure:
+    verdict: PASS
+    evidence: >
+      install.md:80-83 reads the canonical sentence verbatim, byte-equal to
+      error-table.ts:1934 and feature-result-contract.md:310 (verified by grep
+      across packages/ and doc/; the four sibling renderings unchanged).
+      Independent newline-normalized sweep by this reviewer (tr '\n' ' ' |
+      tr -s ' ' over all 83 files under doc/guides, doc/tools, doc/overview,
+      doc/planning/oss-tooling/milestones/*/commands): zero "primary checkout"
+      hits, zero "checkout identity" hits; positive control ("main checkout")
+      hits as expected, proving the technique that caught F-1 is live and the
+      residue is gone.
+  f1_class_closure:
+    verdict: PASS
+    evidence: >
+      Detection core (buildNormalized) collapses whitespace runs including
+      newlines to single spaces and builds lineAt, mapping every normalized
+      offset to the original 1-based line of its character; findings report
+      lineAt[matchStart]. New arms: wrapped primary-checkout violation found and
+      named at real line 2 (the injected space maps to line 3 but the match start
+      maps to line 2 — proves the mapping), wrapped project-key mislabel found at
+      line 1, wrapped exception strings (projects/ container, projects.* error
+      code, --project-root flag joined across wraps) produce zero findings —
+      normalization creates no new match for the exception forms. All 14
+      pre-existing arms byte-intact (diff is core rewrite + pure insertion of
+      three tests); suite 17 pass / 0 fail live. R3 offset fix verified correct:
+      projectKeyExempt receives lineNumber = lineAt[at] and reads
+      originalLines[lineNumber - 1], which is the correct original-line lookup
+      for normalized offsets; the tracker and project_key: senses remain
+      line-shaped at the match's start and can only narrow (flag more), never
+      widen. Suite exports have no external importers (grep: none), so the core
+      rewrite affects this suite only.
+  phase9_blast_radius:
+    verdict: PASS
+    evidence: >
+      Post-iter-1 commits are exactly 50548c42 (plan phase 9 append + rev-2
+      comment + pm-notes verdict/retro entries) and 5e57e3af (pm-notes completion
+      entry +28, install.md 2/2, vocabulary-conformance.test.ts 94/14). Zero
+      packages/**, zero doc/decisions/**, zero script changes. doc-conformance
+      suite 61 pass / 0 fail with the m4 page's required literals intact (the
+      "Build and install from the main checkout" pin at
+      tests/checks/doc-conformance.test.ts:737 satisfied). Plan YAML parses; 9
+      phases; phase 9 declared with the mandatory fix, the two PM-optional
+      companions, and their decline conditions. F-2 decline recorded as a
+      pm-notes entry per the plan's own conditional; the normalization companion
+      was PM-accepted and delivered. Cited gate log
+      tmp/run-logs-runner/2026-11-24/191658-pnpm-check-quality-gate-gh406.log
+      exists, shows the biome warning for originalLineAt visible in-gate (134 vs
+      133 baseline warnings — delta is exactly this finding) and exit 0.
+  standing_state:
+    verdict: PASS
+    evidence: >
+      The two phase-9 commits touch no packages/**, no doc/decisions/**, no
+      script surface, so iter-1's three review-time rows (TC-DPKODR-001 step 5,
+      TC-DPKPIN-001 step 3, TC-DPKPIN-002) remain valid unconditionally. Flat
+      -alias suite + golden fixture: zero diff vs base 22b15d31 (git diff
+      --stat empty) and 6 pass / 0 fail live. Narrow ladder green:
+      vocabulary-conformance 17/0, delivery-vocabulary 61/0 (78 across the two
+      files), doc-conformance 61/0. The committed tree stays violation-free under
+      the normalized matcher (TC-DPKCONF-001 clean-tree arm passes; sweep
+      corroborates).
+fences:
+  zero_rename: PASS
+  flat_alias_byte_identity: PASS
+  additive_contracts_same_value_alias: PASS
+  groups_v1_no_grammar: PASS
+  conformance_exceptions_and_synthetic_negatives: PASS
+  naming_check_surface_and_baseline: PASS
+  decision_record_fence: PASS
+  vocabulary_ac_coverage: PASS
+fence_notes: >
+  Fence 5 upgrades PASS_WITH_FINDING -> PASS: the wrapped-phrase blind spot is
+  closed at instance and class level, exceptions stay exact (the wrapped-exception
+  arm proves normalization adds no exception; sense exemptions read the original
+  line at the match's start and can only narrow), negative proofs remain
+  synthetic-only, and the committed tree is clean under the wrap-tolerant
+  matcher. Fence 6 (naming check) keeps its PASS with the iter-1 F-2 fail-open
+  observation standing as a recorded deferral, not a regression. All other fences
+  untouched by phase 9 and re-confirmed by the absence of any new commit on their
+  surfaces. F-3/F-4 from iter-1 remain informational with no action; F-2 remains
+  deferred with the recorded reason; new F-5/F-6 are non-blocking observations.
+plan_audit:
+  open_phases: none
+  evidence_missing: none
+  scope_deviations: >
+    None. Phase 9 executed inside its declared scope: install.md + scanner suite
+    + pm-notes ride are exactly the declared files (the two optional-companion
+    files for the declined F-2 hardening were in-scope permissions, not
+    obligations, and the decline is recorded per the plan's conditional). The
+    mandatory F-1 fix, the accepted normalization companion, and the three
+    synthetic arms all match phase 9's summary verbatim. Iter-1's disclosed
+    deviations (recorded in review-iter-1.yaml) are unchanged.
+reviewed_at: 2026-11-24T18:46:56Z
+next_step: PROCEED
