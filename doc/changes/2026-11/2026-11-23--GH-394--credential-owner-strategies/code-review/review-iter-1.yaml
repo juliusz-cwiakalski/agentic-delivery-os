@@ -1,0 +1,153 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-394
+branch: feat/GH-394/credential-owner-strategies
+status: FAIL
+summary: >
+  The delivery is substantively strong: all 7 plan phases executed with per-phase
+  evidence, the hard fences hold (daemon-compose untouched, resolution-pending
+  never parked, error-table/park-record/announcement-code/result-token/exit
+  vocabularies unchanged, goldens read-only after phase 1, no license headers,
+  no secrets, hermeticity guard proven, forwarding realized at every mapped site),
+  and the named battery re-runs green under this review (130 battery tests, 171
+  companion tests, 15 guide/status tests, tripwire OK on 111 surfaces, boundary
+  OK on 489 files). Two AC-level gaps and one red gate block PASS: (1) the
+  exports-parity/TC-RELEASE-002 red is a DELIVERY REGRESSION misclassified as
+  pre-existing — this review reproduced PASS at merge-base 4f1a7ddc in a clean
+  build worktree and traced the cause to 36fa3eeb (phase 2), whose #credentials/*
+  imports-map specifiers do not resolve inside the packed adapters artifact;
+  (2) the "unknown field on a known style refuses by name" strict pass claimed by
+  the phase-3 design correction was never wired anywhere; (3) AC-F3-5's
+  shape-drift harness-and-field naming is dropped at the resolver boundary and no
+  suite asserts it. All five disclosed deviations were verified in code and are
+  ACCEPTED.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 2
+  low: 1
+  info: 0
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/credentials/index.ts:28
+    message: >
+      exports-parity + TC-RELEASE-002 are red at HEAD, and the carried
+      "pre-existing baseline defect" classification is factually wrong. This
+      review reproduced the check PASSING at merge-base 4f1a7ddc (clean
+      --frozen-lockfile install + build in a fresh worktree, same toolchain and
+      lockfile) and traced the introduction to 36fa3eeb (plan phase 2): index.ts
+      imports its sibling strategy modules through the #credentials/* imports
+      map, and adapters' package.json maps "#credentials/*" to ./src/credentials/*.ts
+      while "files" publishes only dist — so dist/credentials/index.d.ts carries
+      #credentials/... specifiers that fail node16 resolution inside the packed
+      artifact (attw InternalResolutionError, exit 1). Every other adapters
+      subpath imports siblings relatively (e.g. packages/adapters/src/git/index.ts:448),
+      which is why only this subpath regressed. The coder's subpath attribution
+      (git/gitlab/jira/github) is also wrong: those table rows carry only
+      profile-ignored problems; the failing entrypoint is ./credentials. The
+      reproduction at c1854932 proved presence mid-branch, not pre-existence at
+      base, so the "owner-visible pre-existing-defect record" disposition route
+      is unavailable. Implicates DoD ("pnpm check green") and the quality_gates
+      disposition.
+    suggestion: >
+      Replace the three #credentials/* sibling imports in
+      packages/adapters/src/credentials/index.ts with relative ./allowlist.js /
+      ./command-strategy.js / ./harness-store-strategy.js imports (the adapters
+      subpath convention), rebuild, and verify exports-parity and
+      TC-RELEASE-002 pass; correct the disposition note in pm-notes to a
+      delivery regression fixed in remediation, never a silent waive.
+    suppressed: false
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/provider/validate.ts:281
+    message: >
+      F-1/DM-1's "an unknown field on a known style is a validation refusal
+      naming the field" is unimplemented at every layer. The raw validator
+      silently drops wrong-style known fields (it constructs fresh per-style
+      objects: validate.ts:281/:286/:320), the config catalog's flat
+      CREDENTIAL_SOURCE_KEY_FIELDS (catalog.ts:83) admits every vocabulary key
+      on every style, and the "style-conditional strict pass belongs to the
+      composition layer (phase 4 wiring)" pass claimed by the phase-3 design
+      correction (pm-notes) and by the test comment at
+      tests/behaviour/credential-strategies-command.test.ts:258 was never wired
+      — grep confirms matchCommandDeclaration exists only at the composition
+      edge for the tracker reference (production.ts:2372) and inside the
+      strategies. A declaration such as {style: literal, name: K, program:
+      "/usr/bin/gh"} or a command key carrying harness/integrationId loads
+      cleanly and the stray field silently disappears. Out-of-table programs
+      are refused fail-closed and classified (composition edge for the tracker
+      reference; classified resolve-time refusal for provider credentials —
+      the disclosed two-layer semantic), so there is no execution hazard; the
+      gap is the silent-drop of wrong-style known fields the spec requires to
+      refuse by name.
+    suggestion: >
+      Enforce per-style allowed-key sets at load in parseCredentialSourceKey
+      (the validator already knows CREDENTIAL_STYLE_FIELDS; refuse any key
+      outside {style} plus the style's required keys, naming the field), or
+      split the catalog credential field tables per style; extend TC-ALLOW-003
+      with wrong-style-field refusal cases so the pinned tolerance at
+      credential-strategies-command.test.ts:250-252 is replaced by the refusal.
+    suppressed: false
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/adapters/src/credentials/index.ts:209
+    message: >
+      AC-F3-5 requires the shape-drift failure to name the harness and the
+      field, and the strategy classification does carry the offending field
+      (harness-store-strategy.ts:76-80) — but the resolver drops it when
+      projecting the port failure (credentialMissing(key, classified.reason)
+      discards classified.field), the DM-2-pinned source format names only the
+      integration id, and the fixed remedy names neither. No rendered surface
+      can tell the operator WHICH field drifted; TC-HARNESS-005
+      (credential-strategies-harness-store.test.ts:245) pins only the reason
+      token despite its own title asserting harness-and-field naming. Note the
+      spec carries an internal tension (F-3/AC-F3-5 naming vs DM-2's fixed
+      source format) that the delivery resolved in DM-2's favor without
+      realizing the naming anywhere.
+    suggestion: >
+      Thread the drift field (and harness identity) onto the rendered refusal
+      within the closed projection — e.g. compose it into the source identity
+      or a derived name-shaped detail — or STOP-and-report the DM-2 format
+      tension to PM for a deliberate spec amendment; extend TC-HARNESS-005 to
+      assert the naming on the resolved port failure, not just the reason
+      token.
+    suppressed: false
+  - id: F-4
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: packages/core/src/contracts/status.ts:509
+    message: >
+      Undeclared-scope edits, disclosed but never classified. (a)
+      packages/core/src/contracts/status.ts and
+      packages/core/src/domain/verify-gates.ts are modified outside every
+      phase scope and absent from the committed forwarding-site map (neither
+      OWNS nor NOT-TOUCHED); the content is additive projection plumbing
+      consumed by the mapped edge.ts sites and is described in the phase-4
+      progress note, but pm-notes never classify it as scope drift and PM's
+      accepted-deviations list omits it. (b) doc/00-index.md,
+      doc/overview/glossary.md, and
+      doc/spec/features/feature-monorepo-scaffold-toolchain.md were edited
+      outside the phase-7 declared reconciliation set — defensible as the
+      doc-syncer lifecycle reconciliation of changed truth (the index row
+      mirrors the phase-6 guide reversal; the glossary rows restate the
+      changed port), but the plan's documentation fence declares doc-touching
+      scopes exhaustively and no record covers the extension.
+    suggestion: >
+      Record both groups as disclosed companions in pm-notes (type: info,
+      naming the files and the reason each was necessary), and extend the
+      forwarding-site map's no-literal supporting-file enumeration with
+      status.ts and verify-gates.ts so the map stays the operative fence.
+    suppressed: false
+reviewed_at: 2026-11-24T02:20:00Z
+next_step: CALL_CODER

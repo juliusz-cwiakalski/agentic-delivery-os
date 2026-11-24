@@ -404,7 +404,7 @@ Files that change for the declaration: `packages/core/src/config/catalog.ts` (a 
 | `literal` | the value of the named environment variable | `literal:<NAME>` | unchanged; the ticket's "environment" names this family, and **no rename is made** |
 | `environment-prefixed` | the value of brand prefix + suffix | `environment-prefixed:<SUFFIX>` | unchanged |
 | `command` | one line of stdout from an **allowlisted** program and pinned subcommand | `command:<program>` | the pair is validated against C-10's table |
-| `harness-store` | one API-key entry from the active harness's declared export | `harness-store:<integrationID>` | exactly one active entry; API-key entries only |
+| `harness-store` | one API-key entry from the active harness's declared export | `harness-store:<harness>:<integrationID>` — the identity names the harness beside the integration id; a shape-drift source additionally appends `field=<drift-field>` | exactly one active entry; API-key entries only |
 
 `harness-oauth` is **not** in the vocabulary (D5). A declaration using an unknown style, an unknown field on a known style, or an allowlist pair outside the table is a shape failure naming the field or the program — never silently ignored, never resolved by resemblance to a provider, account, display name or variable. No style has a fallback and no reference declares a chain (C-3).
 

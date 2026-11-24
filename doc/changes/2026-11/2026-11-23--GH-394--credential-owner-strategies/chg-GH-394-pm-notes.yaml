@@ -11,7 +11,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-23T23:19:37.091Z }
   dor_check: { started: null, completed: 2026-11-23T23:23:25.941Z }
   delivery: { started: null, completed: 2026-11-24T01:35:13.451Z }
-  system_spec_update: { started: null, completed: 2026-11-24T01:47:49.191Z }
+  system_spec_update: { started: null, completed: 2026-11-24T02:46:57.132Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -429,12 +429,11 @@ notes:
       packages/adapters/src/credentials/index.ts map to src/*.ts while 'files'
       publishes only dist; the failing entrypoint is ./credentials, not the
       git/gitlab/jira/github subpaths originally attributed): exports-parity +
-      TC-RELEASE-002 failed on packages/adapters attw subpath resolution;
-      FIXED in plan phase 8 by converting to the adapters' relative ./x.js
+      TC-RELEASE-002 failed on packages/adapters attw subpath resolution; FIXED
+      in plan phase 8 by converting to the adapters' relative ./x.js
       sibling-import convention (imports only, no behaviour change).
       TC-RELEASE-001 stays red until the phase-7 changeset by design (green
-      since phase 7). No lifecycle phase complete was run (delivery
-      continues)."
+      since phase 7). No lifecycle phase complete was run (delivery continues)."
     type: info
     date: "2026-11-24"
   - text: "Plan phase 5 complete: commit 3847363a. LANDED: the CI allowlist tripwire
@@ -522,9 +521,8 @@ notes:
       TC-RELEASE-002 failed on exports-parity (packages/adapters attw subpath
       resolution); the 'branch baseline defect' claim was FALSE — it is a
       delivery regression introduced at 36fa3eeb (the reviewer reproduced PASS
-      at merge-base 4f1a7ddc; the c1854932 output was mid-branch presence
-      only), fixed in plan phase 8. All seven plan phases are complete:
-      374aa159 (1),
+      at merge-base 4f1a7ddc; the c1854932 output was mid-branch presence only),
+      fixed in plan phase 8. All seven plan phases are complete: 374aa159 (1),
       36fa3eeb (2), e57832fb (3), f89499db + d5b5d3de (4), 3847363a (5),
       f20a78d7 (6), 7da08fb4 (7)."
     type: info
@@ -539,18 +537,17 @@ notes:
       boundary-fixture rename for the secret scanner, memoized
       declared-credential load. CARRIED into phase 9: exports-parity +
       TC-RELEASE-002 red (adapters attw subpath) — CORRECTED IN REMEDIATION
-      (review iter-1 F-1): NOT pre-existing; a delivery regression introduced
-      at 36fa3eeb (review reproduced PASS at merge-base 4f1a7ddc; the
-      c1854932 reproduction was mid-branch presence only), fixed in plan
-      phase 8 rather than dispositioned as baseline. Next:
-      system_spec_update via @doc-syncer."
+      (review iter-1 F-1): NOT pre-existing; a delivery regression introduced at
+      36fa3eeb (review reproduced PASS at merge-base 4f1a7ddc; the c1854932
+      reproduction was mid-branch presence only), fixed in plan phase 8 rather
+      than dispositioned as baseline. Next: system_spec_update via @doc-syncer."
     type: info
     date: "2026-11-24"
-  - text: "Doc reconciliation complete (3c9d0d9f): six targets + three contract-driven
-      cross-link fixes (00-index row, glossary rows, scaffold subpath row) — the
-      three were accepted then as current-truth accuracy; the reviewer later
-      required them CLASSIFIED as scope additions (F-4b), done in this
-      remediation. Always-resolve judgment recorded: no new feature spec;
+  - text: "Doc reconciliation complete (3c9d0d9f): six targets + three
+      contract-driven cross-link fixes (00-index row, glossary rows, scaffold
+      subpath row) — the three were accepted then as current-truth accuracy; the
+      reviewer later required them CLASSIFIED as scope additions (F-4b), done in
+      this remediation. Always-resolve judgment recorded: no new feature spec;
       adapter-ports is the credential area's coherent home."
     type: info
     date: "2026-11-24"
@@ -558,10 +555,10 @@ notes:
       added to plan rev 3; 0c/1h/2m/1l). (F-1 HIGH) exports-parity +
       TC-RELEASE-002 is a DELIVERY REGRESSION, not pre-existing: reviewer
       reproduced the check PASSING at merge-base 4f1a7ddc (fresh worktree,
-      frozen lockfile, clean build); root cause 36fa3eeb made
-      adapters credentials/index.ts import via '#credentials/*' subpath
-      specifiers — package.json maps them to src/*.ts while 'files' publishes
-      only dist, so dist d.ts carries unresolvable '#'-specifiers (attw
+      frozen lockfile, clean build); root cause 36fa3eeb made adapters
+      credentials/index.ts import via '#credentials/*' subpath specifiers —
+      package.json maps them to src/*.ts while 'files' publishes only dist, so
+      dist d.ts carries unresolvable '#'-specifiers (attw
       InternalResolutionError); failing entrypoint is ./credentials, NOT
       git/gitlab/jira/github as the coder attributed. Fix: relative imports +
       rebuild + correct the disposition notes. (F-2 MEDIUM) validate.ts:281 —
@@ -572,10 +569,10 @@ notes:
       DM-2 source format names only the integration id; TC-HARNESS-005 pins
       reason only. (F-4 LOW) scope classification: contracts/status.ts +
       domain/verify-gates.ts outside all phase scopes and absent from the
-      committed map (F-4a); the three doc files unclassified in pm-notes
-      (F-4b). Fences all verified holding; five disclosed deviations all
-      ACCEPTED; battery re-verified green under review (130+171+15, tripwire
-      111 surfaces, boundary 489 files)."
+      committed map (F-4a); the three doc files unclassified in pm-notes (F-4b).
+      Fences all verified holding; five disclosed deviations all ACCEPTED;
+      battery re-verified green under review (130+171+15, tripwire 111 surfaces,
+      boundary 489 files)."
     type: info
     date: "2026-11-24"
   - text: "Retro: I carried the coder's 'pre-existing at baseline c1854932' claim
@@ -584,52 +581,52 @@ notes:
       pre-existence. The reviewer, sent to verify the claim independently,
       reproduced at the true merge-base and refuted it. Lesson: 'baseline'
       evidence must anchor at the merge-base; a mid-branch reproduction is
-      presence evidence only. My delegation DID instruct merge-base
-      verification — the control worked; the miss was accepting the coder's
-      framing in my own pm-notes before review. Cost: one review iteration;
-      the false disposition would have survived to the owner."
+      presence evidence only. My delegation DID instruct merge-base verification
+      — the control worked; the miss was accepting the coder's framing in my own
+      pm-notes before review. Cost: one review iteration; the false disposition
+      would have survived to the owner."
     type: retro
     date: "2026-11-24"
   - text: "Remediation state (review iter-1 FAIL): plan rev 3 Phase 8 authored by
       reviewer (verify schema with plan validate before delegation). Fix list:
-      (1) relative imports in adapters/src/credentials/index.ts per the
-      ./x.js convention, rebuild, exports-parity + TC-RELEASE-002 green;
-      (2) composition-layer wrong-style-known-field refusal (validate.ts /
-      wiring) per F-1/DM-1 + fix TC-ALLOW-003 to pin the refusal;
-      (3) shape-drift failure carries harness+field through to rendered
-      surfaces; DM-2 source format includes the field; TC-HARNESS-005 asserts
-      the naming; (4) classify status.ts + verify-gates.ts into the forwarding
-      map (no-literal supporting files) and the three doc files in pm-notes;
-      (5) correct the two disposition notes (phase-3 + phase-4 entries and the
-      carried-risk note) to delivery-regression truth. After coder: re-run
-      doc-syncer (code changed), re-run reviewer iter-2, then quality_gates."
+      (1) relative imports in adapters/src/credentials/index.ts per the ./x.js
+      convention, rebuild, exports-parity + TC-RELEASE-002 green; (2)
+      composition-layer wrong-style-known-field refusal (validate.ts / wiring)
+      per F-1/DM-1 + fix TC-ALLOW-003 to pin the refusal; (3) shape-drift
+      failure carries harness+field through to rendered surfaces; DM-2 source
+      format includes the field; TC-HARNESS-005 asserts the naming; (4) classify
+      status.ts + verify-gates.ts into the forwarding map (no-literal supporting
+      files) and the three doc files in pm-notes; (5) correct the two
+      disposition notes (phase-3 + phase-4 entries and the carried-risk note) to
+      delivery-regression truth. After coder: re-run doc-syncer (code changed),
+      re-run reviewer iter-2, then quality_gates."
     type: info
     date: "2026-11-24"
   - text: "(F-4 classification, review iter-1 — both groups ACCEPTED as disclosed
       companions.) (F-4a) packages/core/src/contracts/status.ts and
       packages/core/src/domain/verify-gates.ts were edited outside every phase
       scope as additive projection plumbing: StatusReadFailure and
-      VerifyGatesReadFailure carry the projection as a nested credential
-      member consumed by the mapped edge.ts sites; neither constructs or
-      collapses a failure. Both are now enumerated as SUPPORTING FILES — no
-      literal site rows in the committed forwarding-site map (plan rev 3),
-      keeping the map the operative fence. (F-4b) doc/00-index.md,
-      doc/overview/glossary.md, and
+      VerifyGatesReadFailure carry the projection as a nested credential member
+      consumed by the mapped edge.ts sites; neither constructs or collapses a
+      failure. Both are now enumerated as SUPPORTING FILES — no literal site
+      rows in the committed forwarding-site map (plan rev 3), keeping the map
+      the operative fence. (F-4b) doc/00-index.md, doc/overview/glossary.md, and
       doc/spec/features/feature-monorepo-scaffold-toolchain.md were edited
       outside the phase-7 declared reconciliation set; they are doc-syncer's
       contract-driven cross-link additions during lifecycle system_spec_update
-      (the 00-index row mirrors the phase-6 ADR/guide landing, the glossary
-      rows restate the changed port, the scaffold row mirrors the new adapters
+      (the 00-index row mirrors the phase-6 ADR/guide landing, the glossary rows
+      restate the changed port, the scaffold row mirrors the new adapters
       credentials subpath), landed at 3c9d0d9f and accepted as current-truth
       accuracy — classified here per review F-4b."
     type: info
     date: "2026-11-24"
-  - text: "Plan phase 8 complete: commit 5dcc0fb2. LANDED: (F-1) the '#credentials/*'
-      imports-map specifiers converted to the adapters' relative ./x.js
-      sibling-import convention in packages/adapters/src/credentials/index.ts
-      AND packages/adapters/src/credentials/command-strategy.ts — the latter is
-      the second site of the same 36fa3eeb defect (its runtime import of
-      allowlist values carried the same unresolvable specifier through dist);
+  - text: "Plan phase 8 complete: commit 5dcc0fb2. LANDED: (F-1) the
+      '#credentials/*' imports-map specifiers converted to the adapters'
+      relative ./x.js sibling-import convention in
+      packages/adapters/src/credentials/index.ts AND
+      packages/adapters/src/credentials/command-strategy.ts — the latter is the
+      second site of the same 36fa3eeb defect (its runtime import of allowlist
+      values carried the same unresolvable specifier through dist);
       exports-parity OK (5 publishables pass attw esm-only) and
       TC-RELEASE-001/002 green (privacy-release 7 pass / 0 fail) after rebuild —
       the delivery regression is closed and the false pre-existing dispositions
@@ -652,48 +649,46 @@ notes:
       (program/args/harness/integrationId/suffix/timeoutMs). TC-ALLOW-003
       re-pinned: refusal arms literal+program, environment-prefixed+program,
       command+harness, harness-store+args, plus the exemption pin and the
-      unknown-key tolerance pin. The cleaner long-term semantic
-      (origins-aware trimming at the composition edge, or
-      replace-on-style-change merge in the config resolver) touches
-      production.ts/resolver.ts — outside phase-8 declared scope; needs a
-      PM/reviewer ruling. (F-3) AC-F3-5 realized on the rendered failure:
-      credentialSourceIdentity's harness-store arm names the harness
-      (harness-store:<harness>:<integrationId>) and shape-drift refusals carry
-      the offending field on the rendered source (… field=<name>; closed
+      unknown-key tolerance pin. The cleaner long-term semantic (origins-aware
+      trimming at the composition edge, or replace-on-style-change merge in the
+      config resolver) touches production.ts/resolver.ts — outside phase-8
+      declared scope; needs a PM/reviewer ruling. (F-3) AC-F3-5 realized on the
+      rendered failure: credentialSourceIdentity's harness-store arm names the
+      harness (harness-store:<harness>:<integrationId>) and shape-drift refusals
+      carry the offending field on the rendered source (… field=<name>; closed
       classifier tokens only, never configuration text or child output);
-      TC-HARNESS-005 extended to assert harness-and-field naming on the
-      resolved port failure and the classification's field member;
-      TC-HARNESS-002/003 source pins re-pinned to the extended format
-      (companion of the DM-2 extension, same file). KNOWN REMNANT (disclosed,
-      out of scope): packages/cli/src/production.ts:2494 (pre-composition cold
-      refusal) and packages/cli/src/commands/doctor.ts:76 (sourceKeyDisplay)
-      still build the harness-store identity as
-      harness-store:<integrationId> — a format inconsistency with the extended
-      DM-2 source for the same style; flagged for reviewer iter-2 / doc-syncer.
-      (F-4) both classifications appended (the F-4 note above) and the
-      forwarding-site map extended with the two no-literal supporting-file rows
-      (plan rev 3; envelope scopeDrift on the plan file accepted). Verify:
-      pnpm build; exports-parity OK; privacy-release 7 pass / 0 fail (the
-      F-1 gate); named credential battery 239 pass / 0 fail across 24 suites
-      (incl. TC-COMP-001..003 composition proofs, TC-POL-SEC-002 canary,
-      TC-HARNESS-001..007, TC-ALLOW-001..006, TC-REASON/TC-REMEDY/TC-REDACT
-      arms, the phase-6 guide re-pin suite); secret-read-boundary OK 489 files;
-      allowlist-tripwire OK 111 surfaces, 0 declarations, 0 coordinates — NO
-      snapshot refresh (imports-only change); typecheck green; biome clean on
-      all changed files. PRE-EXISTING RED DISCLOSED (reproduced at HEAD
-      f21c74eb, not caused by phase 8):
+      TC-HARNESS-005 extended to assert harness-and-field naming on the resolved
+      port failure and the classification's field member; TC-HARNESS-002/003
+      source pins re-pinned to the extended format (companion of the DM-2
+      extension, same file). KNOWN REMNANT (disclosed, out of scope):
+      packages/cli/src/production.ts:2494 (pre-composition cold refusal) and
+      packages/cli/src/commands/doctor.ts:76 (sourceKeyDisplay) still build the
+      harness-store identity as harness-store:<integrationId> — a format
+      inconsistency with the extended DM-2 source for the same style; flagged
+      for reviewer iter-2 / doc-syncer. (F-4) both classifications appended (the
+      F-4 note above) and the forwarding-site map extended with the two
+      no-literal supporting-file rows (plan rev 3; envelope scopeDrift on the
+      plan file accepted). Verify: pnpm build; exports-parity OK;
+      privacy-release 7 pass / 0 fail (the F-1 gate); named credential battery
+      239 pass / 0 fail across 24 suites (incl. TC-COMP-001..003 composition
+      proofs, TC-POL-SEC-002 canary, TC-HARNESS-001..007, TC-ALLOW-001..006,
+      TC-REASON/TC-REMEDY/TC-REDACT arms, the phase-6 guide re-pin suite);
+      secret-read-boundary OK 489 files; allowlist-tripwire OK 111 surfaces, 0
+      declarations, 0 coordinates — NO snapshot refresh (imports-only change);
+      typecheck green; biome clean on all changed files. PRE-EXISTING RED
+      DISCLOSED (reproduced at HEAD f21c74eb, not caused by phase 8):
       tests/checks/harness-mutants.test.ts TC-HARN-029 'credential fallback
-      mutant fails naming the reference' — the mutant's multiline
-      text.replace anchor no longer matches the single-line
-      credentialFailure(...) call (reworded in phase 4; the phase-4/5 notes'
-      'anchor re-pinned' claim is inaccurate — the anchor matches neither
-      text), so the mutation is a no-op and the unmutated build refuses,
-      tripping the oracle; the suite sits outside the phase-8 declared scope
-      and the named battery, so it is disclosed for the review_fix iteration
-      (re-anchor the mutant to the current call) rather than fixed here.
-      PROCESS NOTE: the first battery run failed TC-COMP-001 against a STALE
-      dist built mid-fix — the composition imports @delivery-os/* through dist,
-      so rebuild-before-battery is load-bearing for validator changes; the
-      final evidence battery ran after pnpm build."
+      mutant fails naming the reference' — the mutant's multiline text.replace
+      anchor no longer matches the single-line credentialFailure(...) call
+      (reworded in phase 4; the phase-4/5 notes' 'anchor re-pinned' claim is
+      inaccurate — the anchor matches neither text), so the mutation is a no-op
+      and the unmutated build refuses, tripping the oracle; the suite sits
+      outside the phase-8 declared scope and the named battery, so it is
+      disclosed for the review_fix iteration (re-anchor the mutant to the
+      current call) rather than fixed here. PROCESS NOTE: the first battery run
+      failed TC-COMP-001 against a STALE dist built mid-fix — the composition
+      imports @delivery-os/* through dist, so rebuild-before-battery is
+      load-bearing for validator changes; the final evidence battery ran after
+      pnpm build."
     type: info
     date: "2026-11-24"
