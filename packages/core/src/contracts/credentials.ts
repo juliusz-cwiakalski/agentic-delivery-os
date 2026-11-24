@@ -84,6 +84,21 @@ export const CREDENTIAL_FAILURE_REASONS = [
 export type CredentialFailureReason = (typeof CREDENTIAL_FAILURE_REASONS)[number];
 
 /**
+ * The credential failure projection (DEC-14): the three optional fields as
+ * they ride classified read results and refusals at the reconstruction sites.
+ * Projection data on the reified failure — never park-record or error-table
+ * columns.
+ */
+export type CredentialFailureProjection = {
+  /** Style plus source identity, e.g. `literal:NAME`, `command:<program>`. */
+  readonly source?: string;
+  /** One token from the closed reason set. */
+  readonly reason?: CredentialFailureReason;
+  /** The fixed `(reason, style)`-keyed remedy text. */
+  readonly remedy?: string;
+};
+
+/**
  * The reified `config.credential.missing` failure (F-6).
  *
  * The required fields mirror the machine-readable error-table row exactly; the
@@ -102,11 +117,8 @@ export type CredentialResolutionFailure = {
   readonly retryable: false;
   readonly consequence: "not_landed";
   readonly projectionClass: "user-validation";
-  /** Style plus source identity, e.g. `literal:NAME`, `command:<program>`. */
   readonly source?: string;
-  /** One token from the closed reason set. */
   readonly reason?: CredentialFailureReason;
-  /** The fixed `(reason, style)`-keyed remedy text. */
   readonly remedy?: string;
 };
 

@@ -9,6 +9,7 @@
  */
 import {
   type BrandIdentity,
+  type CredentialFailureProjection,
   type DeliveryRequest,
   ERROR_TABLE,
   type ErrorTableEntry,
@@ -109,6 +110,8 @@ export type VerifyGatesReadFailure = {
   readonly reason: VerifyGatesReadFailureReason;
   readonly failureCode?: string;
   readonly failureClass?: "provider.payload.invalid";
+  /** The credential failure projection rides credential refusals only (DEC-14). */
+  readonly credential?: CredentialFailureProjection;
 };
 
 export type VerifyGatesAbsence = {

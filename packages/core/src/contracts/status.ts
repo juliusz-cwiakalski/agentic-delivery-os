@@ -9,6 +9,7 @@
  */
 
 import type { BlockerLedgerView, BlockerQuestionView } from "./blockers.js";
+import type { CredentialFailureProjection } from "./credentials.js";
 import type { OwnerGateSlaState, OwnerGateUnknownAgeReason } from "./owner-gate-sla.js";
 import type { OwnerHoldFact, OwnerHoldSource } from "./owner-hold.js";
 import type { DeliveryRequest, PipelineRun, WorkItem } from "./ports.js";
@@ -505,6 +506,11 @@ export type StatusReadFailure = {
     | "commit-unresolved";
   readonly failureCode?: string;
   readonly failureClass?: string;
+  /**
+   * The credential failure projection rides credential refusals only (DEC-14):
+   * source, reason, and remedy carried beside the classification.
+   */
+  readonly credential?: CredentialFailureProjection;
 };
 
 /** The bounded issues read result. */

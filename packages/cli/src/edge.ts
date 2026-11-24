@@ -269,7 +269,11 @@ import {
 } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
-import type { ProviderZoneFacts } from "@delivery-os/core/contracts";
+import type {
+  CredentialFailureProjection,
+  CredentialFailureReason,
+  ProviderZoneFacts,
+} from "@delivery-os/core/contracts";
 import {
   ACTION_WIP_LIMIT,
   type AdapterCapabilityDeclaration,
@@ -634,7 +638,9 @@ import type {
   CommandDefinition,
   CommandFlags,
   CommandProgram,
+  SecretRegistry,
 } from "./index.js";
+import { createSecretRegistry } from "./index.js";
 
 /**
  * Resolve the claimed agent identity from injected environment data (DEC-3).
@@ -1300,14 +1306,35 @@ export type VerifyGatesRuntimeOptions = {
   ) => Promise<{ readonly commitSha: string; readonly source: "redrive" } | undefined>;
 };
 
-type ProviderFailureLike = { readonly ok: false; readonly code: string };
+type ProviderFailureLike = {
+  readonly ok: false;
+  readonly code: string;
+  /** The credential projection rides the reified resolution failure (DEC-14). */
+  readonly source?: string;
+  readonly reason?: CredentialFailureReason;
+  readonly remedy?: string;
+};
+
+/** The credential projection a reified failure carries, if any. */
+const credentialProjectionOf = (
+  failure: ProviderFailureLike,
+): CredentialFailureProjection | undefined =>
+  failure.source === undefined && failure.reason === undefined && failure.remedy === undefined
+    ? undefined
+    : {
+        ...(failure.source === undefined ? {} : { source: failure.source }),
+        ...(failure.reason === undefined ? {} : { reason: failure.reason }),
+        ...(failure.remedy === undefined ? {} : { remedy: failure.remedy }),
+      };
 
 const providerReadFailure = <T>(failure: ProviderFailureLike): VerifyGatesReadResult<T> => {
   if (failure.code === "config.credential.missing") {
+    const credential = credentialProjectionOf(failure);
     return {
       ok: false,
       reason: "credential-unavailable",
       failureCode: "config.credential.missing",
+      ...(credential === undefined ? {} : { credential }),
     };
   }
   if (failure.code === "provider.not-found") {
@@ -1321,11 +1348,15 @@ const unaddressed = <T>(): VerifyGatesReadResult<T> => ({
   reason: "address-unresolved",
 });
 
-const credentialRefusal = <T>(): VerifyGatesReadResult<T> => ({
-  ok: false,
-  reason: "credential-unavailable",
-  failureCode: "config.credential.missing",
-});
+const credentialRefusal = <T>(failure?: ProviderFailureLike): VerifyGatesReadResult<T> => {
+  const credential = failure === undefined ? undefined : credentialProjectionOf(failure);
+  return {
+    ok: false,
+    reason: "credential-unavailable",
+    failureCode: "config.credential.missing",
+    ...(credential === undefined ? {} : { credential }),
+  };
+};
 
 /** Compose the gates reads at the runtime-aware edge. */
 export const createVerifyGatesCommandRuntime = (
@@ -1728,7 +1759,7 @@ export function createProductionDependencies(options: EdgeOptions): CliDependenc
     brand: options.brand,
     clock: { now: () => Date.now() },
     newRunId: () => globalThis.crypto.randomUUID(),
-    secrets: registerEdgeSecrets(environment, options.secretKeys ?? []),
+    secrets: createSecretRegistry(registerEdgeSecrets(environment, options.secretKeys ?? [])),
     program: options.program,
     mode: resolveCliMode(options.isTTY === undefined ? {} : { isTTY: options.isTTY }),
     ...(audit === undefined ? {} : { audit }),
@@ -2784,10 +2815,18 @@ export const createDbCommandRuntime = (composition: DbComposition): DbCommandRun
   };
 };
 
-const providerFailure = (failure: { readonly code: string }): StatusReadFailure =>
-  failure.code === "config.credential.missing"
-    ? { ok: false, reason: "credential-unavailable", failureCode: "config.credential.missing" }
-    : { ok: false, reason: "read-failed", failureClass: failure.code };
+const providerFailure = (failure: ProviderFailureLike): StatusReadFailure => {
+  if (failure.code === "config.credential.missing") {
+    const credential = credentialProjectionOf(failure);
+    return {
+      ok: false,
+      reason: "credential-unavailable",
+      failureCode: "config.credential.missing",
+      ...(credential === undefined ? {} : { credential }),
+    };
+  }
+  return { ok: false, reason: "read-failed", failureClass: failure.code };
+};
 
 /**
  * The delivered profile probe over a parsed provider configuration's entries
@@ -3387,11 +3426,13 @@ export const createDoctorCommandRuntime = (
       ? instance.authMethod.reference
       : undefined;
   const envVar =
-    reference === undefined
+    reference === undefined || reference.sourceKey.style === "command"
       ? undefined
-      : reference.sourceKey.style === "literal"
-        ? reference.sourceKey.name
-        : `${options.environmentPrefix}${reference.sourceKey.suffix}`;
+      : reference.sourceKey.style === "environment-prefixed"
+        ? `${options.environmentPrefix}${reference.sourceKey.suffix}`
+        : reference.sourceKey.style === "literal"
+          ? reference.sourceKey.name
+          : undefined;
   const credentialRefusal: DoctorCredentialPresence = {
     ok: false,
     failureCode: "config.credential.missing",
@@ -3457,7 +3498,19 @@ export const createDoctorCommandRuntime = (
     readRepository,
     resolveTrackerCredential: (): DoctorCredentialPresence => {
       if (!admitted || reference === undefined) return credentialRefusal;
-      return options.credentials.resolve(reference).ok ? { ok: true } : credentialRefusal;
+      const resolved = options.credentials.resolve(reference);
+      if (resolved.ok) return { ok: true };
+      // Forward the failure's projection fields beside the delivered identity
+      // (DEC-14): the refusal keeps the environment variable name for the two
+      // environment styles and gains the source identity for all four.
+      return {
+        ok: false,
+        failureCode: "config.credential.missing",
+        ...(envVar === undefined ? {} : { envVar }),
+        ...(resolved.source === undefined ? {} : { source: resolved.source }),
+        ...(resolved.reason === undefined ? {} : { reason: resolved.reason }),
+        ...(resolved.remedy === undefined ? {} : { remedy: resolved.remedy }),
+      };
     },
     readTrackerPage: async (target, limit) => {
       if (!admitted)
@@ -4455,7 +4508,7 @@ export type ConfigProgramResult =
       readonly ok: true;
       readonly brand: BrandIdentity;
       readonly program: CommandProgram;
-      readonly secrets: readonly string[];
+      readonly secrets: SecretRegistry;
     }
   | { readonly ok: false; readonly error: BrandingInputError };
 
@@ -5200,7 +5253,7 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
       ? [envName(brand.environmentPrefix, path)]
       : [],
   );
-  const secrets = registerEdgeSecrets(initialLegacy.environment, secretKeys);
+  const secrets = createSecretRegistry(registerEdgeSecrets(initialLegacy.environment, secretKeys));
 
   const resolve = (flags: CommandFlags): Result<ConfigResolvedSnapshot, ConfigFailure> => {
     warnings.length = 0;
@@ -5786,7 +5839,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
     // set the message composition redacts with BEFORE bounding (AC-F4-7). A
     // runtime that already carries an injected set is never shadowed.
     commands.dispatch = createDispatchCommandDefinition(
-      options.dispatch.secrets === undefined ? { ...options.dispatch, secrets } : options.dispatch,
+      options.dispatch.secrets === undefined
+        ? { ...options.dispatch, secrets: secrets.values() }
+        : options.dispatch,
     );
   }
   if (options.doctor !== undefined) {
@@ -5813,7 +5868,7 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.blockers !== undefined) {
     commands.blockers = createBlockersCommandDefinition(
-      createBlockersCommandRuntime(options.blockers, brand, secrets, options.environment),
+      createBlockersCommandRuntime(options.blockers, brand, secrets.values(), options.environment),
     );
   }
   if (options.merge !== undefined) {
@@ -5829,7 +5884,7 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.steer !== undefined) {
     commands.steer = createSteerCommandDefinition(
-      createSteerCommandRuntime(options.steer, brand, secrets),
+      createSteerCommandRuntime(options.steer, brand, secrets.values()),
     );
   }
   if (options.spend !== undefined) {

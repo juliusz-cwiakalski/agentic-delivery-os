@@ -881,6 +881,7 @@ export {
 } from "./coordinator.js";
 export type {
   CredentialFailureCode,
+  CredentialFailureProjection,
   CredentialFailureReason,
   CredentialPort,
   CredentialReference,

@@ -112,6 +112,28 @@ export type CliAuditWriteResult =
   | { readonly ok: false; readonly code: string };
 
 /**
+ * The live redaction registry (DM-7): material registered at the moment it is
+ * obtained, consulted at render time. The entrypoint path registers the two
+ * environment styles statically and never resolves; the resolver registers
+ * command and store material on materialization; the edge-composed sites
+ * register into the same registry.
+ */
+export type SecretRegistry = {
+  readonly register: (value: string) => void;
+  readonly values: () => readonly string[];
+};
+
+export const createSecretRegistry = (initial?: readonly string[]): SecretRegistry => {
+  const values = new Set<string>(initial ?? []);
+  return {
+    register: (value: string): void => {
+      if (value.length > 0) values.add(value);
+    },
+    values: (): readonly string[] => [...values],
+  };
+};
+
+/**
  * The injected audit seam: the store-backed writer plus the invocation scope,
  * optional repository target, and the claimed identity resolved at the edge.
  */
@@ -127,7 +149,7 @@ export type CliDependencies = {
   readonly brand: BrandIdentity;
   readonly clock: CliClock;
   readonly newRunId: () => string;
-  readonly secrets: readonly string[];
+  readonly secrets: SecretRegistry;
   readonly program: CommandProgram;
   /** Injected mode fact; the historical default stays interactive. */
   readonly mode?: CliMode;
@@ -664,8 +686,8 @@ export async function runCli(
     const identity = audit.identity;
     const facts: AuditInvocationFacts = {
       runId,
-      command: redact(commandToken(argv), deps.secrets),
-      arguments: redact([...argv], deps.secrets),
+      command: redact(commandToken(argv), deps.secrets.values()),
+      arguments: redact([...argv], deps.secrets.values()),
       exitCode: envelope.exitCode,
       timing,
       resultSchemaVersion: envelope.schemaVersion,
@@ -678,7 +700,7 @@ export async function runCli(
         : {
             agentIdentity: {
               kind: identity.kind,
-              value: redact(identity.value, deps.secrets),
+              value: redact(identity.value, deps.secrets.values()),
             },
           }),
     };
@@ -700,7 +722,7 @@ export async function runCli(
       streams,
       envelope,
       diagnostic.length === 0 ? undefined : diagnostic,
-      deps.secrets,
+      deps.secrets.values(),
       emitEnvelope,
       {
         mode,
@@ -722,7 +744,7 @@ export async function runCli(
       streams,
       fallback,
       `${deps.brand.binaryName}: ${FALLBACK_INTERNAL_CODE}\n`,
-      deps.secrets,
+      deps.secrets.values(),
       true,
     );
     exitCode = fallback.exitCode;
@@ -731,7 +753,7 @@ export async function runCli(
   if (exitCode === 0 && outcome.type === "success" && stream !== undefined) {
     try {
       for await (const line of stream) {
-        const serialized = serializeStreamLine(line, deps.secrets);
+        const serialized = serializeStreamLine(line, deps.secrets.values());
         if (serialized !== undefined) streams.stdout.write(serialized);
       }
     } catch (thrown) {
