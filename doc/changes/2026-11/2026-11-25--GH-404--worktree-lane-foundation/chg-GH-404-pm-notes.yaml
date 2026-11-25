@@ -52,6 +52,81 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Plan phase 3 complete (commit 816d23e2): the git adapter gained the
+      addWorktree seam in the house style of the delivered worktree family —
+      fixed argv `worktree add -b <branch> <path> <baseRef>`, no shell, local
+      only, NO force flag; every git refusal (branch exists, path exists,
+      anything else) surfaces as a typed GitWorktreeAddResult refusal with
+      zero retries, zero fallbacks, zero overrides (seam-side input
+      validation is plan-restriction; git refusals are worktree-add-refused).
+      In the same commit the linked-worktree enumeration and the
+      branch-checked-out-elsewhere check were made POSITION-INDEPENDENT
+      (F-10, DEC-5): the exported pure parser parseWorktreeListing decides
+      main-vs-linked structurally (a porcelain block is the main checkout
+      exactly when its git directory is the repository's common directory;
+      the seam reads it with `rev-parse --path-format=absolute
+      --git-common-dir`), never by list position. Behaviour-preserving for
+      every delivered listing shape: the closeout-branch real-git suites stay
+      green, and a manual smoke of the seam against a temp repository
+      verified create-at-base-tip on the new branch, linked-only listing,
+      branch-elsewhere true/false both ways, and typed refusals for duplicate
+      branch, duplicate path, and unsafe relative path. Boundary evidence per
+      the TC-RELEASE-001 escalation note: full 13-stage battery
+      (tmp/run-logs-runner/2026-11-25/phase3-gate.log, per-stage exits in
+      phase3-gate.stages.tsv) — stages 1-3 and 5-13 green (exit 0), bun test
+      12863 pass / 1 known-deferred fail (TC-RELEASE-001 only, verified sole
+      failure at log line 624) / 4 skip. The positional-pin alternative
+      (spec 7.3) stays the documented fallback, unused."
+    type: info
+    date: "2026-11-25"
+  - text: "NFR-9 / TC-ENV-004 fresh-worktree provisioning measurement (targeted
+      manual run, delivery machine linux, pnpm 10.18.3, git 2.53.0, warm
+      content-addressable store): a sibling worktree of this checkout created
+      per the phase-2 path scheme (git worktree add -b lane/MEASURE-9
+      <sibling>/jaiship-GH-404-measure at HEAD, then removed and its branch
+      deleted after the run). Measured: worktree add 401 ms; dependencies
+      installed in the worktree from the committed lockfile
+      (TMPDIR=$PWD/tmp/tmpdir pnpm install --frozen-lockfile) 807 ms exit 0;
+      the gate build in the worktree (TMPDIR=$PWD/tmp/tmpdir pnpm build, the
+      six-package workspace build the aggregate gate consumes) 8575 ms exit
+      0; total provisioning 9790 ms. The gate temporary directory was created
+      inside the worktree per DEC-6. NO threshold is imposed and NO suite
+      asserts any duration; the install cost reflects a warm pnpm store on
+      this machine (a cold store installs slower) — the measurement informs
+      GH-412 lane-cost planning only."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 4 boundary finding (BLOCKED, spec-ambiguity shape; surfaced
+      for a plan amendment): phase 4's declared scope names
+      packages/core/src/app/dispatch-lane.ts and dispatch-gate.ts as the
+      dispatch-engine wiring sites, but neither is the engine — dispatch-lane
+      is the lane RESOLVER (resume-side read) and dispatch-gate the
+      summary/divergence/handover use-cases. The actual sites the phase's
+      contract needs are undeclared in every phase: the lane-record write
+      site and the spawn flow live in packages/core/src/app/dispatch.ts
+      (runDispatch — the sole production writer of dispatch.lane records,
+      active append at :1069-1084, terminal at :842-850; the lease claim and
+      pre-spawn sequence run inside it), and the lease-claim composition edge
+      lives in packages/cli/src/production.ts (~:4272; declared only in phase
+      5 for the host-index write site). Recording DM-1's worktreePath on the
+      lane record and provisioning before the first phase with the
+      lease-first order are mechanically impossible inside phase 4's declared
+      scope — landing them anyway would be undeclared scope drift, which the
+      declared-scope-is-authoritative fence forbids improvising. Remedy
+      mirrors plan rev 2: a revision (rev 4) declaring
+      packages/core/src/app/dispatch.ts (engine: a provision-after-lease port
+      and the lane-record context) and packages/cli/src/production.ts
+      (composition binding) in phase 4's scope. NO phase-4 code was written;
+      phases 5-10 depend on the recorded worktree context (resume reuse,
+      surfaces, goldens, lifecycle proofs) and are stopped with it. Delivery
+      ends at phase 3 plus the NFR-9 measurement; typed blocker
+      q-de70dae6-1ad2-45e9-bc78-d8ddd937e9d7 (spec-ambiguity, lane GH-404,
+      audience coordinator) published with this finding; the question text is
+      the 120-char bound's compression of this note. The two probe blockers
+      published during grammar verification (q-522bbece, q-e6f5a4ef) were
+      answered-and-within immediately and carry no finding."
+    type: info
+    date: "2026-11-25"
   - text: "Plan phase 2 complete (commit 4c281841): the pure domain layer landed —
       new packages/core/src/domain/lane-worktree-plan.ts (deterministic path
       scheme <worktree-root>/<checkout-basename>-<ref> over injected PHYSICAL
