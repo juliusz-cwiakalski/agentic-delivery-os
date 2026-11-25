@@ -52,8 +52,36 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Delta verification of phase 14 (code-review/review-delta-phase-14.yaml):
+      APPROVE — proceed to quality gates. F-34 is genuine compliance restoration
+      (invariant file/test/allowlist untouched across the whole branch; removal,
+      not suppression; the absence assertion pins AC-F2-1), F-35/F-36/F-38
+      verified at HEAD with HEAD~1 controls. New findings from the merge step:
+      F-47 (low) mergeTree classifies with statSync (follows symlinks — three
+      shapes differ from HEAD~1; not reachable from the product's own writes;
+      fix = cpSync recursive), F-48 (low) four shape-flip shapes become safe
+      retried refusals (F-37's opaque projection), F-49 (low) an untracked
+      tmp/deliver-ticket/<ref>.log still plans would-apply then refuses at apply
+      (F-37 family), F-50/F-52/F-53 (info) half-merged entry on mid-failure /
+      directory modes / size-equality verification, F-51 (info) the byte cap
+      bounds one sweep, not a merged same-date entry (three sweeps 31→62→93 MiB
+      under a 32 MiB cap, each truncated:false). PM ADJUDICATIONS: F-47+F-48 FIX
+      NOW (reviewer-recommended, one line + scenarios, pre-battery so no second
+      full battery), F-55 FIX NOW (the changeset still describes the pre-review
+      design: lane/<ref> branch, merge from worktree, gate evidence swept,
+      ref-keyed join — user-facing release prose must match the delivered
+      contract), F-49/F-50/F-51/F-52/F-53 CARRY as declared residuals with
+      owner visibility (F-51's per-sweep cap semantics documented for a
+      follow-up). Remediation: plan rev 12 phase 15 (mergeTree cpSync + the
+      F-47/F-48 scenarios; changeset rewrite) + delta re-check + doc-sync
+      re-run + review_fix complete + quality_gates."
+    type: info
+    date: "2026-11-25"
   - text: "Plan phase 14 (rev-11 review-iter-3 delta) applied in ONE commit
-      through the commit primitive. PM ADJUDICATIONS EXECUTED: F-34 FIX
+      through the commit primitive (a34bbda4d7ca24ee52a03aba544c62eb8469dc05;
+      the hash was unknowable when this note was committed IN that commit, so
+      this parenthetical is the follow-up evidence edit — no amend, no history
+      rewrite). PM ADJUDICATIONS EXECUTED: F-34 FIX
       (reviewer-recommended option), F-38 FIX, F-37 CARRY as a declared
       residual. FINAL STATUS. F-34 ADDRESSED by REMOVAL, not by routing
       around the checker: the shell-fallback output path is gone from the

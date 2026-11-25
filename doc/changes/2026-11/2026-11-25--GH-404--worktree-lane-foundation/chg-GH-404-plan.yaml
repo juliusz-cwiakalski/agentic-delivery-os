@@ -1115,6 +1115,90 @@ phases:
         - tests/structure/state-scope.test.ts
         - tests/behaviour/dispatch-production-worktree.test.ts
         - doc/changes/2026-11/2026-11-25--GH-404--worktree-lane-foundation/chg-GH-404-pm-notes.yaml
+  - id: 15
+    title: Delta-review micro-remediation (phase 14 delta APPROVE) — mergeTree replaced by the copy primitive (symlink + shape-flip hardening), changeset prose rewritten to the delivered contract (F-47, F-48, F-55)
+    kind: delivery
+    summary: "delta-review micro-remediation (review-delta-phase-14.yaml: APPROVE with pre-battery fixes; the three findings are NEW in the delta or outside it — none blocks). F-47 + F-48 (low, FIX — reviewer-recommended before the battery): replace the mergeTree body in packages/cli/src/production.ts with cpSync(from, to, { recursive: true }) — Bun/Rust behavior verified in isolation by the reviewer: it merges nested trees and keeps the earlier files, it REFUSES (EISDIR) instead of writing through a linked destination directory, and it copies a staged link as a link (closing the three symlink shapes: a re-targeted directory symlink overwriting an earlier target's file; the date entry itself a symlink writing outside the state root; a new directory symlink copying the target's contents as a real directory — all previously passing a link-following verification); with F-47, a type mismatch unlinks the destination child before copying and the remaining refusals are classified with the path and the next action; the symlink + shape-flip scenarios are added to tests/behaviour/dispatch-production-worktree.test.ts (the reviewer's HEAD~1/HEAD controls become the assertions) and scenarios 9 and 9b are re-verified green (same-date preservation unaffected). F-55 (medium, FIX — user-facing release prose): .changeset/gh-404-worktree-lane-foundation-minor.md is rewritten to the DELIVERED contract — detached lane worktree at the base tip (no lane/<ref> branch), the lane's own intake creates the delivery branch, provider-landing merge with the post-landing branch deletion deferred to closeout, the bounded runner-log sweep (tmp/run-logs-runner/**, newest-first byte cap, truncation disclosed; tmp/tmpdir discarded), the (repository, ref)-keyed worktree-path visibility on dispatch status / lanes / board, the lane.worktree-root + lane.disable-worktrees settings, host-index registration pinned to the main checkout, and the shared clone identity — the changeset STAYS the branch's single package-minor changeset for the five fixed groups (the bump and the package list do not change; TC-RELEASE-001's count/packages/privacy checks are unaffected). CARRIED RESIDUALS, one line each: F-49 (the F-37 family — the plan-time exclusion is deeper than the sweep's non-recursive removal for tmp/deliver-ticket; closes with F-40 or F-37), F-50 (the merge is not atomic per entry — a mid-merge failure leaves a half-merged date entry until a retry completes it; no distinct log lost; optional staging-compose note for the next touch), F-51 (the cap bounds ONE sweep, not the merged destination entry — DEC-11's per-sweep wording rides the doc-sync re-run per F-45), F-52 (merged-entry directory mode takes the umask default — next touch, resolved by the primitive), F-53 (per-placed-file verification compares SIZES, not content — wording note for the next touch); the phase-13/14 carrier list stays as-is."
+    # Review context: review-delta-phase-14.yaml (delta review of the phase-14
+    # commit at a34bbda4) — verdict APPROVE with pre-battery fixes; F-47/F-48
+    # are NEW in this delta (the mergeTree classification), F-55 is OUTSIDE
+    # the delta (the changeset untouched since d583b2ba, untracked by
+    # iterations 1-3; TC-RELEASE-001 checks count/packages/privacy, not
+    # prose — nothing else would catch it). The reviewer's recommendation to
+    # fix now avoids a second full gate run after quality_gates.
+    # F-47 + F-48 (low, FIX): mergeTree (production.ts:1995) classifies with
+    # statSync, which follows symlinks — the merge arm reads and writes
+    # through them; the verification passed in every reproduced case because
+    # placedFilesMatch also follows links. The fix replaces the body with
+    # cpSync(from, to, { recursive: true }) (the primitive does exactly what
+    # the reviewer verified under Bun 1.4.4: merge-and-keep, refuse EISDIR on
+    # a linked destination directory, copy a staged link as a link); with it,
+    # a type mismatch unlinks the destination child before copying and the
+    # remaining refusals are classified with the path and the next action
+    # (F-48's four shapes: file->directory EEXIST, directory->file ENOTDIR,
+    # non-directory at destination/<date> EEXIST, read-only EACCES — every
+    # refusal safe: sources intact, staging removed, code
+    # closeout.lane-log-sweep-failed; the operator surface remains F-37's
+    # carried residual). Scenarios added to the production-composition suite:
+    # the three symlink shapes + the shape-flip shapes — the reviewer's
+    # HEAD~1/HEAD controls become the assertions; scenarios 9 and 9b
+    # re-verified green (same-date preservation unaffected by the primitive
+    # swap). Reachability note (reviewer's own): requires a symlink under
+    # the lane's tmp/run-logs-runner; no product code creates one; hardening,
+    # not a vulnerability.
+    # F-55 (medium, FIX): the changeset is the CHANGELOG text of the minor
+    # bump — the release prose described the PRE-remediation design (the
+    # lane/<ref> branch; merge resolved from worktree or main checkout with
+    # the gate-evidence sweep; a ref-keyed join). Rewritten to the delivered
+    # contract: detached lane worktree at the base tip (no lane/<ref>
+    # branch), the lane's own intake creates the delivery branch,
+    # provider-landing merge with the post-landing branch deletion deferred
+    # to closeout, the bounded runner-log sweep (tmp/run-logs-runner/**
+    # newest-first byte cap, truncation disclosed; tmp/tmpdir discarded),
+    # (repository, ref)-keyed worktree-path visibility on dispatch status /
+    # lanes / board, the lane.worktree-root + lane.disable-worktrees
+    # settings, host-index registration pinned to the main checkout, the
+    # shared clone identity. The changeset STAYS the branch's single added
+    # changeset: the minor bump and the five fixed-group package list do not
+    # change (TC-RELEASE-001 unaffected).
+    # CARRIED RESIDUALS (one line each, with reason):
+    # - F-49 (low): tmp/deliver-ticket neither excluded nor removed — the
+    #   F-37 masked-dirt family, one member wider (the typed lane never
+    #   writes the directory); closes with F-40's recursive removal or
+    #   F-37's classified projection.
+    # - F-50 (info): the merge is not atomic per entry; a retry completes
+    #   it; no distinct log lost — optional staging-compose for the next
+    #   touch.
+    # - F-51 (info): the cap bounds ONE sweep, not the destination's merged
+    #   total; growth equals real distinct log bytes — DEC-11's per-sweep
+    #   wording rides the doc-sync re-run (F-45); no code change.
+    # - F-52 (info): merged-entry directory mode takes the umask default —
+    #   resolved by the primitive adoption (F-47); note for the next touch.
+    # - F-53 (info): per-placed-file verification compares SIZES (equal
+    #   byte COUNT), not content — strength unchanged from before the delta
+    #   and finer than the former per-tree total; wording note for the next
+    #   touch.
+    # - The phase-13/14 carrier list (F-26..F-28, F-31/F-32, F-33 + F-23's
+    #   wording, F-37, F-39..F-46) stays as-is; F-54's two end-to-end
+    #   scenarios remain folded with F-42's suite hardening.
+    # Fences (unchanged): exception-mode pins never regenerated; default
+    # goldens re-pin only with the surfaces they pin; no GH-412 scope; naming
+    # rules; hermetic tests; TS rules section 0; every seam
+    # production-reachable through composed callers; each fix lands with its
+    # suite in the same commit; the no-shell invariant neither narrowed nor
+    # allowlisted.
+    # Phase gate (this phase's own): bun run scripts/checks/
+    # no-shell-dispatch.ts clean; the production suite green INCLUDING the
+    # new symlink/shape scenarios; scenarios 9 and 9b green (same-date
+    # preservation unaffected); pnpm typecheck; biome lint + format:check;
+    # tests/golden green with NO byte changes. The full battery is run at
+    # the phase boundary by the orchestrator's quality_gates phase.
+    # Verify: bun run scripts/checks/no-shell-dispatch.ts; TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-production-worktree.test.ts tests/behaviour/dispatch-resume-economics.test.ts tests/behaviour/closeout-worktree.test.ts tests/behaviour/merge-production-composition.test.ts; bun test tests/golden; pnpm typecheck; biome lint; biome format:check; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary (orchestrator quality_gates runs the full battery); git status confirms only the three declared paths changed.
+    scope:
+      files:
+        - packages/cli/src/production.ts
+        - tests/behaviour/dispatch-production-worktree.test.ts
+        - .changeset/gh-404-worktree-lane-foundation-minor.md
 # Plan revision log:
 #   rev 1 — 2026-11-25: initial ten-phase plan from spec v1.0 (0cb77658) +
 #           test plan v1.0 (a50a1503). OQ-1 settled in-plan: the fresh-worktree
@@ -1557,3 +1641,43 @@ phases:
 #           belongs to the orchestrator's quality_gates phase, and the
 #           delta's review pass covers this phase before it. Phases 1-13
 #           byte-identical; no tasks key; no progress records.
+#   rev 12 — 2026-11-25: Delta-review micro-remediation declared
+#           (delivery_planning reopened; review-delta-phase-14.yaml —
+#           verdict APPROVE with pre-battery fixes; the findings are NEW in
+#           the delta or outside it, none blocking; the reviewer recommends
+#           fixing now to avoid a second full gate run after quality_gates).
+#           Phase 15 appended (kind delivery, 3 declared files): F-47 + F-48
+#           (low, FIX) — the mergeTree body in production.ts replaced with
+#           cpSync(from, to, { recursive: true }) (Bun/Rust behavior
+#           reviewer-verified in isolation: merge-and-keep, refuses EISDIR
+#           instead of writing through a linked destination directory,
+#           copies a staged link as a link), closing the three symlink
+#           shapes and the four shape-flip refusals (with type-mismatch
+#           unlink-before-copy and the remaining refusals classified with
+#           path + next action); the symlink + shape-flip scenarios added to
+#           the production-composition suite (the reviewer's HEAD~1/HEAD
+#           controls become the assertions); scenarios 9 and 9b re-verified
+#           green (same-date preservation unaffected). F-55 (medium, FIX) —
+#           the changeset release prose rewritten to the DELIVERED contract
+#           (detached lane worktree at the base tip, no lane/<ref> branch;
+#           the lane's intake creates the delivery branch; provider-landing
+#           merge with post-landing deletion deferred to closeout; the
+#           bounded runner-log sweep with tmp/tmpdir discarded;
+#           (repository, ref)-keyed visibility; the two worker settings;
+#           host-index pinned to the main checkout; shared clone identity) —
+#           the changeset stays the branch's single package-minor changeset
+#           for the five fixed groups (bump and package list unchanged).
+#           CARRIED RESIDUALS recorded one line each: F-49 (the F-37 family;
+#           closes with F-40 or F-37), F-50 (non-atomic merge per entry;
+#           retry completes; next touch), F-51 (per-sweep cap semantics —
+#           DEC-11 wording rides the doc-sync re-run; no code change), F-52
+#           (merged-entry directory mode; resolved by the primitive), F-53
+#           (size-equality wording; next touch); the phase-13/14 carrier
+#           list stays as-is; F-54 folds with F-42's suite hardening.
+#           Fences unchanged (incl. the no-shell neither-narrowed-nor-
+#           allowlisted boundary). Phase gate: no-shell-dispatch clean; the
+#           production suite green including the new symlink/shape
+#           scenarios; scenarios 9/9b green; typecheck; biome; tests/golden
+#           green with NO byte changes; the full battery belongs to the
+#           orchestrator's quality_gates phase. Phases 1-14 byte-identical;
+#           no tasks key; no progress records.
