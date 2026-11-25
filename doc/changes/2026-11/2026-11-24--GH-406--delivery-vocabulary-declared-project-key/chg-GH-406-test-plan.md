@@ -2,7 +2,7 @@
 id: chg-GH-406-test-plan
 status: Updated
 created: 2026-11-24
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 owners: [Juliusz Ćwiąkalski]
 service: delivery vocabulary and product-scope contracts (ubiquitous language, declared product key grammar, clone identity)
 labels: [change, m4, vocabulary, docs, cli, config]
@@ -16,7 +16,7 @@ links:
 
 # Test Plan - M4-S39: Delivery vocabulary: product, repository, main checkout, worktree, lane, clone identity; credentials bind to the product key (M4)
 
-> Title note: the change title field above is the tracker's renamed title — the owner renamed it at 2026-11-24T17:06:57Z alongside the vocabulary amendment (comment 7138707234); amendment §G covers only branch and change-folder slugs, not the title, and suite/file names remain unchanged identifiers per §G and Section 7. The delivered vocabulary is product-based; every assertion in this plan uses the amended nouns.
+> Title note: the change title field above is the tracker's renamed title — the owner renamed it at 2026-11-24T17:06:57Z alongside the vocabulary amendment (comment 7138707234); amendment §G covers only branch and change-folder slugs, not the title, and suite file names remain identifiers per §G and Section 7 — with the one directed exception: `tests/structure/declared-product-key.test.ts`, renamed by the CEO's PR-review directive (PR #411 review fix 6). The delivered vocabulary is product-based; every assertion in this plan uses the amended nouns.
 
 ## 1. Scope and Objectives
 
@@ -223,7 +223,7 @@ Per `.ai/rules/testing-strategy.md`, this is a mixed change: TypeScript workspac
 **Related IDs**: F-2, AC-F2-1, DM-1, NFR-1
 **Test Type(s)**: Unit
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/declared-project-key.test.ts` (new; exercises the exported `DECLARED_PRODUCT_KEY_PATTERN` and its predicate `isDeclaredProductKey` from the product-scope contracts module)
+**Target Layer / Location**: `tests/structure/declared-product-key.test.ts` (new; exercises the exported `DECLARED_PRODUCT_KEY_PATTERN` and its predicate `isDeclaredProductKey` from the product-scope contracts module)
 **Tags**: @backend, @structure
 
 **Preconditions**:
@@ -245,7 +245,7 @@ Per `.ai/rules/testing-strategy.md`, this is a mixed change: TypeScript workspac
 **Notes / Clarifications**:
 
 - The matrix mirrors NFR-1's threshold ("every rule unit-tested"); the length-64 accept and length-65 reject cases are the boundary pair the prompt names. Internal doubled hyphens are grammar-legal by the pattern — asserting them accepted pins the regex, not a new rule.
-- The suite file keeps its delivered name `declared-project-key.test.ts`: file names — like slugs, folder and branch — are identifiers and are NOT renamed by the amendment (amendment §G); only the contract names asserted inside changed (`DECLARED_PRODUCT_KEY_PATTERN`, `isDeclaredProductKey`). A reviewer must not read the file name as drift.
+- The suite file is named `declared-product-key.test.ts` (product-based, matching the contract names asserted inside it — `DECLARED_PRODUCT_KEY_PATTERN`, `isDeclaredProductKey`): its project-based draft name was renamed by the CEO's PR-review directive (PR #411 review fix 6) — a directed identifier change, distinct from amendment §G, which covers only branch and change-folder slugs. The other suite file names remain unchanged identifiers; no reviewer should read a suite name as drift.
 
 #### TC-DPKKEY-002 - Reserved segments `unbound` and `projects` refused
 
@@ -255,7 +255,7 @@ Per `.ai/rules/testing-strategy.md`, this is a mixed change: TypeScript workspac
 **Related IDs**: F-2, AC-F2-1, DM-1, NFR-1
 **Test Type(s)**: Unit
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/declared-project-key.test.ts` (new; same suite as TC-DPKKEY-001)
+**Target Layer / Location**: `tests/structure/declared-product-key.test.ts` (new; same suite as TC-DPKKEY-001)
 **Tags**: @backend, @structure
 
 **Preconditions**:
@@ -285,7 +285,7 @@ Per `.ai/rules/testing-strategy.md`, this is a mixed change: TypeScript workspac
 **Related IDs**: F-3, AC-F3-1, DM-2, NFR-2
 **Test Type(s)**: Unit
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/declared-project-key.test.ts` (new) plus the export inventory update in `tests/structure/content-inventory.test.ts` (Existing – Update)
+**Target Layer / Location**: `tests/structure/declared-product-key.test.ts` (new) plus the export inventory update in `tests/structure/content-inventory.test.ts` (Existing – Update)
 **Tags**: @backend, @structure
 
 **Preconditions**:
@@ -316,7 +316,7 @@ Per `.ai/rules/testing-strategy.md`, this is a mixed change: TypeScript workspac
 **Related IDs**: F-4, AC-F4-1, DM-3
 **Test Type(s)**: Unit + Contract
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/declared-project-key.test.ts` (accessor unit half) and `tests/behaviour/projects-clone-key.test.ts` (new; resolved-scope behaviour half through the production harness)
+**Target Layer / Location**: `tests/structure/declared-product-key.test.ts` (accessor unit half) and `tests/behaviour/projects-clone-key.test.ts` (new; resolved-scope behaviour half through the production harness)
 **Tags**: @backend, @structure, @behaviour
 
 **Preconditions**:
@@ -797,10 +797,10 @@ Per `.ai/rules/testing-strategy.md`, this is a mixed change: TypeScript workspac
 |-------|------------------------------|-------------------|--------------------------------|--------|
 | TC-DPKVOC-001 | `tests/structure/delivery-vocabulary.test.ts` (new) | `bun test tests/structure/delivery-vocabulary.test.ts` | None — reads committed docs | To Implement |
 | TC-DPKVOC-002 | `tests/structure/delivery-vocabulary.test.ts` (same suite) | `bun test tests/structure/delivery-vocabulary.test.ts` | None | To Implement |
-| TC-DPKKEY-001 | `tests/structure/declared-project-key.test.ts` (new) | `bun test tests/structure/declared-project-key.test.ts` | None — pure exported units | To Implement |
-| TC-DPKKEY-002 | `tests/structure/declared-project-key.test.ts` (same suite) | `bun test tests/structure/declared-project-key.test.ts` | None | To Implement |
-| TC-DPKALI-001 | `tests/structure/declared-project-key.test.ts`; `tests/structure/content-inventory.test.ts` (update) | `bun test tests/structure/declared-project-key.test.ts tests/structure/content-inventory.test.ts` | None | To Implement + Existing – Update |
-| TC-DPKACC-001 | `tests/structure/declared-project-key.test.ts`; `tests/behaviour/projects-clone-key.test.ts` (new) | `bun test tests/structure/declared-project-key.test.ts tests/behaviour/projects-clone-key.test.ts` | Fixture clone with identity marker (`tests/fixtures/projects/` helpers) | To Implement |
+| TC-DPKKEY-001 | `tests/structure/declared-product-key.test.ts` (new) | `bun test tests/structure/declared-product-key.test.ts` | None — pure exported units | To Implement |
+| TC-DPKKEY-002 | `tests/structure/declared-product-key.test.ts` (same suite) | `bun test tests/structure/declared-product-key.test.ts` | None | To Implement |
+| TC-DPKALI-001 | `tests/structure/declared-product-key.test.ts`; `tests/structure/content-inventory.test.ts` (update) | `bun test tests/structure/declared-product-key.test.ts tests/structure/content-inventory.test.ts` | None | To Implement + Existing – Update |
+| TC-DPKACC-001 | `tests/structure/declared-product-key.test.ts`; `tests/behaviour/projects-clone-key.test.ts` (new) | `bun test tests/structure/declared-product-key.test.ts tests/behaviour/projects-clone-key.test.ts` | Fixture clone with identity marker (`tests/fixtures/projects/` helpers) | To Implement |
 | TC-DPKUI-001 | `tests/behaviour/projects-list-contract.test.ts`, `tests/behaviour/repos-list-contract.test.ts` (updates) | `bun test tests/behaviour/projects-list-contract.test.ts tests/behaviour/repos-list-contract.test.ts` | Standard list fixture host (existing helpers) | Existing – Update (header pins) |
 | TC-DPKUI-002 | `tests/behaviour/repos-help.test.ts`, `tests/behaviour/projects-help.test.ts`, board help/selection suites (updates if pins trip); conformance suite covers every command reference page under `doc/planning/oss-tooling/milestones/*/commands/**` (three m2 pages also carry pin updates) | `bun test tests/behaviour/repos-help.test.ts tests/behaviour/projects-help.test.ts` | None beyond existing fixtures | Existing – Update (conditional) + To Implement (conformance half) |
 | TC-DPKUI-003 | `tests/behaviour/projects-flat-alias.test.ts` (update; golden/literals untouched) | `bun test tests/behaviour/projects-flat-alias.test.ts` | Pinned pre-change payload/text literals (committed) | Existing – Update (wording-only discipline) |
@@ -817,7 +817,7 @@ Per `.ai/rules/testing-strategy.md`, this is a mixed change: TypeScript workspac
 | TC-DPKPIN-002 | None (review-time) | Diff inspection at the delivery gate | The change branch diff vs base 22b15d31 | Manual Only |
 | TC-DPKGATE-001 | None (aggregate) | `TMPDIR=$PWD/tmp/tmpdir pnpm check` | Full working tree | Existing – No Change (battery) |
 
-Suite file names keep their delivered names — `declared-project-key.test.ts`, `delivery-vocabulary.test.ts`, `vocabulary-conformance.test.ts`, `projects-clone-key.test.ts`, `clone-identity-fixtures.test.ts`, `scripts/checks/new-code-naming.ts` + baseline: file names — like slugs, folder and branch — are identifiers and are NOT renamed by the owner amendment (§G). The amendment changes the contract names asserted inside them (`DECLARED_PRODUCT_KEY_PATTERN`, `isDeclaredProductKey`, `declaredProductKey`) and the user-facing nouns; no reviewer should read a legacy file name as drift. Exact suite file names are this plan's proposal; the implementation plan (phase 4) pins them, and reconciliation notes go to the owning TCs if the plan deviates; the plan's prose reconciles to the amendment's nouns when its phase reopens.
+Suite file names are identifiers, with one directed exception: `declared-product-key.test.ts` — its project-based draft name was renamed by the CEO's PR-review directive (PR #411 review fix 6), a directed identifier change distinct from amendment §G, which covers only branch and change-folder slugs. The remaining suites keep their delivered names — `delivery-vocabulary.test.ts`, `vocabulary-conformance.test.ts`, `projects-clone-key.test.ts`, `clone-identity-fixtures.test.ts`, `scripts/checks/new-code-naming.ts` + baseline: file names — like slugs, folder and branch — are identifiers and are NOT renamed by the owner amendment (§G). The amendment changes the contract names asserted inside them (`DECLARED_PRODUCT_KEY_PATTERN`, `isDeclaredProductKey`, `declaredProductKey`) and the user-facing nouns; no reviewer should read a legacy suite name as drift. Exact suite file names are this plan's proposal; the implementation plan (phase 4) pins them, and reconciliation notes go to the owning TCs if the plan deviates; the plan's prose reconciles to the amendment's nouns when its phase reopens.
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -840,7 +840,7 @@ Suite file names keep their delivered names — `declared-project-key.test.ts`, 
 - The owner's sources are authoritative in the order body < delivery brief (owner comment 7122871259) < vocabulary amendment (owner comment 7138707234); spec v1.1 is their authored form; the amendment supersedes the brief where they differ (spec §12, DEC-1, DEC-6).
 - The change's base is 22b15d31 (pm-notes state detection); the naming-rule check pins it as a committed constant.
 - `DECLARED_PRODUCT_KEY_PATTERN`, `isDeclaredProductKey`, `CLONE_KEY_PATTERN`, the legacy `PROJECT_KEY_PATTERN`, `cloneKey`, `declaredProductKey`, the legacy `projectKey`, the legacy `repoKey` are contract identifiers required verbatim by the ACs (spec authoring guidelines) — suites assert these exact names. The naming-rule baseline's forbidden token stays the bare legacy `projectKey` (the legacy token the check guards); the naming-check surface, the base constant (22b15d31) and the mutation tests stay as delivered.
-- Suite file names keep their delivered names — file names are identifiers, not renamed by the amendment (slugs stay per amendment §G); no file name is asserted by or asserts the vocabulary.
+- Suite file names are identifiers, with the one directed exception `declared-product-key.test.ts` (its project-based draft name renamed by the CEO's PR-review directive, PR #411 review fix 6 — slugs stay per amendment §G); no file name is asserted by or asserts the vocabulary.
 - Git's marker-sharing across linked worktrees holds on the reference host; fixture G-1 verifies it rather than assuming it (spec §12).
 - The delivered pin suites' fixture helpers cover the G-1/G-2 fixture needs (temp repositories, markers, host-index readers); otherwise the helpers extend within `tests/fixtures/projects/` without new isolation patterns.
 - ODR-0006 is the next free decision id, reserved by the brief (spec §12); the structural assertions in TC-DPKODR-001 rely on it.
@@ -857,6 +857,7 @@ None. Spec §14 records no open questions and the clarification resolved every r
 | 1.0 | 2026-11-24 | test-plan-writer agent | Initial test plan from chg-GH-406-spec.md (12 ACs, F-1..F-10, DM-1..3, NFR-1..7, fixtures G-1..G-3, Appendix B scope/exceptions) and .ai/rules/testing-strategy.md |
 | 1.1 | 2026-11-24 | test-plan-writer agent | Owner vocabulary amendment (comment 7138707234) applied end to end per spec v1.1 (test_planning phase reopened for this directed correction): contract names `DECLARED_PRODUCT_KEY_PATTERN` / `isDeclaredProductKey` / `declaredProductKey` replace the pre-amendment names in every assertion (`CLONE_KEY_PATTERN`/`cloneKey` unchanged; the legacy alias pair `PROJECT_KEY_PATTERN` ≡ `CLONE_KEY_PATTERN` keeps its shape per NFR-2); vocabulary nouns product / repository (long form "product repository" contrast-only) / product key everywhere, with "project" retired from the model's own vocabulary and "Jira project" for the tracker's word; headers `PRODUCT` / `REPOSITORY` / `CLONE` with `PROJECT REPOSITORY` asserted absent as a header (TC-DPKUI-001); retirement clause, "the tool" prose rule and neutral-examples rule (`acme`, `example.com`) added as asserted properties (TC-DPKVOC-002, AC-F1-1); ODR-0006 structural arms extended with the retirement clause (TC-DPKODR-001); G-2 noun swap — two clones of one repository resolve the same product key, different state roots (mechanism unchanged); wrapped-violation and wrapped-exception scanner arms pinned as delivered (TC-DPKCONF-002/003, review-iter-1 hardening); the reserved segment `projects` annotated as state-layout, not model vocabulary (TC-DPKKEY-002, TC-DPKCONF-003); suite file names explicitly kept — identifiers, not renamed by the amendment (§G); the bare legacy `projectKey` stays the naming-rule baseline's forbidden token; all 12 amended ACs still covered in §3.1; DM-1/NFR-1/NFR-2 reworded; TC IDs, scenario structure and file names unchanged |
 | 1.2 | 2026-11-24 | test-plan-writer agent | Amendment-fix (DoR iteration-3 finding 1, ride-along): title adoption only — H1 and the title-provenance note now carry the tracker's renamed title (owner renamed it at 2026-11-24T17:06:57Z alongside amendment comment 7138707234); the note's false provenance removed — amendment §G covers only branch and change-folder slugs, not the title, and suite/file names remain unchanged identifiers per §G and Section 7. Vocabulary content byte-intact: all v1.1 amendment content (contract names, headers PRODUCT / REPOSITORY / CLONE, retirement clause, TC coverage) unchanged |
+| 1.3 | 2026-11-25 | test-plan-writer agent | Suite file rename adoption per CEO PR #411 review fix 6 (test_planning phase reopened, PR-review ride): the DPK structure suite file is now `tests/structure/declared-product-key.test.ts` (its project-based draft name renamed by the CEO's directed identifier change, distinct from amendment §G — branch + change-folder slugs stay) — adopted in every target-location row (TC-DPKKEY-001/002, TC-DPKALI-001, TC-DPKACC-001), the §7 automation-map rows and their execution commands; the identifier notes (title note, TC-DPKKEY-001 note, §7 note, §8.2 assumption) corrected accordingly, while `delivery-vocabulary.test.ts`, `vocabulary-conformance.test.ts`, `projects-clone-key.test.ts`, `clone-identity-fixtures.test.ts` keep their delivered names. No coverage change: all 21 TC rows, code-name assertions and NFR mappings byte-intact |
 
 ## 10. Test Execution Log
 
