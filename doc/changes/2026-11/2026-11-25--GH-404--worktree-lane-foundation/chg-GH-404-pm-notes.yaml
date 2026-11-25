@@ -1,0 +1,80 @@
+change_id: GH-404
+title: "M4-S36: A work item's whole lifecycle runs in its own worktree (default on)"
+milestone: "M4: Jaiship-native delivery"
+branch: feat/GH-404/worktree-lane-foundation
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-25T03:29:05.413Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "Scope split per CEO comment on GH-404 (2026-11-25): this ticket delivers
+      the worktree foundation only — one lane at a time, the repository lease
+      and the dispatch result pr-open are unchanged; parallel lanes (lease per
+      lane, per-repository cap, second-lane admission, sync before the pull
+      request, behind indicator, owner-number measurement) move to GH-412."
+    date: "2026-11-25"
+  - text: "Vocabulary per ODR-0006 / GH-406 (landed, main-tools tip e5ff0512): read
+      every 'project', 'project repository' and 'project key' in the ticket as
+      'product', 'repository' and 'product key'; command names, schema ids and
+      field names keep their identifiers until GH-408; new code says cloneKey
+      and declaredProductKey, never the bare projectKey; the naming check with
+      its committed baseline runs in pnpm check."
+    date: "2026-11-25"
+open_questions:
+  - text: "To settle during planning (ticket directive, not a human blocker): what
+      the gates need in a fresh worktree (install, build) and how long that
+      takes — record the measurement during delivery. The GH-412 sync-commit
+      choice is explicitly out of scope here."
+    date: "2026-11-25"
+blockers: []
+notes:
+  - text: "Intake observed 2026-11-25: ticket open, milestone 'M4: Jaiship-native
+      delivery' attached (verified from the existing milestone set), five owner
+      comments read bottom-up — the 2026-11-25 CEO comment governs scope. No
+      prior branch, worktree, phase records, PR, or recorded session existed for
+      GH-404: the lifecycle started fresh. Resume sync verified: main-tools ==
+      origin/main-tools at e5ff0512 before branch creation."
+    type: info
+    date: "2026-11-25"
+  - text: "Reserved decision-record id if this change writes one: TDR-0077 (next
+      free id on main-tools), status Proposed, decision_date null — the owner
+      accepts or rejects it at PR review."
+    type: info
+    date: "2026-11-25"
+  - text: "Known doc impacts for system_spec_update (phase 7):
+      feature-dispatch-engine (worktree creation before the first phase, the
+      lane's working directory and derived environment, resume reusing the
+      worktree); feature-closeout (lane log sweep before removal, removal only
+      after merge confirmation); feature-projects (host-index registration
+      pinned to the main checkout, no prune of a live clone when a worktree is
+      removed, worktrees never rows of the flat record set); feature-board and
+      the lanes/dispatch-status visibility (worktree path); feature-config-layer
+      (worker settings: worktree-root, the disable-worktrees exception);
+      feature-state-layer (shared clone identity pin)."
+    type: info
+    date: "2026-11-25"
+  - text: "Delivery conventions (ticket): commits via the commit primitive; gate
+      evidence uses TMPDIR=$PWD/tmp/tmpdir; PR targets main-tools; this change
+      itself is delivered in the main checkout — the next lane dispatched after
+      it lands is the first to run in a worktree."
+    type: info
+    date: "2026-11-25"
+  - text: "Retro: the first `phase complete GH-404 clarify_scope` was refused by the
+      delivered pm-notes lint (`lint.keys.missing`: delivery_mode required at
+      top level). The delivered lint is the authority —
+      `.ai/agent/pm-instructions.md` still documents 'absent ⇒ interactive' as
+      the default, which current tooling rejects. delivery_mode set to
+      autonomous (lifecycle-prompt-driven delivery run, human authority reserved
+      at merge). Drift between pm-instructions prose and the delivered lint is
+      an owner-visible follow-up candidate; no ticket created autonomously."
+    type: retro
+    date: "2026-11-25"
