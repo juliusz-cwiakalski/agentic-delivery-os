@@ -799,7 +799,10 @@ export {
   type DispatchResumeEconomics,
   type DispatchResumePlan,
   evaluateDispatchResumeEconomics,
+  type LaneWorktreeResumePlan,
+  laneWorktreeBranch,
   planDispatchResume,
+  planLaneWorktreeResume,
 } from "./domain/dispatch-resume.js";
 export {
   DISPATCH_TRACKER_EXHAUSTED_IDENTITY,
@@ -1156,6 +1159,7 @@ export {
   parseCapsuleEvents,
   payloadFieldViolations,
   persistedTickVerdict,
+  planCloseoutWorktreeRemoval,
   planDocumentFromValidateData,
   planLogAppend,
   planWatchdogRestoration,
@@ -1454,6 +1458,19 @@ export {
   type LaneLaunchPlanFacts,
   planLaneLaunch,
 } from "./domain/lane-launch-plan.js";
+export {
+  checkoutBasenameOf,
+  defaultLaneWorktreeRoot,
+  deriveLaneWorktreeEnvironment,
+  GATE_TEMPORARY_DIRECTORY_EVIDENCE_LITERAL,
+  LANE_PROVISIONING_STEPS,
+  LANE_WORKTREE_INSTALL_COMMAND,
+  type LaneProvisioningStep,
+  type LaneWorktreeEnvironment,
+  laneWorktreePath,
+  parentDirectory,
+  resolveLaneWorktreeRoot,
+} from "./domain/lane-worktree-plan.js";
 // GH-299: the pure metrics report domain and its bounded human renderer.
 export {
   BASELINE_ENTRY_DECLARATIONS,

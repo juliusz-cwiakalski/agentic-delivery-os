@@ -52,6 +52,45 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Plan phase 2 boundary finding (ESCALATION, trigger-2 shape; GH-406
+      precedent applied): tests/checks/privacy-release.test.ts TC-RELEASE-001
+      asserts a BRANCH-level release property — with no changeset added on the
+      branch vs the merge base, the publishable diff must be empty. Phase 1's
+      commit (e25deabe) landed publishable core changes; the five-package minor
+      changeset is plan phase 10's only artifact. The suite cannot be greened
+      wording-only (its expectation IS the release property; weakening it is
+      forbidden) and turns green at the phase-10 boundary when the changeset
+      lands. The green-at-every-boundary letter and the phase-10 changeset
+      sequencing are mutually incompatible under TC-RELEASE-001 — the exact
+      conflict GH-406 recorded and resolved by committing phases with the ONE
+      known-deferred failure, all other stages green (1-3 in-gate, 5-13
+      standalone), and the changeset clearing it at the final phase boundary.
+      Applied here: no weakening, no early changeset, per-phase boundary
+      evidence records the known-deferred verdict."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 1 complete (commit e25deabe): the additive contract surface
+      landed — lane.worktree-root (DM-3) and lane.disable-worktrees (DM-4) as
+      key constants co-located with the delivered lane.* keys in
+      contracts/dispatch.ts, admitted by LANE_BRANCH / LaneSettings /
+      resolveLaneSettings (unset = sibling-of-main-checkout default /
+      worktree lanes on; wrong types fail closed naming the key), and the
+      additive optional worktreePath on DispatchLaneRecord (DM-1; absent is the
+      DEC-8 context-less shape). Fence-authorized re-pins (conditional-sweep
+      fence, deliberate, additive-only, no exception-mode pin touched):
+      dispatch-contract-invariance LANE_BRANCH exact-fields pin (+2 keys),
+      operator-contract-invariance configurationKeyCount 91->93,
+      content-inventory and port-contract-inventory export rows for the two key
+      constants, dispatch-contract DispatchLaneRecord declared-field pin
+      (+worktreePath optional), contract-baseline LANE_KEYS (+worktreePath).
+      Evidence: TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary —
+      13/13 stages, bun test 12864 pass / 4 skip / 0 fail; gate log
+      tmp/run-logs-runner/2026-11-25/053700-pnpm-check-gh404-lane-config.log
+      (earlier red run
+      tmp/run-logs-runner/2026-11-25/051511-pnpm-check-gh404-lane-config.log
+      failed on exactly the five stale pins re-pinned in this commit)."
+    type: info
+    date: "2026-11-25"
   - text: "DoR gate iter-2 verdict READY (readiness-iter-2.md in the change folder):
       10 PASS / 0 FAIL facets. Blocking finding verified closed against the tree
       (production.ts sole write site confirmed; state-scope settlement coherent

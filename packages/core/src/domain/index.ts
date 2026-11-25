@@ -106,7 +106,7 @@ export {
   projectCloseoutMemberIssueClosure,
   projectCloseoutMembers,
 } from "./closeout-members.js";
-export { evaluateWorktreeSafety } from "./closeout-worktree.js";
+export { evaluateWorktreeSafety, planCloseoutWorktreeRemoval } from "./closeout-worktree.js";
 export {
   type CommitActFailure,
   type CommitActNoPending,
@@ -369,7 +369,10 @@ export {
   type DispatchResumeEconomics,
   type DispatchResumePlan,
   evaluateDispatchResumeEconomics,
+  type LaneWorktreeResumePlan,
+  laneWorktreeBranch,
   planDispatchResume,
+  planLaneWorktreeResume,
 } from "./dispatch-resume.js";
 export {
   DISPATCH_TRACKER_EXHAUSTED_IDENTITY,
@@ -482,6 +485,19 @@ export {
   type LaneLaunchPlanFacts,
   planLaneLaunch,
 } from "./lane-launch-plan.js";
+export {
+  checkoutBasenameOf,
+  defaultLaneWorktreeRoot,
+  deriveLaneWorktreeEnvironment,
+  GATE_TEMPORARY_DIRECTORY_EVIDENCE_LITERAL,
+  LANE_PROVISIONING_STEPS,
+  LANE_WORKTREE_INSTALL_COMMAND,
+  type LaneProvisioningStep,
+  type LaneWorktreeEnvironment,
+  laneWorktreePath,
+  parentDirectory,
+  resolveLaneWorktreeRoot,
+} from "./lane-worktree-plan.js";
 export { evaluateMemory } from "./memory-lint.js";
 export {
   evaluateMergeFreshness,
