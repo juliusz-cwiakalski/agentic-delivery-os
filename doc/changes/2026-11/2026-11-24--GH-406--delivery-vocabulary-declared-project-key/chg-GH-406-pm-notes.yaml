@@ -10,7 +10,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-24T20:05:06.059Z }
   delivery_planning: { started: null, completed: 2026-11-24T20:08:48.072Z }
   dor_check: { started: null, completed: 2026-11-24T20:14:24.288Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-25T00:26:05.533Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -571,97 +571,96 @@ notes:
       ^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$, string pin kept), the internal regex
       const, DECLARED_PRODUCT_KEY_REJECTIONS, the
       DeclaredProductKeyRejection/DeclaredProductKeyVerdict types, and the
-      delivered predicate declaredProjectKeyVerdict renamed
-      isDeclaredProductKey (asserted BY NAME per amended AC-F2-1; behaviour
-      identical: length, charset, hyphen-position, reserved-segment refusals
-      exact-match on the whole key). CLONE_KEY_PATTERN and cloneKey UNTOUCHED;
-      the NFR-2 alias assertion stays the same-value pair PROJECT_KEY_PATTERN
-      = CLONE_KEY_PATTERN with NO cross-value equality to the product-key
-      pattern; the served cloneKey accessor and state-scope.ts carry no
-      amendment touch. Export-name inventory rows followed the rename
-      additively: tests/fixtures/ports/v1-contract-inventory.json (10 rows
-      renamed, none removed) and tests/structure/content-inventory.test.ts
-      (the four GH-406 allowance entries). Evidence: first boundary-gate run
-      211834-pnpm-check-gh406-amend-phase2.log short-circuited at the test
-      stage on ONE load-flaky failure (TC-DAEMON-121 foreground stop latency,
+      delivered predicate declaredProjectKeyVerdict renamed isDeclaredProductKey
+      (asserted BY NAME per amended AC-F2-1; behaviour identical: length,
+      charset, hyphen-position, reserved-segment refusals exact-match on the
+      whole key). CLONE_KEY_PATTERN and cloneKey UNTOUCHED; the NFR-2 alias
+      assertion stays the same-value pair PROJECT_KEY_PATTERN =
+      CLONE_KEY_PATTERN with NO cross-value equality to the product-key pattern;
+      the served cloneKey accessor and state-scope.ts carry no amendment touch.
+      Export-name inventory rows followed the rename additively:
+      tests/fixtures/ports/v1-contract-inventory.json (10 rows renamed, none
+      removed) and tests/structure/content-inventory.test.ts (the four GH-406
+      allowance entries). Evidence: first boundary-gate run
+      211834-pnpm-check-gh406-amend-phase2.log short-circuited at the test stage
+      on ONE load-flaky failure (TC-DAEMON-121 foreground stop latency,
       251.004ms vs the 250ms budget - daemon timing, no causal path to the
       contract renames; green twice standalone), documented limited retry
       214213-pnpm-check-gh406-amend-phase2-retry.log then ran the FULL chain
       green: exit 0, 13/13 stages, bun test 12848 pass / 4 skip / 0 fail, OK
       new-code-naming 2505 governed file(s) scanned, 0 violations, 4 baseline
       entry(ies). Narrow ladder before the gate: declared-project-key +
-      content-inventory + naming-boundary 36/36, port-contract-inventory
-      16/16, pnpm typecheck clean."
+      content-inventory + naming-boundary 36/36, port-contract-inventory 16/16,
+      pnpm typecheck clean."
     type: info
     date: "2026-11-24"
   - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 3 complete (commit
       71f22a5b): `projects list` group-table headers now PRODUCT and REPOSITORY
       (packages/cli/src/output/projects-text.ts GROUP_HEADER; the flat-alias
       HEADER constant in the same file untouched byte for byte - it IS the
-      --flat text surface), repos header stays CLONE, board --project help
-      keeps its delivered clone-identity wording, and the m2 projects.md
-      reference page re-pinned its column sentence, description sentence, and
-      header example to the table's nouns (repos.md and board.md already
-      carried them; zero-diff on both is acceptable). Pins refreshed in the
-      SAME commit: tests/behaviour/projects-groups-list.test.ts header block
-      wording-only (payload assertions untouched - the delivered
-      conditional-sweep surface trips again under the amendment; trip and
-      wording-only verdict recorded here per the conditional-sweep rule),
-      tests/behaviour/projects-list-contract.test.ts gained the TC-DPKUI-001
-      arm (text table header exactly PRODUCT/REPOSITORY with
+      --flat text surface), repos header stays CLONE, board --project help keeps
+      its delivered clone-identity wording, and the m2 projects.md reference
+      page re-pinned its column sentence, description sentence, and header
+      example to the table's nouns (repos.md and board.md already carried them;
+      zero-diff on both is acceptable). Pins refreshed in the SAME commit:
+      tests/behaviour/projects-groups-list.test.ts header block wording-only
+      (payload assertions untouched - the delivered conditional-sweep surface
+      trips again under the amendment; trip and wording-only verdict recorded
+      here per the conditional-sweep rule),
+      tests/behaviour/projects-list-contract.test.ts gained the TC-DPKUI-001 arm
+      (text table header exactly PRODUCT/REPOSITORY with
       GROUP/MEMBER/PROJECT/PROJECT REPOSITORY asserted ABSENT, PRODUCT column
       carries the group key, REPOSITORY column the member locator,
       project-groups.v1 envelope + exit 0 unchanged), and
       tests/structure/vocabulary-conformance.test.ts live-header literals
-      refreshed wording-only (PRODUCT/REPOSITORY exact + the four legacy
-      headers not.toContain; normalization and wrapped arms untouched - they
-      are phase 9's delivered output, preserved). Boundary evidence: gate run
-      225502-pnpm-check-gh406-amend-phase3-retry2.log green end-to-end -
-      exit 0, 13/13 stages in-chain, bun test 12849 pass / 4 skip / 0 fail,
-      OK new-code-naming 2505/0/4. Two earlier attempts disclosed: attempt 1
-      short-circuited at format:check (GROUP_HEADER single-line nit - fixed
-      by the formatter's own print); attempt 2's only failure was the
-      load-flaky TC-DAEMON-121 stop-latency first sample (252.06ms vs the
-      250ms budget, other four samples 232-236ms; green standalone twice and
-      in this green attempt - daemon timing, no causal path to the header
-      renames). Flat-alias byte-identity verified in this phase (constraint
-      (d)): projects-flat-alias.test.ts passed on its never-regenerated
-      pinned literals, 0 delta both modes."
+      refreshed wording-only (PRODUCT/REPOSITORY exact + the four legacy headers
+      not.toContain; normalization and wrapped arms untouched - they are phase
+      9's delivered output, preserved). Boundary evidence: gate run
+      225502-pnpm-check-gh406-amend-phase3-retry2.log green end-to-end - exit 0,
+      13/13 stages in-chain, bun test 12849 pass / 4 skip / 0 fail, OK
+      new-code-naming 2505/0/4. Two earlier attempts disclosed: attempt 1
+      short-circuited at format:check (GROUP_HEADER single-line nit - fixed by
+      the formatter's own print); attempt 2's only failure was the load-flaky
+      TC-DAEMON-121 stop-latency first sample (252.06ms vs the 250ms budget,
+      other four samples 232-236ms; green standalone twice and in this green
+      attempt - daemon timing, no causal path to the header renames). Flat-alias
+      byte-identity verified in this phase (constraint (d)):
+      projects-flat-alias.test.ts passed on its never-regenerated pinned
+      literals, 0 delta both modes."
     type: info
     date: "2026-11-24"
   - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 4 complete (commit
       135f7909): the amended eight-term vocabulary table landed in
-      doc/overview/ubiquitous-language.md and doc/overview/glossary.md -
-      Product (one or more repositories forming a single deliverable, planned
-      and delivered as one), Repository (one git repository belonging to
-      exactly one product; the long form product repository contrast-only in
-      prose, never a header), Main checkout, Worktree, Lane (delivery in one
-      repository, keyed <ref>@<cloneKey>), Work item, Clone identity, and
-      Product key (groupKey locally, product.key in the GH-401 manifest; the
-      contract names keep the declared qualifier while the legacy names
-      exist). The retirement clause is recorded in BOTH documents (project
-      retired from the model's own vocabulary; Jira project for the tracker's
-      word; existing names containing project named legacy exceptions) and
-      both prose rules are recorded in BOTH documents (the tool rule -
-      where the docs say the product meaning the tool itself they say the
-      tool - and neutral public examples only: acme, example.com). The UL
-      disambiguation entry is re-worded Product / repository / workspace and
-      the standing-enforcement paragraph names the amendment's new-code name
-      declaredProductKey. Both feature specs link the table and their term
-      enumerations speak the amended nouns; their residual contract-truth
-      wording (renamed export mentions, header-column sentences) stays
-      doc-syncer's lifecycle scope per the documentation-split fence. The
-      glossary retains the distinct Repository key concept (NG-7) and gained
-      a Project (retired) row carrying the clauses.
-      tests/structure/delivery-vocabulary.test.ts proves it: eight amended
-      terms with lifetimes in both documents, retirement clause + both prose
-      rules + neutral examples asserted (wrap-tolerant), pre-amendment rows
-      asserted gone, product repository never a header row, links present,
-      Repository key retained. One format nit fixed before the boundary
-      (formatter's own multi-line print). Boundary evidence: gate run
-      233829-pnpm-check-gh406-amend-phase4-retry.log green end-to-end -
-      exit 0, 13/13 stages in-chain, bun test 12853 pass / 4 skip / 0 fail,
-      OK new-code-naming 2505/0/4."
+      doc/overview/ubiquitous-language.md and doc/overview/glossary.md - Product
+      (one or more repositories forming a single deliverable, planned and
+      delivered as one), Repository (one git repository belonging to exactly one
+      product; the long form product repository contrast-only in prose, never a
+      header), Main checkout, Worktree, Lane (delivery in one repository, keyed
+      <ref>@<cloneKey>), Work item, Clone identity, and Product key (groupKey
+      locally, product.key in the GH-401 manifest; the contract names keep the
+      declared qualifier while the legacy names exist). The retirement clause is
+      recorded in BOTH documents (project retired from the model's own
+      vocabulary; Jira project for the tracker's word; existing names containing
+      project named legacy exceptions) and both prose rules are recorded in BOTH
+      documents (the tool rule - where the docs say the product meaning the tool
+      itself they say the tool - and neutral public examples only: acme,
+      example.com). The UL disambiguation entry is re-worded Product /
+      repository / workspace and the standing-enforcement paragraph names the
+      amendment's new-code name declaredProductKey. Both feature specs link the
+      table and their term enumerations speak the amended nouns; their residual
+      contract-truth wording (renamed export mentions, header-column sentences)
+      stays doc-syncer's lifecycle scope per the documentation-split fence. The
+      glossary retains the distinct Repository key concept (NG-7) and gained a
+      Project (retired) row carrying the clauses.
+      tests/structure/delivery-vocabulary.test.ts proves it: eight amended terms
+      with lifetimes in both documents, retirement clause + both prose rules +
+      neutral examples asserted (wrap-tolerant), pre-amendment rows asserted
+      gone, product repository never a header row, links present, Repository key
+      retained. One format nit fixed before the boundary (formatter's own
+      multi-line print). Boundary evidence: gate run
+      233829-pnpm-check-gh406-amend-phase4-retry.log green end-to-end - exit 0,
+      13/13 stages in-chain, bun test 12853 pass / 4 skip / 0 fail, OK
+      new-code-naming 2505/0/4."
     type: info
     date: "2026-11-24"
   - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 5 complete (commit
@@ -671,58 +670,56 @@ notes:
       pre-amendment nouns (the delivered front matter printed PROJECT and
       PROJECT REPOSITORY); governance.driver now cites the FULL supersession
       chain ticket body < delivery brief (comment 7122871259) < VOCABULARY
-      AMENDMENT (comment 7138707234). Body: the amendment's product nouns
-      with the retirement clause (project retired from the model's own
-      vocabulary, Jira project for the tracker's word, legacy names as named
-      exceptions), the section retitled The product key with the renamed
-      contract names DECLARED_PRODUCT_KEY_PATTERN and isDeclaredProductKey,
-      the mapping row Product = a group with NAMED EXCEPTIONS (groupKey, the
+      AMENDMENT (comment 7138707234). Body: the amendment's product nouns with
+      the retirement clause (project retired from the model's own vocabulary,
+      Jira project for the tracker's word, legacy names as named exceptions),
+      the section retitled The product key with the renamed contract names
+      DECLARED_PRODUCT_KEY_PATTERN and isDeclaredProductKey, the mapping row
+      Product = a group with NAMED EXCEPTIONS (groupKey, the
       delivery.projects.groups.v1 schema, projects.yaml - renaming them is
-      GH-408), the context recording the amendment's direction, and both
-      prose rules recorded. Status stays Proposed, decision_date stays null,
-      no ados_distribution header, no earlier record touched,
-      00-register.md untouched; the 00-index.md row keeps its mechanism with
-      only the TITLE TEXT re-worded to the product vocabulary.
-      TC-DPKODR-001's automated arms extended (renamed terms, product-key
-      section, retirement clause, supersession-chain comments, mapping-row
-      named exceptions, DECLARED_PRODUCT_KEY_PATTERN/isDeclaredProductKey
-      by name) - the re-worded front-matter prose and row title carry NO
-      automated assertion per the coverage posture; review-time diff
-      inspection backstops (scanner excludes doc/decisions/**). Boundary
-      evidence: gate run 000006-pnpm-check-gh406-amend-phase5.log green
-      end-to-end - exit 0, 13/13 stages in-chain, bun test 12854 pass / 4
-      skip / 0 fail, OK new-code-naming 2505/0/4. Exactly the three declared
-      paths changed under git status."
+      GH-408), the context recording the amendment's direction, and both prose
+      rules recorded. Status stays Proposed, decision_date stays null, no
+      ados_distribution header, no earlier record touched, 00-register.md
+      untouched; the 00-index.md row keeps its mechanism with only the TITLE
+      TEXT re-worded to the product vocabulary. TC-DPKODR-001's automated arms
+      extended (renamed terms, product-key section, retirement clause,
+      supersession-chain comments, mapping-row named exceptions,
+      DECLARED_PRODUCT_KEY_PATTERN/isDeclaredProductKey by name) - the re-worded
+      front-matter prose and row title carry NO automated assertion per the
+      coverage posture; review-time diff inspection backstops (scanner excludes
+      doc/decisions/**). Boundary evidence: gate run
+      000006-pnpm-check-gh406-amend-phase5.log green end-to-end - exit 0, 13/13
+      stages in-chain, bun test 12854 pass / 4 skip / 0 fail, OK new-code-naming
+      2505/0/4. Exactly the three declared paths changed under git status."
     type: info
     date: "2026-11-25"
   - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 6 complete (commit
-      9b9918eb): the conformance scanner's sense rules now speak the
-      amendment's vocabulary while every delivered mechanic is preserved
-      byte-intact - the whitespace-normalized detection core with the
-      original-line map (phase 9's hardening, PRESERVED not reverted: the
-      wrapped-violation, wrapped project-key mislabel, and wrapped-exception
-      arms are untouched), the 42-page commands glob pin, the four named
-      exceptions individually exempt single-line and wrapped with near-misses
-      still flagging, and the synthetic-only negative proofs (in-memory and
-      session temp root; the committed tree stays clean). Sense-rule updates:
-      DECLARED_TERM now reads declared product keys (the declared-term sense
-      is product key), the tracker sense gains the Jira project line
-      exemption with a synthetic arm, the declared-term arm input speaks the
-      product nouns, and the file header records that a clone identity
-      presented as the product or as a product key flags with the reserved
-      segment projects as state-layout. The live header assertions were
-      already refreshed wording-only in phase 3 (PRODUCT/REPOSITORY present,
-      GROUP/MEMBER/PROJECT/PROJECT REPOSITORY absent, CLONE, flat-alias KEY
-      byte-identical). Sweep residue landed in the SAME commit - the tool
-      prose rule applied on the pages this change already touches:
-      doc/guides/local-install.md (5 instances), doc/guides/
-      migrating-to-per-repository-state.md (1), and the m4 install page (2:
-      the tool binary, the installed tool binary); the m2 attempts page and
-      the three m2 command pages carry no the-product instances (verified,
+      9b9918eb): the conformance scanner's sense rules now speak the amendment's
+      vocabulary while every delivered mechanic is preserved byte-intact - the
+      whitespace-normalized detection core with the original-line map (phase 9's
+      hardening, PRESERVED not reverted: the wrapped-violation, wrapped
+      project-key mislabel, and wrapped-exception arms are untouched), the
+      42-page commands glob pin, the four named exceptions individually exempt
+      single-line and wrapped with near-misses still flagging, and the
+      synthetic-only negative proofs (in-memory and session temp root; the
+      committed tree stays clean). Sense-rule updates: DECLARED_TERM now reads
+      declared product keys (the declared-term sense is product key), the
+      tracker sense gains the Jira project line exemption with a synthetic arm,
+      the declared-term arm input speaks the product nouns, and the file header
+      records that a clone identity presented as the product or as a product key
+      flags with the reserved segment projects as state-layout. The live header
+      assertions were already refreshed wording-only in phase 3
+      (PRODUCT/REPOSITORY present, GROUP/MEMBER/PROJECT/PROJECT REPOSITORY
+      absent, CLONE, flat-alias KEY byte-identical). Sweep residue landed in the
+      SAME commit - the tool prose rule applied on the pages this change already
+      touches: doc/guides/local-install.md (5 instances), doc/guides/
+      migrating-to-per-repository-state.md (1), and the m4 install page (2: the
+      tool binary, the installed tool binary); the m2 attempts page and the
+      three m2 command pages carry no the-product instances (verified,
       zero-diff); public examples on the touched pages are already neutral
-      synthetic keys (no real company, nothing private - no edit needed);
-      the ~45-line remainder sweep across pages this change does not touch
-      stays routed to GH-408. Pre-existing F-5 dead-helper lint warning
+      synthetic keys (no real company, nothing private - no edit needed); the
+      ~45-line remainder sweep across pages this change does not touch stays
+      routed to GH-408. Pre-existing F-5 dead-helper lint warning
       (originalLineAt) is the delivered reviewer-dispositioned residual,
       untouched. Boundary evidence: gate run 002216-pnpm-check-gh406-amend-
       phase6.log green end-to-end - exit 0, 13/13 stages in-chain, bun test
@@ -730,25 +727,56 @@ notes:
     type: info
     date: "2026-11-25"
   - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 7 complete (commit
-      28cacb44): the behaviour-proof mechanism kept exactly as delivered and
-      its vocabulary updated to the amendment - wording-only.
+      28cacb44): the behaviour-proof mechanism kept exactly as delivered and its
+      vocabulary updated to the amendment - wording-only.
       tests/behaviour/clone-identity-fixtures.test.ts: G-2's header, describe
-      and test titles, disjoint-namespace comment, and the test-local
-      identifier now speak the product key (one repository cloned twice
-      resolves the SAME product key with different clone identities and
-      per-clone state roots; the product key is never compared against the
-      clone identity); G-3's header reads declared product-key grammar;
-      no persisted name touched, cloneKey untouched, no renamed-export
-      imports exist in either suite (verified - projects-clone-key.test.ts
-      needed no edit; its remaining 'declared field set' wording is generic,
-      not model vocabulary). tests/fixtures/projects/ helpers carry no
-      amendment surface (their 'declared' usages are generic mechanism
-      wording). NFR-7 double-run spot check: the fixture suite ran twice,
-      3/3 pass both runs. Boundary evidence: gate run 004343-pnpm-check-
-      gh406-amend-phase7.log green end-to-end - exit 0, 13/13 stages
-      in-chain, bun test 12854 pass / 4 skip / 0 fail, OK new-code-naming
-      2505/0/4."
+      and test titles, disjoint-namespace comment, and the test-local identifier
+      now speak the product key (one repository cloned twice resolves the SAME
+      product key with different clone identities and per-clone state roots; the
+      product key is never compared against the clone identity); G-3's header
+      reads declared product-key grammar; no persisted name touched, cloneKey
+      untouched, no renamed-export imports exist in either suite (verified -
+      projects-clone-key.test.ts needed no edit; its remaining 'declared field
+      set' wording is generic, not model vocabulary). tests/fixtures/projects/
+      helpers carry no amendment surface (their 'declared' usages are generic
+      mechanism wording). NFR-7 double-run spot check: the fixture suite ran
+      twice, 3/3 pass both runs. Boundary evidence: gate run 004343-pnpm-check-
+      gh406-amend-phase7.log green end-to-end - exit 0, 13/13 stages in-chain,
+      bun test 12854 pass / 4 skip / 0 fail, OK new-code-naming 2505/0/4."
     type: info
+    date: "2026-11-25"
+  - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 8 complete (commit
+      f0a4c94d): the release changeset body re-worded to the amendment's
+      vocabulary - .changeset/gh-406-delivery-vocabulary-declared-project-key
+      -minor.md keeps its file name (an identifier per amendment section G) and
+      its five fixed-group minor front matter (core, adapters, cli, mcp,
+      opencode; version bumps unchanged), and its body now names
+      DECLARED_PRODUCT_KEY_PATTERN with predicate isDeclaredProductKey, the
+      headers PRODUCT and REPOSITORY with CLONE, the amended eight-term table,
+      the retired project with the Jira-project rule, and the two prose rules -
+      the delivered body verifiably named the pre-amendment export
+      DECLARED_PROJECT_KEY_PATTERN and the PROJECT/PROJECT REPOSITORY headers,
+      which ceased to be true the moment phases 2 and 3 landed; this wording
+      ride keeps the release artifact truthful. The two feature-spec entries are
+      DECLARATION ONLY for the lifecycle system_spec_update phase:
+      doc/spec/features/feature-projects.md and
+      doc/spec/features/feature-project-groups.md speak
+      product/repository/product key with the mapping row product = a group with
+      named exceptions (groupKey, the delivery.projects.groups.v1 schema, the
+      projects.yaml file), their pre-amendment export-name mentions state
+      DECLARED_PRODUCT_KEY_PATTERN after reconciliation, with the grammar, the
+      CLONE_KEY_PATTERN/PROJECT_KEY_PATTERN alias, and the served cloneKey
+      recorded as current truth under the zero-rename and no-migration posture -
+      doc-syncer executes them in the lifecycle; no coder task edited them in
+      this commit. TC-RELEASE-001 stays green: the changeset exists on the
+      branch, verified 7/7 standalone at this boundary plus in-chain. Boundary
+      evidence: gate run 010511-pnpm-check- gh406-amend-phase8.log green
+      end-to-end - exit 0, 13/13 stages in-chain, bun test 12854 pass / 4 skip /
+      0 fail, OK new-code-naming 2505/0/4. All seven re-executed phases (2-8)
+      are complete with new commits and fresh 13/13 gate evidence; phases 1 and
+      9 carry their delivered commits and evidence (0b49e404, 5e57e3af) per the
+      re-execution accounting fence."
+    type: decision
     date: "2026-11-25"
   - text: "DoR iter-4 verdict READY (focused closure gate, 10/10 facets PASS, 0
       blocking): iter-3 finding 1 verified remediated — renamed tracker title
