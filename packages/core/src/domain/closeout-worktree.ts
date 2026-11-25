@@ -42,3 +42,52 @@ export const evaluateWorktreeSafety = (input: WorktreeSafetyInput): WorktreeSafe
   if (input.earlierFailure) return { safe: false, reason: "earlier-failure" };
   return { safe: true };
 };
+
+/* ------------------------------------------------------------------------- */
+/* GH-404 F-6 — the closeout ordering rules, layered AROUND the delivered    */
+/* safety predicate above (reused, never redefined). The lane's logs are     */
+/* swept before removal; removal happens strictly after the merge is         */
+/* confirmed; a lane stopped without a merge keeps its worktree.             */
+/* ------------------------------------------------------------------------- */
+
+/** The closeout removal ordering plan (F-6, NFR-5). */
+export type CloseoutWorktreeOrderingPlan =
+  | { readonly remove: true }
+  | {
+      readonly remove: false;
+      readonly reason: "merge-unconfirmed" | "logs-not-swept" | "safety-refused";
+      /** The delivered predicate's own refusal reason when the ordering refused on safety. */
+      readonly safetyReason?: string;
+    };
+
+/**
+ * Plan the removal ordering for one lane closeout (F-6, NFR-5; review F-8).
+ *
+ * The ordering is the contract: the merge must be confirmed first (a stalled
+ * lane without a merge always keeps its worktree), the lane's logs must
+ * already be swept to their destination, and only then does the delivered
+ * safety predicate decide — over the POST-sweep worktree state the caller
+ * observed (the swept paths are gone by then; the caller supplies
+ * `safety.clean` from its post-sweep observation). Every refusal keeps the
+ * worktree and the logs intact; there is no force path.
+ */
+export const planCloseoutWorktreeRemoval = (input: {
+  /** The merge is confirmed (squash landing observed for this lane's change). */
+  readonly mergeConfirmed: boolean;
+  /** The lane's logs are already swept to their destination. */
+  readonly logsSwept: boolean;
+  /** The delivered safety predicate's input, evaluated unchanged. */
+  readonly safety: WorktreeSafetyInput;
+}): CloseoutWorktreeOrderingPlan => {
+  if (!input.mergeConfirmed) return { remove: false, reason: "merge-unconfirmed" };
+  if (!input.logsSwept) return { remove: false, reason: "logs-not-swept" };
+  const verdict = evaluateWorktreeSafety(input.safety);
+  if (!verdict.safe) {
+    return {
+      remove: false,
+      reason: "safety-refused",
+      ...(verdict.reason === undefined ? {} : { safetyReason: verdict.reason }),
+    };
+  }
+  return { remove: true };
+};

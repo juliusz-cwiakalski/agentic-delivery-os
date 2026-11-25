@@ -162,6 +162,15 @@ describe("TC-PROJ-004 clones, worktrees, and marker discipline", () => {
       expect(KEY_AND_LOCATION(a1)).toBe(KEY_AND_LOCATION(a));
       expect(KEY_AND_LOCATION(a2)).toBe(KEY_AND_LOCATION(a));
       expect(KEY_AND_LOCATION(b1)).toBe(KEY_AND_LOCATION(b));
+      // TC-IDENT-001 (GH-404 F-9, DM-5, AC-F9-1): a linked worktree resolves
+      // the SAME clone identity and the SAME state root as its main checkout
+      // — the worktree's own checkout root differs (its own path), the
+      // identity and state location never do, and the marker in the git
+      // common directory is the one shared source.
+      expect(rootOf(a1)).toBe(worktreeA1);
+      expect(rootOf(a1)).not.toBe(rootOf(a));
+      expect(keyOf(a1)).toBe(keyOf(a));
+      expect(locationOf(a1)).toBe(locationOf(a));
 
       // The marker lives in the common directory, is 0600, and is never rewritten.
       const common = join(cloneA, ".git");

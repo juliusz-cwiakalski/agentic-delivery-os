@@ -1,0 +1,462 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-404
+branch: feat/GH-404/worktree-lane-foundation
+status: FAIL
+summary: 'Iteration-1''s two blocking and four major findings are fixed in the tree and I reproduced each fix through
+  the production composition: resume after the delivery branch exists, the session''s PATH and TMPDIR on spawn and
+  on resume, the rollback, the detached worktree, the byte-for-byte squashLand revert, and the whole lane end to
+  end (dispatch; verify gates and merge in the worktree with the deletion deferred; closeout --apply removing the
+  worktree, sweeping the runner logs and deleting the branch) when `tmp/` is ignored, as in this repository. FAIL
+  rests on three new production defects in the remediated code, none visible to the committed suites: the sweep''s
+  destination is keyed by ref and verified as a whole, so a second sweep of the same ref (the re-dispatch the remediation
+  itself supports, or one lane swept twice) fails forever and wedges closeout; the F-8 fix sits behind a plan-time
+  safety predicate that still refuses a lane worktree as dirty before the sweep when the repository does not ignore
+  `tmp/`; and the F-7 key change left the board without any worktree path, because the board names a repository
+  by its derived key while the lane record carries the origin identity. The declared residuals F-9 (error-row prose)
+  and F-17 (out of scope) are acceptable to carry into the pull request with owner visibility; the minimal remediation
+  is one small phase that needs no new decision.'
+severity_breakdown:
+  critical: 0
+  high: 3
+  medium: 5
+  low: 5
+  info: 3
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+- id: F-18
+  severity: high
+  confidence: high
+  category: correctness
+  location: packages/cli/src/production.ts:2014
+  owner: plan phase 13 (Code Review Remediation, iteration 2)
+  message: 'BLOCKING. The lane-log sweep writes to `<state root>/closeout-lane-logs/<ref>` and then verifies the
+    WHOLE destination against this sweep''s copy (entry count and recursive bytes, production.ts:2010-2020). The
+    destination is never cleared, so any later sweep of the same ref with new entries fails with `closeout.lane-log-sweep-failed`
+    on every retry and closeout refuses the worktree removal for good. Reproduced with the production closure over
+    dispatch-provisioned worktrees: the ref''s second lane after `git worktree remove` and a fresh dispatch (the
+    suite''s own scenario-6 shape) fails with ''copied 1 entries / 16 bytes, verified 2 / 32'' (later date) and
+    ''copied 1 / 25 bytes, verified 2 / 57'' (same date); one lane swept twice with new logs in between fails with
+    ''copied 1 entries / 44 bytes, verified 1 / 64''; the detail says the logs are ''not retrievable'' while they
+    are. Introduced by the remediation (the previous sweep compared nothing); the new suite stops before a second
+    closeout.'
+  suggestion: 'Give each sweep a clean destination per entry: copy to a staging sibling and replace `destination/<entry>`
+    atomically, then verify only the entries this sweep placed (placed bytes equal to the measured source bytes);
+    older differently named entries may stay. Add production-composition scenarios for a second lane of the same
+    ref and for one lane swept twice.'
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-19
+  severity: high
+  confidence: high
+  category: spec-compliance
+  location: packages/cli/src/edge.ts:2514
+  owner: plan phase 13 (Code Review Remediation, iteration 2)
+  message: 'BLOCKING (iteration-1 F-8 is not fixed in production; spec F-6 and feature-closeout.md:188 call the
+    sweep ''the mechanical precondition for the cleanliness predicate to pass''). The remediation moved the cleanliness
+    arm inside gateWorktreeRemoval, but that gate runs only for a worktree the PLAN already judged safe: planFacts
+    observes `git status` before any sweep (edge.ts:2514-2526) and worktreeStep emits `would-refuse` with no operation
+    when the worktree is dirty (closeout.ts:1354). In a repository that does not ignore `tmp/` (the installer adds
+    no such entry) the lane''s own unswept logs make it dirty, so `closeout --apply` exits 1 with ''worktree-cleanup
+    refused: retained=1 ... condition=dirty'', the sweep never runs, and the worktree and the branch stay. Reproduced
+    end to end through the production CLI; the control with `tmp/` ignored completes (worktree removed, branch deleted,
+    logs at the destination). The pm-notes deferral (''apply-time is authoritative'') rests on a premise the apply
+    path does not honour.'
+  suggestion: Evaluate the plan-time cleanliness of a lane worktree with the swept paths excluded (`git status --porcelain
+    -- . ':(exclude)tmp/run-logs-runner' ':(exclude)tmp/tmpdir'`) and keep the apply-time post-sweep observation
+    authoritative, or let worktreeStep emit the remove operation for a lane worktree whose only dirt is the swept
+    paths. Add a production-composition closeout scenario with `tmp/` not ignored.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-20
+  severity: high
+  confidence: high
+  category: spec-compliance
+  location: packages/core/src/domain/owner-gate-sla.ts:508
+  owner: plan phase 13 (Code Review Remediation, iteration 2)
+  message: BLOCKING regression (AC-F7-1 / ticket AC6, board leg). The F-7 fix keys the join by `${repository}|${ref}`,
+    but the board passes its repository KEY to laneRow (owner-gate-sla.ts:508-510, 629) while newestDispatchLaneWorktreePaths
+    keys by the dispatch.lane record's ORIGIN identity. In production the two never meet (`repo-dbd86596` vs `github.com/owner/repo`,
+    both observed through the real composer), so no board lane row carries a worktreePath any more, although `lanes
+    list` and `dispatch status` still do; the control with one identity renders the path. tests/behaviour/board-lanes.test.ts
+    passes only because its fixture uses BOARD_REPOSITORY for both identities.
+  suggestion: Build the map per repository inside loadRepositoryFacts from that repository's own store (it already
+    opens one) and key it by ref, which also delivers the declared 'the board runtime reads each repository's own
+    store'; add a test whose board key differs from the record identity and correct the stale 'ref-keyed' / 'per
+    ref' comments (edge.ts:4312-4320, board.ts:126).
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-21
+  severity: medium
+  confidence: high
+  category: plan-compliance
+  location: packages/cli/src/production.ts:1996
+  owner: plan phase 13 (Code Review Remediation, iteration 2)
+  message: 'Decision 3 says truncation is ''disclosed as a fact''; the flag is returned and then dropped: gateWorktreeRemoval
+    reads only postSweepClean (closeout.ts:1883) and no operator surface renders it. The loop stops at the first
+    entry over the 32 MiB cap and then deletes every entry, copied or not; when the newest entry alone exceeds the
+    cap nothing is copied, the lane''s whole log tree is deleted and the sweep answers `ok: true, swept: true, truncated:
+    true`. Reproduced with a sparse file one byte over the cap (destination empty, source empty); this contradicts
+    NFR-5 whenever it triggers.'
+  suggestion: Either refuse the sweep when an entry would be dropped (logs and worktree stay, the operator decides)
+    or carry `truncated` into the closeout step evidence and summary; add a sparse-file test for both shapes.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-22
+  severity: medium
+  confidence: high
+  category: testing
+  location: tests/behaviour/dispatch-production-worktree.test.ts:432
+  owner: plan phase 13 (Code Review Remediation, iteration 2)
+  message: Iteration-1 F-6 residual. Scenarios 1, 2, 3 and 6 are production-path; scenario 4 hand-wires the merge
+    runtime and calls `ports.deleteBranch` directly (the production binding at production.ts:3336 is executed by
+    no committed suite), scenario 5 calls the sweep closure with a stubbed cleanliness observer and never runs the
+    closeout transaction, and no committed suite invokes `merge` or `closeout` through the composer (the new suite
+    runs only `queue add` and `dispatch`). That is why F-18, F-19 and F-20 are invisible to a green targeted run.
+    The file header and the pm-notes ('dispatch/merge runtime ... only harness/provider/children stubbed') overstate
+    it, and the comment in dispatch-resume-economics.test.ts:14-20 says scenario 2 proves TC-RESUME-002/003 while
+    it covers only the branch-mismatch half of 002.
+  suggestion: 'Add two production-composition scenarios: merge invoked in the lane worktree (post-landing deferral,
+    branch retained) and `closeout --apply` from the main checkout (sweep, removal, branch deletion), plus the F-18
+    and F-19 shapes; tmp/tmpdir/opencode/gh404-review-i2/probe-e2e.ts is a working seed. Reword the comments to
+    what is asserted.'
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-23
+  severity: medium
+  confidence: medium
+  category: documentation
+  location: doc/guides/engine-first-operations.md:27
+  owner: doc-sync re-run (guide sentence) plus a follow-up work item (code)
+  message: 'The operator guide presents `dispatch`, `verify gates`, `merge` as one sequence, but under default-on
+    worktree lanes `verify gates <ref>` reads the invoking working tree: from the main checkout it fails (`verify.gates.failed`,
+    ''lifecycle-incomplete source=pm-notes:absent'') and records the base head, after which `merge` refuses `merge.gates-stale`
+    with a hint (''re-run verify gates'') that cannot converge there. `merge` from the main checkout does land once
+    the verification was produced in the lane''s worktree (AC-F6-1 holds for merge), and closeout invoked from the
+    lane worktree is refused (`checkout-restore refused`) without naming the remedy. All reproduced through the
+    production CLI; inherent to the default flip and missed in iteration 1.'
+  suggestion: In the doc-sync re-run state where each command must run (`verify gates` in the lane's worktree, `dispatch
+    status <ref>` shows the path; `merge` and `closeout` from the main checkout) and open a follow-up work item
+    for a worktree-aware `verify gates` and a remedy that names the worktree. Check how the owner's wrapper invokes
+    these before the first lane after merge.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-24
+  severity: medium
+  confidence: high
+  category: spec-compliance
+  location: doc/changes/2026-11/2026-11-25--GH-404--worktree-lane-foundation/chg-GH-404-spec.md:333
+  owner: PM and spec-writer, before dod_check and the pull request
+  message: 'The change spec was not revised for Decisions 1-3 (status Proposed, last edited before the decisions):
+    AC-F2-1 still requires the worktree ''on a new branch at the tip of the base branch'', AC-F4-1 ''verified to
+    be on the lane''s branch'', and G-2, F-2 and F-6 still describe the lane branch and the `tmp/tmpdir` sweep.
+    Against the tree those two acceptance criteria read as unmet, so dod_check would audit superseded criteria.'
+  suggestion: Record Decisions 1-3 as a spec revision and reword AC-F2-1, AC-F4-1 and the F-2/F-6 text (detached
+    worktree, no lane branch, resume accepts detached-at-base or a convention branch, runner-log sweep, provider
+    landing with the deletion deferred to closeout).
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-25
+  severity: medium
+  confidence: high
+  category: error-contract
+  location: packages/adapters/src/git/index.ts:522
+  owner: plan phase 13 (Code Review Remediation, iteration 2)
+  message: 'Two paths still wedge a ref with an opaque refusal. (a) A lane worktree directory removed without `git
+    worktree remove` leaves a registered worktree and every later dispatch of the ref is refused ''worktree-add-refused:
+    git refused the worktree creation (128)'': no path, no remedy (`git worktree prune` recovers). (b) When the
+    failed install or build leaves untracked, non-ignored files the rollback is refused; the first refusal discloses
+    the path, but every later dispatch repeats the bare ''(128)''. Both reproduced; iteration-1 F-9''s stderr-tail
+    fix covers the install and build children only.'
+  suggestion: Carry a bounded git stderr tail and the worktree path in the addWorktree refusal and name the remedy
+    (prune, or remove the named path); consider recording an orphaned worktree on the lane record so the next attempt
+    names it.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-26
+  severity: low
+  confidence: high
+  category: correctness
+  location: packages/cli/src/production.ts:4458
+  owner: plan phase 13 (Code Review Remediation, iteration 2) or a declared residual
+  message: The detached arm compares HEAD with the CURRENT base tip, so a worktree detached at an OLDER base commit
+    (the base moved between provisioning and resume, before the lane's intake creates its branch) is refused as
+    'neither detached at main-tools nor on a ... delivery branch'. Reproduced; the message misdescribes the state
+    and names no recovery (creating the delivery branch by hand does recover). Decision 1 says 'detached-at-the-recorded-base'.
+  suggestion: Accept a detached HEAD that is an ancestor of the base tip, or record the provisioning SHA on the
+    lane record and compare against it; say what the operator should do.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-27
+  severity: low
+  confidence: high
+  category: correctness
+  location: packages/cli/src/production.ts:4448
+  owner: plan phase 13 (Code Review Remediation, iteration 2) or a declared residual
+  message: 'The reuse verification runs git in the recorded directory without checking that it is a worktree of
+    this repository; when the path exists but is not one, git discovers a repository upward and the refusal reports
+    that repository''s branch. Reproduced with an empty directory at the recorded path: the message named the unrelated
+    repository above it (in the probe, the repository under review).'
+  suggestion: Compare `git rev-parse --git-common-dir` at the recorded path with the invoking checkout's common
+    directory (or require the path in listWorktrees()) before reading its checkout.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-28
+  severity: low
+  confidence: high
+  category: maintainability
+  location: packages/cli/src/production.ts:4466
+  owner: plan phase 13 (Code Review Remediation, iteration 2) or a declared residual
+  message: 'Two definitions of the delivery-branch convention: resume uses an unescaped `^[a-z]+/<REF>/` built from
+    the ref, while merge and closeout use the adapter''s escaped branchConvention (`^[a-z][a-z0-9-]*/<REF>/.+$`,
+    index.ts:245). A lane on `feat2/<REF>/x` can merge and close out but is refused at resume (reproduced).'
+  suggestion: Use one matcher for both (export the adapter's) or record why the resume form is narrower.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-29
+  severity: low
+  confidence: high
+  category: correctness
+  location: packages/adapters/src/git/merge.ts:241
+  owner: plan phase 13 (Code Review Remediation, iteration 2)
+  message: isBranchCheckedOutInLinkedWorktree matches the branch by substring, so a parked `feat/GH-1/ab` defers
+    the deletion of the distinct branch `feat/GH-1/a`, and a dead (prunable) worktree still counts as holding its
+    branch. Both reproduced; the first self-heals only if that ref is closed out, the second leaves the merged branch
+    behind.
+  suggestion: Compare the exact `branch refs/heads/<branch>` line and skip blocks whose worktree path no longer
+    exists.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-30
+  severity: low
+  confidence: high
+  category: error-contract
+  location: packages/cli/src/production.ts:1984
+  owner: plan phase 13 (Code Review Remediation, iteration 2)
+  message: 'In the no-logs arm the scratch deletion runs outside the try, so a failure rejects out of the sweep
+    port instead of returning the declared `{ ok: false, code, detail }`, and gateWorktreeRemoval does not catch
+    it (reproduced with a read-only `tmp/`: EACCES thrown). The reuse arm also binds TMPDIR to `<worktree>/tmp/tmpdir`
+    without ensuring it exists.'
+  suggestion: Move the deletion into the try (or wrap the port call) and create the TMPDIR anchor on reuse.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-31
+  severity: info
+  confidence: high
+  category: convention
+  location: commit 3d8faceb
+  owner: follow-up (commit primitive)
+  message: 'Iteration-1 F-17(d): the remediation commit is typed `docs(GH-404)` while carrying 30 source and test
+    files (the commit primitive derives the type from the first pathspec). Squash landing keeps it off base, but
+    the pull request history shows a mistyped commit.'
+  suggestion: No action for this change; route to the commit-primitive follow-up already listed.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-32
+  severity: info
+  confidence: high
+  category: observation
+  location: packages/cli/src/production.ts:4514
+  owner: follow-up
+  message: 'Placement derives from the invoking directory: a first dispatch of another ref invoked from inside a
+    lane worktree created `<lane-worktree-basename>-<ref>` beside the lane worktree, while spec G-2 says a sibling
+    of the main checkout. The host-index root stayed on the main checkout.'
+  suggestion: Derive the placement from the main checkout when the invoking directory is a linked worktree, or state
+    the invocation assumption.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-33
+  severity: info
+  confidence: high
+  category: documentation
+  location: doc/spec/features/feature-closeout.md:188
+  owner: doc-sync re-run
+  message: 'Sentences the tree now contradicts, for the doc-sync re-run: feature-closeout.md:188-190 (the `tmp/tmpdir`
+    sweep; ''an unsafe or unmerged worktree is already refused when the plan is built''), feature-state-layer.md:99
+    and :126, feature-merge-verify-deploy.md:105-114 (the -C landing paragraph), feature-dispatch-engine.md:62 and
+    :190, and doc/guides/engine-first-operations.md:46-58 (`lane/<ref>`, ''sweeps the lane''s gate evidence'', the
+    three-command sequence).'
+  suggestion: Reconcile in the doc-sync re-run together with F-23.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+reviewed_at: '2026-11-25T17:55:00Z'
+next_step: 'FAIL: F-18, F-19 and F-20 block; none needs a new PM decision (each follows from Decisions 1-3 and AC-F7-1),
+  so the plan-writer can append a short phase 13 (Code Review Remediation, iteration 2) and CALL_CODER. (1) createLaneLogSweep:
+  per-entry replace-and-verify, never whole-directory counts. (2) edge.ts planFacts: plan-time cleanliness of a
+  lane worktree excludes the swept paths; the apply-time post-sweep observation stays authoritative. (3) board runtime:
+  build the worktree-path map from each repository''s own store inside loadRepositoryFacts. Each with a production-composition
+  scenario; the probes at tmp/tmpdir/opencode/gh404-review-i2/*.ts are working seeds. Recommended in the same edit
+  (non-blocking): F-21, F-22, F-25, F-29, F-30. Before the pull request: F-24 (spec amendment) and the doc-sync
+  list in F-23 and F-33. Re-review as iteration 3. No remediation phase was appended to the plan and no typed blocker
+  was published by this review: the delegating session asked for owning phase and minimal remediation per finding,
+  as in iteration 1.'
+verification:
+  note: 'Additive informational key (not part of the iteration-1 schema): status of each iteration-1 finding against
+    the tree at 3d8faceb, with the probe that shows it. Probe labels refer to tmp/tmpdir/opencode/gh404-review-i2/probe-*.ts.'
+  F-1:
+    verdict: VERIFIED FIXED
+    evidence: R1 detached at the base tip with no lane branch; R2 resume after `feat/<REF>/some-slug` accepted,
+      same worktree; R3 resume while detached accepted; R5 foreign branch refused; suite scenario 2.
+    residual: F-26, F-27, F-28.
+  F-2:
+    verdict: VERIFIED FIXED for the declared scope
+    evidence: S1 runner logs copied newest-first, scratch deleted, post-sweep clean; S2 blocked destination moves
+      nothing; end to end (A2) the logs land at the destination and the worktree is removed.
+    residual: F-18 and F-21 are regressions in the remediated closure; F-30.
+  F-3:
+    verdict: VERIFIED FIXED
+    evidence: squashLand is byte-identical to main-tools e5ff0512 (only the new detection member differs); end to
+      end the merge reports post-landing branch-deletion ok with the branch retained, and closeout --apply then
+      deletes it (A2 from the worktree, B2 from the main checkout).
+    residual: F-29; the committed proof is not production-path (F-22).
+  F-4:
+    verdict: VERIFIED FIXED for the declared cases
+    evidence: J4c failed install rolls the worktree back and the retry provisions fresh; J3 and suite scenario 6
+      re-dispatch after a clean removal; R1 shows no lane branch.
+    residual: F-25.
+  F-5:
+    verdict: VERIFIED FIXED
+    evidence: 'R1-R3: every session spawn and every resume runs in the worktree with <worktree>/node_modules/.bin
+      leading PATH, TMPDIR inside the worktree and DELIVERY_WORK_PATH set; controls K1 (context-less record) and
+      K2 (disable-worktrees) keep the delivered environment byte-for-byte.'
+    residual: LaneLaunchPlanFacts.worktreeEnvironment in lane-launch-plan.ts still has no supplier (declared in
+      the uncommitted pm-notes edit; the phase-12 file list named the file). Acceptable to carry.
+  F-6:
+    verdict: PARTIAL
+    evidence: Scenarios 1, 2, 3 and 6 run through createProductionComposer, the real CLI and real git. Scenario
+      4 hand-wires the merge runtime; scenario 5 calls the sweep closure directly; no committed suite runs merge
+      or closeout through the composer.
+    residual: F-22.
+  F-7:
+    verdict: PARTIAL
+    evidence: '(repository, ref) key and newest-record-wins verified: `lanes list` and `dispatch status` render
+      the path through the CLI; J2 shows cross-repository isolation and a newer context-less record superseding
+      an older path.'
+    residual: The board leg no longer renders at all (F-20) and the board still reads only the invoking store.
+  F-8:
+    verdict: NOT FIXED IN PRODUCTION
+    evidence: 'A (tmp not ignored): plan would-refuse, apply exit 1 ''condition=dirty'', no sweep; A2 control completes.'
+    residual: F-19.
+  F-9:
+    verdict: PARTIAL, AS DECLARED
+    evidence: Refusal detail names the step, the bound, the timeout fact and a 400-character stderr tail (J4, J4c,
+      J4t); the sweep token is declared at feature-closeout.md:190; the error-row prose at contracts/error-table.ts:1362-1370
+      is unchanged and still says 'the attempt stays recorded' and 'inspect the harness selection' for refusals
+      that record zero attempts.
+    residual: ACCEPTABLE TO CARRY with owner visibility. It needs one coder-owned commit moving three files together
+      (contracts/error-table.ts, doc/spec/features/feature-result-contract.md Appendix D, tests/fixtures/events/error-table-baseline.json;
+      error-table-sync enforces they agree); the doc-syncer alone cannot close it.
+  F-10:
+    verdict: VERIFIED FIXED
+    evidence: Relative and tilde roots refused at config resolution naming the key, value trimmed; TC-WT-006 guards
+      worktreePath (config-schema and lifecycle suites in the targeted run).
+    residual: None.
+  F-11:
+    verdict: AS DECLARED
+    evidence: The 30 s bound stays and is named with the timeout fact (J4t).
+    residual: No retry, declared out of scope.
+  F-12:
+    verdict: VERIFIED FIXED
+    evidence: 'Real separate-git-dir main checkout: excluded from the linked inventory, isCheckedOutElsewhere correct
+      (F12).'
+    residual: None.
+  F-13:
+    verdict: VERIFIED FIXED
+    evidence: LANE_PROVISIONING_STEPS reordered to the production order and consumed together with LANE_WORKTREE_INSTALL_COMMAND;
+      the dead resume helpers and their inventory rows are gone.
+    residual: None.
+  F-14:
+    verdict: PARTIAL, AS DECLARED (narrowed mapping)
+    evidence: The canary control runs the scan. The preserved golden tests/golden/status-context-less.txt is byte-identical
+      to the merge-base renderer's output (sha256 1a0c6ecdf0ce...) and was not regenerated. TC-WT-005, TC-ENV-001
+      and the TC-HOSTIDX-001 `void command` loop are unchanged.
+    residual: 'ACCEPTABLE TO CARRY. The JUSTIFIED comment at host-index-worktree-pin.test.ts:53-58 says the production-path
+      composition is proven by the new suite, which has no host-index assertion; I verified the pin myself at HEAD
+      (H1, H2: the root stays on the main checkout across dispatch, status and lanes, including invocations from
+      the worktree).'
+  F-15:
+    verdict: VERIFIED FIXED
+    evidence: No require(), non-null assertion or as-never cast in any test file the remediation touched.
+    residual: None.
+  F-16:
+    verdict: VERIFIED FIXED in code; doc sentences pending
+    evidence: One accurate comment block remains at the provisioning binding.
+    residual: 'The guide and spec sentences are still in the tree: F-33.'
+  F-17:
+    verdict: OUT OF SCOPE, AS DECLARED
+    evidence: (a)-(f) each carry a reason in plan phase 12; the port comment names (a)-(c).
+    residual: 'ACCEPTABLE TO CARRY. (d) now also covers 3d8faceb (F-31). For awareness: the live checkout still
+      holds eight `lane/*` branches at e5ff0512 with no worktree (GH-239, GH-347, GH-348, GH-354, GH-356, PDEV-12,
+      GH-901, GH-902; created 2026-11-25 07:05-07:37, before this review), left by the retired lane-branch model;
+      the owner may want to delete them.'
+reviewer_notes:
+  gates_run: pnpm typecheck exit 0 (six packages); biome lint and format exit 0; boundaries, new-code naming, error-table-sync,
+    exports discipline and parity, no-shell, allowlist-tripwire, forbidden-literals, exit-code-literals and tsconfig-strictness
+    all OK; targeted bun test 632 pass / 0 fail across 84 files (51 s); `plan validate GH-404` valid, `plan diff`
+    unreadable (the F-17(f) stub). The full battery was not run (quality_gates owns it).
+  scope_discipline: 'No golden bytes changed in 3d8faceb (exception pins preserved; the default-mode golden was
+    re-pinned with its surface in phase 7). LANE_BRANCH did not exist at the merge base, so retiring it breaks nothing.
+    Phase 12 declared 29 files; the commit touched 31 and 23 are declared. Six declared files are untouched (contracts/error-table.ts,
+    contracts/queue.ts, contracts/owner-gate-sla.ts, domain/lane-launch-plan.ts, tests/fixtures/dispatch/parity/harness.ts,
+    and the preserved golden). Eight touched paths are undeclared: the pm-notes and seven source and test files,
+    of which six are disclosed in the pm-notes as tracked drift; tests/behaviour/config-schema.test.ts (the F-10
+    test) is not.'
+  reviewer_incident: 'Disclosure. The first run of probe-resume.ts had an empty worktree path and its guard-free
+    git helper fell back to the process cwd, so it created four branches (feat/GH-902/some-slug, feat/GH-904/recovered,
+    feat/GH-905/some-slug, some-foreign-branch), checked them out and made one commit (ecface90, ''feat: lane work'',
+    adding work.txt) in THIS checkout, and left an untracked notes.md. I restored the checkout by hand: back on
+    feat/GH-404/worktree-lane-foundation at 3d8faceb, the four branches deleted, work.txt removed by the checkout,
+    notes.md deleted, the uncommitted pm-notes modification preserved byte-for-byte (sha256 6d16bfd931cf...), `git
+    status --short` identical to the state before the review. Traces that remain: five HEAD reflog entries and one
+    unreachable commit object (ecface90, author ''GH-288 fixture''). No tracked file differs. The probe library
+    now confines every git and CLI call to its own temporary root.'

@@ -1,0 +1,299 @@
+version: 1
+iteration: 3
+mode: local
+scope: delta
+delta_of: review-delta-phase-14.yaml
+work_item_ref: GH-404
+branch: feat/GH-404/worktree-lane-foundation
+head: 9916809884a65e4efa07addd78d92d1c29f2cc12
+status: PASS
+summary: >-
+  Delta re-check of the phase-15 commit 99168098 (F-47, F-48, F-55), not a new
+  iteration. VERDICT: PROCEED to quality gates. No blocking defect. F-47 is
+  closed on the product's runtime: with the copy primitive the merge never
+  wrote through a link in any shape driven through the production closure under
+  Bun 1.4.4 (entry-level link, child file link, child directory link, loose
+  file, dangling link), a staged link lands as a link, and every refusal keeps
+  the sources intact and names the entry, the destination and the next action.
+  F-52 is resolved by the same change. The rewritten changeset is accurate
+  against spec v1.1 and the code and carries none of the pre-review design.
+  The 15d deviation (a read-only earlier file replaced by newer bytes) is
+  acceptable. The tree is green where it matters: production suite 22 of 22,
+  the five named tests, TC-RELEASE-001, no-shell, cli typecheck, biome. New
+  findings, none blocking: the no-write-through property is a property of Bun's
+  cpSync and reopens under Node 24.11.1 (not a supported runtime), and the two
+  child-level shapes where the runtimes diverge are not pinned by the committed
+  scenarios (F-56, low); four info notes (F-57 to F-60).
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 4
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-56
+    severity: low
+    confidence: high
+    category: security
+    location: packages/cli/src/production.ts:2001
+    owner: coder, two scenarios; optional ten-line hardening; otherwise a declared residual with owner visibility
+    message: >-
+      NEW in this delta, and a consequence of the fix this reviewer recommended
+      in the phase-14 pass (verified there under Bun only). The merge's safety
+      is a property of Bun's cpSync, not of the code. Under Bun 1.4.4, cpSync
+      unlinks a destination symlink child before copying and refuses a
+      directory onto a linked destination. Under Node 24.11.1 the SAME call
+      writes through: a regular file staged over a file-symlink child
+      overwrote the link's target outside the destination (target.log became
+      NEWER), and a directory staged over a directory-symlink child created a
+      file inside the linked directory. Node is not a supported runtime here
+      (engines.bun 1.4.4, the bin shebang is bun, the installer requires bun),
+      so this does not block. Coverage gap: the committed scenarios pin the
+      entry-level link (14a) and link onto link (14b); neither pins the two
+      child-level shapes on which the runtimes diverge, which are exactly the
+      write-through shapes under the other runtime. The read-only-file
+      behaviour pinned by 15d is also Bun-specific (Node refuses EACCES and
+      keeps the old file).
+    suggestion: >-
+      Add two scenarios: an earlier file-symlink child with a regular file in
+      the re-sweep (the link is replaced, the target untouched), and an earlier
+      directory-symlink child with a real directory in the re-sweep (typed
+      refusal, target untouched). Optionally make the merge runtime-independent
+      with an lstat pre-flight that refuses a destination entry holding a
+      symlink under any name the staged tree also carries. Note in the sweep's
+      doc comment that the behaviour is Bun's.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-57
+    severity: info
+    confidence: high
+    category: error-contract
+    location: packages/cli/src/production.ts:2120
+    owner: with F-37's classified projection; wording
+    message: >-
+      NEW in this delta. The refusal's reason is the last 400 characters of the
+      error message. Bun puts the error class at the start and repeats the
+      paths after it, so with realistic paths the class is cut: with a
+      123-character entry path the reason starts mid-path and names neither
+      EISDIR nor ERR_FS_CP (reproduced). The error object carries a stable code
+      (ERR_FS_CP_DIR_TO_NON_DIR, ERR_FS_CP_NON_DIR_TO_DIR) and a path. Also the
+      fixed next-action clause (remove or fix the named destination entry) is
+      appended to rename failures where no destination entry exists, for
+      example a read-only reference directory (reproduced: EACCES, rename); the
+      reason still says what failed. The transaction-level projection drops the
+      whole detail today (F-37), so this matters only once F-37 is fixed.
+    suggestion: >-
+      Lead the reason with the error code when present, or keep the head of
+      the message; say "or its parent directory's permissions" for rename
+      failures.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-58
+    severity: info
+    confidence: high
+    location: packages/cli/src/production.ts:2094
+    owner: note for the next touch; declared residual
+    message: >-
+      PRE-EXISTING since phase 13 and not changed by this delta; recorded now
+      because the suite and the lstat verifier pin it as the contract. The
+      stage step and the new-entry path preserve a symlink as a link, and Bun
+      turns a relative target into an absolute one. A link whose target is
+      inside the worktree dangles once the worktree is removed; a link to
+      anywhere else keeps pointing at a live file outside the state root. The
+      sweep reports swept true. Reproduced: a date entry that is a symlink is
+      preserved as that link; a relative link to a worktree file lands as an
+      absolute link into the worktree. No log inside the runner-log tree is
+      lost (a real file is copied in its own right); the preserved tree is
+      just not self-contained. No product path writes a link there.
+    suggestion: >-
+      Next touch: refuse a symlink in the runner-log tree at the stage step
+      with the typed refusal, or copy the target when it lies inside the tree.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-59
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/production.ts:2033
+    owner: wording or one token, next touch
+    message: >-
+      NEW in this delta. The verifier is strict for links (a link with the
+      identical target string) and for directories (a directory, recursed). For
+      a staged regular file it requires only a non-directory of equal lstat
+      size, so a symlink standing where a regular file was staged passes when
+      the target string's length equals the file size. Unreachable under Bun
+      with the primitive (the link is replaced first); it is the check that
+      would have caught the Node behaviour in F-56.
+    suggestion: >-
+      Add !placed.isSymbolicLink() to the file arm.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-60
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-25--GH-404--worktree-lane-foundation/chg-GH-404-plan.yaml:1121
+    owner: PM; two sentences in the plan's phase-15 text
+    message: >-
+      The plan's phase-15 summary says "with F-47, a type mismatch unlinks the
+      destination child before copying", and the phase comment lists "read-only
+      EACCES" among four refused shapes. The delivered behaviour is the
+      opposite on both points: the type mismatches are refused (scenarios 15a,
+      15b, reproduced) and a read-only earlier file is replaced (15d). What is
+      unlinked before copying is a same-named regular file. The pm-notes note
+      is accurate and discloses the deviation; the plan prose is not. The
+      pm-notes file also rides in the commit without being in phase 15's
+      declared scope, as in earlier phases.
+    suggestion: >-
+      Align the two sentences with the pm-notes.
+    suppressed: false
+    published_url: null
+    published_at: null
+verification:
+  note: >-
+    Each item against the tree at 99168098. Probe labels refer to
+    tmp/tmpdir/opencode/gh404-delta-p15/ (probes/probe-p15*.ts,
+    probes/probe-primitive-p15.ts, probes/probe-runtime.mjs and the .out files),
+    all confined to their own temporary roots under the approved scratch base.
+  F-47:
+    verdict: VERIFIED FIXED on the product runtime (Bun 1.4.4)
+    evidence: >-
+      mergeTree's body is cpSync(from, to, { recursive: true }); the statSync
+      recursion is gone. Through the production closure: a date entry that
+      sweep 1 preserved as a symlink refuses sweep 2 with the typed detail and
+      leaves the linked directory intact; a child directory symlink with a real
+      directory in the re-sweep refuses, target intact; a child file or
+      directory symlink with a regular file in the re-sweep has the link
+      replaced, target intact; a loose-file entry onto a symlink is replaced,
+      target intact; a staged directory link lands as a link on both paths and
+      its target's contents never materialize; a dangling link at a
+      destination date entry is a typed refusal. Plain layouts still merge and
+      verify (distinct, nested, same-named, empty directory). Scenarios 14a and
+      14b green.
+    residual: F-56 (runtime dependence, two unpinned shapes), F-58, F-59.
+  F-48:
+    verdict: ADDRESSED; remaining shapes carried
+    evidence: >-
+      Scenarios 15a, 15b, 15c, 15d green. Reproduced through the closure: file
+      to directory, directory to file, a regular file at a destination date
+      entry and a read-only date directory all give the typed refusal (entry,
+      destination, reason, next action), sources intact, staging removed, the
+      destination unchanged. New with the primitive and also safe: a same-named
+      link in the re-sweep over an existing name of any kind refuses (link onto
+      file: EEXIST; link onto link; directory link onto directory), and a
+      dangling link at a date entry refuses with ENOTDIR from rename.
+    residual: Those refusal shapes, reachable only with symlinks in the
+      runner-log tree; F-57 on the reason text.
+  15d:
+    verdict: ACCEPTABLE deviation
+    evidence: >-
+      A same-named regular file at the destination is unlinked before the newer
+      bytes are written (hard-link witness: new inode, the witness keeps the
+      old bytes), so a read-only file is replaced and takes the source's mode.
+      In isolation a copy that fails after the unlink leaves that name absent
+      at the destination. In the closure an unreadable staged child cannot
+      occur (the stage step has already read it); realistic causes are a full
+      disk, an I/O error or a kill.
+    judgment: >-
+      Consistent with F-38's contract (a same-named file takes the newer
+      bytes). The phase-14 EACCES refusal was an accident of open() on a
+      read-only destination, not a protection any spec clause promises; the
+      destination is product-owned state. The closeout now completes instead of
+      wedging behind F-37's opaque error. The cost is the unlink window, which
+      the sweep's refusal covers (sources intact, a retry restores it); it
+      belongs to F-50's wording. No distinct log is lost unless an operator
+      bypasses the refusal and deletes the worktree by hand.
+  F-52:
+    verdict: RESOLVED by the primitive
+    evidence: >-
+      Through the closure: a new 0o700 sub-directory on the merge path keeps
+      its mode (and its 0o600 file keeps its mode).
+  F-55:
+    verdict: VERIFIED FIXED
+    evidence: >-
+      The changeset matches spec v1.1 and the code on every statement checked:
+      provisioning after the lease and detached at the base tip (git worktree
+      add --detach), no lane branch, the lane's own intake creates the delivery
+      branch, install and gate build before any phase, PATH precedence for the
+      provisioning children and the lane session, resume verification anchored
+      on the work item ref, rollback on a failed provisioning, the context-less
+      lane (DEC-8), the host-index pin, shared clone identity, provider landing
+      with the deletion deferred to closeout, the bounded sweep with disclosed
+      truncation and the gate scratch discarded, lane.worktree-root and
+      lane.disable-worktrees in the catalog, the (repository, ref) join, the
+      addWorktree seam, position-independent enumeration. None of the
+      pre-review phrases remains (lane/<ref> branch, merge resolved from the
+      worktree, gate-evidence sweep, ref-keyed join). Frontmatter identical to
+      a34bbda4; the branch's only changed changeset; public examples are
+      neutral and no legacy product name remains. TC-RELEASE-001 4 pass; the
+      release file 7 pass.
+    residual: >-
+      Optional wording: "today's in-checkout behaviour" is time-relative for a
+      changelog; "a delivery-convention branch" could add "matching the work
+      item ref".
+  F-50:
+    verdict: CARRIED, wording extended
+    evidence: >-
+      Reproduced: a re-sweep carrying a same-named regular file and a
+      same-named link updated the regular file at the destination and then
+      refused on the link; sources intact; the retry refuses the same way until
+      the link is removed.
+    residual: >-
+      Now also: the earlier same-named file is unlinked before the newer bytes
+      land, so a failure in that window leaves the name absent until the retry.
+reviewer_notes:
+  gates_run: >-
+    On HEAD: the production suite tests/behaviour/dispatch-production-worktree.test.ts
+    (22 pass, 0 fail); TC-SHELL-002 (14), TC-BATTLE-001 (3), TC-BATTLE-004 (2),
+    TC-PORT-001 (7), TC-IDENT-001 (1), all exit 0; TC-RELEASE-001 (4 pass) and
+    its whole file (7 pass); `bun run scripts/checks/no-shell-dispatch.ts` clean,
+    43 surface files; biome lint and biome format on the two changed code and
+    test files (clean); tsc --noEmit for packages/cli (exit 0); `jaiship plan
+    validate GH-404` verdict=valid. The no-shell invariant files still have no
+    commit on the branch.
+  not_run: >-
+    The reported 588-test behaviour set, tests/golden, the typecheck of the
+    other packages and the remaining pnpm check gates. Those are the coder's
+    report and were not re-run here, as instructed. The other three files of
+    phase 15's verify list were not re-run either.
+  scope: >-
+    The commit touches four files: the changeset, the pm-notes, production.ts
+    and the production suite. Phase 15 declares the first three plus the suite;
+    nothing under tests/golden, scripts/checks, tests/checks or tests/conformance
+    changed. The commit subject is again typed docs(GH-404) while carrying
+    production code and tests (F-31, info, recurs). The uncommitted pm-notes
+    edit is the commit-hash parenthetical.
+  working_tree: >-
+    NOT THIS REVIEW'S CHANGE. Between the start and the end of this pass the
+    working tree gained 15 modified files under doc/ (the doc-sync re-run, in
+    flight from another session). This review wrote none of them and did not
+    review that delta. Spot checks only: its sweep paragraphs agree with the
+    phase-15 code on the per-sweep cap (F-51), the same-date merge, size
+    verification (F-53), and the ad-hoc tmp/*.log discard (the DEC-11 gap), and
+    its added lines no longer name the shell-fallback directory or a ref-keyed
+    join. That delta still needs its own doc-focused check and a commit before
+    or with the gate run, because the gate suite reads the working tree.
+  disclosures: >-
+    (1) The one-line fix this reviewer recommended in the phase-14 pass was
+    verified under Bun only; F-56 records what it does under Node. (2) The
+    product's runtime is Bun by contract, which is why F-56 does not block.
+    (3) HEAD, branch, the branch list (35), the worktree list, the sha256 of
+    the pm-notes, of the plan and of the changeset, and the code-review listing
+    are identical before and after this pass; the only difference in
+    `git status --porcelain` is the other session's doc/ edits. Nothing was
+    written outside tmp/tmpdir and this artifact. No remediation phase was
+    appended and no blocker was published.
+reviewed_at: '2026-11-25T19:43:10Z'
+next_step: >-
+  PROCEED to quality gates. Nothing in this pass needs to land first. Carry
+  F-56 to F-60 as declared residuals with owner visibility; F-56's two
+  scenarios are the one item worth taking with F-42's suite hardening. Align
+  the plan's two phase-15 sentences (F-60) whenever the plan is next touched.
+  The doc-sync re-run is in flight in the working tree: commit it and have its
+  delta checked (F-33, F-23, F-16, F-45) before the pull request.

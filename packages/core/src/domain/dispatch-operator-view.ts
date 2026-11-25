@@ -133,6 +133,12 @@ export const buildStatusData = (input: {
     pid: record === undefined ? null : record.owner.processId,
     sessionId: record === undefined ? null : record.sessionId,
     lane: record === undefined ? null : operatorLaneFactsOf(record),
+    // The lane's worktree path (GH-404 F-7, DM-1): carried additively from
+    // the record's own field; absent on a context-less record (DEC-8), which
+    // renders exactly as today.
+    ...(record === undefined || record.worktreePath === undefined
+      ? {}
+      : { worktreePath: record.worktreePath }),
   };
 };
 

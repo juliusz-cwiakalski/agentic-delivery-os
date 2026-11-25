@@ -9,7 +9,7 @@ created: 2026-02-03
 owners: ["engineering"]
 summary: "End-to-end change delivery workflow (planning to PR) with PM-led gates and artifacts." 
 links:
-  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242", "GH-268", "GH-313", "GH-300", "GH-366"]
+  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242", "GH-268", "GH-313", "GH-300", "GH-366", "GH-404"]
 ---
 
 # Change Lifecycle
@@ -75,6 +75,8 @@ All lifecycle commits route through the `commit` primitive, directly or through 
 - Breaking-change detection and classified failure identities
 
 Lifecycle phase state is written only through the `phase` family (`phase list`, `phase complete`, `phase reopen`). No prompt hand-edits phase timestamps or the PR-URL field; the PR URL is a pm-notes `notes:` entry. The typed engine is the regular delivery path: `dispatch <ref>` appends real `pilot` attempts, and the lifecycle merge and closeout run through the engine primitives. The shell entry points (`deliver-ticket.sh`, `batch-deliver.sh`, `pm-liveness.sh`, `ceo-loop.sh`) are the documented, still-executable fallback, and their authoritative-mode deprecation pointer names `dispatch <ref>` and `dispatch handover <repo> --revert`. A repository is flipped only by a separate owner act (`dispatch handover <repo>`) once its gate reads eligible; nothing in the lifecycle flips one.
+
+A dispatched work item runs its whole lifecycle in its own linked worktree, created before the first phase, so the main checkout stays on the base branch and clean while the lane delivers. `lane.worktree-root` places the worktrees elsewhere and `lane.disable-worktrees: true` runs a lane in the invoking checkout instead ([Engine-first Delivery Operations](engine-first-operations.md)).
 
 ### Pure-Writer Agents
 
@@ -403,7 +405,7 @@ flowchart TD
   - All acceptance criteria satisfied (verify against `chg-<workItemRef>-spec.md`).
   - Current-truth documentation is complete and up to date for the delivered change (phase 7 has no unresolved documentation gaps).
   - No pending TODOs without an explicit follow-up ticket.
-  - `verify change <ref>` reports the declared variant's ledger as complete: `finished` with exit `0`. An incomplete or unverifiable ledger is a non-zero failure naming the missing required phases, and finalization does not proceed until the gap is resolved or the phase is reopened. `verify gates <ref>` evaluates the config-declared merge battery (by default lifecycle, CI on the pushed commit, push parity, owner labels, and squash preflight) and records the verification; a fresh recorded verification is required before the merge transaction lands. A reported run also cites its suite breadth and the mirrored CI job (`data.suiteBreadth`/`data.mirrorsJob`), and a run whose declared local breadth is narrower than that CI job refuses at exit `1` with `verify.narrowed-scope` and records no fresh verification, so finalization cannot consume a narrow run as full green.
+  - `verify change <ref>` reports the declared variant's ledger as complete: `finished` with exit `0`. An incomplete or unverifiable ledger is a non-zero failure naming the missing required phases, and finalization does not proceed until the gap is resolved or the phase is reopened. `verify gates <ref>` evaluates the config-declared merge battery (by default lifecycle, CI on the pushed commit, push parity, owner labels, and squash preflight) and records the verification — it reads the invoking working tree, so under a worktree lane it runs in the lane's worktree; a fresh recorded verification is required before the merge transaction lands. A reported run also cites its suite breadth and the mirrored CI job (`data.suiteBreadth`/`data.mirrorsJob`), and a run whose declared local breadth is narrower than that CI job refuses at exit `1` with `verify.narrowed-scope` and records no fresh verification, so finalization cannot consume a narrow run as full green.
 - Finalization is variant-aware. A `full` change requires the canonical eleven phases; an explicit `lite` change requires the pinned six (`clarify_scope`, `specification`, `delivery`, `quality_gates`, `dod_check`, `pr_creation`). Verification never infers LITE from omission, and a completed declared-variant ledger is necessary but not sufficient for merge: the merge battery evaluated by `verify gates` supplies the gate evidence, and the merge transaction consumes a fresh verification.
 - **If any gap is found**: reopen the appropriate phase and delegate to the relevant agent.
   - Example: if a delivery plan phase is incomplete, reopen `delivery` and delegate to `@coder`.

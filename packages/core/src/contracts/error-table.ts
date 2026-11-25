@@ -1365,9 +1365,10 @@ export const ERROR_TABLE = [
     retryable: false,
     consequence: "not_landed",
     remediationHint:
-      "Inspect the harness selection and execution environment, then retry the dispatch; no session was created and the attempt stays recorded.",
+      "Read the refusal detail: a lane-worktree provisioning or resume-verification refusal names the worktree and the failing step and records NO attempt; fix the named cause — an install or build failure recovers the environment and re-runs the dispatch, a worktree-missing or branch-mismatch refusal needs the recorded worktree restored or the lane closed out — then retry. A harness spawn failure keeps its recorded attempt.",
     projectionClass: "user-validation",
-    summary: "The harness or process failed before a session existed.",
+    summary:
+      "The dispatch failed before a session existed; a lane-worktree provisioning or resume-verification refusal records no attempt.",
   },
   {
     code: "dispatch.state-unverified",

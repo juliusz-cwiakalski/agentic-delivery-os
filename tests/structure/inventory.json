@@ -190,6 +190,7 @@
     "src/domain/install-replace.ts",
     "src/domain/install-status.ts",
     "src/domain/lane-launch-plan.ts",
+    "src/domain/lane-worktree-plan.ts",
     "src/domain/loop-backoff.ts",
     "src/domain/loop-log.ts",
     "src/domain/loop-prompt.ts",

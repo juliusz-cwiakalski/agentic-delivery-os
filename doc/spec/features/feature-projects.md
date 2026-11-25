@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-FEATURE-PROJECTS
 status: Current
 created: 2026-11-11
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 owners: ["engineering"]
 service: delivery-os
-summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-clone project root), the clone-identity marker and its minted key, the additive declared-product-key and clone-key contract exports beside the served `cloneKey` on the resolved project scope, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic `CLONE` table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload; the board reads the host index once per `--all`/`--project` run, unions it with the invoking checkout, and never maintains it."
+summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-clone project root), the clone-identity marker and its minted key, the additive declared-product-key and clone-key contract exports beside the served `cloneKey` on the resolved project scope, the derived host index with bounded maintenance, the registration root pinned to the main checkout's physical path, and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic `CLONE` table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload; the board reads the host index once per `--all`/`--project` run, unions it with the invoking checkout, and never maintains it."
 links:
-  related_changes: ["GH-288", "GH-289", "GH-309", "GH-320", "GH-297", "GH-293", "GH-365", "GH-406"]
+  related_changes: ["GH-288", "GH-289", "GH-309", "GH-320", "GH-297", "GH-293", "GH-365", "GH-406", "GH-404"]
   related_decisions: ["TDR-0022", "ODR-0004", "TDR-0031", "ODR-0006"]
 ---
 
@@ -89,7 +89,7 @@ This **extends** [TDR-0022](../../decisions/TDR-0022-multi-repository-workstatio
 without contradicting it: one effective host root per invocation, one
 home-plus-brand composition, and one `<PREFIX>_STATE_DIR` read remain; only which
 root that same rule selects changes. The operator-facing description is the
-[Local Install and Prior-Identity Transition](../../../guides/local-install.md)
+[Local Install and Prior-Identity Transition](../../guides/local-install.md)
 guide.
 
 ## Clone identity and the delivered names
@@ -110,7 +110,9 @@ back to `project`, and the literal `unbound` is refused as a basename. Because
 the discriminator derives from the once-minted identifier, two checkouts of
 different repositories that share a basename mint different clone identities.
 Because the mint-time basename travels in the marker, a rename or a move
-changes only the reported checkout root.
+changes only the reported checkout root. Because the marker lives in the shared
+common directory, a linked worktree resolves the same clone identity and the
+same project state root as its main checkout — never a path-derived substitute.
 
 The clone-identity pattern is exported under its vocabulary name
 `CLONE_KEY_PATTERN`; the delivered export `PROJECT_KEY_PATTERN` stays exported
@@ -181,6 +183,18 @@ root is absent, or that root's marker now resolves to a different identifier),
 leaves uncertain entries, always re-derives every state location from its key,
 and reports a disagreement as a warning that never redirects a read. Content that
 did not change produces zero writes and no revision advance.
+
+**The registration root is the main checkout.** Every lane command, whatever
+checkout it runs in, registers the **main checkout's physical path**: the root is
+`dirname(realpath(commonDir))`, derived from the clone's git common directory and
+resolved through real paths, never through a symlinked alias. A command invoked
+inside a linked worktree therefore registers the same root as the same command
+invoked from the main checkout, the entry never flips to a worktree path, and a
+later worktree removal can never make maintenance prune a live clone's entry.
+Worktrees are never rows of the flat record set — they are visible only through
+the lane surfaces that carry a lane's worktree path
+([Dispatch Engine](feature-dispatch-engine.md), [Scheduling Engine](feature-scheduling-engine.md),
+[Board](feature-board.md)).
 
 Absent is not corrupt: no index means no registered project, an empty list,
 revision `0`, and exit success. A present but unreadable or unparsable index is
@@ -350,7 +364,7 @@ No automatic migration, migration command, or re-attribution exists.
 
 ## Related
 
-- [Local Install and Prior-Identity Transition](../../../guides/local-install.md) — the operator-facing host-root transition and the declared divergences.
+- [Local Install and Prior-Identity Transition](../../guides/local-install.md) — the operator-facing host-root transition and the declared divergences.
 
 - [Project Groups](feature-project-groups.md) — the `projects` family: the
   configuration document, the group surface, and the group-scoped reads.

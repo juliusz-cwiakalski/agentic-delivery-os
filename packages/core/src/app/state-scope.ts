@@ -32,6 +32,7 @@ import {
   type ProjectScope,
   STATE_MIGRATION_NOTE_PATH,
 } from "../contracts/projects.js";
+import { laneWorktreePath, resolveLaneWorktreeRoot } from "../domain/lane-worktree-plan.js";
 
 const PROJECT_IDENTIFIER_PATTERN = new RegExp(
   `^[0-9a-f]{${String(PROJECT_IDENTIFIER_HEX_LENGTH)}}$`,
@@ -401,6 +402,45 @@ export const stateScopeRoots = (outcome: ProjectScopeOutcome): StateScopeRoots =
   hostRoot: outcome.scope.hostRoot,
   projectRoot: outcome.scope.stateLocation,
 });
+
+/**
+ * The lane worktree placement facts (GH-404 F-2, DM-3), derived from the
+ * clone's PHYSICAL location: the effective worktree root (the explicit
+ * `lane.worktree-root` setting wins; absent takes the sibling-of-main-checkout
+ * default) and the deterministic worktree path. The worktree is provisioned
+ * DETACHED at the base tip — no lane branch is ever created (review
+ * remediation, Decision 1). The clone identity and state-root derivations
+ * above are untouched (TC-IDENT-001's pin stands); this is the one additive
+ * placement rule, and it never accepts a symlinked alias — the composition
+ * tier resolves the clone's real path once and supplies it here (NFR-7).
+ */
+export type LaneWorktreePlacement = {
+  readonly worktreeRoot: string;
+  readonly worktreePath: string;
+};
+
+export const resolveLaneWorktreePlacement = (input: {
+  /** The clone's realpath-resolved location, supplied by the composition tier. */
+  readonly physicalCheckoutRoot: string;
+  /** The resolved `lane.worktree-root` setting; absent is the sibling default. */
+  readonly configuredWorktreeRoot?: string;
+  readonly ref: string;
+}): LaneWorktreePlacement => {
+  const worktreeRoot = resolveLaneWorktreeRoot({
+    ...(input.configuredWorktreeRoot === undefined
+      ? {}
+      : { configuredRoot: input.configuredWorktreeRoot }),
+    physicalCheckoutRoot: input.physicalCheckoutRoot,
+  });
+  return {
+    worktreeRoot,
+    worktreePath: laneWorktreePath({
+      worktreeRoot,
+      physicalCheckoutRoot: input.physicalCheckoutRoot,
+      ref: input.ref,
+    }),
+  };
+};
 
 /** The closed-outcome checkout facts supplied by the adapter seam (DEC-17). */
 export type CheckoutIdentityFacts =

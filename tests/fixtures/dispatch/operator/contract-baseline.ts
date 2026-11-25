@@ -44,7 +44,7 @@ export type ContractBaseline = {
   readonly claude: AdapterDeclaration;
 };
 
-/** The lane record key set (the delivered field set; no field may be added). */
+/** The lane record key set (the delivered field set plus the GH-404 additive worktree context). */
 export const LANE_KEYS = [
   "schema",
   "ref",
@@ -59,6 +59,7 @@ export const LANE_KEYS = [
   "recordedAt",
   "lastToken",
   "lastOutcome",
+  "worktreePath",
 ] as const;
 
 /** The attempt record key set (the delivered field set; no field may be added). */
@@ -151,8 +152,9 @@ export const CONTRACT_BASELINE: ContractBaseline = {
   attemptsHumanBytes: 8192,
   // GH-394 DM-5: the declarable tracker credential reference grows the
   // catalog by the github branch (the branch, its credential node, its
-  // source-key node, and the eight per-style keys).
-  configurationKeyCount: 91,
+  // source-key node, and the eight per-style keys). GH-404 DM-3/DM-4: the two
+  // additive lane worktree worker settings grow it by two more leaf keys.
+  configurationKeyCount: 93,
   opencode: {
     supportedOperations: [
       "spawn",

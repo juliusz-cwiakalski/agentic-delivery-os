@@ -458,6 +458,15 @@ export const isDispatchLaneRecord = (value: unknown): value is DispatchLaneRecor
     return false;
   }
   if (!isInstant(value.recordedAt)) return false;
+  // The lane's worktree context (GH-404 DM-1; review F-10): when present it
+  // is a non-empty machine path — a non-string or empty value refuses the
+  // record rather than flowing into path checks and surfaces.
+  if (
+    value.worktreePath !== undefined &&
+    (typeof value.worktreePath !== "string" || value.worktreePath.length === 0)
+  ) {
+    return false;
+  }
   if (value.state === "active")
     return value.lastToken === undefined && value.lastOutcome === undefined;
   if (value.state !== "terminal") return false;

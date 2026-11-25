@@ -7,6 +7,7 @@
  * union is the declared contract set and contains no force-capable variant.
  */
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import {
   MERGE_GIT_OPERATIONS,
   type MergeGitOperation,
@@ -95,6 +96,16 @@ export type GitMergeSeam = {
     readonly branch: string;
     readonly baseRef: string;
   }) => Promise<MergeGitRefreshResult>;
+  /**
+   * Whether the resolved branch is checked out in a LINKED worktree (review
+   * F-3, Decision 2): the post-landing deletion defers as satisfied-by-
+   * closeout when it is — closeout's delivered order removes the worktree,
+   * then deletes the branch. A structural worktree-list read; false when the
+   * listing is unavailable.
+   */
+  readonly isBranchCheckedOutInLinkedWorktree: (input: {
+    readonly branch: string;
+  }) => Promise<boolean>;
   readonly squashLand: (input: {
     readonly branch: string;
     readonly baseRef: string;
@@ -206,6 +217,42 @@ export const createGitMergeSeam = (options: GitMergeSeamOptions = {}): GitMergeS
       : { outcome: "succeeded", oldSha: before, newSha: after };
   };
 
+  const isBranchCheckedOutInLinkedWorktree: GitMergeSeam["isBranchCheckedOutInLinkedWorktree"] =
+    async (input) => {
+      const porcelain = await git(["worktree", "list", "--porcelain"]);
+      if (porcelain.status !== 0) return false;
+      const common = await git(["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+      if (common.status !== 0) return false;
+      const commonDir = common.stdout.trim().replace(/\/+$/u, "");
+      for (const block of porcelain.stdout.split("\n\n")) {
+        const path = block
+          .split("\n")
+          .find((line) => line.startsWith("worktree "))
+          ?.slice("worktree ".length);
+        if (path === undefined || path.trim().length === 0) continue;
+        // GH-404 F-29: a prunable block (its directory is gone) holds no
+        // branch — its stale registration must never defer a deletion.
+        if (block.split("\n").includes("prunable") || !existsSync(path.trim())) continue;
+        // The main checkout is the block whose OWN git directory equals the
+        // common directory (review F-3 with F-12's resolved-equality rule);
+        // every other block is linked. A resolution failure falls back to the
+        // standard `<worktree>/.git` layout.
+        const resolved = await git(["-C", path.trim(), "rev-parse", "--absolute-git-dir"]);
+        const ownGitDir = (
+          resolved.status === 0 ? resolved.stdout.trim() : `${path.replace(/\/+$/u, "")}/.git`
+        ).replace(/\/+$/u, "");
+        if (ownGitDir === commonDir) continue;
+        // GH-404 F-29: the EXACT ref line, never a substring — a parked
+        // `feat/GH-1/ab` must not defer the deletion of `feat/GH-1/a`.
+        const branchLine = block
+          .split("\n")
+          .find((line) => line.startsWith("branch "))
+          ?.slice("branch ".length);
+        if (branchLine === `refs/heads/${input.branch}`) return true;
+      }
+      return false;
+    };
+
   const squashLand: GitMergeSeam["squashLand"] = async (input) => {
     if (!isSafeRef(input.branch) || !isSafeRef(input.baseRef)) {
       return { ok: false, code: "plan-restriction" };
@@ -248,6 +295,7 @@ export const createGitMergeSeam = (options: GitMergeSeamOptions = {}): GitMergeS
 
   return {
     head,
+    isBranchCheckedOutInLinkedWorktree,
     resolveRef: async (ref) => {
       if (!isSafeRef(ref)) return false;
       const result = await git(["rev-parse", "--verify", ref]);

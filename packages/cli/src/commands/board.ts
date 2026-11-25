@@ -46,6 +46,14 @@ export type BoardCommandRuntime = {
     readonly flags: Readonly<Record<string, boolean | string | readonly string[]>>;
   }) => BoardSelectionResolution | Promise<BoardSelectionResolution>;
   readonly loadRepository: (repository: string) => Promise<BoardRepositoryLoad>;
+  /**
+   * The ref-keyed worktree-path join source (GH-404 F-7, TC-SURFACES-002):
+   * the newest dispatch.lane record's worktree path per ref. The join
+   * contributes paths to existing lane rows only; a store read failure
+   * contributes an empty map (the classified absence). Absent keeps the
+   * delivered board byte-for-byte.
+   */
+  readonly dispatchWorktreePaths?: () => Readonly<Record<string, string>>;
   readonly appendDecision: (
     repository: string,
     decision: OwnerGateSlaDecisionRecord,
@@ -106,6 +114,7 @@ export const createBoardCommandDefinition = (runtime: BoardCommandRuntime): Comm
       facts.push(loaded.facts);
     }
 
+    const dispatchWorktreePaths = runtime.dispatchWorktreePaths?.() ?? {};
     const project = (repositories: readonly BoardRepositoryFacts[]) =>
       projectBoard({
         audience: "owner",
@@ -117,6 +126,9 @@ export const createBoardCommandDefinition = (runtime: BoardCommandRuntime): Comm
         policy: runtime.policy,
         nowMs: runtime.nowMs(),
         nowIso: runtime.nowIso(),
+        // The ref-keyed worktree-path join source (GH-404 F-7,
+        // TC-SURFACES-002): contributes paths to existing lane rows only.
+        dispatchWorktreePaths,
       });
 
     // First pass: the decisions this invocation must append.

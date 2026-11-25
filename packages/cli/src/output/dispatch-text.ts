@@ -200,6 +200,10 @@ export const renderDispatchStatusText = (data: DispatchStatusData): string => {
           `lastOutcome=${lane.lastOutcome ?? "none"}`,
           `recordedAt=${lane.recordedAt}`,
         ]),
+    // The lane's worktree path (GH-404 F-7, TC-SURFACES-001): rendered only
+    // when the record carries the context; a context-less lane renders
+    // exactly as today (DEC-8, the byte-for-byte exception-mode basis).
+    ...(data.worktreePath === undefined ? [] : [`worktreePath=${data.worktreePath}`]),
   ];
   return `${lines.join("\n")}\n`;
 };

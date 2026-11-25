@@ -86,6 +86,7 @@ export {
   type DispatchPreflightResult,
   type DispatchRunResult,
   type DispatchTruthReads,
+  type DispatchWorktreeProvisioning,
   runDispatch,
 } from "./app/dispatch.js";
 export {
@@ -111,6 +112,7 @@ export {
   resolveDispatchLane,
 } from "./app/dispatch-lane.js";
 export {
+  newestDispatchLaneWorktreePaths,
   type OperatorDeliveringRead,
   type OperatorLaneReadFailure,
   type OperatorStatusRead,
@@ -342,6 +344,7 @@ export {
   checkoutDirectoryName,
   type HostStateRootInput,
   hostIndexPath,
+  type LaneWorktreePlacement,
   type LegacyStoreFacts,
   legacyStoreWarning,
   type ProjectIdentityPorts,
@@ -354,6 +357,7 @@ export {
   projectStateRoot,
   projectsContainerPath,
   resolveHostStateRoot,
+  resolveLaneWorktreePlacement,
   resolveProjectScope,
   type StateScopeRoots,
   sanitizeProjectBasename,
@@ -1156,6 +1160,7 @@ export {
   parseCapsuleEvents,
   payloadFieldViolations,
   persistedTickVerdict,
+  planCloseoutWorktreeRemoval,
   planDocumentFromValidateData,
   planLogAppend,
   planWatchdogRestoration,
@@ -1336,6 +1341,7 @@ export {
   type WatchdogPreflightBuildInput,
   type WatchdogPreflightEvaluation,
   type WatchdogRestorationPlan,
+  type WorktreeSafetyInput,
   wakeKeyFor,
   watchdogPreservedRefName,
   weightLoads,
@@ -1454,6 +1460,23 @@ export {
   type LaneLaunchPlanFacts,
   planLaneLaunch,
 } from "./domain/lane-launch-plan.js";
+export {
+  checkoutBasenameOf,
+  defaultLaneWorktreeRoot,
+  deriveLaneWorktreeEnvironment,
+  GATE_TEMPORARY_DIRECTORY_EVIDENCE_LITERAL,
+  LANE_LOG_SWEEP_BYTE_CAP,
+  LANE_RUNNER_LOG_DIRECTORY,
+  LANE_SCRATCH_DIRECTORY,
+  LANE_PROVISIONING_STDERR_TAIL_CHARS,
+  LANE_PROVISIONING_STEPS,
+  LANE_WORKTREE_INSTALL_COMMAND,
+  type LaneProvisioningStep,
+  type LaneWorktreeEnvironment,
+  laneWorktreePath,
+  parentDirectory,
+  resolveLaneWorktreeRoot,
+} from "./domain/lane-worktree-plan.js";
 // GH-299: the pure metrics report domain and its bounded human renderer.
 export {
   BASELINE_ENTRY_DECLARATIONS,

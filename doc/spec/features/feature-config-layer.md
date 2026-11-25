@@ -2,13 +2,13 @@
 id: SPEC-CONFIG-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 owners: ["engineering"]
 service: delivery-os
 ados_distribution: internal
-summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps (including the spend-ceiling budgets branch) and shipped overridable defaults, declarable credential source keys over the closed four-style vocabulary (literal, environment-prefixed, command, harness-store) with load-time slot-grammar validation and the declarable tracker credential reference (github.credential, shipped default literal GITHUB_TOKEN), per-repository provider policy over the five layers that can declare a provider value, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed verify branch (the declared suite-to-job map), the typed metrics branch (the burn-rate threshold declaration), the typed harness branch (selected kind, declared integration mode with its origin, execution kind, store locations reconciled with the harness data directory and its store override, deny-by-default environment allowlist with a variable-only optional marker), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, the per-layer prior-identity read fallback for the two repository-owned layers, and nine classified config errors."
+summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps (including the spend-ceiling budgets branch) and shipped overridable defaults, declarable credential source keys over the closed four-style vocabulary (literal, environment-prefixed, command, harness-store) with load-time slot-grammar validation and the declarable tracker credential reference (github.credential, shipped default literal GITHUB_TOKEN), per-repository provider policy over the five layers that can declare a provider value, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed verify branch (the declared suite-to-job map), the typed metrics branch (the burn-rate threshold declaration), the typed harness branch (selected kind, declared integration mode with its origin, execution kind, store locations reconciled with the harness data directory and its store override, deny-by-default environment allowlist with a variable-only optional marker), the typed lane branch (liveness interval, restart budget, the lane worktree root, and the disable-worktrees exception), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, the per-layer prior-identity read fallback for the two repository-owned layers, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288", "GH-300", "GH-320", "GH-299", "GH-335", "GH-347", "GH-348", "GH-350", "GH-365", "GH-394"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288", "GH-300", "GH-320", "GH-299", "GH-335", "GH-347", "GH-348", "GH-350", "GH-365", "GH-394", "GH-404"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003", "TDR-0021", "TDR-0042", "TDR-0050", "TDR-0051", "PDR-0006", "TDR-0056", "TDR-0057", "TDR-0059"]
 ---
 
@@ -66,7 +66,7 @@ When the invoking identity declares a prior identity (the `jaiship` bin declares
 
 The current file wins whenever it exists and the prior file is then reported **not used**; the prior file is read (as that same layer, with its real path recorded as the loaded file **and as the origin of every value it supplies**) only when the current file is absent. Machine-global layers never fall back, because the transitional claim is about artifacts the product created in a workspace. The fallback is strictly read-only — no write, copy, move, or deletion ever targets the prior directory — and is **not** a configuration warning, so `--strict` is unchanged and a prior read cannot become `config.warning.strict`. Skips, error codes, and warning kinds are unchanged.
 
-The fallback is exercised by the delivered **composition-time acquisition**: the production composition resolves the daemon and lane settings over one read-only project-configuration acquisition before any handler runs, so every composed invocation performs it and `status --json` exercises the prior read without the change adding an acquisition to any command. The read reports itself once per source kind per composed program through the prior-identity fallback notice (`prior-identity-fallback`, reasons `config-read` and `config-skipped`) on stderr in every mode including `--json`, never in a payload and with no exit-code change. The notice survives a composition that then fails: the composition hands each notice line it already produced to the entrypoint's containment outcome, so an invalid working-name override that still reads the prior file emits its `config-read` line before `fallback.internal` answers at exit `2`, with the delivered summary and a clean payload. The operator-facing description is the [Local Install and Prior-Identity Transition](../../../guides/local-install.md) guide.
+The fallback is exercised by the delivered **composition-time acquisition**: the production composition resolves the daemon and lane settings over one read-only project-configuration acquisition before any handler runs, so every composed invocation performs it and `status --json` exercises the prior read without the change adding an acquisition to any command. The read reports itself once per source kind per composed program through the prior-identity fallback notice (`prior-identity-fallback`, reasons `config-read` and `config-skipped`) on stderr in every mode including `--json`, never in a payload and with no exit-code change. The notice survives a composition that then fails: the composition hands each notice line it already produced to the entrypoint's containment outcome, so an invalid working-name override that still reads the prior file emits its `config-read` line before `fallback.internal` answers at exit `2`, with the delivered summary and a clean payload. The operator-facing description is the [Local Install and Prior-Identity Transition](../../guides/local-install.md) guide.
 
 ### Discovery and CI controls
 
@@ -282,13 +282,13 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 | Effective tree | The validated tree after all layers and resets, excluding bootstrap and directives. |
 | Origin | The winning source label for an effective leaf or collection. |
 | Selected file | The `--config`/environment/legacy file occupying project-committed priority. |
-| Lane branch | The typed `lane.liveness-interval` and `lane.restart-budget` policy data with shipped defaults and existing configuration identities. |
+| Lane branch | The typed `lane.liveness-interval`, `lane.restart-budget`, `lane.worktree-root`, and `lane.disable-worktrees` policy data: two shipped defaults and the two worktree settings whose effective defaults are derived at the consumption seam. |
 | Queue branch | The typed `queue.lease-ttl` and `queue.park-recheck.<condition-type>` policy data with shipped defaults and existing configuration identities. |
 | Coordinator branch | The typed `coordinator.stuck-window`, `coordinator.kill-grace`, `coordinator.restart-budget`, `coordinator.resume-context-limit`, `coordinator.collection-interval`, and `coordinator.progress-bound` policy data with shipped defaults and existing configuration identities. |
 | Loop supervision profile | The `loop` family's consumption of the six coordinator keys unchanged — zero keys added, no default changed — with the shell loop's environment knobs mapping onto them. |
 | Metrics branch | The typed `metrics.burn-rate` threshold declaration (positive `threshold`, `cost` or `tokens` `basis`, 1..90-day `window`) with no default; absent means undeclared and every defect is refused `config.value.invalid` before any read. |
 
-See also: [Local Install and Prior-Identity Transition](../../../guides/local-install.md), [Provider Engine](feature-provider-engine.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Session Lifecycle Economics](feature-session-lifecycle-economics.md), [Scheduling Engine](feature-scheduling-engine.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
+See also: [Local Install and Prior-Identity Transition](../../guides/local-install.md), [Provider Engine](feature-provider-engine.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Session Lifecycle Economics](feature-session-lifecycle-economics.md), [Scheduling Engine](feature-scheduling-engine.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
 
 ## The merge configuration branch
 
@@ -373,20 +373,27 @@ instead of defaulting. See [Harness Adapters](feature-harness-adapters.md).
 ## The lane configuration branch
 
 The production catalog declares a typed `lane` branch. It carries the lane
-liveness cadence and the per-delivery restart bound as policy data.
+liveness cadence, the per-delivery restart bound, and the worktree-lane settings
+as policy data.
 
 | Key | Shape | Default | Semantics |
 |---|---|---|---|
 | `lane.liveness-interval` | integer milliseconds | `30000` | The lane liveness evaluation cadence. The value must be an integer greater than `0`; a non-integer, zero, or negative value is `config.value.invalid` naming the key. |
 | `lane.restart-budget` | integer restarts per delivery | `3` | The per-delivery restart bound. The value must be an integer greater than or equal to `0`; `0` is the valid admit-no-restarts policy. A non-integer or negative value is `config.value.invalid` naming the key. |
+| `lane.worktree-root` | path string | unset | The root under which lane worktrees are created. Unset means the sibling-of-main-checkout default, derived at dispatch time from the clone's physical location. An empty, blank, or non-string value is `config.value.invalid` naming the key. |
+| `lane.disable-worktrees` | boolean | unset | The worktree-lane exception. Unset or `false` keeps worktree lanes on; `true` runs every lane in the invoking checkout byte-for-byte as a composition without worktrees. A non-boolean value is `config.value.invalid` naming the key. |
 
-An absent `lane` branch resolves to both shipped defaults with `defaults`
-origins. An unknown key under `lane` fails `config.key.unknown`; invalid input
-never silently falls back to the default. Each default is declared once in the
-defaults layer. The values are policy data: resolving the branch starts no
-scheduler, and the restart gate reads the bound at evaluation time rather than
-capturing it at construction. See
-[Session Lifecycle Economics](feature-session-lifecycle-economics.md).
+An absent `lane` branch resolves the two shipped defaults with `defaults`
+origins. The two worktree keys declare no shipped default: their effective
+defaults — the sibling root and worktree lanes on — are derived at the
+consumption seam, so `lane.worktree-root` and `lane.disable-worktrees` stay
+absent until an operator declares them. An unknown key under `lane` fails
+`config.key.unknown`; invalid input never silently falls back to the default.
+Each default is declared once in the defaults layer. The values are policy data:
+resolving the branch starts no scheduler, and the restart gate reads the bound at
+evaluation time rather than capturing it at construction. See
+[Session Lifecycle Economics](feature-session-lifecycle-economics.md) and
+[Dispatch Engine](feature-dispatch-engine.md#lane-worktrees).
 
 ## Related
 
@@ -475,15 +482,17 @@ keys value-for-value, `CEO_LOOP_SLEEP_SECONDS` is replaced by the declared
 backoff schedule plus the collection interval, and `MAX_ITERATIONS=0` is replaced
 by an unbounded loop. See [Loop Supervision](feature-loop-supervision.md).
 
-The typed dispatch lane adds no configuration key and changes no default. It
-consumes four delivered values as policy data: `lane.restart-budget` (default
-`3`) as the in-process restart bound, `lane.liveness-interval` (default
-`30000` ms) as the liveness cadence, `coordinator.kill-grace` (default
-`20000` ms) as the terminate grace, and `queue.lease-ttl` (default `90000` ms) as
-the lease staleness bound and the ceiling on the admission fence wait. The
-terminate grace borrows the coordinator's signalling constant rather than adding a
-lane-specific duplicate, and `coordinator.restart-budget` stays a coordinator
-value that dispatch does not read. See [Dispatch Engine](feature-dispatch-engine.md)
+The typed dispatch lane declares two keys in the `lane` branch and changes no
+default: `lane.worktree-root` and `lane.disable-worktrees` are read as policy data
+and both stay unset by default. It consumes four delivered values as policy data:
+`lane.restart-budget` (default `3`) as the in-process restart bound,
+`lane.liveness-interval` (default `30000` ms) as the liveness cadence,
+`coordinator.kill-grace` (default `20000` ms) as the terminate grace, and
+`queue.lease-ttl` (default `90000` ms) as the lease staleness bound and the
+ceiling on the admission fence wait. The terminate grace borrows the
+coordinator's signalling constant rather than adding a lane-specific duplicate,
+and `coordinator.restart-budget` stays a coordinator value that dispatch does not
+read. See [Dispatch Engine](feature-dispatch-engine.md)
 and [Scheduling Engine](feature-scheduling-engine.md).
 
 ## The poll configuration branch

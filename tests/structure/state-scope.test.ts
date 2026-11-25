@@ -358,3 +358,43 @@ describe("TC-ACTION-034 the action-registry prefixes are a declared sibling scop
     }
   });
 });
+
+/**
+ * TC-IDENT-001 (GH-404 F-9, DM-5, AC-F9-1) — the state-scope policy over a
+ * linked worktree: the identity and state root derive from the common
+ * directory's marker, so the worktree resolves the SAME project identity and
+ * state location as its main checkout; the placement helper derives the lane
+ * worktree placement from the clone's PHYSICAL location only, and its other
+ * resolutions are untouched.
+ */
+import { resolveLaneWorktreePlacement } from "../../packages/core/src/app/state-scope";
+
+describe("TC-IDENT-001 the linked worktree resolves the shared identity and state root", () => {
+  test("the lane worktree placement derives from the physical checkout root only", () => {
+    const placement = resolveLaneWorktreePlacement({
+      physicalCheckoutRoot: "/repos/checkout",
+      ref: "GH-404",
+    });
+    // The sibling default and the deterministic worktree path. The placement
+    // is DETACHED (AC-F2-1, Decision 1): no lane branch member exists.
+    expect(placement.worktreeRoot).toBe("/repos");
+    expect(placement.worktreePath).toBe("/repos/checkout-GH-404");
+    expect(Object.hasOwn(placement, "branch")).toBe(false);
+    // The explicit setting wins over the sibling default.
+    const explicit = resolveLaneWorktreePlacement({
+      physicalCheckoutRoot: "/repos/checkout",
+      configuredWorktreeRoot: "/elsewhere",
+      ref: "GH-404",
+    });
+    expect(explicit.worktreeRoot).toBe("/elsewhere");
+    expect(explicit.worktreePath).toBe("/elsewhere/checkout-GH-404");
+    // The physical location is the ONLY location input: an alias resolved
+    // here would defeat NFR-7, so the placement is a pure function of the
+    // injected real path.
+    const aliased = resolveLaneWorktreePlacement({
+      physicalCheckoutRoot: "/repos/physical",
+      ref: "GH-404",
+    });
+    expect(aliased.worktreePath).toBe("/repos/physical-GH-404");
+  });
+});

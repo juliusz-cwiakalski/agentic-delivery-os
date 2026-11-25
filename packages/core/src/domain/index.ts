@@ -106,7 +106,8 @@ export {
   projectCloseoutMemberIssueClosure,
   projectCloseoutMembers,
 } from "./closeout-members.js";
-export { evaluateWorktreeSafety } from "./closeout-worktree.js";
+export type { WorktreeSafetyInput } from "./closeout-worktree.js";
+export { evaluateWorktreeSafety, planCloseoutWorktreeRemoval } from "./closeout-worktree.js";
 export {
   type CommitActFailure,
   type CommitActNoPending,
@@ -482,6 +483,20 @@ export {
   type LaneLaunchPlanFacts,
   planLaneLaunch,
 } from "./lane-launch-plan.js";
+export {
+  LANE_PROVISIONING_STDERR_TAIL_CHARS,
+  checkoutBasenameOf,
+  defaultLaneWorktreeRoot,
+  deriveLaneWorktreeEnvironment,
+  GATE_TEMPORARY_DIRECTORY_EVIDENCE_LITERAL,
+  LANE_PROVISIONING_STEPS,
+  LANE_WORKTREE_INSTALL_COMMAND,
+  type LaneProvisioningStep,
+  type LaneWorktreeEnvironment,
+  laneWorktreePath,
+  parentDirectory,
+  resolveLaneWorktreeRoot,
+} from "./lane-worktree-plan.js";
 export { evaluateMemory } from "./memory-lint.js";
 export {
   evaluateMergeFreshness,

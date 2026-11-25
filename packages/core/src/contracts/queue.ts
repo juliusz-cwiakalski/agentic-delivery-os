@@ -917,6 +917,13 @@ export type QueueLane = {
   readonly restarts: number | null;
   readonly amplification: number | null;
   readonly amplificationWarning?: string;
+  /**
+   * The lane's worktree path (GH-404 F-7, DM-1), contributed by the ref-keyed
+   * join over the newest dispatch.lane record. Absent renders exactly as
+   * today — the classified absence for context-less lanes (DEC-8); the join
+   * contributes to existing rows only and never mints one.
+   */
+  readonly worktreePath?: string;
   readonly weightClass: QueueWeightClass;
 };
 

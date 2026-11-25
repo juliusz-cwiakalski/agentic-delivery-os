@@ -262,6 +262,26 @@ export type DispatchNomination =
 export type DispatchNominatePort = () => DispatchNomination;
 
 /** Everything the one-shot run consumes; every field is injected. */
+/**
+ * The one provision-after-lease outcome (GH-404 F-2, F-8, DEC-8): either the
+ * lane runs in its provisioned worktree (`mode: "worktree"` — the physical
+ * path recorded additively on the lane record, DM-1, and applied to the
+ * spawn/resume working directory, F-3), or the lane runs in the invoking
+ * checkout exactly as today (`mode: "in-checkout"` — the disable-worktrees
+ * exception shape and the DEC-8 pre-change context-less shape; no worktree is
+ * created or referenced), or the provisioning was refused — final, carrying
+ * the step's identity and detail; the engine releases the lease and surfaces
+ * it without retrying (NFR-1).
+ */
+export type DispatchWorktreeProvisioning =
+  | {
+      readonly ok: true;
+      readonly mode: "worktree";
+      readonly worktreePath: string;
+    }
+  | { readonly ok: true; readonly mode: "in-checkout" }
+  | { readonly ok: false; readonly code: string; readonly detail: string };
+
 export type DispatchPorts = {
   readonly store: StateStorePort;
   readonly fenceToken: string;
@@ -344,6 +364,19 @@ export type DispatchPorts = {
   readonly delay?: DispatchDelay;
   /** The pre-session harness admission; runs before the lease claim (NFR-1). */
   readonly harnessAdmission?: DispatchHarnessAdmissionPort;
+  /**
+   * The provision-after-lease port (GH-404 F-2, TC-WT-003): invoked exactly
+   * once after the repository lease is claimed and before any phase, spawn, or
+   * session, so the lease-first order is the engine's own sequence (NG-2).
+   * Absent keeps the delivered in-checkout behaviour byte-for-byte — the
+   * disable-worktrees exception shape (F-8, DEC-8); the escape hatch can never
+   * lag the default because both bind at this one seam. A refusal is final:
+   * the lease is released and the refusal surfaces — zero retries, zero
+   * fallbacks, zero overrides (NFR-1).
+   */
+  readonly provisionWorktree?: () =>
+    | DispatchWorktreeProvisioning
+    | Promise<DispatchWorktreeProvisioning>;
   /**
    * The borrowed terminate grace (GH-347 DEC-4): `coordinator.kill-grace`
    * (20 000 ms default), reused rather than duplicated.
@@ -792,6 +825,35 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
 
   let releaseCause: "completed" | "aborted" = "aborted";
   try {
+    // The lane's worktree provisioning (GH-404 F-2, TC-WT-003): strictly after
+    // the lease claim — the lease-first order is this engine's own sequence
+    // (NG-2) — and before the first phase, spawn, or session. Absent keeps the
+    // in-checkout shape byte-for-byte (F-8); a refusal releases the lease and
+    // surfaces as a refusal, never a retry or fallback (NFR-1).
+    const provisioned =
+      ports.provisionWorktree === undefined ? undefined : await ports.provisionWorktree();
+    if (provisioned !== undefined && !provisioned.ok) {
+      return {
+        ok: false,
+        error: {
+          kind: "dispatch",
+          code: "dispatch.session.spawn-failed",
+          summary: `the lane worktree could not be provisioned (${provisioned.code}): ${provisioned.detail}`,
+        },
+      };
+    }
+    const provisionedWorktree =
+      provisioned === undefined || !provisioned.ok || provisioned.mode !== "worktree"
+        ? undefined
+        : provisioned;
+    const laneWorktreePath = provisionedWorktree?.worktreePath;
+    // The worktree-scoped descriptor (GH-404 F-3): a provisioned lane's
+    // working directory IS its worktree, for the fresh spawn and every restart
+    // resume. Absent keeps the delivered descriptor byte-for-byte (F-8).
+    const laneDescriptor =
+      provisionedWorktree === undefined
+        ? ports.descriptor
+        : { ...ports.descriptor, workDirectory: provisionedWorktree.worktreePath };
     const now = ports.nowIso();
     const attemptId = ports.newAttemptId();
     let restarts = ports.initialRestarts ?? 0;
@@ -851,6 +913,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           iterationOrdinal,
           restartsConsumed: restarts - persistedRestarts,
           state: "terminal",
+          ...(laneWorktreePath === undefined ? {} : { worktreePath: laneWorktreePath }),
           lastToken: input.token,
           lastOutcome: input.outcome,
           recordedAt: now,
@@ -1007,7 +1070,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           return ports.harness.resume({
             handle,
             prompt: ports.resumePrompt ?? ports.prompt,
-            descriptor: ports.descriptor,
+            descriptor: laneDescriptor,
             streamContext: { attemptId, iterationOrdinal },
             ...propagation,
           });
@@ -1017,7 +1080,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         return ports.harness.spawn({
           workItemRef: ports.ref,
           prompt: spawnPrompt ?? ports.prompt,
-          descriptor: ports.descriptor,
+          descriptor: laneDescriptor,
           streamContext: { attemptId, iterationOrdinal },
           ...(ports.freshTitle === undefined ? {} : { title: ports.freshTitle }),
           ...propagation,
@@ -1078,6 +1141,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           iterationOrdinal,
           restartsConsumed: restarts - persistedRestarts,
           state: "active",
+          ...(laneWorktreePath === undefined ? {} : { worktreePath: laneWorktreePath }),
           recordedAt: now,
         });
         if (!active.ok) laneAppendFailed = true;

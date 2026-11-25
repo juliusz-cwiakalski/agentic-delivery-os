@@ -9,8 +9,11 @@
  * transcribed.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createGitMergeSeam } from "@delivery-os/adapters/git";
 import { MERGE_COMPOSITION_EMITTABLE_CODES } from "../../packages/cli/src/production";
 import { projectExitCode } from "../../packages/cli/src/projection";
 import {
@@ -1261,6 +1264,112 @@ describe("GH-388 the native merge sequence at the production composition", () =>
     } finally {
       guard.restore();
       harness.dispose();
+    }
+  });
+});
+
+/**
+ * TC-CLOSEOUT-001 / review F-3 (Decision 2) — the PROVIDER-LANDING contract:
+ * production lands through the provider API; the retired local squashLand
+ * seam is reverted to its delivered form and stays with zero composed
+ * callers. The post-landing deletion DEFERS as satisfied-by-closeout when the
+ * resolved branch is checked out in the lane's worktree (closeout's delivered
+ * order removes the worktree, THEN deletes the branch). Hermetic: real
+ * temporary repositories with real linked worktrees, no remotes.
+ */
+describe("TC-CLOSEOUT-001 the provider-landing contract and the post-landing deferral", () => {
+  test("the retired squashLand refuses a worktree-invoked landing (checkout-failed)", async () => {
+    // Delivered behaviour restored: from a linked worktree whose base is
+    // parked in the main checkout, `git checkout <base>` refuses
+    // (already-used-by-worktree) — the retired seam is not production's
+    // landing path.
+    const base = mkdtempSync(join(tmpdir(), "gh404-retire-"));
+    const main = join(base, "main");
+    const worktree = join(base, "worktree");
+    mkdirSync(main, { recursive: true });
+    const git = (cwd: string, args: readonly string[]): string =>
+      execFileSync("git", [...args], { cwd, encoding: "utf8" }).trim();
+    git(main, ["init", "-q", "-b", "base"]);
+    git(main, ["config", "user.email", "gh404@example.invalid"]);
+    git(main, ["config", "user.name", "GH-404"]);
+    git(main, ["commit", "-q", "--allow-empty", "-m", "base"]);
+    const branch = "feat/GH-404/retired";
+    git(main, ["worktree", "add", "-q", worktree, "-b", branch]);
+    writeFileSync(join(worktree, "delivery.txt"), "delivery\n");
+    git(worktree, ["add", "delivery.txt"]);
+    git(worktree, ["commit", "-q", "-m", "delivery work"]);
+    try {
+      const seam = createGitMergeSeam({ cwd: worktree, timeoutMs: 30_000 });
+      const landed = await seam.squashLand({
+        branch,
+        baseRef: "base",
+        message: "landing",
+      });
+      expect(landed.ok).toBe(false);
+      if (!landed.ok) expect(landed.code).toBe("checkout-failed");
+      // The worktree-invoked deletion port defers: production composes
+      // isBranchCheckedOutInLinkedWorktree over the same seam.
+      const deferred = await seam.isBranchCheckedOutInLinkedWorktree({
+        branch,
+      });
+      expect(deferred).toBe(true);
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
+  });
+
+  test("the delivered squashLand still lands a main-checkout invocation", async () => {
+    const base = mkdtempSync(join(tmpdir(), "gh404-mainland-"));
+    const main = join(base, "main");
+    const worktree = join(base, "worktree");
+    mkdirSync(main, { recursive: true });
+    const git = (cwd: string, args: readonly string[]): string =>
+      execFileSync("git", [...args], { cwd, encoding: "utf8" }).trim();
+    git(main, ["init", "-q", "-b", "base"]);
+    git(main, ["config", "user.email", "gh404@example.invalid"]);
+    git(main, ["config", "user.name", "GH-404"]);
+    git(main, ["commit", "-q", "--allow-empty", "-m", "base"]);
+    const branch = "feat/GH-404/mainland";
+    git(main, ["worktree", "add", "-q", worktree, "-b", branch]);
+    writeFileSync(join(worktree, "delivery.txt"), "delivery\n");
+    git(worktree, ["add", "delivery.txt"]);
+    git(worktree, ["commit", "-q", "-m", "delivery work"]);
+    try {
+      const seam = createGitMergeSeam({ cwd: main, timeoutMs: 30_000 });
+      const landed = await seam.squashLand({
+        branch,
+        baseRef: "base",
+        message: "landing from main",
+      });
+      expect(landed.ok).toBe(true);
+      if (!landed.ok) return;
+      expect(landed.containedOnBase).toBe(true);
+      expect(git(main, ["rev-parse", "base"])).toBe(landed.squashSha);
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
+  });
+
+  test("the post-landing deletion proceeds for a non-worktree branch", async () => {
+    // The detection seam: a branch checked out in the MAIN checkout is not
+    // "in a linked worktree" — the delivered deletion runs.
+    const base = mkdtempSync(join(tmpdir(), "gh404-nodefer-"));
+    const main = join(base, "main");
+    mkdirSync(main, { recursive: true });
+    const git = (cwd: string, args: readonly string[]): string =>
+      execFileSync("git", [...args], { cwd, encoding: "utf8" }).trim();
+    git(main, ["init", "-q", "-b", "base"]);
+    git(main, ["config", "user.email", "gh404@example.invalid"]);
+    git(main, ["config", "user.name", "GH-404"]);
+    git(main, ["commit", "-q", "--allow-empty", "-m", "base"]);
+    const branch = "feat/GH-404/nodefer";
+    git(main, ["checkout", "-q", "-b", branch]);
+    try {
+      const seam = createGitMergeSeam({ cwd: main, timeoutMs: 30_000 });
+      const checkedOut = await seam.isBranchCheckedOutInLinkedWorktree({ branch });
+      expect(checkedOut).toBe(false);
+    } finally {
+      rmSync(base, { recursive: true, force: true });
     }
   });
 });

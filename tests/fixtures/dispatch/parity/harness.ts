@@ -370,6 +370,8 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
     preferenceChain:
       base: base
       fallbacks: []
+lane:
+  disable-worktrees: true
 `,
   );
   const stateDirectory = projectScopeFor({

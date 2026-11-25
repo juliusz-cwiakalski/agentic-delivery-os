@@ -1,0 +1,1501 @@
+change_id: GH-404
+title: "M4-S36: A work item's whole lifecycle runs in its own worktree (default on)"
+milestone: "M4: Jaiship-native delivery"
+branch: feat/GH-404/worktree-lane-foundation
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-25T03:29:05.413Z }
+  specification: { started: null, completed: 2026-11-25T03:37:50.066Z }
+  test_planning: { started: null, completed: 2026-11-25T03:43:23.337Z }
+  delivery_planning: { started: null, completed: 2026-11-25T14:25:48.675Z }
+  dor_check: { started: null, completed: 2026-11-25T04:08:42.685Z }
+  delivery: { started: null, completed: 2026-11-25T13:57:22.115Z }
+  system_spec_update: { started: null, completed: 2026-11-25T14:40:48.779Z }
+  review_fix: { started: null, completed: 2026-11-25T19:47:14.257Z }
+  quality_gates: { started: null, completed: 2026-11-25T20:07:02.614Z }
+  dod_check: { started: null, completed: 2026-11-25T20:11:08.125Z }
+  pr_creation: { started: null, completed: 2026-11-25T20:13:41.508Z }
+decisions:
+  - text: "Scope split per CEO comment on GH-404 (2026-11-25): this ticket delivers
+      the worktree foundation only — one lane at a time, the repository lease
+      and the dispatch result pr-open are unchanged; parallel lanes (lease per
+      lane, per-repository cap, second-lane admission, sync before the pull
+      request, behind indicator, owner-number measurement) move to GH-412."
+    date: "2026-11-25"
+  - text: "Vocabulary per ODR-0006 / GH-406 (landed, main-tools tip e5ff0512): read
+      every 'project', 'project repository' and 'project key' in the ticket as
+      'product', 'repository' and 'product key'; command names, schema ids and
+      field names keep their identifiers until GH-408; new code says cloneKey
+      and declaredProductKey, never the bare projectKey; the naming check with
+      its committed baseline runs in pnpm check."
+    date: "2026-11-25"
+  - text: "OQ-2 (spec) resolved as a PM decision, change-scoped and reversible,
+      owner-visible at PR review: a pre-change lane whose lane record carries no
+      worktree context resumes exactly as today in the main checkout (the
+      disable-worktrees shape, spec F-8), never provisions a worktree, and
+      completes/closes out under today's behaviour. Rationale: in-flight lanes
+      must survive the upgrade; worktree context is additive (spec DM-1) so
+      absence is detectable; the context-less population is transitional.
+      Retroactive provisioning would swap a live lane's environment
+      mid-delivery; refusing resume would hard-break in-flight deliveries. No
+      separate decision record — the TDR-0077 reservation stays tied to OQ-1
+      only."
+    date: "2026-11-25"
+open_questions:
+  - text: "SETTLED IN PLAN (delivery_planning, DoR iter-1 cycle): the gates need the
+      worktree's dependencies installed (pnpm install --frozen-lockfile) and the
+      gate build done in the worktree before the first phase — declared as plan
+      phase 4's provisioning contract. Remaining: record the timing MEASUREMENT
+      as delivery evidence during phase 6 (NFR-9, TC-ENV-004 — no timing
+      assertion). The GH-412 sync-commit choice is explicitly out of scope
+      here."
+    date: "2026-11-25"
+blockers: []
+notes:
+  - text: "PR CREATED:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/425 — base
+      main-tools, head feat/GH-404/worktree-lane-foundation at 71a953e4, 98
+      files (+12354/-256 over e5ff0512..71a953e4, 42 commits), not draft,
+      mergeable MERGEABLE, NOT merged. Title (shortened to commitlint's 100-char
+      header bound): 'feat(GH-404): M4-S36 a work item's lifecycle runs in its
+      own worktree (default on)'. Body: summary + what-changed + delivery
+      quality (12,926 pass 13/13 stages, range gate PASS 40/0) + carried
+      residuals (F-37, F-39..F-43, F-49, F-42/F-54/F-56, F-44..F-46/F-48
+      remainder/F-50/F-51/F-53/F-57..F-60, F-26/27/28/31/32, source-comment
+      cleanup) + named follow-ups (worktree-aware verify gates — no ticket
+      minted; refused-sweep projection; per-sweep cap policy; suite hardening;
+      pre-existing doc items; the split state-root environment finding). Merge
+      authority stays with the owner; the lane stops here."
+    type: info
+    date: "2026-11-25"
+  - text: "DoD check (phase 10) evidence: (1) ALL previous lifecycle phases
+      completed — clarify_scope, specification, test_planning,
+      delivery_planning, dor_check, system_spec_update, review_fix,
+      quality_gates in the root-A ledger view, and delivery completed
+      2026-11-25T13:57:22.115Z in the root-B ledger (operation complete, outcome
+      landed, commitSha 57f3655b, an ancestor of HEAD) — verified by the
+      runner's cross-root read. (2) Plan completion: all 15 declared plan phases
+      (1..15) carry pm-notes evidence entries naming the phase id, commit hash
+      (e25deabe, 4c281841, 816d23e2, b2fff27d, 7a5b0fe4, 9d8b062f, 5a9c58dd,
+      ae9837de, f31212b1, d583b2ba, 2bb07ad4, 3d8faceb, 96f6228a, a34bbda4,
+      99168098) and their test evidence, plus the boundary-defect fix 9934afbb.
+      (3) Spec ACs: reviewer iterations verified spec compliance (iter-1
+      blockers all fixed and production-reproduced; delta re-check PROCEED; the
+      final FAIL was tree-level and was fixed in phases 14–15), AC coverage
+      traced through the test plan. (4) Current-truth docs: doc-sync COMPLETE
+      (15 files re-reconciled; doc invariants green in the battery). (5) Quality
+      gates PASS (12926/4/0; range gate PASS 40/0/none). ENVIRONMENT FINDING
+      (owner-visible, no ticket): the state is split across two roots for this
+      identity (agentic-delivery-os-gh-288-2c548742) — ~/.delivery-os-state
+      holds 8 phase records incl. quality_gates, ~/.jaiship-state holds
+      delivery; phase list reads one root and omits the other. Both roots are
+      durable and checksum-verified; the split is a state-root identity artifact
+      (GH-365 namespace era), not a lost record. Also: eight pre-existing lane/*
+      local branches remain in the live checkout (retired-model hygiene)."
+    type: info
+    date: "2026-11-25"
+  - text: "Quality gates PASS (both gates, one battery run on the clean tree at
+      f1a028b3). Gate 1 — TMPDIR=$PWD/tmp/tmpdir pnpm check: exit 0, 18m00s,
+      12926 pass / 4 skip / 0 fail, 118561 expect calls across 1530+ files, all
+      13 stages PASS (lint warnings are pre-existing warning-level only; format,
+      typecheck, boundaries, allowlist-tripwire, memory, forbidden-literals,
+      new-code-naming, namespace-tree, prompt-conformance, help-guide-coverage,
+      exports-parity all green); log
+      tmp/run-logs-runner/2026-11-25/204755-gh404-pnpm-check.log. Gate 2 —
+      commit-range lint (./scripts/lint-commit-range.sh --base main-tools):
+      VERDICT: PASS — 40 commits in range; all satisfy the configuration; 0
+      offending commits; mode none (no MODE line on PASS); commitlint binary
+      node_modules/.bin/commitlint, origin repository-local; base resolved from
+      refs/remotes/origin/main-tools, merge-base e5ff0512, head f1a028b3; log
+      tmp/run-logs-runner/2026-11-25/210620-gh404-lint-commit-range.log."
+    type: info
+    date: "2026-11-25"
+  - text: "Review cycle closed before merges: delta re-check PROCEED
+      (review-delta-phase-15.yaml; F-47 fixed on the product runtime Bun 1.4.4,
+      the 15d deviation judged acceptable as F-38's own newer-bytes contract,
+      F-55 changeset verified accurate against spec v1.1; new F-56..F-60
+      lows/infos carried, F-60's plan prose fixed in rev 13) and doc
+      re-reconciliation COMPLETE (15 current-truth docs aligned: detached
+      provisioning with the resume state table, provider landing + post-landing
+      deferral replacing the dead -C paragraph, bounded runner-log sweep with
+      per-sweep cap semantics/truncation/same-date merge/post-sweep cleanliness,
+      (repository,ref) joins, F-23's where-each-command-runs split,
+      F-16/F-33/F-45 wording; validation 250+268 pass, doc-distribution no
+      drift). CARRIED RESIDUALS FOR THE PR BODY: F-37 (refused-sweep projection
+      opacity; the sweep refuses safely), F-39/F-40/F-41/F-43/F-49 (exclusion
+      blast radius, *.log directory wedge, cap detail, board map reuse,
+      tmp/deliver-ticket plan/apply asymmetry), F-42/F-54/F-56 (suite hardening;
+      merge/exclusion closure-level proofs; the no-write-through property is
+      Bun's — Node is not a supported runtime), F-44/F-45/F-46/F-48
+      remainder/F-50/F-51/F-53/ F-57/F-58/F-59/F-60 (info-level wording/notes;
+      F-59 one-token verifier tightening next touch), F-26/F-27/F-28/F-31/F-32
+      (as declared), source-comment cleanup (board/dispatch-lane-view/closeout
+      comments still say ref-keyed / gate-evidence — next touch), F-23 code half
+      (worktree-aware verify gates) as a FOLLOW-UP NAMED IN THE PR BODY (no
+      ticket minted autonomously), pre-existing outside-change items
+      (branding-seam broken links; planning dispatch reference page). Next:
+      review_fix completion sweep (review artifacts + plan rev 13 + docs +
+      pm-notes), quality_gates (full battery ONCE + commit-range gate),
+      dod_check, pr_creation."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 15 (rev-12 delta-review micro-remediation) applied in ONE
+      commit through the commit primitive
+      (9916809884a65e4efa07addd78d92d1c29f2cc12; the hash was unknowable when
+      this note was committed IN that commit, so this parenthetical is the
+      follow-up evidence edit — no amend, no history rewrite). FINAL STATUS.
+      F-47 ADDRESSED — the hand-written recursive merge is replaced by the copy
+      PRIMITIVE (cpSync(from, to, { recursive: true })), so the merge arm never
+      follows a link: a re-targeted date-entry link is REFUSED without writing
+      through it (both victim targets byte-identical, the link still a link), a
+      staged directory link is copied AS A LINK on a new entry (target contents
+      never materialized as a real directory), and per-placed-file verification
+      now uses lstat (file size equality, link target equality) so the verifier
+      itself never follows a symlink. F-48 ADDRESSED as the primitive's
+      delivered behaviour: the three TYPE-MISMATCH shapes are refused safely
+      (file->dir, dir->file, a non-directory at the destination date entry) —
+      typed failure, no throw, detail names the entry, the destination and the
+      next action, sources intact, staging cleaned; verified empirically under
+      Bun 1.4.4 that a read-only EARLIER FILE alone is now REPLACED by the newer
+      bytes by the primitive's directory merge (it unlinks before copying), so
+      the safe permission refusal is exercised through a read-only CONTAINER
+      instead — this is disclosed as a deviation from the review's four-refusal
+      list, and it is safe (the same-named file takes the newer bytes, no
+      distinct log is lost). Scenarios 9 and 9b re-verified green (same-date
+      preservation unaffected). F-55 ADDRESSED — the changeset prose is
+      rewritten to the delivered contract (detached worktree at the base tip, no
+      lane branch, the lane's own intake creates the delivery branch;
+      provider-landing merge with the post-landing deletion deferred to
+      closeout; bounded runner-log sweep with disclosed truncation and the
+      tmp/tmpdir scratch discarded; (repository, ref)-keyed worktree-path
+      visibility on dispatch status/lanes/board; lane.worktree-root and
+      lane.disable-worktrees; host-index registration pinned to the main
+      checkout; shared clone identity). It remains the branch's single
+      package-minor changeset for the five groups — frontmatter, bump and
+      package list untouched; TC-RELEASE-001 green. VERIFICATION (observed):
+      no-shell check clean (43 surface files); the production suite 22 pass / 0
+      fail (14a/14b/15a-15d new); the phase-14 behaviour set 588 pass / 0 fail
+      across 81 files including tests/golden 348 with NO byte changes; pnpm
+      typecheck green for all six packages plus tests/types; biome lint 0 errors
+      and biome format clean; boundaries, workspace entrypoints and secret-read
+      boundary green; TC-RELEASE-001 (privacy-release) 7 pass / 0 fail. CARRIED
+      RESIDUALS unchanged: F-49 (tmp/deliver-ticket is neither excluded nor
+      removed — the F-37 masked-dirt family), F-50 (merge not atomic per entry;
+      a retry completes it, no distinct log lost), F-51 (the cap bounds one
+      sweep, not the merged destination — DEC-11's per-sweep wording rides the
+      doc-sync re-run), F-52 (resolved by the primitive adoption), F-53
+      (verification compares sizes, not content — wording), and the phase-13/14
+      carrier list (F-26..F-28, F-31/F-32, F-33 + F-23 wording, F-37,
+      F-39..F-46; F-54 folded with F-42's suite hardening). SCOPE: the three
+      declared files plus this pm-notes note (drift disclosed by the
+      primitive)."
+    type: info
+    date: "2026-11-25"
+  - text: "Delta verification of phase 14 (code-review/review-delta-phase-14.yaml):
+      APPROVE — proceed to quality gates. F-34 is genuine compliance restoration
+      (invariant file/test/allowlist untouched across the whole branch; removal,
+      not suppression; the absence assertion pins AC-F2-1), F-35/F-36/F-38
+      verified at HEAD with HEAD~1 controls. New findings from the merge step:
+      F-47 (low) mergeTree classifies with statSync (follows symlinks — three
+      shapes differ from HEAD~1; not reachable from the product's own writes;
+      fix = cpSync recursive), F-48 (low) four shape-flip shapes become safe
+      retried refusals (F-37's opaque projection), F-49 (low) an untracked
+      tmp/deliver-ticket/<ref>.log still plans would-apply then refuses at apply
+      (F-37 family), F-50/F-52/F-53 (info) half-merged entry on mid-failure /
+      directory modes / size-equality verification, F-51 (info) the byte cap
+      bounds one sweep, not a merged same-date entry (three sweeps 31→62→93 MiB
+      under a 32 MiB cap, each truncated:false). PM ADJUDICATIONS: F-47+F-48 FIX
+      NOW (reviewer-recommended, one line + scenarios, pre-battery so no second
+      full battery), F-55 FIX NOW (the changeset still describes the pre-review
+      design: lane/<ref> branch, merge from worktree, gate evidence swept,
+      ref-keyed join — user-facing release prose must match the delivered
+      contract), F-49/F-50/F-51/F-52/F-53 CARRY as declared residuals with owner
+      visibility (F-51's per-sweep cap semantics documented for a follow-up).
+      Remediation: plan rev 12 phase 15 (mergeTree cpSync + the F-47/F-48
+      scenarios; changeset rewrite) + delta re-check + doc-sync re-run +
+      review_fix complete + quality_gates."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 14 (rev-11 review-iter-3 delta) applied in ONE commit through
+      the commit primitive (a34bbda4d7ca24ee52a03aba544c62eb8469dc05; the hash
+      was unknowable when this note was committed IN that commit, so this
+      parenthetical is the follow-up evidence edit — no amend, no history
+      rewrite). PM ADJUDICATIONS EXECUTED: F-34 FIX (reviewer-recommended
+      option), F-38 FIX, F-37 CARRY as a declared residual. FINAL STATUS. F-34
+      ADDRESSED by REMOVAL, not by routing around the checker: the
+      shell-fallback output path is gone from the swept set and from the
+      plan-time exclusion everywhere it existed — packages/cli/src/production.ts
+      (the sweep comment, removeEphemeral and its doc comment) and
+      packages/cli/src/edge.ts (LANE_SWEPT_PATHSPECS) — and no such literal
+      remains in the dispatch-flow surface. The committed no-shell invariant was
+      NOT narrowed and its allowlist was NOT touched: TC-SHELL-002,
+      TC-BATTLE-001 and TC-BATTLE-004 go green because the literals no longer
+      exist; `bun run scripts/checks/no-shell-dispatch.ts` reports clean (43
+      surface files). packages/core/src/domain /lane-worktree-plan.ts was
+      declared but carries no swept-set constant (the phase-13 implementation
+      put it in edge.ts), so it is untouched. The swept set is now the runner
+      logs plus tmp/tmpdir and the ad-hoc tmp/*.log files, matching DEC-11. F-35
+      ADDRESSED — CloseoutLaneLogSweepData added to BOTH module lists of
+      tests/fixtures/ports /v1-contract-inventory.json (after
+      CloseoutLabelArguments in each); TC-PORT-001 green. F-36 ADDRESSED — the
+      stale placement.branch assertion is retired; the test asserts the ABSENCE
+      of a branch member (Object.hasOwn) and the comment states AC-F2-1's
+      detached contract; TC-IDENT-001 green. F-38 ADDRESSED — a same-named
+      destination entry is now MERGED (recursive copy keeps the earlier sweep's
+      distinct files; a same-named file takes the newer bytes) with
+      per-placed-FILE verification (equal bytes), while a NEW entry still lands
+      by atomic rename from the verified staging sibling; the newest-first byte
+      cap is unchanged. New production-composition scenario 9b (distinct file
+      names in one date directory, twice swept: all three files preserved),
+      scenario 9 stays as the same-named complement. F-37 CARRIED as a declared
+      residual with owner visibility: a refused sweep still surfaces as the
+      transient retryable closeout.write.failed with its detail dropped, but the
+      sweep refuses SAFELY (sources intact, destination empty); the classified
+      projection plus a transaction-level refused-sweep scenario is the
+      follow-up, named in the PR body. OTHER DECLARED RESIDUALS, unchanged
+      reasons: F-39 (exclusion/sweep reach hand-created delivery worktrees —
+      gate on the newest dispatch.lane record), F-40 (non-recursive tmp/*.log
+      deletion after the sources move), F-41 (over-cap detail/omitted names),
+      F-42 (active-lane-missing proof, [0, 2] pins, comment), F-43 (board map
+      not cleared on a reused runtime), F-44..F-46 (info notes), F-26/F-27/F-28
+      and F-31/F-32 as previously declared; F-45's doc list (including the
+      DEC-11 wording and the retired spawn-failed prose mirror) and F-33/F-23
+      wording ride the doc-sync re-run; F-23's code half is named as a PR-BODY
+      follow-up (no ticket minted). VERIFICATION (observed): no-shell check
+      clean; tests/checks + tests/structure + tests/conformance 4265 pass / 0
+      fail across 445 files (the five previously red tests green); the phase-13
+      behaviour set 582 pass / 0 fail across 81 files including tests/golden 348
+      with NO byte changes; the production suite 16 pass / 0 fail; pnpm
+      typecheck green for all six packages plus tests/types; biome lint 0 errors
+      and biome format clean; boundaries, ambient globals, workspace
+      entrypoints, secret-read boundary, new-code naming and forbidden-literals
+      green. SCOPE: the six declared code/test files plus this pm-notes note;
+      lane-worktree-plan.ts declared and untouched."
+    type: info
+    date: "2026-11-25"
+  - text: "Review iter-3 verdict FAIL (code-review/review-iter-3.yaml): the three
+      iteration-2 blockers ARE FIXED and production-reproduced (F-18 second
+      sweep end-to-end; F-19 non-tmp-ignoring repo plans+applies; F-20
+      two-repository board). The FAIL is on the TREE: pnpm test red with 5
+      failing tests in 3 root causes, none in the phase's reported set — F-34
+      (high): the literals 'tmp/deliver-ticket'/'deliver-ticket' trip the
+      committed no-shell invariant (TC-SHELL-002, TC-BATTLE-001/004); F-35
+      (medium): CloseoutLaneLogSweepData missing from the v1 contract inventory
+      fixture (TC-PORT-001); F-36 (medium): state-scope.test.ts:381 still
+      asserts placement.branch, removed by Decision 1 (TC-IDENT-001, red since
+      3d8faceb). Two mediums in the same closure: F-37 every refused sweep
+      reaches the operator as the generic retryable closeout.write.failed with
+      detail dropped (the sweep safely refuses — no data loss); F-38 the
+      per-entry replace silently deletes an earlier sweep's same-date logs on a
+      twice-swept ref (violates NFR-5 0 silent log loss). Lows F-39..F-43
+      (exclusion reaches hand-created worktrees; a directory named
+      tmp/<name>.log wedges; cap-refusal wording; testing gaps; board map not
+      cleared on a reused runtime); info F-44..F-46. PM ADJUDICATIONS: F-34 —
+      adopt the reviewer's recommendation, DROP tmp/deliver-ticket from the
+      swept set (spec DEC-11 names only the runner logs and tmp/tmpdir, so this
+      is compliance restoration, not a new decision; the invariant is the
+      authority and is not narrowed or allowlisted); F-38 — FIX (silent loss is
+      a spec violation; same-date re-sweeps preserve the earlier entries); F-37
+      — CARRY with owner visibility (projection wording; the sweep refuses
+      safely); F-35/F-36 — mechanical fixes; F-39..F-46 — declared residuals;
+      F-23's code half (worktree-aware verify gates) — named in the PR body as a
+      follow-up (no ticket minted autonomously). The three full review
+      iterations are exhausted; the remaining work is the reviewer-PRESCRIBED
+      delta remediation + delta verification, then quality_gates. Remediation:
+      plan rev 11 phase 14 (F-34 sweep-set narrowing, F-35 inventory export,
+      F-36 assertion retirement, F-38 same-date preservation scenario, pending
+      pm-notes edit committed with it); gate: no-shell-dispatch check + bun test
+      tests/checks tests/structure tests/conformance + the phase-13 set."
+    type: info
+    date: "2026-11-25"
+  - text: "Retro (iteration-3 lesson, process-honest): the phase-13 coder ran
+      typecheck + its targeted suite but not the invariant trio (tests/checks,
+      tests/structure, tests/conformance) — the exact suites that tripped. Every
+      remediation phase's gate must include the invariant/conformance battery
+      portions that the change's literals and exports touch, not just behaviour
+      suites; and the review's own 'not run' set (about 660 of 1001 behaviour
+      files) is why quality_gates runs the whole battery exactly once. Also:
+      F-36 was red from 3d8faceb and the iteration-2 reviewer's set missed it —
+      review sets must include the stale-assertion sweep for every constant a
+      decision retires."
+    type: retro
+    date: "2026-11-25"
+  - text: "Plan phase 13 (rev-10 review-iter-2 remediation) applied in ONE commit
+      through the commit primitive (96f6228a371ee879288646e60c22ddb8c25a844e;
+      the hash was unknowable when this note was committed IN that commit, so
+      this parenthetical is the follow-up evidence edit — no amend, no history
+      rewrite). FINAL STATUS PER FINDING. F-18 ADDRESSED — createLaneLogSweep
+      replaces and verifies PER ENTRY (staging sibling, atomic
+      destination/<entry> replace, placed bytes == measured source bytes;
+      destination verification covers only the entries this sweep placed; older
+      differently named entries stay). The whole-directory comparison that
+      wedged a ref forever is gone: scenario 8 drives a SECOND lane of the same
+      ref through dispatch + closeout, scenario 9 sweeps one worktree twice with
+      same-date replacement and a later date. F-19 ADDRESSED — planFacts
+      observes worktree cleanliness with the swept paths excluded
+      (tmp/run-logs-runner, tmp/tmpdir, tmp/deliver-ticket, tmp/*.log) via the
+      new isWorktreeClean exclude parameter; the apply-time post-sweep
+      observation stays authoritative and the pre-removal adapter check passes
+      no exclusion. Scenario 7 is a repository that does NOT ignore tmp/: plan
+      says would-apply (not dirty) and apply sweeps, removes the worktree and
+      deletes the branch. F-20 ADDRESSED — the board's worktree-path map is
+      built from EACH repository's own store inside loadRepositoryFacts and
+      re-keyed to the BOARD's repository key; scenario 12 proves the derived key
+      differs from the dispatch.lane record's github.com/owner/repo identity and
+      the lane row still carries the path. F-21 ADDRESSED — the sweep returns
+      truncated + omittedBytes, the domain carries them on
+      CloseoutStep.laneLogSweep (bounded identifier-only contract field) and
+      renders them in the human digest; a sparse entry over the cap is disclosed
+      in the applied payload (scenario 10) and a sweep that could preserve
+      NOTHING refuses with the logs intact (scenario 10b). F-22 ADDRESSED —
+      scenarios 4 and 5 are now explicitly justified seam-level proofs, and
+      scenario 7 runs verify gates + merge in the lane worktree (post-landing
+      deletion DEFERRED, branch retained) followed by closeout --apply from the
+      main checkout through the composer; the resume-economics header is
+      reworded to what scenario 2 asserts. F-25 ADDRESSED — the addWorktree
+      refusal names the worktree path, a bounded git stderr tail and the
+      recovery (git worktree prune, or remove the named path); the
+      removeWorktree refusals name the path and the remedy; the production
+      rollback disclosure keeps the path. Scenario 11a removes a lane worktree
+      directory without git worktree remove and asserts the refusal names the
+      path, prune and exit 128; scenario 11b leaves a partial-install file,
+      asserts the refused rollback discloses the path and prune. F-29 ADDRESSED
+      — the deferral check parses the exact branch refs/heads/<branch> line (no
+      substring) and skips prunable or missing worktree blocks; scenario 13
+      covers feat/GH-1/a vs feat/GH-1/ab and a pruned registration. F-30
+      ADDRESSED — the no-logs scratch deletion sits inside the try (a read-only
+      tmp returns the declared refusal, scenario 5) and the reuse arm creates
+      the TMPDIR anchor it binds (scenario 2). F-9 CLOSURE — the error-table row
+      states that a lane-worktree provisioning or resume-verification refusal
+      records NO attempt and the hint promises no guaranteed retry; the events
+      baseline, the supervise baseline, Appendix D and the two structure mirrors
+      moved together and error-table-sync plus the structure suites are green.
+      DECLARED RESIDUALS: F-26 GH-412 adjacency (detached-ancestor or
+      recorded-SHA resume refinement rides parallel-lane planning); F-27
+      defense-in-depth follow-up (the refusal already surfaces; the
+      misattribution is cosmetic); F-28 fold the two branch-convention matchers
+      at the GH-408 rename; F-31 commit-primitive subject typing follow-up; F-32
+      placement-from-the-invoking-directory follow-up; F-33 contradicted doc
+      sentences and F-23 guide wording ride the orchestrator's doc-sync re-run
+      after code lands (F-23's code half is a follow-up work item); F-24 is DONE
+      (spec v1.1 landed in 31f8226a); the eight leftover lane/* local branches
+      are workspace hygiene for LOCAL cleanup, not repository content.
+      VERIFICATION (observed): pnpm typecheck green for all six packages plus
+      tests/types; the production suite 15 pass / 0 fail; the targeted set
+      (production suite, lifecycle, host-index, resume economics, merge
+      composition, three closeout worktree suites, retirement pin, house style,
+      error-table-sync, enumeration, seam, board, config, both structure error
+      suites, content-inventory, tests/golden) 746 pass / 0 fail across 84
+      files; the dispatch behaviour glob 511 pass / 0 fail across 64 files;
+      tests/golden 348 pass / 0 fail with NO golden byte changes; biome lint 0
+      errors and biome format clean; boundaries, ambient globals, workspace
+      entrypoints, secret-read boundary, new-code naming and forbidden-literals
+      green. DRIFT DISCLOSED: the declared 11 files plus four mechanical mirrors
+      the chosen fixes require — packages/core/src/contracts/index.ts (the new
+      type's #contracts re-export), tests/fixtures/supervise/
+      error-table-baseline.json and the two tests/structure error-row mirrors
+      (the synchronized copies of the F-9 row; leaving them would red the
+      error-table-sync and supervision invariants)."
+    type: info
+    date: "2026-11-25"
+  - text: "Review iter-2 verdict FAIL (code-review/review-iter-2.yaml; swept at the
+      review_fix completion): the six iteration-1 blockers/majors are VERIFIED
+      FIXED through the production composer (F-1 resume accepted detached AND on
+      the delivery branch, foreign branch refused; F-2 runner logs copied bound,
+      scratch deleted, blocked destination moves nothing; F-3 squashLand
+      byte-identical to main-tools + end-to-end merge deferral + closeout branch
+      deletion; F-4 install-failure rollback + re-dispatch after closeout; F-5
+      PATH/TMPDIR/DELIVERY_WORK_PATH are the worktree's on spawn AND resume with
+      controls; F-6 scenarios 1/2/3/6 are production-path). THREE NEW HIGHS in
+      the remediated code, invisible to the committed suites: F-18 the sweep
+      verifies the whole destination directory against this copy and never
+      clears it — a second sweep of the same ref fails forever with
+      closeout.lane-log-sweep-failed and closeout refuses removal permanently;
+      F-19 the F-8 fix is unreachable where it matters — plan-time cleanliness
+      still judges the PRE-sweep worktree, so closeout --apply exits 1 with
+      condition=dirty and the sweep never runs in repos that do not ignore tmp/
+      (no effect in this repo; hits adopters — the installer adds no tmp/
+      ignore); F-20 the board keys its worktree-path join by the derived
+      repository key (repo-<hex>) while the lane record carries
+      github.com/owner/repo, so the board shows no path (the committed test
+      passes only because its fixture uses one string for both). Mediums: F-21
+      the truncation fact is dropped and un-copied logs are deleted (decision 3
+      requires disclosure); F-22 scenarios 4/5 are not production-path and no
+      suite runs merge or closeout through the composer; F-23 verify gates from
+      the main checkout does not converge for a worktree lane (doc-owned); F-24
+      the change spec is unamended (AC-F2-1/AC-F4-1 read unmet); F-25 a stale
+      registration or refused rollback wedges the ref with a bare (128). Lows
+      F-26..F-30; info F-31..F-33 (incl. eight pre-existing lane/* local
+      branches — workspace hygiene, not repository content). DECLARED RESIDUALS:
+      F-9 — PM chose to CLOSE it in this cycle via the phase-13 trio
+      (contracts/error-table.ts +
+      tests/fixtures/events/error-table-baseline.json +
+      doc/spec/features/feature-result-contract.md moved together so
+      error-table-sync stays green); F-17 out-of-scope as declared; F-14
+      narrowed and verified at HEAD. REMEDIATION ORDER (review iteration 3 is
+      the LAST before human escalation — quality over speed): spec amendment
+      F-24 (spec-writer) + plan rev 10 phase 13 (F-18/F-19/F-20 blockers +
+      F-21/F-22/F-25/F-29/F-30 + the F-9 closure, each with a
+      production-composition scenario seeded from
+      tmp/tmpdir/opencode/gh404-review-i2/probe-e2e.ts) + new coder + review
+      iter-3 + doc-sync re-run (merge spec, F-16 doc sentences, F-23 guide
+      wording, F-33) + review_fix complete + quality_gates + DoD + PR. REVIEWER
+      INCIDENT (self-reported, independently verified by @runner): its first
+      probe run created four branches and one commit in this checkout; it
+      restored by hand and the verification confirms HEAD 3d8faceb on the change
+      branch, status identical to the pre-review state, the four branches
+      deleted, work.txt/notes.md absent, pm-notes sha256 6d16bfd9… intact,
+      single worktree registered; five reflog entries and one unreachable commit
+      remain (harmless); its probe library now confines git operations to its
+      own temporary root."
+    type: info
+    date: "2026-11-25"
+  - text: "Retro (iteration-2 lesson, the complement of iteration 1's):
+      production-composition coverage must extend to EVERY seam a remediation
+      pass touches. The new default-mode suite covered provisioning and resume —
+      so F-1/F-2/F-4/F-5/F-6 were caught and fixed — but it ran no merge, no
+      closeout and no board render through the composer, which is exactly where
+      F-18/F-19/F-20 lived. Rule for remediation phases: enumerate the seams the
+      fixes touch, and extend the production suite to each in the same commit; a
+      scenario count is not coverage. The reviewer's own probe misfire also
+      reinforces the harness rule: every probe library confines git to its own
+      temporary root (it does now)."
+    type: retro
+    date: "2026-11-25"
+  - text: "Plan phase 12 (rev-9 review-iter-1 remediation) applied in ONE commit
+      through the commit primitive (3d8faceb32416449aef976653899319becc2af96;
+      this hash was unknowable when the note was committed IN that commit, so
+      this parenthetical carries the follow-up evidence edit — no amend, no
+      history rewrite, no capsule file was written for this change). FINAL
+      STATUS PER FINDING: F-1 ADDRESSED — worktree provisioned DETACHED at the
+      base tip, no lane/<REF> branch; reuse verifies detached-at-base OR a
+      delivery-convention branch ^[a-z]+/<REF>/, a genuinely foreign branch
+      still refuses (production-path suite scenario 2, positive and negative);
+      LANE_BRANCH/lane/<REF> retired from production, contract and fixtures. F-2
+      ADDRESSED — the production sweep (createLaneLogSweep, the exact closure
+      the closeout composition binds) copies the runner-log tree
+      tmp/run-logs-runner/** newest-first under LANE_LOG_SWEEP_BYTE_CAP with
+      recursive byte accounting, verifies the COPIED ENTRIES (count, recursive
+      bytes, existence), deletes tmp/tmpdir scratch instead of preserving it,
+      and moves nothing on failure (real-file suite, refusal case included). F-3
+      ADDRESSED — the dead squashLand worktree-invocation change is reverted
+      byte-for-byte (merge-landing-retirement zero-callers pin green); the
+      provider-landing contract stands; the post-landing branch deletion defers
+      as satisfied-by-closeout when the branch is checked out in a linked
+      worktree (edge.ts port + production binding + detection tests). F-4
+      ADDRESSED — a post-creation provisioning failure rolls the just-created
+      worktree back through removeWorktree and DISCLOSES a refused rollback; a
+      TERMINAL record whose worktree closeout removed provisions fresh for the
+      ref's new lane instead of refusing lane-worktree-missing (production-path
+      scenario 6); no lane branch leaks. F-5 ADDRESSED — the lane session
+      descriptor derives the worktree environment (worktree node_modules/.bin
+      leading PATH, TMPDIR anchored inside the worktree) for the fresh spawn AND
+      the resumed lane; the suite asserts the SESSION spawn environment, not
+      only the provisioning children. Residual, declared: the older
+      LaneLaunchPlanFacts.worktreeEnvironment branch in
+      packages/core/src/domain/lane-launch-plan.ts still has no supplier — its
+      only consumer is the daemon lane planner (daemon-compose.ts), which is
+      F-17(b) out of scope here; the dispatch SESSION environment is delivered
+      by the descriptor builder, which is the authoritative spawn source. F-6
+      ADDRESSED — new first-class suite
+      tests/behaviour/dispatch-production-worktree.test.ts (6 scenarios,
+      createProductionComposer -> real CLI -> dispatch/merge runtime over real
+      temp git repositories, only harness/provider/children stubbed); the
+      governing fixtures carry explicit JUSTIFIED remarks where they pin the
+      engine seam rather than the composer. Sub-item deviation: the parity
+      harness (tests/fixtures/dispatch/parity/harness.ts) keeps its
+      exception-mode pin because its suites pin exception-mode parity; the
+      default-mode document lives in the queue production harness and the new
+      suite consumes it. F-7 ADDRESSED — the join keys on repository|ref and the
+      NEWEST record decides, a newer context-less record superseding an older
+      path; board and lanes tests updated. F-8 ADDRESSED — the pre-sweep
+      pre-check no longer evaluates the cleanliness arm; the ordering gate
+      evaluates the POST-sweep cleanliness the production sweep port observes,
+      and a composition without a sweep port keeps the delivered cleanliness
+      check. F-9 PARTIAL, DECLARED: the provisioning refusal detail now names
+      the declared step, the timeout fact and a bounded stderr tail
+      (production.ts), and the sweep reason token is already declared in
+      feature-closeout.md; the dispatch.session.spawn-failed error-row prose
+      change was REVERTED because that row is a distributed synchronized surface
+      (doc/spec/features/feature-result-contract.md Appendix D + the events
+      error-table baseline fixture), the repo invariant requires them to move
+      together, and this phase's fence declares no doc edits — it belongs to the
+      doc-sync re-run, not to a scope violation here. F-10 ADDRESSED — a
+      relative or tilde lane.worktree-root is refused at config resolution as
+      config.value.invalid naming the key, the accepted value is trimmed, and
+      the lane-record guard refuses a non-string or empty worktreePath (tests
+      added). F-11 ADDRESSED — the declared bound stays and is named in the
+      refusal together with timedOut; no retry ladder (declared GH-412-adjacent
+      out of scope). F-12 ADDRESSED — the linked-only enumeration compares each
+      block's OWN resolved git directory with the common directory (one bounded
+      rev-parse --absolute-git-dir per block), so separate-git-dir and submodule
+      main checkouts classify correctly; pure resolver test and real-repo
+      isCheckedOutElsewhere assertions added; the merge seam uses the same
+      resolved-equality rule. F-13 ADDRESSED — LANE_PROVISIONING_STEPS is
+      reordered to production's real order (gate temp dir, install, build) and
+      production CONSUMES the declared steps and LANE_WORKTREE_INSTALL_COMMAND;
+      matchesDeliveryBranchConvention and the retired resume helpers were
+      removed with their inventory rows. F-14 ADDRESSED per the phase's narrowed
+      mapping — the canary control really runs the scan (factored
+      scanSeamSource) and the preserved-golden provenance comment states the
+      verified fact (bytes match the merge-base renderer; the bytes are never
+      regenerated). F-15 ADDRESSED — static node:child_process imports, a typed
+      tuple shuffle, a real OWNER_GATE_SLA_POLICY value. F-16 ADDRESSED — the
+      contradictory stacked comment is gone; the disproved spec sentences ride
+      the doc-sync re-run (Decision 2). F-17 OUT OF SCOPE as declared, and the
+      port comment names (a)-(c). VERIFICATION (observed, not asserted): pnpm
+      typecheck green for all six packages plus tests/types; the new suite 6
+      pass / 0 fail (71 expect calls); the targeted set (the new suite,
+      lifecycle, host-index, resume economics, merge composition, three closeout
+      worktree suites, retirement pin, house style, enumeration, seam, board,
+      config, both structure error suites, content-inventory, tests/golden) 628
+      pass / 0 fail across 83 files; the dispatch behaviour glob 503 pass / 0
+      fail across 64 files; the closeout composition batch 56 pass / 0 fail
+      across 4 files; biome lint 0 errors and biome format clean; boundaries,
+      ambient globals, workspace entrypoints, secret-read boundary, new-code
+      naming and forbidden-literals all green. DRIFT DISCLOSED: the declared
+      file list omitted the files where the decisions actually bind —
+      packages/core/src/app/dispatch-lane-view.ts (F-7 join), the core barrels
+      and packages/core/src/app/state-scope.ts (retired lane-branch context),
+      packages/core/src/domain/dispatch-resume.ts (retired dead pure resume
+      rules), and tests/structure/content-inventory.test.ts (the export
+      inventory baseline for the new constants and the removed dead exports);
+      they are tracked drift, staged by the primitive and disclosed there.
+      Deferred with reasons: the error-row prose plus its doc and baseline (F-9,
+      doc fence), the parity harness default-mode document (unused export
+      otherwise), the plan-mode pre-sweep would-refuse render for a repository
+      that does not ignore tmp/ (apply-time is authoritative; the plan render is
+      read-only), and the sweep truncation flag is returned by the port but has
+      no in-scope operator surface to render it."
+    type: info
+    date: "2026-11-25"
+  - text: "Review iter-1 verdict FAIL (code-review/review-iter-1.yaml, swept with
+      the next phase complete): 17 findings — 2 blocking, 4 major, 4 minor, 6
+      nits, 1 info — reproduced through the real production composer over real
+      temp git repositories. THE CORE DEFECT: no committed suite runs the
+      DEFAULT (worktree) mode through the production composer (both production
+      fixtures pin lane.disable-worktrees: true), so the 13/13 gate was blind to
+      the default mode. Blocking: F-1 operator resume refused once the lane
+      moves to its delivery branch (reuse arm demands lane/<REF>; AC2 broken);
+      F-2 the sweep copies <worktree>/tmp/tmpdir scratch (2.9 GB / 74k entries,
+      no bound, no prune) into the state root while the REAL runner logs
+      (tmp/run-logs-runner/, 20 MB, per the runner contract) are siblings that
+      git worktree remove deletes — the zero-log-loss claim inverts. Majors: F-3
+      the -C landing sits in the RETIRED squashLand seam (zero composed callers,
+      pinned by merge-landing-retirement) while production lands via the
+      provider API and post-landing branch deletion fails for a worktree-parked
+      branch (my phase-6 deviation adjudication REOPENED — the coder's sandbox
+      tested the dead seam); F-4 no failure-path ownership (failed install
+      leaves the worktree registered; later dispatches refuse
+      worktree-add-refused; post-closeout lane record still carries worktreePath
+      and refuses lane-worktree-missing; lane/<REF> leaks one branch per work
+      item); F-5 AC-F3-1 PATH precedence holds only for the provisioning
+      children, not the lane session (lane-launch-plan consumption point
+      unsupplied); F-6 no default-mode production-composition suite; governing
+      fixtures re-implement logic instead of composing production. Verified
+      sound: addWorktree seam, lease-first order, host-index pin
+      (composer-verified), exception mode byte-identical to merge base,
+      position-independent enumeration, NG fences clean, scope disclosure clean.
+      PM DECISIONS (binding, recorded for rev 9): (1) LANE BRANCH MODEL —
+      provision DETACHED at the base tip; no lane/<REF> branch is ever created;
+      the lane's own intake ensures its delivery branch <type>/<REF>/<slug> per
+      the repo convention; resume verifies the worktree exists with HEAD
+      detached-at-base OR on a delivery-convention branch matching the work item
+      ref; foreign branches still refused. (2) MERGE POST-LANDING — accept the
+      provider-landing contract: revert the dead squashLand change (its
+      zero-callers pin stays green); the merge transaction's post-landing branch
+      deletion DEFERS to closeout when the branch is parked in the lane's
+      worktree (closeout's delivered order: worktree removal, then branch
+      deletion, completes it); the merge spec section is re-reconciled (doc-sync
+      re-run after code changes). (3) SWEEP SCOPE — the lane's logs are the
+      runner-log directories (tmp/run-logs-runner/**): copied bounded
+      (newest-first, byte-capped, truncation disclosed) to <state
+      root>/closeout-lane-logs/<ref>; tmp/tmpdir scratch is DELETED, not
+      preserved; the destination verify checks the copied entries, not the
+      directory it created; the cleanliness predicate evaluates the POST-sweep
+      state (fixing the inverted rationale, F-8). Remediation: plan rev 9
+      (remediation phase covering F-1..F-16 with the decisions above + the
+      default-mode production-composition suite as the first-class deliverable),
+      coder applies, doc-sync re-runs (merge spec section), reviewer iter-2.
+      Iteration 1 of max 3."
+    type: info
+    date: "2026-11-25"
+  - text: "Retro (review catch — the two lessons that made 17 findings possible):
+      (1) THE DEFAULT-FLIP BLIND SPOT — the phase-4 fence-authorized re-pins
+      pinned both production-composition fixtures to the exception mode
+      (correctly preserving today's behaviour) but NO complementary suite
+      covered the NEW default through the production composer, so a 13/13 green
+      gate proved nothing about the mode the change ships. Rule for every
+      default-flip change: the default-mode production-composition suite lands
+      in the SAME change as the flip, as a first-class deliverable, not a
+      follow-up. (2) DEVIATION ADJUDICATION MUST CHECK PRODUCTION REACHABILITY —
+      I accepted the phase-6 merge deviation on the coder's sandbox evidence
+      without asking whether the seam it modified (squashLand) is
+      production-composed; a retired zero-caller seam can be empirically
+      'verified' and still be dead code. Rule: every deviation adjudication
+      names the composed call path it affects (the plan-writer's binding-chain
+      discipline, applied to adjudication). Both lessons clear the memory
+      capture bar at closeout."
+    type: retro
+    date: "2026-11-25"
+  - text: "Plan phase 11 (rev-8 remediation) applied (commit 2bb07ad4):
+      doc/spec/nonfunctional.md gained the worktree-lane NFR row in the
+      NFR-TOOL-003 budget-index table — a work item's lifecycle runs in its own
+      linked worktree (lease-first provisioning before the first phase; resume
+      reuses the recorded worktree with observed branch verification; the
+      lane.disable-worktrees exception restores in-checkout behaviour
+      byte-for-byte), pointing at feature-dispatch-engine.md#lane-worktrees,
+      plus the closeout sweep/removal-ordering sentence (lane logs swept to the
+      state-root destination before removal; removal only after merge
+      confirmation), pointing at feature-closeout.md#local-worktree-cleanup —
+      matching the page's row format and prose style, GH-406 vocabulary, prose
+      only, zero identifier renames. tests/checks/ operation-count-pages.test.ts
+      line map updated in the SAME commit per the green-boundary fence: the
+      one-row prose addition shifted the nonfunctional page by exactly one line
+      — nonfunctional.parity 354->355, the nonfunctional.clause-ids neighbour
+      357->358, and the page's declared nine-lines set [357]->[358] (pin-map
+      delta: 3 entries, 1-line shift). Verification:
+      tests/checks/operation-count-pages.test.ts 6/6 green; doc-conformance +
+      namespace-doc-battery 66/66 green; the full tests/checks battery 1661 pass
+      / 0 fail; git diff --check clean. No golden impact (prose-only spec page);
+      exception-mode pins untouched. The commit's staged set carried the two
+      declared files plus the pm-notes evidence ride (the orchestrator's rev-8
+      checkpoint note, this entry)."
+    type: info
+    date: "2026-11-25"
+  - text: "Rev-8 checkpoint observations (5e9aaba2, adjudicated by PM — no action
+      taken on three, one accepted): (1) the 19 phase-7 doc edits swept into the
+      delivery_planning completion commit as disclosed scopeDrift — the
+      documented engine behavior for tracked drift-flagged files; content is
+      verified and complete, landing early is harmless, no amend (no history
+      rewrite mid-lifecycle). (2) The template-derived commit subject ('update
+      doc/00-index.md') understates the payload (plan rev 8 + pm-notes + 19
+      docs) — cosmetic; this note is the durable truth. (3) phase list shows
+      only the five planning-class phases by view shape; the durable ledger
+      holds delivery completed 13:57:22Z (the reopen batch cross-checked the
+      ledger read-only) — state intact, no divergence. (4) OBSERVATION for the
+      owner: the change folder carries no events.jsonl capsule file across the
+      whole lifecycle; the capsule is command-owned
+      (phase/commit/verify/closeout write it) so it was never hand-created — if
+      closeout's capsule validation requires it, closeout will surface the gap;
+      an engine-behavior question, not something the PM improvises. No ticket
+      filed autonomously."
+    type: info
+    date: "2026-11-25"
+  - text: "Phase-7 (system_spec_update) reconciliation result: 19 current-truth
+      files reconciled (dispatch-engine lane-worktrees section; closeout
+      removal-ordering gate + closeout-lane-logs destination; projects realpath
+      registration pin; board/scheduling-engine ref-keyed join; config-layer
+      lane.worktree-root + lane.disable-worktrees with the corrected
+      no-config-key paragraph; state-layer shared-store + closeout-lane-logs;
+      merge -C structural landing; delivery-lifecycle, economics,
+      resident-daemon, queue-ready adjacency; two test-specs;
+      engine-first-operations + change-lifecycle guides; architecture overview;
+      ubiquitous language; doc index). Feature-spec coverage fully resolved —
+      the worktree contract lives in feature-dispatch-engine.md (deliberately no
+      separate feature page: one contract, one truth). THREE RESIDUALS: (1)
+      doc/spec/nonfunctional.md worktree-lane NFR row missing — blocked by the
+      operation-count-pages line-pin invariant (a code-side pin map must move
+      first; doc-sync has no code mandate) — THIS CHANGE'S GAP, resolved
+      in-change via plan rev 8 remediation + @coder + doc-sync verification pass
+      before the phase completes; (2) feature-branding-seam.md two pre-existing
+      broken ../../../guides/local-install.md links — PRE-EXISTING, not this
+      change's, declared residual for a later docs-only pass; (3)
+      doc/planning/oss-tooling/milestones/m1/commands/dispatch.md status field
+      list omits worktreePath — planning record outside the doc-sync write
+      allowlist, declared residual for the planning owner. Phase 7 stays open
+      until (1) lands and verification passes."
+    type: info
+    date: "2026-11-25"
+  - text: "Delivery-boundary defect FOUND AND FIXED immediately after the boundary
+      act: the phase-10 exclusion disclosure revealed the dispatch-status
+      worktree golden's two FIXTURE files (status-worktree.txt,
+      status-context-less.txt) were untracked strays — I had placed them under
+      tests/fixtures/dispatch/golden/, outside the plan's declared tests/golden
+      folder, so the commit primitive excluded them and the committed golden
+      suite (tests/golden/dispatch-status-worktree.test.ts, landed in phase 9)
+      would have failed in a clean checkout at its readFileSync. Fix: the
+      fixtures MOVED into tests/golden/ (the declared folder — goldens live with
+      their suite), the suite's GOAL path updated, the suite re-run green (3/3),
+      and the fixtures committed through the primitive (commit 9934afbb, exactly
+      three staged files, zero drift; full tests/golden battery re-run green,
+      348 tests). The branch is now self-contained. LESSON (capture bar): when a
+      plan declares a FOLDER scope for new test fixtures, place the fixtures
+      inside that folder — a fixture beside its suite in an undeclared directory
+      is a stray the commit primitive will silently exclude, and the boundary
+      commit completes with a broken clean-checkout suite. The exclusion
+      disclosure is what surfaced it — read it on every landed commit."
+    type: retro
+    date: "2026-11-25"
+  - text: "Plan phase 10 complete (commit d583b2ba): the release changeset
+      .changeset/gh-404-worktree-lane-foundation-minor.md landed — the branch's
+      ONLY new .changeset/*.md vs the merge base, declaring the five fixed-group
+      packages (@delivery-os/core, adapters, cli, mcp, opencode) at minor per
+      the lockstep configuration and the spec front matter's version_impact
+      minor, its body stating the worktree-lane foundation in the delivered
+      GH-406 vocabulary (default-on worktree lanes with the disable-worktrees
+      exception, provisioning before the first phase, resume reuse, registration
+      pinned to the main checkout, merge/closeout ordering, worktree-path
+      visibility, the addWorktree seam house style, the position-independent
+      enumeration; parallel lanes and sync-before-PR explicitly GH-412). The six
+      feature-spec entries are DECLARATION ONLY per the plan — doc-syncer
+      executes the contract-truth reconciliation in the lifecycle
+      system_spec_update phase per the pm-notes doc-impacts list; no coder task
+      edited them in this commit. Boundary evidence — THE FULL GATE IS GREEN FOR
+      THE FIRST TIME: tmp/run-logs-runner/2026-11-25/phase10-gate.log — 13/13
+      stages exit 0; bun test 12905 pass / 4 skip / 0 FAIL; TC-RELEASE-001
+      PASSED as a normal stage-4 result (7/7 focused — the known-deferred
+      verdict clears exactly at the phase-10 boundary when the changeset lands,
+      per the GH-406 precedent); exports-parity green; the changeset verified to
+      parse as YAML front matter declaring exactly the five fixed-group packages
+      at minor. No timing assertions exist anywhere in the test corpus
+      (TC-ENV-004 remains the recorded pm-notes measurement)."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 9 complete (commit f31212b1): behaviour proof II landed — (1)
+      TC-CLOSEOUT-002/003/004 run-level ordering (closeout-worktree.test.ts
+      additions): the apply transaction's worktree-removal gate proven over
+      injected runtimes — sweep strictly before removal (order [sweep, remove]);
+      a sweep failure refuses the removal with the worktree AND the logs intact;
+      the merge arm refuses before any side effect with the stalled lane keeping
+      its worktree (the killing case is SAFE verdict + UNCONFIRMED merge —
+      defense in depth, so the merge arm is load-bearing independently of the
+      predicate's mergedObserved arm); a composition without the sweep port
+      keeps the delivered removal (the logs arm neutralized). (2)
+      TC-CLOSEOUT-005: the two ordering mutants MUT-GH404-01 (gate skipped) and
+      MUT-GH404-02 (merge arm hardcoded true) registered in the mutant registry
+      with the guarding suite closeout-worktree.test.ts — the mutant machinery
+      verified both killed with the declared signals carried by message-bearing
+      assertions (bun's expect(actual, message) names the signal in the failure
+      output; the signal-bearing assertion is placed FIRST so an earlier
+      assertion cannot mask it). Fence-authorized re-pins:
+      capsule-mutants.test.ts count pins 44->46 with the two new ids. (3)
+      TC-CLOSEOUT-001: the worktree-invoked merge landing proven over a REAL
+      temp repository with a real linked worktree — invoked from the worktree,
+      the squash lands ON BASE in the main checkout (base advances to squashSha,
+      containedOnBase true, the invoking worktree untouched); invoked from the
+      main checkout, the delivered argv and result hold. (4) TC-SURFACES-001:
+      the dispatch-status worktree golden pair (status-worktree.txt with the
+      worktreePath line; status-context-less.txt the PRESERVED pre-change pin,
+      never regenerated, byte-identical rendering, and the delta between the two
+      goldens proven to be exactly the worktree line). (5) TC-SURFACES-002: the
+      board lanes join pins (the row carries the joined path; a context-less
+      lane renders exactly as today, no rows minted). TC-REG-001: the
+      exception-mode pins are the preserved goldens + context-less assertions
+      (0-byte delta). Boundary evidence: first gate run flagged ONE lint error
+      (a duplicate type import in board-lanes.test.ts — fixed by merging the
+      import); bun test was green except TC-RELEASE-001 in both runs. Post-fix
+      rerun (phase9-gate2.log): stages 1-3, 5-13 green; bun test 12904 pass / 4
+      skip / 1 known-deferred fail. Fence-authorized re-pins: capsule-mutants
+      count pins (noted above)."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 8 complete (commit ae9837de): the governing fixtures and
+      guards landed — NEW suites:
+      tests/behaviour/git-adapter-worktree-seam.test.ts (TC-WT-001 over a REAL
+      temp git repository: linked worktree on the new branch at the base tip,
+      linked-only enumeration, branch-elsewhere both ways; the typed refusal
+      matrix with zero inventory residue), tests/
+      checks/worktree-seam-house-style.test.ts (TC-WT-002: no shell, no force
+      token, no network in the create path; the fixed argv form asserted
+      whitespace-tolerantly; planted canaries fail the scan and stay contained;
+      the refusal matrix through a counting child runner proves ONE git call per
+      refusal and zero git calls behind the seam-side validations),
+      tests/behaviour/git-adapter-worktree-enumeration.test.ts (TC-IDENT-002:
+      the common-dir rule asserted directly, order-insensitivity proven by
+      shuffled/reversed permutations, locked/bare attributes
+      position-independent, the main checkout's branch never leaking into the
+      linked inventory), tests/behaviour/dispatch-worktree-lifecycle.test.ts
+      (TC-WT-003 lease-first order with a REAL worktree: lease -> provision ->
+      spawn, spawn cwd = the worktree, the sibling placement at the base tip,
+      main checkout on base and clean throughout, DM-1 worktreePath on the lane
+      record, the join source mapping it; the provisioning refusal releasing the
+      lease with zero retries and zero spawns; TC-WT-004 sibling default vs
+      explicit root; TC-WT-005 the symlink alias never participating in the
+      placement; TC-ENV-002 the derived environment contract; TC-REG-002 the
+      exception at the same seam — in-checkout, no worktree created or
+      referenced), tests/behaviour/host-index-worktree-pin.test.ts
+      (TC-HOSTIDX-001/002/003 over real git: the registration root derived from
+      the worktree equals the physical main checkout across three lane commands
+      — zero flips; the entry survives worktree removal plus maintenance — zero
+      prunes, repos list keeps its row; worktrees never rows of the flat record
+      set). UPDATED suites: dispatch-resume-economics (TC-RESUME-001/002/003 the
+      reuse/verify/DEC-8 rules), dispatch-gate-evidence (TC-ENV-003 the literal
+      $PWD/tmp/tmpdir anchored per worktree), projects-identity (TC-IDENT-001
+      the worktree's own root differs while identity and state root match),
+      state-scope (the placement rule over the physical root + the explicit
+      setting). install/build STUBBED everywhere (RSK-T5); zero timing
+      assertions (TC-ENV-004 is the recorded pm-notes evidence).
+      Fence-authorized re-pins: content-inventory gains the dispatch-lane-view
+      export row; the new-code-naming baseline gains a reason-bearing entry for
+      the host-index pin suite's delivered HostIndexRegistration field-name keys
+      (projectKey — the zero-rename fence forbids renaming the delivered field;
+      the GH-406 baseline pattern). Boundary evidence: full 13-stage battery
+      (phase8-gate.log) — stages 1-3, 5-8, 10-13 green; bun test 12891/2 fail
+      (TC-RELEASE-001 known-deferred + the naming unit test on the unbaselined
+      fixture keys); post-baseline stage-4 rerun (phase8-stage4.log): 12892 pass
+      / 1 known-deferred fail / 4 skip."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 7 complete (commit 5a9c58dd): the worktree-path visibility
+      landed on all three surfaces via the PM's binding design (option a,
+      REF-KEYED JOIN, JOIN-ONLY) — (1) dispatch status:
+      DispatchStatusData/contracts gains the additive optional worktreePath,
+      buildStatusData maps the lane record's own field (absent on a context-less
+      record — DEC-8), renderDispatchStatusText emits worktreePath=<path> only
+      when carried (TC-SURFACES-001). RECORDED DEVIATION (file attribution): the
+      blocker map named contracts/dispatch.ts as the type's home, but
+      DispatchStatusData lives in contracts/dispatch-operator.ts — the map's
+      error, the PM's binding design unchanged, the type edited in its real home
+      (disclosed as scopeDrift). (2) lanes: QueueLane gains worktreePath;
+      foldLanes accepts dispatchWorktreePaths (ref -> path) and CONTRIBUTES to
+      existing rows only; edge readLanes injects the join source from the
+      bounded retained-window read via the new app/dispatch-lane-view.ts helper
+      newestDispatchLaneWorktreePaths (newest record per (repository, ref) — the
+      store is project-scoped, so the repository dimension is the store's own; a
+      context-less record contributes nothing; a store read failure contributes
+      an empty map — the classified absence). (3) board: BoardLaneRow gains
+      worktreePath; BoardProjectionInput accepts dispatchWorktreePaths; laneRow
+      contributes to existing rows verbatim; BoardCommandRuntime gains the join
+      source and commands/board.ts passes it into projectBoard. The path value
+      carries the SAME bound as the record's own field (one bound, reused —
+      verbatim). Join-only: rows are never minted; absence renders exactly as
+      today on every surface (the DEC-8 byte-for-byte basis). Golden discipline:
+      NO existing golden changed — existing fixtures seed no worktree context,
+      so rendered output is byte-identical; the worktree lines are pinned by
+      phase 9's new fixtures. Boundary evidence:
+      tmp/run-logs-runner/2026-11-25/112857-phase7-gate.log — stages 1-3 and
+      5-13 green; bun test 12863 pass / 4 skip / 1 known-deferred fail
+      (TC-RELEASE-001 only). Hermetic surface probe verified: status renders the
+      path; context-less status renders as today; the join is newest-wins;
+      lanes/board rows carry the path; unjoined renders as today.
+      content-inventory gains the dispatch-lane-view export row
+      (fence-authorized re-pin)."
+    type: info
+    date: "2026-11-25"
+  - text: "PM design decision for rev 7 (the blocker's named PM question — how
+      dispatch-lane worktree paths surface on lanes/board): OPTION (a) REF-KEYED
+      JOIN, JOIN-ONLY. The lane-row types gain an additive optional worktreePath
+      (contracts queue.ts QueueLane, owner-gate-sla.ts BoardLaneRow;
+      DispatchStatusData likewise for dispatch status — unambiguous there),
+      sourced from the NEWEST dispatch.lane record per (repository, ref) via the
+      established bounded retained-window read (the same filter-by-repository
+      then fold-newest-per-ref pattern the operator lane view already uses). The
+      join CONTRIBUTES the path to EXISTING rows only — it never mints new rows;
+      the row universe stays queue-schedule + daemon lanes (dispatch status
+      remains the authoritative per-ref view). Absence renders exactly as today
+      (no member / classified-absent null, the DM-1 pattern). The path value
+      carries the same bound as the lane record's own worktreePath field — one
+      bound, reused, not a second one. Default-mode golden re-pins for the
+      changed surfaces ride the amended phase 7 per the golden- discipline
+      fence; exception-mode pins untouched. Rationale: minimal shape change, one
+      established read pattern, no duplicate lane identity in a second structure
+      (an additive section was rejected — the owner would read two places and
+      the board's one-screen budget strains)."
+    type: decision
+    date: "2026-11-25"
+  - text: "PM adjudication of the phase-6 recorded deviation + phase-7 blocker: (1)
+      the merge-landing deviation is ACCEPTED — rev 6 named the detach landing,
+      but the coder's hermetic sandbox rejected it empirically (the squash
+      records on the detached head; containedOnBase=false; the change would
+      never land); the -C main-checkout resolution in the DECLARED
+      adapters/src/git/merge.ts satisfies AC-F6-1 (TC-CLOSEOUT-001 'lands
+      normally'). Evidence over plan text, disclosed via the commit primitive.
+      (2) The phase-7 blocker (q-8b0e7f76, spec-ambiguity) is ACCEPTED — plan
+      rev 7 ordered: phase 7's declared scope gains contracts/dispatch.ts,
+      contracts/queue.ts, contracts/owner-gate-sla.ts,
+      domain/dispatch-operator-view.ts, domain/queue-lanes.ts, and the edge.ts
+      readLanes/board-runtime parts (shared-file discipline: phases 4/6 own
+      their edge.ts parts, phase 7 owns its lane-data parts), implementing the
+      design decision above."
+    type: decision
+    date: "2026-11-25"
+  - text: "Retro (call-site class, fourth instance — now at the DATA-FLOW level):
+      phase 7 declared the surfaces' thin command files + one renderer, but
+      surface data is BUILT in domain folds and CONTRACT types — the render
+      pipeline (contract type -> domain fold -> edge runtime -> command
+      delegator -> renderer) is the real unit of declaration for any
+      surface-facing phase. Combined with the three earlier instances, the full
+      plan-authoring convention for this repo is now: declare (a) write sites,
+      (b) binding chains (literal -> type -> assembly -> engine), (c) data-flow
+      pipelines (contract -> fold -> runtime -> renderer) — three traces per
+      surface-facing phase, one pass each, BEFORE declaring file lists. The
+      coder's recon-to-line-precision pipeline keeps catching the gaps cheaply,
+      but rev 7 should have been foreseeable at planning time from the spec's
+      own DM-1 row (it named the surfaces)."
+    type: retro
+    date: "2026-11-25"
+  - text: "Plan phase 7 boundary finding (BLOCKED, spec-ambiguity shape; rev-7
+      request; fourth instance of the call-site class): phase 7's declared scope
+      (commands/dispatch.ts, commands/lanes.ts, commands/board.ts,
+      output/dispatch-text.ts) is the thin grammar delegators plus ONE renderer
+      — the worktree path cannot reach ANY of the three surfaces through them,
+      because the lane data flows through undeclared plumbing: (1) dispatch
+      status renders DispatchStatusData (contracts/dispatch.ts) built by
+      buildStatusData (domain/dispatch-operator-view.ts) from the lane record —
+      the record's worktreePath (DM-1) never enters the data; (2) the lanes
+      surface renders QueueLanesData/QueueLane (contracts/queue.ts) folded by
+      foldLanes (domain/queue-lanes.ts) over QUEUE schedule entries + DAEMON
+      lanes (edge.ts readLanes :7709) — the dispatch.lane family is not in this
+      fold at all; (3) the board renders BoardData.lanes = BoardLaneRow[]
+      (contracts/owner-gate-sla.ts) built by the board runtime (edge.ts).
+      AC-F7-1 (each surface shows the lane's worktree path) therefore requires,
+      at minimum: DispatchStatusData + QueueLane + BoardLaneRow gaining the
+      additive worktree path (classified-absent null for context-less lanes, the
+      DM-1 pattern), buildStatusData/foldLanes/board-runtime mapping it, and the
+      edge readLanes joining dispatch.lane records — contracts/dispatch.ts,
+      contracts/queue.ts, contracts/owner-gate-sla.ts,
+      domain/dispatch-operator-view.ts, domain/queue-lanes.ts and the edge.ts
+      readLanes/board-runtime parts, all undeclared. A DESIGN QUESTION rides the
+      amendment for the PM: the lanes/board surfaces render the QUEUE/daemon
+      lane family — the form in which DISPATCH-lane worktree paths surface there
+      (a join keyed on ref, an additive section, or another declared shape) is
+      the PM's call; the dispatch status surface is unambiguous (the record IS
+      the lane's data). NO phase-7 code was written. Golden re-pins
+      (default-mode goldens gaining the worktree line) ride the amended phase's
+      commit per the golden-discipline fence. Phases 1-6 stand (e25deabe,
+      4c281841, 816d23e2, def013bb, b2fff27d, 7a5b0fe4, 9d8b062f, 0b120f4e);
+      typed blocker q-8b0e7f76-3800-4d45-b8d7-d7473b0d000f published with this
+      finding. Delivery stops at phase 7; phases 8-10 (proofs, changeset) depend
+      on the surfaces and are stopped with it."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 6 complete (commit 9d8b062f): merge and closeout on a
+      worktree-checked-out branch — (1) MERGE (adapters/src/git/merge.ts, the
+      declared seam): squashLand resolves the landing directory by the
+      structural worktree rule (top level = the common directory's parent → main
+      checkout) — a LINKED-worktree invocation lands with `git -C <main
+      checkout>` prefix (checkout base, merge --squash, commit, head read all
+      against the landing directory), so the squash reaches base exactly as a
+      main-checkout invocation does ('lands normally', TC-CLOSEOUT-001); a
+      main-checkout invocation keeps the delivered argv byte-for-byte. RECORDED
+      DEVIATION from the plan's mechanism sentence: rev 6 named the detach
+      landing, but the detach form was rejected EMPIRICALLY (hermetic sandbox:
+      the squash commit records on the detached head, containedOnBase=false,
+      base never advances — the change would NOT land); the -C resolution
+      satisfies the spec contract (AC-F6-1 'lands, resolved from the worktree or
+      the main checkout') inside the declared file. (2) CLOSEOUT
+      (domain/closeout.ts + edge.ts closeout parts + production.ts): the
+      worktree-removal gate gateWorktreeRemoval runs strictly before the
+      remove-worktree operation — (a) the merge+safety arms of
+      planCloseoutWorktreeRemoval consumed with no side effects (refusal leaves
+      worktree AND logs intact — TC-CLOSEOUT-003), (b) the lane-log sweep port
+      moves the worktree's tmp/tmpdir gate evidence to <state
+      root>/closeout-lane-logs/<work item ref> (copy, verify at the destination,
+      then delete the source — zero log loss; also the mechanical precondition
+      for the cleanliness predicate to pass on a worktree lane), (c) the full
+      ordering rules re-consumed with the runtime sweep fact — the phase-2
+      pure-rules home is LOAD-BEARING in the real flow (rev-6 reconciliation,
+      option a); a sweep failure refuses the removal; a stalled (unmerged) lane
+      is refused at the edge facts gate and keeps its worktree
+      (TC-CLOSEOUT-004); idempotent second closeout unchanged. The sweep port is
+      bound in the production composition; a composition without it keeps the
+      delivered removal behaviour (logs arm neutralized, merge+safety arms
+      enforced). Boundary evidence: full 13-stage battery
+      tmp/run-logs-runner/2026-11-25/phase6-gate.log — stages 1-3, 5-13 green;
+      bun test 12858/6 fail — five closeout-composition-facts failures
+      ROOT-CAUSED to a stale-dist artifact (the bare bun-test diagnostics ran
+      the pre-fix gate from dist; the logs-arm neutralization fix was in src
+      unbuilt) — after pnpm build the post-fix rerun (phase6-gate2.log): 12863
+      pass / 4 skip / 1 known-deferred fail (TC-RELEASE-001 only), all other
+      stages green. OPERATIONAL LESSON recorded: after editing core/cli sources,
+      bare `bun test` on cli-level suites needs `pnpm build` first — the
+      workspace resolves @delivery-os/core from dist."
+    type: info
+    date: "2026-11-25"
+  - text: "PM adjudication of the phase-6 blocker (q-fa489f9a, spec-ambiguity):
+      ACCEPTED — plan rev 6 ordered per the coder's verified site map. Phase 6's
+      declared scope gains (1) packages/cli/src/edge.ts (the closeout runtime
+      parts: createCloseoutCommandRuntime :2738, worktree facts + mergedObserved
+      gate :2440-2530 — shared-file discipline: phase 4 owns its dispatch parts
+      of edge.ts, phase 6 owns its closeout parts), and (2) packages/core/src/
+      domain/closeout.ts (worktreeStep :1322-1373, step order :117-129,
+      runCloseout :2472, remove-worktree executor :1820-1836 — the lane-log
+      sweep step binds here, BEFORE removal; the sweep is also the mechanical
+      precondition for removal feasibility since untracked gate artifacts would
+      keep the worktree dirty and the delivered cleanliness predicate refusing
+      forever). Rev 6 must also reconcile the phase-2 ordering rules: either
+      domain/closeout.ts consumes closeout-worktree.ts's ordering helpers or the
+      ordering binds in closeout.ts directly with closeout-worktree.ts remaining
+      the pure-rules home — declared explicitly, whichever the author chooses.
+      The merge half binds in the already-declared adapters/src/git/merge.ts
+      (checkout --detach landing per the coder's empirical sandbox).
+      Binding-chain verification required in one pass: commands/closeout.ts ->
+      edge.ts runtime -> domain/closeout.ts planner/ executor -> git seam."
+    type: decision
+    date: "2026-11-25"
+  - text: "Retro (call-site class, third instance — this one ANTICIPATED): the
+      coder's recon flagged the closeout home files during phase 4 and confirmed
+      the site map to line precision before phase 6, so the blocker arrived
+      pre-verified. Structural lesson for THIS repo's future plans: vertical
+      behavior lives in edge.ts runtimes and domain planners, NOT in command
+      files or *-submodule files — plans should declare the shared behavior
+      homes (edge.ts, domain planners) with per-phase part ownership UP FRONT,
+      and run a recon-before-scope pass that maps each phase's behavior to its
+      real bind points before declaring file lists. The three-cycle cost (rev 4,
+      5, 6) is the plan schema's file-scope model colliding with the repo's real
+      layering; the fence held every time and no code ever landed undeclared,
+      but the same lesson now has three data points — promote to the
+      plan-authoring convention."
+    type: retro
+    date: "2026-11-25"
+  - text: "PM accepts the coder's incident record from the phases 4-5 stretch as
+      delivered (all root-caused, none bypassed a check): (1) commit primitive
+      once failed commitlint because a server restart dropped node_modules/.bin
+      from PATH — the probe's ENOENT surfaced as the 'rejected' fallback;
+      repaired by restoring the repo bin dir to PATH, after which the message
+      was genuinely linted (safe-direction fallback confirmed). (2) One mid-gate
+      edit race invalidated a gate run — rerun clean, the invalidated run is not
+      evidence. (3) Gate run 2's 56 conformance failures root-caused to the
+      parity fixture's missing exception config and fixed as recorded. (4) A
+      mechanics experiment mis-fired into the repo tree — verified no harm
+      (HEAD/branch/worktree state intact, residue pruned)."
+    type: decision
+    date: "2026-11-25"
+  - text: "Plan phase 6 boundary finding (BLOCKED, spec-ambiguity shape; rev-6
+      request; third instance of the call-site class): phase 6's declared scope
+      (commands/merge.ts, commands/closeout.ts, domain/ closeout-worktree.ts,
+      adapters/src/git/merge.ts) cannot deliver the phase's contract, because
+      the closeout behavior lives elsewhere — (1) the sweep-before-removal
+      binding: the closeout runtime that builds the worktree facts and evaluates
+      the delivered safety predicate is packages/cli/src/edge.ts
+      (createCloseoutCommandRuntime :2738; the worktree facts + mergedObserved
+      gate at :2440-2530), and the closeout step planning/execution —
+      worktreeStep :1322-1373, the declared step order :117-129
+      (worktree-cleanup before branch-cleanup), runCloseout :2472, and the
+      remove-worktree executor :1820-1836 — is packages/core/
+      src/domain/closeout.ts. NEITHER file is declared in phase 6 (edge.ts is
+      phase 4's; domain/closeout.ts is in no phase). The lane-log sweep (the
+      worktree's tmp/tmpdir gate evidence moved to its destination in the state
+      root BEFORE the worktree is removed — also the mechanical precondition for
+      the delivered cleanliness predicate to ever pass on a worktree lane, since
+      untracked gate artifacts make the worktree dirty) has no consumption point
+      inside the declared files, and domain/closeout-worktree.ts's ordering
+      rules (phase 2) are consumed by nothing in the real flow —
+      evaluateWorktreeSafety is called directly by edge.ts. (2) The merge half
+      CAN bind in scope: verified empirically in a hermetic sandbox — from a
+      worktree whose base branch is parked in the main checkout, `git checkout
+      <base>` refuses ('already used by worktree', exit 128 — the delivered
+      git/merge.ts squashLand's first argv at :215), while `git checkout
+      --detach <base>` succeeds, so adapters/src/git/merge.ts (declared) carries
+      the worktree-invocation landing mechanics. commands/merge.ts and
+      commands/closeout.ts are thin grammar delegators with no behavior to
+      change. NO phase-6 code was written: a partial phase (merge seam without
+      the sweep) would strand the phase, which the plan explicitly forbids
+      (merge and closeout in ONE phase). Remedy (rev 6):
+      packages/cli/src/edge.ts (the closeout runtime: the sweep binding + the
+      removal-after-merge-confirmation ordering it already gates) and
+      packages/core/src/domain/closeout.ts (a lane-log sweep step ordered before
+      worktree-cleanup) join phase 6's scope; git/merge.ts's landing mechanics
+      stay in scope as declared. Phases 1-5 stand (e25deabe, 4c281841, 816d23e2,
+      def013bb, b2fff27d, 7a5b0fe4, fd8831ae); the phase-5 evidence note is in
+      this commit; typed blocker q-fa489f9a-22a7-4a27-ad0c-8d400b9ea1ec
+      published with this finding. Delivery stops at phase 6; phases 7-10
+      (surfaces, proofs, changeset) depend on the lifecycle completing and are
+      stopped with it."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 5 complete (commit 7a5b0fe4): resume reuse and the
+      registration pin landed — (1) production.ts's provisioning port reuse arm
+      now VERIFIES the recorded worktree before reuse (F-4, NFR-3,
+      TC-RESUME-001/002): existence observed (a missing worktree is the
+      lane-worktree-missing lane error naming the path and the expected branch)
+      and the branch observed through the composer's injected git child runner
+      via a cwd-targeted readCheckout (a branch mismatch is the
+      lane-worktree-branch-mismatch lane error naming observed vs expected);
+      neither re-provisions, moves, or touches the inventory — zero second
+      worktrees across attempts; the DEC-8 context-less arm (a recorded lane
+      without worktree context answers in-checkout) is unchanged from phase 4.
+      (2) The registration pin (F-5, DM-2, NFR-6): the sole host-index write
+      site (production.ts, the maintainHostIndex registration) now registers
+      dirname(realpath(commonDir)) — the MAIN checkout's PHYSICAL path for every
+      lane command, whatever checkout invoked it, zero resolutions through an
+      alias (NFR-7) — so a worktree path never flips the entry and a later
+      worktree removal can never prune a live clone's registration;
+      host-index.ts keeps its maintenance logic and projects.ts keeps
+      reading/resolving, both unchanged. Declared-but-unchanged files (the scope
+      is an upper bound): dispatch-lane.ts (the resolver's handle treeRoot is
+      opencode session-id metadata, adapter :653, and the resume working
+      directory flows through the engine's worktree-scoped descriptor — no
+      resolver change needed), dispatch-resume.ts (the phase-2 rules already
+      express the reuse/verify/DEC-8 decision; the binding consumed them via the
+      port), host-index.ts and projects.ts (the pin is at the call site).
+      Boundary evidence: tmp/run-logs-runner/2026-11-25/phase5-gate.log — stages
+      1-3 and 5-13 green; bun test 12863 pass / 4 skip / 1 known-deferred fail
+      (TC-RELEASE-001 only). Environment incident, recorded for the ledger: the
+      first commit attempt failed commit.commitlint-failed because the server
+      restart dropped node_modules/.bin from PATH — the commitlint probe's
+      ENOENT surfaced as the 'rejected' fallback (empty output, non-zero exit);
+      repaired by restoring the repository's own bin directory to PATH for the
+      invocation, after which the message was linted by the repository's
+      commitlint config for real. No check was bypassed or weakened."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 4 complete (commit b2fff27d): the provision-after-lease
+      binding-chain landed — (1) engine (app/dispatch.ts): the optional
+      provisionWorktree port on DispatchPorts invoked exactly once after the
+      lease claim and before any phase, spawn, or session (the lease-first order
+      is the engine's own sequence, NG-2); a provisioning refusal releases the
+      lease and surfaces as dispatch.session.spawn-failed naming the step (zero
+      retries, NFR-1); the worktree-scoped descriptor (working directory = the
+      worktree) applies to the fresh spawn AND every restart resume; and BOTH
+      lane-record appends (terminal :842-850, active :1070-1084) record the
+      additive worktreePath (DM-1, absent = the DEC-8 context-less shape). (2)
+      The provisioning outcome is a three-mode union: worktree / in-checkout /
+      refused — in-checkout answers the disable-worktrees exception AND the
+      pre-change context-less record (never retroactive provisioning, DEC-8) at
+      the same seam (TC-REG-002). (3) edge.ts: DispatchComposition gains the
+      optional provisionWorktree member and the sole runDispatch assembly gains
+      the one conditional forwarding line (the rev-5 two-line binding chain).
+      (4) production.ts: provisionLaneWorktree reuses the recorded worktree
+      (F-4; branch verification lands in phase 5) or creates via the phase-3
+      seam through the composer's ONE injected git child runner (hermetic end to
+      end — no second, un-injected runner), at the resolved placement
+      (state-scope's new resolveLaneWorktreePlacement over the PHYSICAL checkout
+      root, NFR-7), then the gate temporary directory inside the worktree
+      (DEC-6) and the ordered steps — install --frozen-lockfile, gate build —
+      fixed argv, no shell, zero retries, with the worktree bin leading PATH and
+      TMPDIR anchored inside (the phase-2 derived environment). Conditional
+      re-pins (recorded per the fence): the production-composition fixture
+      sandboxes (queue/production harness config.yaml + the dispatch parity
+      harness config.yaml) set lane.disable-worktrees so the suites pinning
+      today's in-checkout shape stay hermetic and byte-identical in subject; the
+      default-mode worktree composition is pinned by phase 8's dedicated
+      lifecycle suites (TC-ENV-001/002, TC-WT-003, install/build stubbed per
+      RSK-T5). content-inventory gains the state-scope export row.
+      Engine-sequence probe verified hermetically: lease -> provision ordering,
+      spawn cwd = worktree, worktreePath on the lane record. Boundary evidence:
+      full 13-stage battery (tmp/run-logs-runner/2026-11-25/phase4-gate3.log) —
+      stages 1-3 and 5-13 green; bun test initially 12862/2/4 (TC-RELEASE-001
+      known-deferred + TC-SPEND-032: the spend-readonly source-scan tripped on
+      the literal word 'spawn' inside my doc comment in edge.ts; fixed by
+      rewording MY comment, never the guard), then the post-fix stage-4 rerun
+      (tmp/run-logs-runner/2026-11-25/phase4-stage4.log): 12863 pass / 1
+      known-deferred fail (TC-RELEASE-001 only) / 4 skip. Two intermediate gate
+      runs were discarded: run 1 raced live edits (invalid), run 2's 56
+      conformance failures were root-caused to the parity fixture sandboxes
+      lacking the exception config (fixed as recorded above; the production
+      provisioning seam now uses the injected runner)."
+    type: info
+    date: "2026-11-25"
+  - text: "PM adjudication of the phase-4 second blocker (q-5f1d0808,
+      spec-ambiguity): ACCEPTED — plan rev 5 ordered, exactly per the coder's
+      compile-level remedy: packages/cli/src/edge.ts joins phase 4's declared
+      scope with two mechanical additions — (1) the closed DispatchComposition
+      type gains the optional provisionWorktree member (claimLease style), and
+      (2) the runDispatch assembly gains one conditional forwarding line
+      mirroring the claimLease pattern (:8255). Everything else from rev 4
+      stands. The rev-5 instruction additionally requires the plan-writer to
+      verify the FULL binding chain this time (composition literal production.ts
+      -> type + assembly edge.ts -> engine dispatch.ts) so no third link
+      surfaces."
+    type: decision
+    date: "2026-11-25"
+  - text: "Retro (third instance of the write-site lesson class — PM process fix
+      this time): the rev-4 remediation instruction told the plan-writer to
+      'check phases 5-7' with a HAND-NAMED file list, and the plan-writer
+      checked exactly that list — it never grep'd edge.ts, which is where the
+      runDispatch assembly lives. The dependency question was framed as
+      reference-grep, but the missing link was TYPE-LEVEL (the closed
+      composition type + the forwarding assembly). Rule for remediation
+      instructions: never hand-name the file set to check; require a binding-
+      chain trace from the composition root to the engine (who builds the
+      object, what type closes it, who forwards its members, who consumes them)
+      in one pass. Cost so far: two amendment cycles at the same phase boundary
+      — the fence held both times, but the PM's remedy scoping should have
+      caught the chain in one pass."
+    type: retro
+    date: "2026-11-25"
+  - text: "Plan phase 4 boundary finding, second pass (BLOCKED again; rev-4
+      follow-through verification): the rev-4 scope additions stand verified —
+      packages/core/src/app/dispatch.ts is confirmed the sole dispatch.lane
+      writer (terminal append :842-850, active append :1070-1084) with the lease
+      claim at :778 and the spawn/resume descriptor pass-throughs at
+      :1010/:1020, and packages/cli/src/production.ts:4272 is confirmed the
+      lease-claim composition inside dispatchComposition() (:4222). But the
+      engine port still cannot be BOUND: the composition object production.ts
+      builds is typed as DispatchComposition — a CLOSED type declared in
+      packages/cli/src/edge.ts:7736-7863, undeclared in every phase — so a
+      provisionWorktree member on the production literal is an excess-property
+      compile error; and even with the member declared, the only runDispatch
+      assembly (edge.ts :8202-8283) forwards fields explicitly (the claimLease
+      pattern at :8255), so the port can never reach the engine without a
+      forwarding line there. Verified: edge.ts :8202 is the tree's sole
+      runDispatch call site; the tracker ladder (domain/dispatch-tracker.ts)
+      does not assemble dispatch ports; the daemon lane path does not run
+      runDispatch. NO phase-4 code was written: landing the engine port alone
+      would be dead capability (production dispatch could never provision — the
+      default flip would be false in production), and landing the production
+      binding alone cannot type-check. Remedy (rev 5, mechanical, two additions
+      in ONE undeclared file): edge.ts joins phase 4's scope — (1)
+      DispatchComposition gains the optional provisionWorktree member (the
+      claimLease (ref) style), and (2) the runDispatch assembly gains the one
+      conditional forwarding line (mirroring :8255). Everything else from rev 4
+      stands unchanged. Phases 1-3 commits and evidence stand (e25deabe,
+      4c281841, 816d23e2, def013bb); tree clean; the accepted first blocker
+      q-de70dae6 was answered with the rev-4 acceptance; typed blocker
+      q-5f1d0808-de2e-417b-b209-b3f8f850a2cf published with this finding.
+      Delivery remains stopped at phase 4."
+    type: info
+    date: "2026-11-25"
+  - text: "PM adjudication of the phase-4 boundary blocker (q-de70dae6,
+      spec-ambiguity): ACCEPTED — plan rev 4 ordered. Phase delivery_planning
+      reopens; phase 4's declared scope gains packages/core/src/app/dispatch.ts
+      (the engine: a provision-after-lease port + the lane-record worktree
+      context at its two append sites) and the packages/cli/production.ts
+      composition binding (lease-claim edge, ~:4272); the plan-writer checks
+      phases 5-7 for the same write-site dependency (resume re-entry runs
+      through the engine) and declares dispatch.ts wherever a phase touches it.
+      plan validate must pass before the phase re-completes; the coder then
+      resumes at phase 4 idempotently from the recorded evidence (phases 1-3
+      commits e25deabe, 4c281841, 816d23e2 stand)."
+    type: decision
+    date: "2026-11-25"
+  - text: "PM accepts the coder's two disclosed scopeDrift classes as delivered
+      (both within the commit primitive's disclosure mechanism, no fence
+      bypassed): (1) export barrels + structure-inventory fixtures riding the
+      phase that landed the modules they index — unimportable modules and red
+      file-set invariants otherwise; (2) TC-RELEASE-001 known-deferred per the
+      recorded GH-406 precedent (branch-level changeset precondition vs the
+      changeset living in plan phase 10; stages 5-13 verified standalone; no
+      weakening, no early changeset) — it clears when phase 10 lands."
+    type: decision
+    date: "2026-11-25"
+  - text: "Retro (repeat of the DoR-iter-1 lesson class, one level deeper): the plan
+      traced the host-index WRITE SITE after the gate demanded it, but still
+      declared DM-1's own record (dispatch.lane) by its RESOLVER module
+      (dispatch-lane.ts) instead of its WRITER (dispatch.ts runDispatch, the
+      sole production append site). Rule for every future plan: a new or
+      extended record contract must have its write site traced to the appending
+      function BEFORE phases are declared — resolvers, use-cases, and
+      composition edges are separate scope lines. Positive: the declared-scope
+      fence plus the no-improvisation rule stopped the drift at the right place,
+      and the typed blocker (spec-ambiguity) carried the finding with a
+      rev-2-shaped remedy — the remediation loop cost one cycle, no code written
+      on drift."
+    type: retro
+    date: "2026-11-25"
+  - text: "Plan phase 3 complete (commit 816d23e2): the git adapter gained the
+      addWorktree seam in the house style of the delivered worktree family —
+      fixed argv `worktree add -b <branch> <path> <baseRef>`, no shell, local
+      only, NO force flag; every git refusal (branch exists, path exists,
+      anything else) surfaces as a typed GitWorktreeAddResult refusal with zero
+      retries, zero fallbacks, zero overrides (seam-side input validation is
+      plan-restriction; git refusals are worktree-add-refused). In the same
+      commit the linked-worktree enumeration and the
+      branch-checked-out-elsewhere check were made POSITION-INDEPENDENT (F-10,
+      DEC-5): the exported pure parser parseWorktreeListing decides
+      main-vs-linked structurally (a porcelain block is the main checkout
+      exactly when its git directory is the repository's common directory; the
+      seam reads it with `rev-parse --path-format=absolute --git-common-dir`),
+      never by list position. Behaviour-preserving for every delivered listing
+      shape: the closeout-branch real-git suites stay green, and a manual smoke
+      of the seam against a temp repository verified create-at-base-tip on the
+      new branch, linked-only listing, branch-elsewhere true/false both ways,
+      and typed refusals for duplicate branch, duplicate path, and unsafe
+      relative path. Boundary evidence per the TC-RELEASE-001 escalation note:
+      full 13-stage battery (tmp/run-logs-runner/2026-11-25/phase3-gate.log,
+      per-stage exits in phase3-gate.stages.tsv) — stages 1-3 and 5-13 green
+      (exit 0), bun test 12863 pass / 1 known-deferred fail (TC-RELEASE-001
+      only, verified sole failure at log line 624) / 4 skip. The positional-pin
+      alternative (spec 7.3) stays the documented fallback, unused."
+    type: info
+    date: "2026-11-25"
+  - text: "NFR-9 / TC-ENV-004 fresh-worktree provisioning measurement (targeted
+      manual run, delivery machine linux, pnpm 10.18.3, git 2.53.0, warm
+      content-addressable store): a sibling worktree of this checkout created
+      per the phase-2 path scheme (git worktree add -b lane/MEASURE-9
+      <sibling>/jaiship-GH-404-measure at HEAD, then removed and its branch
+      deleted after the run). Measured: worktree add 401 ms; dependencies
+      installed in the worktree from the committed lockfile
+      (TMPDIR=$PWD/tmp/tmpdir pnpm install --frozen-lockfile) 807 ms exit 0; the
+      gate build in the worktree (TMPDIR=$PWD/tmp/tmpdir pnpm build, the
+      six-package workspace build the aggregate gate consumes) 8575 ms exit 0;
+      total provisioning 9790 ms. The gate temporary directory was created
+      inside the worktree per DEC-6. NO threshold is imposed and NO suite
+      asserts any duration; the install cost reflects a warm pnpm store on this
+      machine (a cold store installs slower) — the measurement informs GH-412
+      lane-cost planning only."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 4 boundary finding (BLOCKED, spec-ambiguity shape; surfaced
+      for a plan amendment): phase 4's declared scope names
+      packages/core/src/app/dispatch-lane.ts and dispatch-gate.ts as the
+      dispatch-engine wiring sites, but neither is the engine — dispatch-lane is
+      the lane RESOLVER (resume-side read) and dispatch-gate the
+      summary/divergence/handover use-cases. The actual sites the phase's
+      contract needs are undeclared in every phase: the lane-record write site
+      and the spawn flow live in packages/core/src/app/dispatch.ts (runDispatch
+      — the sole production writer of dispatch.lane records, active append at
+      :1069-1084, terminal at :842-850; the lease claim and pre-spawn sequence
+      run inside it), and the lease-claim composition edge lives in
+      packages/cli/src/production.ts (~:4272; declared only in phase 5 for the
+      host-index write site). Recording DM-1's worktreePath on the lane record
+      and provisioning before the first phase with the lease-first order are
+      mechanically impossible inside phase 4's declared scope — landing them
+      anyway would be undeclared scope drift, which the
+      declared-scope-is-authoritative fence forbids improvising. Remedy mirrors
+      plan rev 2: a revision (rev 4) declaring packages/core/src/app/dispatch.ts
+      (engine: a provision-after-lease port and the lane-record context) and
+      packages/cli/src/production.ts (composition binding) in phase 4's scope.
+      NO phase-4 code was written; phases 5-10 depend on the recorded worktree
+      context (resume reuse, surfaces, goldens, lifecycle proofs) and are
+      stopped with it. Delivery ends at phase 3 plus the NFR-9 measurement;
+      typed blocker q-de70dae6-1ad2-45e9-bc78-d8ddd937e9d7 (spec-ambiguity, lane
+      GH-404, audience coordinator) published with this finding; the question
+      text is the 120-char bound's compression of this note. The two probe
+      blockers published during grammar verification (q-522bbece, q-e6f5a4ef)
+      were answered-and-within immediately and carry no finding."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 2 complete (commit 4c281841): the pure domain layer landed —
+      new packages/core/src/domain/lane-worktree-plan.ts (deterministic path
+      scheme <worktree-root>/<checkout-basename>-<ref> over injected PHYSICAL
+      paths, the sibling-of-main-checkout default root, the new lane branch
+      lane/<ref>, the ordered provisioning steps install -> gate build -> gate
+      temp dir as data, the environment derivation with the worktree bin leading
+      PATH and the gate temporary directory inside the worktree, the evidence
+      literal $PWD/tmp/tmpdir unchanged); resume verification in
+      dispatch-resume.ts (a context-less record plans today's in-checkout shape
+      per DEC-8; a missing or branch-mismatched worktree is a lane error naming
+      the problem, never a re-provision); closeout ordering in
+      closeout-worktree.ts layered AROUND the delivered evaluateWorktreeSafety
+      predicate (reused, not redefined): merge confirmed, then logs swept, then
+      the predicate — a stalled lane keeps its worktree; and the worktree
+      consumption point in lane-launch-plan.ts (worktree bin leads PATH, TMPDIR
+      anchored inside the worktree; absent keeps the in-checkout launch
+      byte-for-byte). Export barrels and the two structure inventory fixtures
+      updated for the new module. Boundary evidence per the TC-RELEASE-001
+      escalation note: gate run
+      tmp/run-logs-runner/2026-11-25/060042-pnpm-check.log — stages 1-3 green
+      (the tests/structure/inventory.json format drift fixed in this commit),
+      bun test 12863 pass / 4 skip / 1 known-deferred fail (TC-RELEASE-001 only;
+      full-test log tmp/run-logs-runner/2026-11-25/060125-pnpm-test-only.log),
+      stages 5-13 verified green standalone
+      (tmp/run-logs-runner/2026-11-25/062054-phase2-post-test-stages.log, 10/10
+      exit 0; privacy-release isolated: 6 pass / 1 known fail)."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 2 boundary finding (ESCALATION, trigger-2 shape; GH-406
+      precedent applied): tests/checks/privacy-release.test.ts TC-RELEASE-001
+      asserts a BRANCH-level release property — with no changeset added on the
+      branch vs the merge base, the publishable diff must be empty. Phase 1's
+      commit (e25deabe) landed publishable core changes; the five-package minor
+      changeset is plan phase 10's only artifact. The suite cannot be greened
+      wording-only (its expectation IS the release property; weakening it is
+      forbidden) and turns green at the phase-10 boundary when the changeset
+      lands. The green-at-every-boundary letter and the phase-10 changeset
+      sequencing are mutually incompatible under TC-RELEASE-001 — the exact
+      conflict GH-406 recorded and resolved by committing phases with the ONE
+      known-deferred failure, all other stages green (1-3 in-gate, 5-13
+      standalone), and the changeset clearing it at the final phase boundary.
+      Applied here: no weakening, no early changeset, per-phase boundary
+      evidence records the known-deferred verdict."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 1 complete (commit e25deabe): the additive contract surface
+      landed — lane.worktree-root (DM-3) and lane.disable-worktrees (DM-4) as
+      key constants co-located with the delivered lane.* keys in
+      contracts/dispatch.ts, admitted by LANE_BRANCH / LaneSettings /
+      resolveLaneSettings (unset = sibling-of-main-checkout default / worktree
+      lanes on; wrong types fail closed naming the key), and the additive
+      optional worktreePath on DispatchLaneRecord (DM-1; absent is the DEC-8
+      context-less shape). Fence-authorized re-pins (conditional-sweep fence,
+      deliberate, additive-only, no exception-mode pin touched):
+      dispatch-contract-invariance LANE_BRANCH exact-fields pin (+2 keys),
+      operator-contract-invariance configurationKeyCount 91->93,
+      content-inventory and port-contract-inventory export rows for the two key
+      constants, dispatch-contract DispatchLaneRecord declared-field pin
+      (+worktreePath optional), contract-baseline LANE_KEYS (+worktreePath).
+      Evidence: TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary — 13/13
+      stages, bun test 12864 pass / 4 skip / 0 fail; gate log
+      tmp/run-logs-runner/2026-11-25/053700-pnpm-check-gh404-lane-config.log
+      (earlier red run
+      tmp/run-logs-runner/2026-11-25/051511-pnpm-check-gh404-lane-config.log
+      failed on exactly the five stale pins re-pinned in this commit)."
+    type: info
+    date: "2026-11-25"
+  - text: "DoR gate iter-2 verdict READY (readiness-iter-2.md in the change folder):
+      10 PASS / 0 FAIL facets. Blocking finding verified closed against the tree
+      (production.ts sole write site confirmed; state-scope settlement coherent
+      with no forgotten consumer; lane.worktree-root and lane.disable-worktrees
+      match the delivered lane.* pattern). Two new NON-BLOCKING one-sentence
+      findings remediated in the dor_check sweep: spec section 7.3 deferred
+      bullet re-framed to the settled position-independence form (was inverted);
+      plan rev 3 phase 9 declares the exception-mode golden-capture commit
+      moment (captured in phase 9 from then-current default-mode goldens,
+      provenance origin = pre-change baseline tip). plan validate verdict=valid,
+      readyForDevelopment=true. Gate closed at iteration 2 of max 3; delivery
+      unblocked."
+    type: info
+    date: "2026-11-25"
+  - text: "DoR gate iter-1 verdict NOT_READY (readiness-iter-1.md in the change
+      folder): 8 PASS / 2 FAIL facets. Blocking major (owning phase
+      delivery_planning): plan phase 5 scope omits the host-index registration
+      WRITE site packages/cli/src/production.ts (verified tip lines 2160-2172,
+      drifted from the ticket's 2079 at 4f1a7ddc; site unchanged) — the only
+      caller passing registration.root = current.checkoutRoot into
+      maintainHostIndex; TC-HOSTIDX-001/002 are undeliverable without it.
+      Minors: literal config-key paths for worktree-root/disable-worktrees
+      unpinned vs the section-prefixed catalog pattern (delivery_planning);
+      TC-IDENT-002 guard-form status lags the plan's position-independence
+      settlement (test_planning). Nits: stale OQ-1 status strings in spec
+      section 14 (specification) and pm-notes (fixed by PM); TC-REG-001's
+      preserved-pin source unnamed (test_planning). Remediation: phase
+      delivery_planning reopened; plan-writer fixes blocking + config keys;
+      bundled minor/nit touch-ups ride the same cycle per the gate's explicit
+      allowance; then plan validate + phase complete + DoR re-gate (iteration
+      2)."
+    type: info
+    date: "2026-11-25"
+  - text: "Retro: the DoR gate caught a real scope gap the authors missed — plan
+      phase 5 declared host-index.ts (maintenance logic) but not the
+      registration write site in production.ts, the exact hazard file the ticket
+      named. Lesson: plan-scope derivation must trace behaviour to its CALL
+      SITES (who passes the value in), not just the module owning the logic;
+      verify fences make an omitted write site an undeliverable test. The gate
+      earning its keep on iteration 1 is the process working, not a process
+      failure."
+    type: retro
+    date: "2026-11-25"
+  - text: "Intake observed 2026-11-25: ticket open, milestone 'M4: Jaiship-native
+      delivery' attached (verified from the existing milestone set), five owner
+      comments read bottom-up — the 2026-11-25 CEO comment governs scope. No
+      prior branch, worktree, phase records, PR, or recorded session existed for
+      GH-404: the lifecycle started fresh. Resume sync verified: main-tools ==
+      origin/main-tools at e5ff0512 before branch creation."
+    type: info
+    date: "2026-11-25"
+  - text: "Reserved decision-record id if this change writes one: TDR-0077 (next
+      free id on main-tools), status Proposed, decision_date null — the owner
+      accepts or rejects it at PR review."
+    type: info
+    date: "2026-11-25"
+  - text: "Known doc impacts for system_spec_update (phase 7):
+      feature-dispatch-engine (worktree creation before the first phase, the
+      lane's working directory and derived environment, resume reusing the
+      worktree); feature-closeout (lane log sweep before removal, removal only
+      after merge confirmation); feature-projects (host-index registration
+      pinned to the main checkout, no prune of a live clone when a worktree is
+      removed, worktrees never rows of the flat record set); feature-board and
+      the lanes/dispatch-status visibility (worktree path); feature-config-layer
+      (worker settings: worktree-root, the disable-worktrees exception);
+      feature-state-layer (shared clone identity pin)."
+    type: info
+    date: "2026-11-25"
+  - text: "Delivery conventions (ticket): commits via the commit primitive; gate
+      evidence uses TMPDIR=$PWD/tmp/tmpdir; PR targets main-tools; this change
+      itself is delivered in the main checkout — the next lane dispatched after
+      it lands is the first to run in a worktree."
+    type: info
+    date: "2026-11-25"
+  - text: "Retro: the first `phase complete GH-404 clarify_scope` was refused by the
+      delivered pm-notes lint (`lint.keys.missing`: delivery_mode required at
+      top level). The delivered lint is the authority —
+      `.ai/agent/pm-instructions.md` still documents 'absent ⇒ interactive' as
+      the default, which current tooling rejects. delivery_mode set to
+      autonomous (lifecycle-prompt-driven delivery run, human authority reserved
+      at merge). Drift between pm-instructions prose and the delivered lint is
+      an owner-visible follow-up candidate; no ticket created autonomously."
+    type: retro
+    date: "2026-11-25"

@@ -597,6 +597,15 @@ export type CloseoutOperation = {
   readonly arguments: CloseoutCanonicalArguments;
 };
 
+/** The lane-log sweep disclosure on an applied worktree-cleanup step (GH-404 F-21). */
+export type CloseoutLaneLogSweepData = {
+  readonly swept: boolean;
+  /** The declared byte cap left entries uncopied: disclosed, never silent. */
+  readonly truncated: boolean;
+  /** Recursive bytes the cap left uncopied (0 when nothing was omitted). */
+  readonly omittedBytes: number;
+};
+
 /** One ordered transaction step (DM-1). */
 export type CloseoutStep = {
   readonly stepId: CloseoutStepId;
@@ -608,6 +617,8 @@ export type CloseoutStep = {
   readonly truncation?: CloseoutTruncation;
   /** Additive bounded step detail (GH-240 F-12, DM-5). */
   readonly detail?: Readonly<Record<string, unknown>>;
+  /** Additive lane-log sweep disclosure (GH-404 F-21); applied worktree step only. */
+  readonly laneLogSweep?: CloseoutLaneLogSweepData;
 };
 
 /** The per-run outcome summary (F-13). */

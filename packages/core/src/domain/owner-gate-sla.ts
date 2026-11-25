@@ -479,7 +479,11 @@ const parkedRow = (repository: string, fact: BoardParkedFact): BoardParkedRow =>
   ownerSource: "park-control",
 });
 
-const laneRow = (repository: string, fact: BoardLaneFact): BoardLaneRow => ({
+const laneRow = (
+  repository: string,
+  fact: BoardLaneFact,
+  dispatchWorktreePaths?: Readonly<Record<string, string>>,
+): BoardLaneRow => ({
   repository,
   ref: boundedText(fact.ref, BOARD_MAX_REF_CHARS),
   laneId: boundedText(fact.laneId, BOARD_MAX_ID_CHARS),
@@ -495,6 +499,15 @@ const laneRow = (repository: string, fact: BoardLaneFact): BoardLaneRow => ({
     : { reason: boundedText(fact.reason, BOARD_MAX_REASON_CHARS) }),
   owner: fact.holder === null ? null : boundedText(fact.holder, BOARD_MAX_OWNER_CHARS),
   ownerSource: "lane-lease-holder",
+  // The (repository, ref)-keyed join (GH-404 F-7; review F-7): contributes
+  // the path to the existing row only; the value is the record's own field,
+  // carried verbatim (one bound, reused). A lane without a dispatch-lane
+  // worktree context renders exactly as today (DEC-8).
+  ...(dispatchWorktreePaths === undefined
+    ? {}
+    : dispatchWorktreePaths[`${repository}|${fact.ref}`] === undefined
+      ? {}
+      : { worktreePath: dispatchWorktreePaths[`${repository}|${fact.ref}`] }),
 });
 
 const compareTextBy =
@@ -613,7 +626,7 @@ export const projectBoard = (input: BoardProjectionInput): BoardProjection => {
 
     const laneFacts = [...repository.lanes].sort(compareTextBy((fact) => fact.ref));
     for (const fact of laneFacts.slice(0, BOARD_MAX_LANES))
-      lanes.push(laneRow(repository.key, fact));
+      lanes.push(laneRow(repository.key, fact, input.dispatchWorktreePaths));
     omittedBySection.lanes +=
       (repository.omittedLanes ?? 0) + Math.max(0, laneFacts.length - BOARD_MAX_LANES);
 

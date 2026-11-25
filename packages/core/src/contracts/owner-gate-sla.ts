@@ -259,6 +259,14 @@ export type BoardLaneRow = {
   readonly reason?: string;
   readonly owner: string | null;
   readonly ownerSource: BoardOwnerSource;
+  /**
+   * The lane's worktree path (GH-404 F-7, DM-1), contributed by the ref-keyed
+   * join over the newest dispatch.lane record. Absent renders exactly as
+   * today — the classified absence for context-less lanes (DEC-8); the join
+   * contributes to existing rows only and never mints one. The value is the
+   * record's own field, carried verbatim (one bound, reused).
+   */
+  readonly worktreePath?: string;
 };
 
 /** One owner-ask row with its drawn default (DM-5, DEC-4, DEC-16, DEC-19). */
@@ -408,6 +416,15 @@ export type BoardProjectionInput = {
   readonly policy: OwnerGateSlaPolicy;
   readonly nowMs: number;
   readonly nowIso: string;
+  /**
+   * The ref-keyed worktree-path join source (GH-404 F-7, DM-1): the newest
+   * dispatch.lane record's worktree path per ref, from the bounded
+   * retained-window read. The join CONTRIBUTES paths to existing lane rows
+   * only — it never mints rows — and a context-less record contributes
+   * nothing (DEC-8): absence renders exactly as today. Absent input keeps the
+   * delivered board byte-for-byte.
+   */
+  readonly dispatchWorktreePaths?: Readonly<Record<string, string>>;
 };
 
 /** The projection: the bounded payload plus the decisions the edge must append. */

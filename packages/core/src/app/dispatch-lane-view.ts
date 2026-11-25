@@ -35,6 +35,32 @@ export type OperatorLaneReadFailure = {
   readonly path: string;
 };
 
+/**
+ * The ref-keyed worktree-path join source (GH-404 F-7, DM-1; TC-SURFACES-002):
+ * the NEWEST dispatch.lane record per (repository, ref) — the store is
+ * project-scoped, so the repository dimension is the store's own — folded over
+ * the bounded retained-window read this module already owns. A context-less
+ * record (pre-change, disable-worktrees — DEC-8) contributes nothing: absence
+ * is the join's classified absence, and the join contributes paths to EXISTING
+ * surface rows only, never mints rows. The path value is the record's own
+ * field, carried verbatim (one bound, reused).
+ */
+const dispatchLaneJoinKey = (repository: string, ref: string): string => `${repository}|${ref}`;
+
+export const newestDispatchLaneWorktreePaths = (
+  records: readonly DispatchLaneRecord[],
+): Readonly<Record<string, string>> => {
+  const paths: Record<string, string> = {};
+  for (const record of records) {
+    const key = dispatchLaneJoinKey(record.repository, record.ref);
+    // The NEWEST record decides (review F-7): a newer context-less record
+    // supersedes an older path.
+    if (record.worktreePath === undefined) delete paths[key];
+    else paths[key] = record.worktreePath;
+  }
+  return paths;
+};
+
 export type OperatorStatusRead =
   | { readonly ok: true; readonly data: DispatchStatusData }
   | OperatorLaneReadFailure;

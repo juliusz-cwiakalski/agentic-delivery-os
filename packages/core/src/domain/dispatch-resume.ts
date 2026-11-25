@@ -8,10 +8,10 @@
  */
 import {
   DELIVERY_RESULT_TOKENS,
-  ECONOMICS_RESTART_SCHEMA_ID,
-  HARNESS_OUTCOMES,
   type DispatchResumeMode,
+  ECONOMICS_RESTART_SCHEMA_ID,
   type EconomicsRestartRecord,
+  HARNESS_OUTCOMES,
 } from "#contracts";
 import { evaluateRestartBudget } from "./economics-budget.js";
 
@@ -197,3 +197,10 @@ export const admissionRefusalPair = (
     comparisonReason: "comparison-source-unavailable",
   };
 };
+
+/* ------------------------------------------------------------------------- */
+/* GH-404 F-4 — the worktree resume rules live on the production path:      */
+/* tests/behaviour/dispatch-production-worktree.test.ts drives the composed */
+/* reuse arm. One worktree per work item; the context-less lane resumes      */
+/* exactly as today (DEC-8).                                                 */
+/* ------------------------------------------------------------------------- */

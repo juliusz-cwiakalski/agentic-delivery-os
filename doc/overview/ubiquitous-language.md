@@ -3,12 +3,12 @@ ados_distribution: internal
 id: TOOLING-UBIQUITOUS-LANGUAGE
 status: Draft
 created: 2026-11-02
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 owners: [engineering]
 area: domain
 document_classification: working-analysis
 links:
-  related_changes: [GH-200, GH-231, GH-225, GH-233, GH-232, GH-234, GH-240, GH-309, GH-406]
+  related_changes: [GH-200, GH-231, GH-225, GH-233, GH-232, GH-234, GH-240, GH-309, GH-406, GH-404]
 summary: "Thin tooling vocabulary relationship map and disambiguation draft for Gate 4."
 ---
 
@@ -57,8 +57,8 @@ the identity or checkout layer owns it.
 | Product | One or more repositories that together form a single deliverable, planned and delivered as one; declared in its manifest. | Durable |
 | Repository | One git repository belonging to exactly one product; the long form "product repository" is used only for contrast in prose and never as a header. | Durable |
 | Main checkout | The clone's primary working tree (the directory that holds `.git`); it stays on the base branch, whatever that branch is called. | Durable per worker |
-| Worktree | A linked git worktree of a main checkout, created for one work item; the word never includes the main checkout. | Temporary |
-| Lane | One work item's delivery in one repository: the queue lane keyed `<ref>@<cloneKey>`, resumable across dispatch attempts through the `dispatch.lane` record; an attempt is never a lane. | Temporary |
+| Worktree | A linked git worktree of a main checkout, created for one work item; the word never includes the main checkout. Dispatch provisions it before the first phase and closeout removes it only after the merge is confirmed. | Temporary |
+| Lane | One work item's delivery in one repository: the queue lane keyed `<ref>@<cloneKey>`, resumable across dispatch attempts through the `dispatch.lane` record and working in its own linked worktree; an attempt is never a lane. | Temporary |
 | Work item | A ticket. | Durable in the tracker |
 | Clone identity | The identity minted once per clone into the git-directory marker, shared by the main checkout and every linked worktree of that clone. | Per clone |
 | Product key | The product's own key: `groupKey` in the local `groups.v1` layer, `product.key` in the portable manifest (GH-401); the contract names keep the *declared* qualifier while the legacy names exist. | Durable |

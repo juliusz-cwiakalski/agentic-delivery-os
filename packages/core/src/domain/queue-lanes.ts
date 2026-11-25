@@ -42,6 +42,16 @@ export type QueueLaneFoldInput = {
   /** Daemon execution evidence folded beside the queue truth (F-9, DM-13). */
   readonly daemonLanes?: readonly DaemonLaneRecord[];
   /**
+   * The (repository, ref)-keyed worktree-path join source (GH-404 F-7, DM-1;
+   * review F-7): the NEWEST dispatch.lane record per (repository, ref) decides
+   * — a newer context-less record supersedes an older path. The join
+   * CONTRIBUTES paths to existing rows only — it never mints rows — and a
+   * context-less newest record renders the row exactly as today (DEC-8). The
+   * path value is the record's own field, carried verbatim (one bound,
+   * reused). Keys are `dispatchLaneJoinKey(repository, ref)`.
+   */
+  readonly dispatchWorktreePaths?: Readonly<Record<string, string>>;
+  /**
    * The declared peak-enforcement state (GH-294 F-8, OQ-TP-6). Absent means
    * the delivered daemon-absent default: `iteration-start-gating` with
    * `parkClaimed: false` — the fold never claims a park that did not happen.
@@ -149,6 +159,18 @@ export const foldLanes = (input: QueueLaneFoldInput): QueueLanesData => {
       ...(lease === undefined ? {} : { leaseScope: lease.scope }),
       ...(lease === undefined ? {} : { leaseHolder: lease.holder }),
       ...(activePark?.expiresAt === undefined ? {} : { until: activePark.expiresAt }),
+      // The (repository, ref)-keyed join (GH-404 F-7; review F-7): contributes
+      // the path to the existing row only; a row without a dispatch-lane
+      // worktree context renders exactly as today (DEC-8).
+      ...(input.dispatchWorktreePaths === undefined
+        ? {}
+        : entry.repository === undefined
+          ? {}
+          : input.dispatchWorktreePaths[`${entry.repository}|${entry.ref}`] === undefined
+            ? {}
+            : {
+                worktreePath: input.dispatchWorktreePaths[`${entry.repository}|${entry.ref}`],
+              }),
       restarts: economics?.restarts ?? null,
       amplification: economics?.amplification ?? null,
       ...(amplificationWarning === undefined ? {} : { amplificationWarning }),

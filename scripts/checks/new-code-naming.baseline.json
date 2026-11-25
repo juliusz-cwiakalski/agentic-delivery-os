@@ -18,6 +18,10 @@
     {
       "path": "tests/behaviour/projects-clone-key.test.ts",
       "reason": "TC-DPKACC-001 step 3's direct field-name assertion: pins the delivered marker and host-index persisted field names unchanged through the production path (zero-rename fence)."
+    },
+    {
+      "path": "tests/behaviour/host-index-worktree-pin.test.ts",
+      "reason": "GH-404 TC-HOSTIDX-001/002/003 fixture: the host-index registration fixture keys use the delivered HostIndexRegistration persisted field names (projectKey/projectIdentifier) unchanged — the zero-rename fence forbids renaming the delivered field the registration pin is asserted on."
     }
   ]
 }
