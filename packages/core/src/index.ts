@@ -803,10 +803,7 @@ export {
   type DispatchResumeEconomics,
   type DispatchResumePlan,
   evaluateDispatchResumeEconomics,
-  type LaneWorktreeResumePlan,
-  laneWorktreeBranch,
   planDispatchResume,
-  planLaneWorktreeResume,
 } from "./domain/dispatch-resume.js";
 export {
   DISPATCH_TRACKER_EXHAUSTED_IDENTITY,
@@ -1468,6 +1465,10 @@ export {
   defaultLaneWorktreeRoot,
   deriveLaneWorktreeEnvironment,
   GATE_TEMPORARY_DIRECTORY_EVIDENCE_LITERAL,
+  LANE_LOG_SWEEP_BYTE_CAP,
+  LANE_RUNNER_LOG_DIRECTORY,
+  LANE_SCRATCH_DIRECTORY,
+  LANE_PROVISIONING_STDERR_TAIL_CHARS,
   LANE_PROVISIONING_STEPS,
   LANE_WORKTREE_INSTALL_COMMAND,
   type LaneProvisioningStep,

@@ -48,7 +48,14 @@ const makeCloneWithWorktree = (): {
   };
 };
 
-/** The delivered registration-root derivation (the phase-5 call-site pin). */
+/**
+ * The delivered registration-root derivation (the phase-5 call-site pin).
+ * JUSTIFIED (review F-6 re-work): this helper mirrors the production call
+ * site's one-line derivation (`dirname(realpath(commonDir))`) — re-implementing
+ * the whole production composer here would test the composer, not the pin.
+ * The production-path composition is proven by
+ * tests/behaviour/dispatch-production-worktree.test.ts.
+ */
 const registrationRootFrom = (checkoutIdentityCommonDir: string): string =>
   join(realpathSync(checkoutIdentityCommonDir), "..");
 

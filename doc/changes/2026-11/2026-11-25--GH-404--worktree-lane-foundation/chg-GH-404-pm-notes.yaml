@@ -52,6 +52,108 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Plan phase 12 (rev-9 review-iter-1 remediation) applied in ONE commit
+      through the commit primitive (its hash is recorded in this change
+      capsule's commit event — this note is committed in that same commit, so
+      it cannot name its own hash; no amend, no history rewrite). FINAL STATUS
+      PER FINDING: F-1 ADDRESSED — worktree provisioned DETACHED at the base
+      tip, no lane/<REF> branch; reuse verifies detached-at-base OR a
+      delivery-convention branch ^[a-z]+/<REF>/, a genuinely foreign branch
+      still refuses (production-path suite scenario 2, positive and negative);
+      LANE_BRANCH/lane/<REF> retired from production, contract and fixtures.
+      F-2 ADDRESSED — the production sweep (createLaneLogSweep, the exact
+      closure the closeout composition binds) copies the runner-log tree
+      tmp/run-logs-runner/** newest-first under LANE_LOG_SWEEP_BYTE_CAP with
+      recursive byte accounting, verifies the COPIED ENTRIES (count, recursive
+      bytes, existence), deletes tmp/tmpdir scratch instead of preserving it,
+      and moves nothing on failure (real-file suite, refusal case included).
+      F-3 ADDRESSED — the dead squashLand worktree-invocation change is
+      reverted byte-for-byte (merge-landing-retirement zero-callers pin green);
+      the provider-landing contract stands; the post-landing branch deletion
+      defers as satisfied-by-closeout when the branch is checked out in a
+      linked worktree (edge.ts port + production binding + detection tests).
+      F-4 ADDRESSED — a post-creation provisioning failure rolls the
+      just-created worktree back through removeWorktree and DISCLOSES a
+      refused rollback; a TERMINAL record whose worktree closeout removed
+      provisions fresh for the ref's new lane instead of refusing
+      lane-worktree-missing (production-path scenario 6); no lane branch
+      leaks. F-5 ADDRESSED — the lane session descriptor derives the
+      worktree environment (worktree node_modules/.bin leading PATH, TMPDIR
+      anchored inside the worktree) for the fresh spawn AND the resumed lane;
+      the suite asserts the SESSION spawn environment, not only the
+      provisioning children. F-6 ADDRESSED — new first-class suite
+      tests/behaviour/dispatch-production-worktree.test.ts (6 scenarios,
+      createProductionComposer -> real CLI -> dispatch/merge runtime over real
+      temp git repositories, only harness/provider/children stubbed); the
+      governing fixtures carry explicit JUSTIFIED remarks where they pin the
+      engine seam rather than the composer. Sub-item deviation: the parity
+      harness (tests/fixtures/dispatch/parity/harness.ts) keeps its
+      exception-mode pin because its suites pin exception-mode parity; the
+      default-mode document lives in the queue production harness and the new
+      suite consumes it. F-7 ADDRESSED — the join keys on repository|ref and
+      the NEWEST record decides, a newer context-less record superseding an
+      older path; board and lanes tests updated. F-8 ADDRESSED — the pre-sweep
+      pre-check no longer evaluates the cleanliness arm; the ordering gate
+      evaluates the POST-sweep cleanliness the production sweep port observes,
+      and a composition without a sweep port keeps the delivered cleanliness
+      check. F-9 PARTIAL, DECLARED: the provisioning refusal detail now names
+      the declared step, the timeout fact and a bounded stderr tail
+      (production.ts), and the sweep reason token is already declared in
+      feature-closeout.md; the dispatch.session.spawn-failed error-row prose
+      change was REVERTED because that row is a distributed synchronized
+      surface (doc/spec/features/feature-result-contract.md Appendix D + the
+      events error-table baseline fixture), the repo invariant requires them
+      to move together, and this phase's fence declares no doc edits — it
+      belongs to the doc-sync re-run, not to a scope violation here.
+      F-10 ADDRESSED — a relative or tilde lane.worktree-root is refused at
+      config resolution as config.value.invalid naming the key, the accepted
+      value is trimmed, and the lane-record guard refuses a non-string or
+      empty worktreePath (tests added). F-11 ADDRESSED — the declared bound
+      stays and is named in the refusal together with timedOut; no retry
+      ladder (declared GH-412-adjacent out of scope). F-12 ADDRESSED — the
+      linked-only enumeration compares each block's OWN resolved git directory
+      with the common directory (one bounded rev-parse --absolute-git-dir per
+      block), so separate-git-dir and submodule main checkouts classify
+      correctly; pure resolver test and real-repo isCheckedOutElsewhere
+      assertions added; the merge seam uses the same resolved-equality rule.
+      F-13 ADDRESSED — LANE_PROVISIONING_STEPS is reordered to production's
+      real order (gate temp dir, install, build) and production CONSUMES the
+      declared steps and LANE_WORKTREE_INSTALL_COMMAND; matchesDeliveryBranchConvention
+      and the retired resume helpers were removed with their inventory rows.
+      F-14 ADDRESSED per the phase's narrowed mapping — the canary control
+      really runs the scan (factored scanSeamSource) and the preserved-golden
+      provenance comment states the verified fact (bytes match the merge-base
+      renderer; the bytes are never regenerated). F-15 ADDRESSED — static
+      node:child_process imports, a typed tuple shuffle, a real
+      OWNER_GATE_SLA_POLICY value. F-16 ADDRESSED — the contradictory stacked
+      comment is gone; the disproved spec sentences ride the doc-sync re-run
+      (Decision 2). F-17 OUT OF SCOPE as declared, and the port comment names
+      (a)-(c). VERIFICATION (observed, not asserted): pnpm typecheck green for
+      all six packages plus tests/types; the new suite 6 pass / 0 fail (71
+      expect calls); the targeted set (the new suite, lifecycle, host-index,
+      resume economics, merge composition, three closeout worktree suites,
+      retirement pin, house style, enumeration, seam, board, config, both
+      structure error suites, content-inventory, tests/golden) 628 pass / 0
+      fail across 83 files; the dispatch behaviour glob 503 pass / 0 fail
+      across 64 files; the closeout composition batch 56 pass / 0 fail across
+      4 files; biome lint 0 errors and biome format clean; boundaries, ambient
+      globals, workspace entrypoints, secret-read boundary, new-code naming
+      and forbidden-literals all green. DRIFT DISCLOSED: the declared file
+      list omitted the files where the decisions actually bind —
+      packages/core/src/app/dispatch-lane-view.ts (F-7 join), the core barrels
+      and packages/core/src/app/state-scope.ts (retired lane-branch context),
+      packages/core/src/domain/dispatch-resume.ts (retired dead pure resume
+      rules), and tests/structure/content-inventory.test.ts (the export
+      inventory baseline for the new constants and the removed dead exports);
+      they are tracked drift, staged by the primitive and disclosed there.
+      Deferred with reasons: the error-row prose plus its doc and baseline
+      (F-9, doc fence), the parity harness default-mode document (unused
+      export otherwise), the plan-mode pre-sweep would-refuse render for a
+      repository that does not ignore tmp/ (apply-time is authoritative; the
+      plan render is read-only), and the sweep truncation flag is returned by
+      the port but has no in-scope operator surface to render it."
+    type: info
+    date: "2026-11-25"
   - text: "Review iter-1 verdict FAIL (code-review/review-iter-1.yaml, swept with
       the next phase complete): 17 findings — 2 blocking, 4 major, 4 minor, 6
       nits, 1 info — reproduced through the real production composer over real

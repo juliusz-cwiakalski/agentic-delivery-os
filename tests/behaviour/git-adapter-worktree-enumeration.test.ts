@@ -22,10 +22,11 @@ const mainBlock = block(MAIN, "main-tools", "a".repeat(40));
 const linkedABlock = block(LINKED_A, "lane/GH-1", "b".repeat(40));
 const linkedBBlock = `worktree ${LINKED_B}\nHEAD ${"c".repeat(40)}\ndetached`;
 
-const shuffle = <T>(items: readonly T[]): readonly T[] => {
-  // Deterministic reversal + rotation: two non-identity permutations suffice
-  // to prove the reading is order-independent (the main block is not first).
-  return [items[1]!, items[2]!, items[0]!, ...items.slice(3)];
+const shuffle = <T>(items: readonly [T, T, T, ...T[]]): readonly T[] => {
+  // Deterministic rotation: a non-identity permutation proves the reading is
+  // order-independent (the main block is not first).
+  const [first, second, third, ...rest] = items;
+  return [second, third, first, ...rest];
 };
 
 describe("TC-IDENT-002 the linked-only enumeration is position-independent", () => {
@@ -90,5 +91,28 @@ describe("TC-IDENT-002 the linked-only enumeration is position-independent", () 
       COMMON_DIR,
     );
     expect(shuffledWithLinked.linked.some((fact) => fact.branch === "lane/GH-1")).toBe(true);
+  });
+});
+
+/**
+ * F-12 (review remediation) — the resolver-based git-dir equality: a main
+ * checkout whose git directory is NOT `<path>/.git` (separate-git-dir,
+ * submodule) classifies as the MAIN checkout when its resolved git dir equals
+ * the common directory — the seam passes one bounded
+ * `rev-parse --absolute-git-dir` resolution per block.
+ */
+describe("F-12 the resolved git-dir equality classifies non-standard layouts", () => {
+  test("a separate-git-dir main checkout is the main checkout under the resolver", () => {
+    const separateGitDirMain = "/repos/checkout";
+    const realGitDir = "/elsewhere/checkout-git";
+    const listing = parseWorktreeListing(
+      [block(separateGitDirMain, "main-tools", "a".repeat(40)), linkedABlock].join("\n\n"),
+      realGitDir,
+      (checkoutPath) => (checkoutPath === separateGitDirMain ? realGitDir : `${checkoutPath}/.git`),
+    );
+    expect(listing.mainCheckoutPath).toBe(separateGitDirMain);
+    expect(listing.linked).toEqual([
+      { path: LINKED_A, branch: "lane/GH-1", head: "b".repeat(40), locked: false },
+    ]);
   });
 });

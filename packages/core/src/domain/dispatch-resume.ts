@@ -14,7 +14,6 @@ import {
   HARNESS_OUTCOMES,
 } from "#contracts";
 import { evaluateRestartBudget } from "./economics-budget.js";
-import { laneWorktreeBranch } from "./lane-worktree-plan.js";
 
 /** `f` failed, `mr` max-restarts, `su` state-unverified. */
 const [, , , , f, , mr, su] = DELIVERY_RESULT_TOKENS;
@@ -200,69 +199,8 @@ export const admissionRefusalPair = (
 };
 
 /* ------------------------------------------------------------------------- */
-/* GH-404 F-4 — the worktree resume rules. One worktree per work item; the   */
-/* context-less lane resumes exactly as today (DEC-8). Pure over injected    */
-/* facts; no provisioning, no I/O.                                           */
+/* GH-404 F-4 — the worktree resume rules live on the production path:      */
+/* tests/behaviour/dispatch-production-worktree.test.ts drives the composed */
+/* reuse arm. One worktree per work item; the context-less lane resumes      */
+/* exactly as today (DEC-8).                                                 */
 /* ------------------------------------------------------------------------- */
-
-/** The lane's worktree branch, derived from the work item ref. */
-export { laneWorktreeBranch };
-
-/** The resume plan for a lane's recorded worktree context (F-4, DEC-8). */
-export type LaneWorktreeResumePlan =
-  | {
-      readonly kind: "reuse";
-      readonly worktreePath: string;
-      /** The branch the worktree must be on: the lane's own worktree branch. */
-      readonly branch: string;
-    }
-  | {
-      /** The context-less shape: resume exactly as today in the invoking checkout (DEC-8). */
-      readonly kind: "in-checkout";
-    }
-  | {
-      readonly kind: "lane-error";
-      readonly reason: "worktree-missing" | "branch-mismatch";
-      readonly detail: string;
-    };
-
-/**
- * Verify the lane's recorded worktree for one resume (F-4, NFR-3, DEC-8).
- *
- * A record with no worktree context plans today's in-checkout shape and never
- * provisions a worktree. A recorded worktree that is missing or has moved off
- * the lane's branch is a lane error naming the problem — never a silent
- * re-provision and never a second worktree.
- */
-export const planLaneWorktreeResume = (input: {
-  /** The lane record's additive worktree context; absent is the context-less shape. */
-  readonly worktreePath?: string;
-  readonly ref: string;
-  /** Whether the recorded worktree exists at its recorded path (injected observation). */
-  readonly worktreePresent: boolean;
-  /** The branch the worktree is currently on (injected observation; absent when missing). */
-  readonly worktreeBranch?: string;
-}): LaneWorktreeResumePlan => {
-  if (input.worktreePath === undefined) return { kind: "in-checkout" };
-  const expectedBranch = laneWorktreeBranch(input);
-  if (!input.worktreePresent) {
-    return {
-      kind: "lane-error",
-      reason: "worktree-missing",
-      detail:
-        `the lane worktree ${input.worktreePath} recorded for ${input.ref} is missing ` +
-        `(expected branch ${expectedBranch}); restore it or close the lane out — resume never re-provisions`,
-    };
-  }
-  if (input.worktreeBranch !== expectedBranch) {
-    return {
-      kind: "lane-error",
-      reason: "branch-mismatch",
-      detail:
-        `the lane worktree ${input.worktreePath} recorded for ${input.ref} is on ` +
-        `${input.worktreeBranch === undefined ? "no branch (detached)" : input.worktreeBranch}, ` +
-        `not the lane branch ${expectedBranch}; resume never moves or re-provisions a worktree`,
-    };
-  }
-  return { kind: "reuse", worktreePath: input.worktreePath, branch: expectedBranch };
-};

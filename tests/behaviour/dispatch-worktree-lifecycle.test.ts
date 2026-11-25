@@ -7,6 +7,7 @@
  * evidence in the change pm-notes, never a suite assertion).
  */
 import { describe, expect, test } from "bun:test";
+import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -23,9 +24,11 @@ import type { DispatchWorktreeProvisioning } from "../../packages/core/src/app/d
 import { runDispatch } from "../../packages/core/src/app/dispatch";
 import { newestDispatchLaneWorktreePaths } from "../../packages/core/src/app/dispatch-lane-view";
 import {
+  isDispatchLaneRecord,
   latestDispatchLaneFor,
   readDispatchLanes,
 } from "../../packages/core/src/app/dispatch-ledger";
+import { DISPATCH_LANE_PAYLOAD_SCHEMA } from "../../packages/core/src/contracts/dispatch";
 import { resolveLaneWorktreePlacement } from "../../packages/core/src/app/state-scope";
 import { deriveLaneWorktreeEnvironment } from "../../packages/core/src/domain/lane-worktree-plan";
 import {
@@ -42,12 +45,8 @@ const makeBaseRepo = (): {
   readonly remove: () => void;
 } => {
   const directory = mkdtempSync(join(tmpdir(), "gh404-lane-repo-"));
-  const run = (args: readonly string[]): string => {
-    const { execFileSync } = require("node:child_process") as {
-      execFileSync: (file: string, args: readonly string[], options: unknown) => string;
-    };
-    return execFileSync("git", [...args], { cwd: directory, encoding: "utf8" }).trim();
-  };
+  const run = (args: readonly string[]): string =>
+    execFileSync("git", [...args], { cwd: directory, encoding: "utf8" }).trim();
   run(["init", "-q", "-b", "main-tools"]);
   run(["config", "user.email", "gh404@example.invalid"]);
   run(["config", "user.name", "GH-404 Fixture"]);
@@ -60,27 +59,17 @@ const makeBaseRepo = (): {
   };
 };
 
-const isClean = (repoDirectory: string): boolean => {
-  const { execFileSync } = require("node:child_process") as {
-    execFileSync: (file: string, args: readonly string[], options: unknown) => string;
-  };
-  return (
-    execFileSync("git", ["status", "--porcelain"], {
-      cwd: repoDirectory,
-      encoding: "utf8",
-    }).trim().length === 0
-  );
-};
+const isClean = (repoDirectory: string): boolean =>
+  execFileSync("git", ["status", "--porcelain"], {
+    cwd: repoDirectory,
+    encoding: "utf8",
+  }).trim().length === 0;
 
-const branchOf = (repoDirectory: string): string => {
-  const { execFileSync } = require("node:child_process") as {
-    execFileSync: (file: string, args: readonly string[], options: unknown) => string;
-  };
-  return execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+const branchOf = (repoDirectory: string): string =>
+  execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
     cwd: repoDirectory,
     encoding: "utf8",
   }).trim();
-};
 
 /** The real provisioning stub: creation + gate temp dir, install/build stubbed. */
 const makeProvisioner = (input: {
@@ -102,12 +91,18 @@ const makeProvisioner = (input: {
     });
     const derived = deriveLaneWorktreeEnvironment({ worktreePath: placement.worktreePath });
     environment.current = derived;
+    // JUSTIFIED (review F-6 re-work): this suite is the ENGINE-seam fixture —
+    // it drives runDispatch directly with a stub provisioning port to pin the
+    // engine's own sequence (lease-first, descriptor workDirectory, DM-1).
+    // The production-path composition is proven by
+    // tests/behaviour/dispatch-production-worktree.test.ts. The stub provisions
+    // via the delivered seam, DETACHED at the base tip (Decision 1 — no lane
+    // branch).
     const created = await createGitBranchSeam({
       cwd: input.repo.directory,
       timeoutMs: 10_000,
     }).addWorktree({
       path: placement.worktreePath,
-      newBranch: placement.branch,
       baseRef: input.repo.baseRef,
     });
     if (!created.ok) {
@@ -124,7 +119,6 @@ const makeProvisioner = (input: {
       ok: true,
       mode: "worktree",
       worktreePath: placement.worktreePath,
-      branch: placement.branch,
     };
   };
 };
@@ -197,7 +191,8 @@ describe("TC-WT-003 dispatch creates the worktree before the first phase, lease-
       const worktreePath = spawnInputs[0]?.descriptor.workDirectory ?? "";
       expect(worktreePath).toContain("GH-401");
       expect(existsSync(worktreePath)).toBe(true);
-      expect(branchOf(worktreePath)).toBe("lane/GH-401");
+      // Decision 1: DETACHED at the base tip — no lane branch exists.
+      expect(branchOf(worktreePath)).toBe("HEAD");
       // The worktree is a sibling of the main checkout at the base tip.
       expect(worktreePath.startsWith(`${repo.directory}-`)).toBe(true);
       expect(repo.run(["-C", worktreePath, "rev-parse", "HEAD"])).toBe(
@@ -210,10 +205,12 @@ describe("TC-WT-003 dispatch creates the worktree before the first phase, lease-
       const lanes = readDispatchLanes(state.store);
       const latest = lanes.ok ? latestDispatchLaneFor(lanes.records, "GH-401") : undefined;
       expect(latest?.worktreePath).toBe(worktreePath);
-      // The join source maps it (the surfaces' ref-keyed join).
-      expect(newestDispatchLaneWorktreePaths(lanes.ok ? lanes.records : [])["GH-401"]).toBe(
-        worktreePath,
-      );
+      // The join source maps it (the (repository, ref)-keyed join; review F-7).
+      expect(
+        newestDispatchLaneWorktreePaths(lanes.ok ? lanes.records : [])[
+          `github.com/owner/repo|GH-401`
+        ],
+      ).toBe(worktreePath);
     } finally {
       const worktreePath = spawnInputs[0]?.descriptor.workDirectory;
       if (worktreePath !== undefined && existsSync(worktreePath)) {
@@ -299,7 +296,7 @@ describe("TC-WT-004 the sibling default and the explicit worktree-root setting",
       });
       expect(placement.worktreeRoot).toBe(repo.directory.slice(0, repo.directory.lastIndexOf("/")));
       expect(placement.worktreePath).toBe(`${placement.worktreeRoot}/${basename}-GH-404`);
-      expect(placement.branch).toBe("lane/GH-404");
+      // Decision 1: detached — the placement declares no lane branch.
     } finally {
       repo.remove();
     }
@@ -418,7 +415,9 @@ describe("TC-REG-002 the disable-worktrees exception at the same seam", () => {
       const latest = lanes.ok ? latestDispatchLaneFor(lanes.records, "GH-403") : undefined;
       expect(latest?.worktreePath).toBeUndefined();
       expect(
-        newestDispatchLaneWorktreePaths(lanes.ok ? lanes.records : [])["GH-403"],
+        newestDispatchLaneWorktreePaths(lanes.ok ? lanes.records : [])[
+          `github.com/owner/repo|GH-403`
+        ],
       ).toBeUndefined();
       expect(branchOf(repo.directory)).toBe(repo.baseRef);
       expect(isClean(repo.directory)).toBe(true);
@@ -426,5 +425,35 @@ describe("TC-REG-002 the disable-worktrees exception at the same seam", () => {
       repo.remove();
       state.dispose();
     }
+  });
+});
+
+/**
+ * TC-WT-006 (review F-10) — the lane-record guard type-validates the additive
+ * worktree context: a non-string or empty value refuses the record instead of
+ * flowing into path checks and surfaces.
+ */
+describe("TC-WT-006 the lane-record guard validates the worktree context", () => {
+  const activeRecord = {
+    schema: DISPATCH_LANE_PAYLOAD_SCHEMA,
+    ref: "GH-404",
+    repository: "github.com/owner/repo",
+    attemptId: "attempt-1",
+    sessionId: "session-1",
+    harnessKind: "opencode",
+    owner: { processId: 1, startedAt: "2026-11-25T12:00:00.000Z" },
+    iterationOrdinal: 1,
+    restartsConsumed: 0,
+    state: "active",
+    recordedAt: "2026-11-25T12:00:00.000Z",
+  };
+
+  test("a present worktreePath must be a non-empty string", () => {
+    expect(isDispatchLaneRecord({ ...activeRecord, worktreePath: "/repos/checkout-GH-404" })).toBe(
+      true,
+    );
+    expect(isDispatchLaneRecord(activeRecord)).toBe(true);
+    expect(isDispatchLaneRecord({ ...activeRecord, worktreePath: 42 })).toBe(false);
+    expect(isDispatchLaneRecord({ ...activeRecord, worktreePath: "" })).toBe(false);
   });
 });

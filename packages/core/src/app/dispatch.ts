@@ -278,7 +278,6 @@ export type DispatchWorktreeProvisioning =
       readonly ok: true;
       readonly mode: "worktree";
       readonly worktreePath: string;
-      readonly branch: string;
     }
   | { readonly ok: true; readonly mode: "in-checkout" }
   | { readonly ok: false; readonly code: string; readonly detail: string };

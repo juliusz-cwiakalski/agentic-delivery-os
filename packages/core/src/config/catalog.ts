@@ -705,6 +705,16 @@ export const resolveLaneSettings = (
   ) {
     return laneFailure("config.value.invalid", origins, "lane.worktree-root");
   }
+  // Review F-10: the worktree root is a machine path — a relative or tilde
+  // value is refused at the config boundary (config.value.invalid naming the
+  // key), never deferred to a provisioning-time plan-restriction refusal; the
+  // accepted value is trimmed once here.
+  if (typeof worktreeRoot === "string") {
+    const trimmed = worktreeRoot.trim();
+    if (trimmed.startsWith("/") !== true) {
+      return laneFailure("config.value.invalid", origins, "lane.worktree-root");
+    }
+  }
   const disableWorktrees = branch["disable-worktrees"];
   if (disableWorktrees !== undefined && typeof disableWorktrees !== "boolean") {
     return laneFailure("config.value.invalid", origins, "lane.disable-worktrees");
@@ -715,7 +725,7 @@ export const resolveLaneSettings = (
       livenessIntervalMs: interval,
       restartBudget: budget,
       ...(typeof worktreeRoot === "string" && worktreeRoot.trim().length > 0
-        ? { worktreeRoot }
+        ? { worktreeRoot: worktreeRoot.trim() }
         : {}),
       ...(disableWorktrees === true ? { disableWorktrees: true } : {}),
     },

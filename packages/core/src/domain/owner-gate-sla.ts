@@ -499,15 +499,15 @@ const laneRow = (
     : { reason: boundedText(fact.reason, BOARD_MAX_REASON_CHARS) }),
   owner: fact.holder === null ? null : boundedText(fact.holder, BOARD_MAX_OWNER_CHARS),
   ownerSource: "lane-lease-holder",
-  // The ref-keyed join (GH-404 F-7): contributes the path to the existing row
-  // only; the value is the record's own field, carried verbatim (one bound,
-  // reused). A ref without a dispatch-lane worktree context renders exactly
-  // as today (DEC-8).
+  // The (repository, ref)-keyed join (GH-404 F-7; review F-7): contributes
+  // the path to the existing row only; the value is the record's own field,
+  // carried verbatim (one bound, reused). A lane without a dispatch-lane
+  // worktree context renders exactly as today (DEC-8).
   ...(dispatchWorktreePaths === undefined
     ? {}
-    : dispatchWorktreePaths[fact.ref] === undefined
+    : dispatchWorktreePaths[`${repository}|${fact.ref}`] === undefined
       ? {}
-      : { worktreePath: dispatchWorktreePaths[fact.ref] }),
+      : { worktreePath: dispatchWorktreePaths[`${repository}|${fact.ref}`] }),
 });
 
 const compareTextBy =

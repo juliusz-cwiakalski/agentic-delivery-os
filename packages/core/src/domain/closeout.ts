@@ -1789,7 +1789,15 @@ export type CloseoutRunInput = {
     readonly workItemRef: string;
     readonly worktreePath: string;
   }) => Promise<
-    | { readonly ok: true; readonly swept: boolean; readonly destination?: string }
+    | {
+        readonly ok: true;
+        readonly swept: boolean;
+        readonly destination?: string;
+        /** The worktree's cleanliness observed AFTER the swept paths left (review F-8). */
+        readonly postSweepClean?: boolean;
+        /** Disclosed fact: the newest-first sweep hit the declared byte cap. */
+        readonly truncated?: boolean;
+      }
     | { readonly ok: false; readonly code: string; readonly detail: string }
   >;
   /**
@@ -1814,9 +1822,9 @@ export type CloseoutRunInput = {
  * strictly before the remove-worktree operation — (a) the merge + safety arms
  * of the phase-2 ordering rules, consumed with no side effects (a refusal
  * leaves the worktree AND the logs intact); (b) the lane-log sweep, moving the
- * worktree's tmp/tmpdir gate evidence to its state-root destination (zero log
- * loss, retrievable at the destination, and the mechanical precondition for
- * the cleanliness predicate to pass on a worktree lane); (c) the full ordering
+ * worktree's runner-log entries to their state-root destination (zero log
+ * loss, retrievable at the destination; the cleanliness arm evaluates the
+ * POST-sweep worktree state); (c) the full ordering
  * rules re-consumed with the runtime sweep fact — the load-bearing
  * consumption: any reordering mutant meets a refusal here and the suite turns
  * red.
@@ -1835,10 +1843,15 @@ const gateWorktreeRemoval = async (
   if (ordering !== undefined) {
     // (a) The merge + safety arms with `logsSwept: true` isolating them: a
     // refusal is merge-unconfirmed or safety-refused, and nothing has moved.
+    // The cleanliness arm is NOT evaluated here (review F-8): the sweep below
+    // is what removes the lane's own artifacts, so cleanliness is observed
+    // AFTER it and enforced in (c) — a pre-sweep cleanliness check would
+    // refuse a lane whose only dirt is the logs this transaction is about to
+    // sweep.
     const pre = planCloseoutWorktreeRemoval({
       mergeConfirmed: ordering.mergeConfirmed,
       logsSwept: true,
-      safety: ordering.safety,
+      safety: { ...ordering.safety, clean: true },
     });
     if (!pre.remove && pre.reason !== "logs-not-swept") {
       return {
@@ -1850,8 +1863,10 @@ const gateWorktreeRemoval = async (
   }
   // (b) The lane-log sweep, strictly before removal. A failed sweep moved
   // nothing (the port's contract): the logs stay intact in the worktree and
-  // the removal is refused.
+  // the removal is refused. The cleanliness arm evaluates the POST-sweep
+  // state the port observes.
   let logsSwept = false;
+  let postSweepClean: boolean | undefined;
   if (input.sweepLaneLogs !== undefined && worktreePath !== undefined) {
     const swept = await input.sweepLaneLogs({
       workItemRef: input.plan.workItemRef,
@@ -1865,8 +1880,12 @@ const gateWorktreeRemoval = async (
       };
     }
     logsSwept = true;
+    postSweepClean = swept.postSweepClean;
   }
-  // (c) The full ordering rules with the runtime sweep fact. A composition
+  // (c) The full ordering rules with the runtime sweep facts (review F-8):
+  // the cleanliness arm evaluates the POST-sweep worktree state the sweep
+  // port observed (the swept paths are gone by then) — the plan-time
+  // snapshot's cleanliness never gates a post-sweep removal. A composition
   // that binds no sweep port keeps the delivered removal behaviour: the logs
   // arm is neutralized (there is no sweeper to fail), so the merge + safety
   // arms stay enforced exactly as delivered.
@@ -1874,7 +1893,10 @@ const gateWorktreeRemoval = async (
     const verdict = planCloseoutWorktreeRemoval({
       mergeConfirmed: ordering.mergeConfirmed,
       logsSwept: logsSwept || input.sweepLaneLogs === undefined,
-      safety: ordering.safety,
+      safety: {
+        ...ordering.safety,
+        clean: postSweepClean ?? ordering.safety.clean,
+      },
     });
     if (!verdict.remove) {
       return {
@@ -3021,10 +3043,10 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
         // strictly before the remove-worktree operation — (a) the merge +
         // safety arms of the phase-2 ordering rules, consumed with no side
         // effects (a refusal here leaves the worktree AND the logs intact);
-        // (b) the lane-log sweep, moving the worktree's tmp/tmpdir gate
-        // evidence to its state-root destination (zero log loss, retrievable
-        // at the destination, and the mechanical precondition for the
-        // cleanliness predicate to pass on a worktree lane); (c) the full
+        // (b) the lane-log sweep, moving the worktree's runner-log entries to
+        // their state-root destination (zero log loss, retrievable at the
+        // destination; the cleanliness arm then evaluates the POST-sweep
+        // worktree state); (c) the full
         // ordering rules re-consumed with the runtime sweep fact — the
         // load-bearing consumption: any reordering mutant (remove before the
         // sweep, remove before merge confirmation) meets a refusal here and

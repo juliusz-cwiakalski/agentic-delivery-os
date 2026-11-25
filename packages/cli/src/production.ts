@@ -160,11 +160,18 @@ import {
   type HarnessSettings,
   type HostIndexRootProbe,
   harnessAgentIdentityViolation,
+  LANE_LOG_SWEEP_BYTE_CAP,
+  LANE_PROVISIONING_STDERR_TAIL_CHARS,
+  LANE_PROVISIONING_STEPS,
+  LANE_RUNNER_LOG_DIRECTORY,
+  LANE_SCRATCH_DIRECTORY,
+  LANE_WORKTREE_INSTALL_COMMAND,
+  type LaneProvisioningStep,
   type LaneSettings,
+  type LaneWorktreeEnvironment,
   type LoopDelay,
   type LoopLogSink,
   type LoopSessionFacts,
-  laneWorktreeBranch,
   latestDispatchLaneFor,
   legacyStoreWarning,
   logByteLength,
@@ -280,6 +287,7 @@ import {
   type HarnessEnvironmentBuilder,
   type HarnessEnvironmentEntry,
   type HarnessExecutionEnvironmentDescriptor,
+  type HarnessExecutionKind,
   type HarnessFailure,
   type HarnessKind,
   type HarnessMode,
@@ -1928,6 +1936,125 @@ export const resolveCompositionTransportSelection = async (
   return resolveTransportSelection({ policy, probe });
 };
 
+/**
+ * The lane-log sweep (GH-404 F-6, NFR-5; review F-2/F-8, Decision 3): the
+ * lane's logs are the RUNNER-LOG directories (`<worktree>/tmp/run-logs-runner`),
+ * copied newest-first, BOUNDED at `LANE_LOG_SWEEP_BYTE_CAP` (the truncation is
+ * a disclosed fact), to `<state root>/closeout-lane-logs/<work item ref>`.
+ * `tmp/tmpdir` is ephemeral scratch — DELETED, never preserved. The destination
+ * verification checks the COPIED ENTRIES (existence, count, recursive bytes),
+ * never a directory the sweep itself created; the swept paths then leave the
+ * worktree and `isWorktreeClean` observes the POST-sweep state the ordering
+ * gate evaluates. A failure moves nothing and refuses the removal (the logs
+ * stay intact in the worktree).
+ *
+ * Exported so the production closure is provable over real files (the
+ * production-composition suite), not only through an injected fake.
+ */
+export const createLaneLogSweep = (deps: {
+  readonly stateDirectory: string;
+  readonly isWorktreeClean?: (input: { readonly path: string }) => Promise<boolean>;
+}): ((input: { readonly workItemRef: string; readonly worktreePath: string }) => Promise<
+  | {
+      readonly ok: true;
+      readonly swept: boolean;
+      readonly destination?: string;
+      readonly postSweepClean?: boolean;
+      readonly truncated?: boolean;
+    }
+  | { readonly ok: false; readonly code: string; readonly detail: string }
+>) => {
+  /** Recursive size of one tree (a runner-log entry is a dated directory). */
+  const treeBytes = (path: string): number => {
+    const stat = statSync(path);
+    if (!stat.isDirectory()) return stat.size;
+    let total = 0;
+    for (const child of readdirSync(path, { withFileTypes: true })) {
+      total += treeBytes(join(path, child.name));
+    }
+    return total;
+  };
+  return async (input) => {
+    const worktreeTmp = `${input.worktreePath}/tmp`;
+    const runnerLogs = join(worktreeTmp, LANE_RUNNER_LOG_DIRECTORY);
+    const destination = join(deps.stateDirectory, "closeout-lane-logs", input.workItemRef);
+    const scratch = join(input.worktreePath, LANE_SCRATCH_DIRECTORY);
+    if (!existsSync(runnerLogs)) {
+      // Nothing to preserve; the scratch still goes with the worktree.
+      rmSync(scratch, { recursive: true, force: true });
+      return { ok: true as const, swept: false };
+    }
+    try {
+      const entries = readdirSync(runnerLogs, { withFileTypes: true })
+        .map((entry) => ({ name: entry.name, path: join(runnerLogs, entry.name) }))
+        // Newest-first by modified time (the runner writes date directories).
+        .sort((left, right) => statSync(right.path).mtimeMs - statSync(left.path).mtimeMs);
+      mkdirSync(destination, { recursive: true });
+      let copied = 0;
+      let bytes = 0;
+      let truncated = false;
+      for (const entry of entries) {
+        const size = treeBytes(entry.path);
+        if (bytes + size > LANE_LOG_SWEEP_BYTE_CAP) {
+          truncated = true;
+          break;
+        }
+        cpSync(entry.path, join(destination, entry.name), { recursive: true });
+        bytes += size;
+        copied += 1;
+      }
+      // The destination verification checks the COPIED ENTRIES: existence,
+      // count, and recursive bytes — never a directory the sweep created.
+      const copiedEntries = readdirSync(destination, { withFileTypes: true });
+      const copiedBytes = copiedEntries.reduce(
+        (total, entry) => total + treeBytes(join(destination, entry.name)),
+        0,
+      );
+      if (
+        copiedEntries.length !== copied ||
+        copiedBytes !== bytes ||
+        copiedEntries.some((entry) => !existsSync(join(destination, entry.name)))
+      ) {
+        return {
+          ok: false as const,
+          code: "closeout.lane-log-sweep-failed",
+          detail:
+            `the swept logs are not retrievable at ${destination} ` +
+            `(copied ${String(copied)} entries / ${String(bytes)} bytes, verified ${String(copiedEntries.length)} / ${String(copiedBytes)})`,
+        };
+      }
+      // The swept paths leave the worktree (post-sweep cleanliness); an entry
+      // beyond the byte cap is disclosed as truncated and leaves with the
+      // worktree. The scratch is deleted, never preserved.
+      for (const entry of entries) {
+        rmSync(entry.path, { recursive: true, force: true });
+      }
+      rmSync(runnerLogs, { recursive: true, force: true });
+      rmSync(scratch, { recursive: true, force: true });
+      const postSweepClean =
+        deps.isWorktreeClean === undefined
+          ? undefined
+          : await deps.isWorktreeClean({ path: input.worktreePath });
+      return {
+        ok: true as const,
+        swept: true,
+        destination,
+        ...(postSweepClean === undefined ? {} : { postSweepClean }),
+        ...(truncated ? { truncated: true } : {}),
+      };
+    } catch (error) {
+      return {
+        ok: false as const,
+        code: "closeout.lane-log-sweep-failed",
+        detail:
+          error instanceof Error
+            ? `the lane-log sweep failed: ${error.message}`
+            : "the lane-log sweep failed",
+      };
+    }
+  };
+};
+
 export const createProductionComposer = (facts: ProductionCompositionFacts): EntrypointComposer => {
   return (brand: BrandIdentity, invocation?: EntrypointInvocationFact) => {
     const environment = facts.environment;
@@ -3203,6 +3330,11 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       store,
       git: mergeGit,
       land: mergeLanding,
+      // Review F-3 / Decision 2: a worktree lane's branch is checked out in
+      // its worktree — the post-landing deletion defers as satisfied-by-
+      // closeout (closeout removes the worktree, then deletes the branch).
+      isBranchCheckedOutInLinkedWorktree: async (input) =>
+        mergeGit.isBranchCheckedOutInLinkedWorktree(input),
       landingGap: () => {
         const declared = GITHUB_ADAPTER_CONTRACT.capabilities;
         if (declared.supportedOperations.includes("merge-delivery-request")) {
@@ -3303,46 +3435,13 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
      */
     const closeout = {
       ...closeoutBase,
-      // The lane-log sweep (GH-404 F-6, NFR-5; TC-CLOSEOUT-002): move the
-      // worktree's tmp/tmpdir gate evidence to its state-root destination
-      // BEFORE the worktree is removed — copy to the destination first, delete
-      // the source only after the copy exists, so a failure moves nothing (the
-      // logs stay intact in the worktree and the removal is refused). Zero log
-      // loss; swept logs retrievable at
-      // <state root>/closeout-lane-logs/<work item ref>.
-      sweepLaneLogs: ({
-        workItemRef,
-        worktreePath,
-      }: {
-        readonly workItemRef: string;
-        readonly worktreePath: string;
-      }) => {
-        const source = `${worktreePath}/tmp/tmpdir`;
-        if (!existsSync(source)) return Promise.resolve({ ok: true as const, swept: false });
-        const destination = join(stateDirectory, "closeout-lane-logs", workItemRef);
-        try {
-          mkdirSync(destination, { recursive: true });
-          cpSync(source, destination, { recursive: true });
-          if (!existsSync(destination)) {
-            return Promise.resolve({
-              ok: false as const,
-              code: "closeout.lane-log-sweep-failed",
-              detail: `the swept logs are not retrievable at ${destination}`,
-            });
-          }
-          rmSync(source, { recursive: true, force: true });
-          return Promise.resolve({ ok: true as const, swept: true, destination });
-        } catch (error) {
-          return Promise.resolve({
-            ok: false as const,
-            code: "closeout.lane-log-sweep-failed",
-            detail:
-              error instanceof Error
-                ? `the lane-log sweep failed: ${error.message}`
-                : "the lane-log sweep failed",
-          });
-        }
-      },
+      // The lane-log sweep (review F-2/F-8, Decision 3): the shared production
+      // closure, bound to this state root and the git seam's POST-sweep
+      // cleanliness observation.
+      sweepLaneLogs: createLaneLogSweep({
+        stateDirectory,
+        isWorktreeClean: (input) => gitBranches.isWorktreeClean(input),
+      }),
       planFacts: async (workItemRef: string) => {
         const facts = await closeoutBase.planFacts(workItemRef);
         const declaration = milestoneDeclarationFor(workItemRef);
@@ -3415,13 +3514,28 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       );
 
     /** The bound deny-by-default environment builder over the injected parent environment. */
-    const buildHarnessEnvironment: HarnessEnvironmentBuilder = (descriptor) =>
-      buildHarnessSpawnEnvironment({
+    const buildHarnessEnvironment: HarnessEnvironmentBuilder = (descriptor) => {
+      // F-5 (review): a worktree lane's session receives the composed
+      // environment — the worktree's dependency binaries lead PATH and TMPDIR
+      // anchors inside the worktree (declared entries take precedence over the
+      // parent). Undefined keeps the delivered record byte-for-byte.
+      const worktreeEnvironment =
+        activeLaneEnvironment === undefined
+          ? {}
+          : {
+              PATH: `${activeLaneEnvironment.pathLeadingBin}:${environment.PATH ?? ""}`,
+              TMPDIR: activeLaneEnvironment.gateTemporaryDirectory,
+            };
+      return buildHarnessSpawnEnvironment({
         descriptor,
         parentEnvironment: environment,
         credentials: harnessCredentials,
-        record: { DELIVERY_WORK_PATH: descriptor.workDirectory },
+        record: {
+          DELIVERY_WORK_PATH: descriptor.workDirectory,
+          ...worktreeEnvironment,
+        },
       });
+    };
 
     /**
      * The harness facts the dispatch admission resolved for the run in flight.
@@ -4280,27 +4394,34 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     };
 
     /**
+     * The ACTIVE lane's derived worktree environment (review F-5): set by the
+     * provisioning port on success, read by the descriptor's environment
+     * getters at spawn time (the composition returns the descriptor before
+     * provisioning runs, so the getters evaluate lazily). Undefined keeps the
+     * delivered in-checkout environment byte-for-byte (DEC-8, TC-REG-002).
+     */
+    let activeLaneEnvironment: LaneWorktreeEnvironment | undefined;
+    /**
      * The provision-after-lease implementation (GH-404 F-2, F-3, F-8, DEC-8;
-     * TC-WT-003, TC-ENV-001/002; TC-REG-002): the engine invokes it exactly
-     * once after the repository lease is claimed and before any phase, spawn,
-     * or session. The lane runs in the invoking checkout exactly as today —
+     * review remediation Decision 1 — DETACHED worktree, TC-WT-003,
+     * TC-ENV-001/002; TC-REG-002): the engine invokes it exactly once after
+     * the repository lease is claimed and before any phase, spawn, or
+     * session. The lane runs in the invoking checkout exactly as today —
      * `mode: "in-checkout"`, nothing created or referenced — when the
-     * disable-worktrees exception is set, or when the newest lane record
-     * carries NO worktree context (a pre-change lane resumes under today's
-     * shape and never provisions retroactively, DEC-8). The lane's worktree is
-     * REUSED when the record already carries the context (F-4's reuse — never
-     * a second worktree, NFR-3; the branch verification binds in phase 5's
-     * re-entry) and created-and-provisioned otherwise: the derived sibling
-     * path (or the explicit `lane.worktree-root`), a new branch at the base
-     * tip through the phase-3 seam (fixed argv, no shell, no force; a git
-     * refusal is a refusal, NFR-1), the gate temporary directory created
-     * inside the worktree (DEC-6), and the ordered provisioning steps from the
-     * pinned lockfile — install, then the gate build — each fixed argv, no
-     * shell, zero retries, run with the worktree's dependency binaries leading
-     * PATH and TMPDIR anchored inside the worktree (the phase-2 derived lane
-     * environment; the evidence literal `$PWD/tmp/tmpdir` anchors to the
-     * lane's working directory). The clone's PHYSICAL location is resolved
-     * once here and never through a symlinked alias (NFR-7).
+     * disable-worktrees exception is set, when the newest lane record carries
+     * NO worktree context (pre-change shape, never retroactive provisioning,
+     * DEC-8), or when the newest record is TERMINAL with no context. The
+     * lane's worktree is REUSED (observed verification) when the newest
+     * ACTIVE record carries the context and the worktree still holds the
+     * lane's state; a TERMINAL record WITH context provisions a fresh
+     * worktree for the ref's new lane (closeout removed the old one). The
+     * created worktree is DETACHED at the base tip — no lane branch exists
+     * (Decision 1); a post-creation provisioning failure ROLLS BACK the
+     * just-created worktree via the seam (F-4a) before refusing; the gate
+     * temporary directory is created inside the worktree (DEC-6) and the
+     * ordered provisioning steps run with the worktree's dependency binaries
+     * leading PATH, fixed argv, no shell, zero retries, a declared bound, and
+     * the child's stderr tail surfaced on refusal (F-9/F-11).
      */
     const provisionLaneWorktree = async (input: {
       readonly ref: string;
@@ -4309,52 +4430,84 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       readonly baseRef: string;
       readonly timeoutMs: number;
     }): Promise<DispatchWorktreeProvisioning> => {
+      // Every dispatch re-derives the lane environment: an in-checkout lane
+      // (the exception, a context-less record) must never inherit a previous
+      // lane's worktree PATH/TMPDIR (review F-5).
+      activeLaneEnvironment = undefined;
       if (input.disableWorktrees) return { ok: true, mode: "in-checkout" };
       const lanes = readDispatchLanes(store);
       if (lanes.ok) {
         const latest = latestDispatchLaneFor(lanes.records, input.ref);
-        if (latest !== undefined && latest.worktreePath !== undefined) {
-          // The reuse verification (GH-404 F-4, NFR-3; TC-RESUME-001/002):
-          // the recorded worktree is THE lane's worktree — its existence and
-          // its branch are OBSERVED through the injected child runner, never
-          // assumed, and never re-provisioned. A missing or branch-mismatched
-          // worktree is a lane error naming the problem; the inventory is
-          // untouched either way (zero second worktrees across attempts).
-          const expected = laneWorktreeBranch({ ref: input.ref });
-          if (!existsSync(latest.worktreePath)) {
+        if (latest !== undefined) {
+          // The reuse verification (review F-1, Decision 1): the recorded
+          // worktree is THE lane's worktree — observed, never assumed.
+          // Accepted states: DETACHED at the recorded base (the provisioned
+          // state) or a delivery-convention branch `<type>/<REF>/...` (the
+          // lane's own lifecycle moved the worktree onto its delivery
+          // branch). A genuinely foreign branch refuses.
+          if (latest.worktreePath !== undefined && existsSync(latest.worktreePath)) {
+            const laneGit = createGitBranchSeam({
+              cwd: latest.worktreePath,
+              ...(facts.gitChildRunner === undefined ? {} : { childRunner: facts.gitChildRunner }),
+            });
+            const headCheckout = await laneGit.readCheckout({
+              deliveryBranch: "",
+              baseRef: input.baseRef,
+            });
+            const baseHead = await laneGit.readBranch({ branch: input.baseRef });
+            const detachedAtBase =
+              headCheckout.state === "unrelated" &&
+              headCheckout.branch === undefined &&
+              baseHead !== undefined &&
+              headCheckout.head === baseHead.head;
+            const onConventionBranch =
+              headCheckout.branch !== undefined &&
+              headCheckout.branch !== "HEAD" &&
+              new RegExp(`^[a-z]+/${input.ref}/`, "u").test(headCheckout.branch);
+            if (!detachedAtBase && !onConventionBranch) {
+              return {
+                ok: false,
+                code: "lane-worktree-branch-mismatch",
+                detail:
+                  `the lane worktree ${latest.worktreePath} recorded for ${input.ref} is in state ` +
+                  `${headCheckout.state}${headCheckout.branch === undefined ? "" : ` (${headCheckout.branch})`}, ` +
+                  `neither detached at ${input.baseRef} nor on a ${input.ref} delivery branch; ` +
+                  "resume never moves or re-provisions a worktree",
+              };
+            }
+            // The REUSED lane's session environment (review F-5): the same
+            // derived PATH/TMPDIR the fresh provision binds, so a resumed lane
+            // spawns in its worktree with the worktree's binaries leading.
+            activeLaneEnvironment = deriveLaneWorktreeEnvironment({
+              worktreePath: latest.worktreePath,
+            });
+            return {
+              ok: true,
+              mode: "worktree",
+              worktreePath: latest.worktreePath,
+            };
+          }
+          // An ACTIVE lane whose recorded worktree is missing is a real
+          // problem: the refusal names it and never re-provisions (F-4b).
+          if (latest.worktreePath !== undefined && latest.state === "active") {
             return {
               ok: false,
               code: "lane-worktree-missing",
               detail:
                 `the lane worktree ${latest.worktreePath} recorded for ${input.ref} is missing ` +
-                `(expected branch ${expected}); restore it or close the lane out — resume never re-provisions`,
+                `while the lane is active; restore it or close the lane out — resume never re-provisions`,
             };
           }
-          const observed = await createGitBranchSeam({
-            cwd: latest.worktreePath,
-            ...(facts.gitChildRunner === undefined ? {} : { childRunner: facts.gitChildRunner }),
-          }).readCheckout({ deliveryBranch: expected, baseRef: input.baseRef });
-          if (observed.state !== "delivery-branch") {
-            return {
-              ok: false,
-              code: "lane-worktree-branch-mismatch",
-              detail:
-                `the lane worktree ${latest.worktreePath} recorded for ${input.ref} is on ` +
-                `${observed.branch ?? "no branch (detached)"}, not the lane branch ${expected}; ` +
-                "resume never moves or re-provisions a worktree",
-            };
+          // DEC-8: a record with no worktree context (pre-change) resumes
+          // exactly as today in the invoking checkout and never provisions
+          // retroactively — active or terminal.
+          if (latest.worktreePath === undefined) {
+            return { ok: true, mode: "in-checkout" };
           }
-          return {
-            ok: true,
-            mode: "worktree",
-            worktreePath: latest.worktreePath,
-            branch: expected,
-          };
+          // TERMINAL with context and the worktree already gone (closeout
+          // removed it, review F-4b): the fresh provision below serves the
+          // ref's NEW lane.
         }
-        // A recorded lane without the worktree context is the pre-change shape
-        // (DM-1's additive absence): it resumes exactly as today in the
-        // invoking checkout and never provisions retroactively (DEC-8).
-        if (latest !== undefined) return { ok: true, mode: "in-checkout" };
       }
       let physicalCheckoutRoot: string;
       try {
@@ -4379,51 +4532,108 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       // The composer's ONE injected seam instance (the same child runner every
       // other git seam in this composition uses): provisioning never spawns a
       // second, un-injected runner, so a composition that injects a runner
-      // stays hermetic end to end.
+      // stays hermetic end to end. The worktree is created DETACHED at the
+      // base tip (Decision 1): no lane branch exists, so a post-creation
+      // failure rolls the worktree back with removeWorktree and nothing else
+      // (F-4a).
       const created = await gitBranches.addWorktree({
         path: placement.worktreePath,
-        newBranch: placement.branch,
         baseRef: input.baseRef,
       });
       if (!created.ok) {
         return { ok: false, code: created.code, detail: created.detail };
       }
-      try {
-        mkdirSync(laneEnvironment.gateTemporaryDirectory, { recursive: true });
-      } catch {
+      const rollback = async (
+        code: string,
+        detail: string,
+      ): Promise<DispatchWorktreeProvisioning> => {
+        // F-4a: the worktree this attempt created is removed before the
+        // refusal — no orphaned worktree, no wedged ref (no lane branch
+        // exists per Decision 1). A refused removal is disclosed, never
+        // hidden: the operator learns the exact path that needs cleanup.
+        const removed = await gitBranches.removeWorktree({ path: placement.worktreePath });
         return {
           ok: false,
-          code: "worktree-provision-refused",
-          detail: `the gate temporary directory ${laneEnvironment.gateTemporaryDirectory} could not be created`,
+          code,
+          detail: removed.ok
+            ? detail
+            : `${detail}; the created worktree ${placement.worktreePath} could not be rolled back (${removed.detail})`,
         };
-      }
+      };
       const parentPath = environment.PATH ?? "";
       const stepEnvironment: Readonly<Record<string, string>> = {
         PATH: `${laneEnvironment.pathLeadingBin}:${parentPath}`,
         TMPDIR: laneEnvironment.gateTemporaryDirectory,
       };
-      for (const step of [
-        { file: "pnpm", args: ["install", "--frozen-lockfile"], label: "dependency install" },
-        { file: "pnpm", args: ["run", "build"], label: "gate build" },
-      ] as const) {
+      // F-13: production consumes the DECLARED ordered provisioning steps (the
+      // domain's one ordering vocabulary) and the declared install command, so
+      // the sequence and the label cannot drift from the declaration: the gate
+      // temporary directory first (the lane environment's TMPDIR anchor), then
+      // the lockfile install, then the gate build.
+      const installArgv = LANE_WORKTREE_INSTALL_COMMAND.split(" ");
+      const installFile = installArgv[0] ?? "pnpm";
+      const stepPlan: Readonly<
+        Record<
+          LaneProvisioningStep,
+          { readonly file: string; readonly args: readonly string[]; readonly label: string }
+        >
+      > = {
+        "create-gate-temporary-directory": {
+          file: "",
+          args: [],
+          label: "gate temporary directory",
+        },
+        "install-dependencies": {
+          file: installFile,
+          args: installArgv.slice(1),
+          label: "dependency install",
+        },
+        "build-gate-prerequisites": {
+          file: installFile,
+          args: ["run", "build"],
+          label: "gate build",
+        },
+      };
+      for (const declaredStep of LANE_PROVISIONING_STEPS) {
+        const step = stepPlan[declaredStep];
+        if (declaredStep === "create-gate-temporary-directory") {
+          try {
+            mkdirSync(laneEnvironment.gateTemporaryDirectory, { recursive: true });
+          } catch {
+            return rollback(
+              "worktree-provision-refused",
+              `the gate temporary directory ${laneEnvironment.gateTemporaryDirectory} could not be created`,
+            );
+          }
+          continue;
+        }
         const ran = await harnessSpawnRunner(step.file, [...step.args], {
           cwd: laneEnvironment.workingDirectory,
           env: stepEnvironment,
           timeout: input.timeoutMs,
         });
         if (ran.status !== 0) {
-          return {
-            ok: false,
-            code: "worktree-provision-refused",
-            detail: `the ${step.label} failed in ${laneEnvironment.workingDirectory} (exit ${ran.status})`,
-          };
+          // F-9/F-11: the refusal names the step, the bound, the timeout fact,
+          // and a bounded stderr tail — the operator sees WHY the child died.
+          const stderrTail =
+            ran.stderr.trim().length === 0
+              ? ""
+              : ` stderr: ${ran.stderr.trim().slice(-LANE_PROVISIONING_STDERR_TAIL_CHARS)}`;
+          return rollback(
+            "worktree-provision-refused",
+            `the ${step.label} (${declaredStep}) failed in ${laneEnvironment.workingDirectory} ` +
+              `(${ran.timedOut ? "timed out" : `exit ${String(ran.status)}`} after a ${String(input.timeoutMs)} ms bound)${stderrTail}`,
+          );
         }
       }
+      // The active lane environment for the session descriptor (F-5): the
+      // worktree's dependency binaries lead PATH and TMPDIR anchors inside
+      // the worktree for every spawn and resume of this lane.
+      activeLaneEnvironment = laneEnvironment;
       return {
         ok: true,
         mode: "worktree",
         worktreePath: placement.worktreePath,
-        branch: placement.branch,
       };
     };
 
@@ -4453,10 +4663,33 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       defaultHarness: settings.kind,
       harnessAdmission: dispatchHarnessAdmission(settings),
       harnessFacts: () => dispatchHarnessFacts,
+      // F-5 (review): the descriptor's getters evaluate lazily at spawn time —
+      // AFTER the provision-after-lease port has run — so a worktree lane's
+      // session works in the worktree with the worktree's dependency binaries
+      // leading PATH and TMPDIR anchored inside it, while an in-checkout lane
+      // (and every pre-provisioning read) sees the delivered values
+      // byte-for-byte (DEC-8, TC-REG-002).
       descriptor: {
-        kind: settings.executionKind,
-        workDirectory: cwd,
-        environment: harnessEnvironmentEntries(settings),
+        get kind(): HarnessExecutionKind {
+          return settings.executionKind;
+        },
+        get workDirectory(): string {
+          return activeLaneEnvironment?.workingDirectory ?? cwd;
+        },
+        get environment(): readonly HarnessEnvironmentEntry[] {
+          const declared = harnessEnvironmentEntries(settings);
+          // The record channel (buildHarnessSpawnEnvironment: declared values
+          // take precedence) composes PATH with the worktree bin leading it;
+          // declaring TMPDIR anchors the scratch inside the worktree. Both are
+          // bound through buildHarnessEnvironment's record below.
+          return activeLaneEnvironment === undefined
+            ? declared
+            : [
+                ...declared,
+                { kind: "variable" as const, name: "PATH" },
+                { kind: "variable" as const, name: "TMPDIR" },
+              ];
+        },
       },
       // GH-347 F-7, DEC-8: the fresh prompt is the delivery-lifecycle prompt
       // parameterized by the ref and the RESOLVED base branch.
@@ -4501,14 +4734,6 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         });
         return released.ok;
       },
-      // The provision-after-lease binding (GH-404 F-2/F-8, TC-WT-003,
-      // TC-REG-002): the engine claims the repository lease BEFORE this port
-      // runs — the lease-first order is unchanged (NG-2). With the
-      // disable-worktrees exception set the port is ABSENT, so the lane runs
-      // in the invoking checkout byte-for-byte as today; the escape hatch and
-      // the default bind at this one seam. The provisioning is measured once
-      // per lane as delivery evidence (NFR-9, TC-ENV-004), never asserted by
-      // a suite.
       // The provision-after-lease binding (GH-404 F-2/F-8, DEC-8, TC-WT-003,
       // TC-REG-002): the engine claims the repository lease BEFORE this port
       // runs — the lease-first order is unchanged (NG-2). The port honours the
@@ -4516,9 +4741,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       // disable-worktrees set, or for a recorded lane without worktree
       // context, it answers in-checkout and nothing is created or referenced;
       // otherwise the lane's worktree is reused or created-and-provisioned.
-      // The provisioning is measured once per lane as delivery evidence
-      // (NFR-9, TC-ENV-004), never asserted by a suite.
       provisionWorktree: (ref: string) => {
+        // F-17(b): the daemon/coordinator lane path is not worktree-scoped in
+        // this change — default-on means `dispatch <ref>` (GH-412 territory).
+        // F-17(c): the install/build commands are pinned (OQ-1 settled).
+        // F-17(a): DEC-8 keys on the newest lane record (transitional
+        // population, spec §19).
         const configuredWorktreeRoot = lane.worktreeRoot;
         return provisionLaneWorktree({
           ref,

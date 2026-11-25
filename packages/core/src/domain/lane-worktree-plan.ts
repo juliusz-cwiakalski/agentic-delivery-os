@@ -4,19 +4,36 @@
  * Pure domain over injected, already-resolved PHYSICAL paths: the
  * deterministic worktree path scheme `<worktree-root>/<checkout-basename>-<ref>`,
  * the sibling-of-main-checkout default root, the ordered provisioning steps
- * executed strictly before the first lane phase, and the lane-environment
- * derivation (the worktree's dependency binaries lead `PATH`, the gate
- * temporary directory anchored inside the worktree with the evidence literal
- * `$PWD/tmp/tmpdir` unchanged because the lane's working directory IS the
- * worktree). No I/O, no spawn, no clock, no configuration reads; symlinked
- * aliases never enter — callers resolve real paths before calling.
+ * executed strictly before the first lane phase, the lane-log sweep scope with
+ * its declared byte cap (Decision 3: the lane's logs are the runner-log
+ * directories; the gate temporary directory is ephemeral scratch, deleted
+ * with the worktree), and the lane-environment derivation (the worktree's
+ * dependency binaries lead `PATH`, the gate temporary directory anchored
+ * inside the worktree with the evidence literal `$PWD/tmp/tmpdir` unchanged
+ * because the lane's working directory IS the worktree). No I/O, no spawn, no
+ * clock, no configuration reads; symlinked aliases never enter — callers
+ * resolve real paths before calling.
+ *
+ * Branch model (review remediation, Decision 1): the lane worktree is
+ * provisioned DETACHED at the base tip and NO lane branch is ever created.
+ * The lane's own lifecycle creates its delivery branch
+ * `<type>/<REF>/<slug>` inside the worktree per the repository convention;
+ * resume verification accepts the provisioned detached state or a
+ * delivery-convention branch and refuses genuinely foreign branches
+ * (production binds the verification).
  */
 
-/** The ordered provisioning steps, executed in this order before `clarify_scope`. */
+/**
+ * The ordered provisioning steps, executed in this order before
+ * `clarify_scope` (review F-13: the declared order IS the production order —
+ * the gate temporary directory first, because the lane environment's TMPDIR
+ * anchor must exist before the install and build children run; then the
+ * lockfile install, then the gate build).
+ */
 export const LANE_PROVISIONING_STEPS = [
+  "create-gate-temporary-directory",
   "install-dependencies",
   "build-gate-prerequisites",
-  "create-gate-temporary-directory",
 ] as const;
 
 export type LaneProvisioningStep = (typeof LANE_PROVISIONING_STEPS)[number];
@@ -29,6 +46,33 @@ export const LANE_WORKTREE_INSTALL_COMMAND = "pnpm install --frozen-lockfile" as
 
 /** The evidence literal the pm-notes convention keeps; the physical resolution anchors to the lane's worktree (DEC-6). */
 export const GATE_TEMPORARY_DIRECTORY_EVIDENCE_LITERAL = "$PWD/tmp/tmpdir" as const;
+
+/**
+ * The lane-log sweep's declared byte cap (Decision 3, review F-2): the newest
+ * runner-log entries are copied newest-first until this many bytes, and a
+ * truncated sweep discloses the fact. The gate temporary directory is
+ * scratch by contract and is never swept.
+ */
+export const LANE_LOG_SWEEP_BYTE_CAP = 33_554_432;
+
+/**
+ * The bounded stderr tail a provisioning refusal surfaces (review F-9): the
+ * child's own stderr tail, so the operator sees why the install or build
+ * died without dumping an unbounded log.
+ */
+export const LANE_PROVISIONING_STDERR_TAIL_CHARS = 400;
+
+/**
+ * The runner-log directory the product's runner contract defines (the lane's
+ * real logs); the sweep copies it newest-first, bounded by the declared cap.
+ */
+export const LANE_RUNNER_LOG_DIRECTORY = "run-logs-runner" as const;
+
+/**
+ * The ephemeral scratch directory (the evidence literal's physical anchor):
+ * deleted with the worktree at closeout, never preserved.
+ */
+export const LANE_SCRATCH_DIRECTORY = "tmp/tmpdir" as const;
 
 const trimTrailingSeparators = (value: string): string => value.replace(/[\\/]+$/u, "");
 
@@ -75,9 +119,6 @@ export const laneWorktreePath = (input: {
 }): string =>
   `${trimTrailingSeparators(input.worktreeRoot)}/${checkoutBasenameOf(input.physicalCheckoutRoot)}-${input.ref}`;
 
-/** The new branch every lane worktree is created on, at the tip of the base branch (F-2). */
-export const laneWorktreeBranch = (input: { readonly ref: string }): string => `lane/${input.ref}`;
-
 /** The derived lane environment for one worktree lane (F-3). */
 export type LaneWorktreeEnvironment = {
   /** The lane's working directory: its worktree. */
@@ -96,6 +137,6 @@ export const deriveLaneWorktreeEnvironment = (input: {
 }): LaneWorktreeEnvironment => ({
   workingDirectory: input.worktreePath,
   pathLeadingBin: `${input.worktreePath}/node_modules/.bin`,
-  gateTemporaryDirectory: `${input.worktreePath}/tmp/tmpdir`,
+  gateTemporaryDirectory: `${input.worktreePath}/${LANE_SCRATCH_DIRECTORY}`,
   gateTemporaryDirectoryEvidenceLiteral: GATE_TEMPORARY_DIRECTORY_EVIDENCE_LITERAL,
 });

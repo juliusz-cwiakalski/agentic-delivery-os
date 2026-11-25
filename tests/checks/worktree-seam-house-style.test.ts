@@ -13,23 +13,41 @@ import { createGitBranchSeam, type GitChildRunnerResult } from "@delivery-os/ada
 
 const SEAM_SOURCE = readFileSync(join(process.cwd(), "packages/adapters/src/git/index.ts"), "utf8");
 
+/**
+ * The scan the assertions run (review F-14): the same predicate over the live
+ * source and over planted canary text, so the control actually executes the
+ * scan instead of asserting on a concatenated string.
+ */
+const scanSeamSource = (source: string): readonly string[] => {
+  const problems: string[] = [];
+  if (source.includes("execSync") || source.includes("spawnSync")) {
+    problems.push("shell invocation in the seam module");
+  }
+  if (source.includes('"--force"') || source.includes("'--force'")) {
+    problems.push("force flag token in the seam module");
+  }
+  if (source.includes("fetch(")) {
+    problems.push("network call in the seam module");
+  }
+  if (!/"worktree",\s*"add",\s*"--detach"/su.test(source)) {
+    problems.push("the addWorktree argv is not the declared detached form");
+  }
+  return problems;
+};
+
 describe("TC-WT-002 the addWorktree seam house style", () => {
   test("the create path carries no shell, no force flag, and no network", () => {
     // The seam module is spawn-only over execFile with fixed argv arrays; the
     // create path adds no shell string, no force token, and no network call.
-    expect(SEAM_SOURCE.includes("execSync") || SEAM_SOURCE.includes("spawnSync")).toBe(false);
-    expect(SEAM_SOURCE.includes('"--force"')).toBe(false);
-    expect(SEAM_SOURCE.includes("'--force'")).toBe(false);
-    expect(SEAM_SOURCE.includes("fetch(")).toBe(false);
-    // The addWorktree argv is exactly the declared fixed form (whitespace-
-    // tolerant match: the formatter may wrap the argv array).
-    expect(/"worktree",\s*"add",\s*"-b"/su.test(SEAM_SOURCE)).toBe(true);
+    expect(scanSeamSource(SEAM_SOURCE)).toEqual([]);
   });
 
   test("planted canaries make the scan fail and stay contained", () => {
     const planted = `${SEAM_SOURCE}\nconst CANARY_FORCE = "--force";\nconst CANARY_SHELL = execSync("echo planted");\n`;
-    expect(planted.includes('"--force"')).toBe(true);
-    expect(planted.includes("execSync")).toBe(true);
+    const problems = scanSeamSource(planted);
+    // The scan REJECTS the planted text: every planted canary is named.
+    expect(problems.some((problem) => problem.includes("force flag"))).toBe(true);
+    expect(problems.some((problem) => problem.includes("shell invocation"))).toBe(true);
     // The canaries live only in this test's string; the scanned file is
     // untouched (containment).
     expect(SEAM_SOURCE.includes("CANARY_FORCE")).toBe(false);
@@ -52,7 +70,6 @@ describe("TC-WT-002 the addWorktree seam house style", () => {
     });
     const refused = await seam.addWorktree({
       path: "/gh404-refusal-matrix/wt",
-      newBranch: "lane/GH-4",
       baseRef: "main-tools",
     });
     expect(refused.ok).toBe(false);
@@ -63,7 +80,7 @@ describe("TC-WT-002 the addWorktree seam house style", () => {
     // Exactly ONE git invocation for the refusal — zero retries, zero
     // fallbacks, zero overrides.
     expect(calls).toHaveLength(1);
-    expect(calls[0]).toBe("worktree add -b lane/GH-4 /gh404-refusal-matrix/wt main-tools");
+    expect(calls[0]).toBe("worktree add --detach /gh404-refusal-matrix/wt main-tools");
   });
 
   test("the seam-side validations refuse before any git call", async () => {
@@ -89,16 +106,6 @@ describe("TC-WT-002 the addWorktree seam house style", () => {
       ok: false,
       code: "plan-restriction",
       detail: "unsafe worktree path",
-    });
-    const unsafeBranch = await seam.addWorktree({
-      path: "/gh404-validation/wt",
-      newBranch: "-leading-dash",
-      baseRef: "base",
-    });
-    expect(unsafeBranch).toEqual({
-      ok: false,
-      code: "plan-restriction",
-      detail: "unsafe new branch name",
     });
     // The validations refused before any git invocation.
     expect(calls).toEqual([]);

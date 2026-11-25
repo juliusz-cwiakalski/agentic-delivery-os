@@ -7,7 +7,6 @@
  * union is the declared contract set and contains no force-capable variant.
  */
 import { execFile } from "node:child_process";
-import { dirname } from "node:path";
 import {
   MERGE_GIT_OPERATIONS,
   type MergeGitOperation,
@@ -96,6 +95,16 @@ export type GitMergeSeam = {
     readonly branch: string;
     readonly baseRef: string;
   }) => Promise<MergeGitRefreshResult>;
+  /**
+   * Whether the resolved branch is checked out in a LINKED worktree (review
+   * F-3, Decision 2): the post-landing deletion defers as satisfied-by-
+   * closeout when it is — closeout's delivered order removes the worktree,
+   * then deletes the branch. A structural worktree-list read; false when the
+   * listing is unavailable.
+   */
+  readonly isBranchCheckedOutInLinkedWorktree: (input: {
+    readonly branch: string;
+  }) => Promise<boolean>;
   readonly squashLand: (input: {
     readonly branch: string;
     readonly baseRef: string;
@@ -207,41 +216,44 @@ export const createGitMergeSeam = (options: GitMergeSeamOptions = {}): GitMergeS
       : { outcome: "succeeded", oldSha: before, newSha: after };
   };
 
+  const isBranchCheckedOutInLinkedWorktree: GitMergeSeam["isBranchCheckedOutInLinkedWorktree"] =
+    async (input) => {
+      const porcelain = await git(["worktree", "list", "--porcelain"]);
+      if (porcelain.status !== 0) return false;
+      const common = await git(["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+      if (common.status !== 0) return false;
+      const commonDir = common.stdout.trim().replace(/\/+$/u, "");
+      for (const block of porcelain.stdout.split("\n\n")) {
+        const path = block
+          .split("\n")
+          .find((line) => line.startsWith("worktree "))
+          ?.slice("worktree ".length);
+        if (path === undefined || path.trim().length === 0) continue;
+        // The main checkout is the block whose OWN git directory equals the
+        // common directory (review F-3 with F-12's resolved-equality rule);
+        // every other block is linked. A resolution failure falls back to the
+        // standard `<worktree>/.git` layout.
+        const resolved = await git(["-C", path.trim(), "rev-parse", "--absolute-git-dir"]);
+        const ownGitDir = (
+          resolved.status === 0 ? resolved.stdout.trim() : `${path.replace(/\/+$/u, "")}/.git`
+        ).replace(/\/+$/u, "");
+        if (ownGitDir === commonDir) continue;
+        if (block.includes(`branch refs/heads/${input.branch}`)) return true;
+      }
+      return false;
+    };
+
   const squashLand: GitMergeSeam["squashLand"] = async (input) => {
     if (!isSafeRef(input.branch) || !isSafeRef(input.baseRef)) {
       return { ok: false, code: "plan-restriction" };
     }
     const baseBefore = await readBranchHead(input.baseRef);
     if (baseBefore === undefined) return { ok: false, code: "base-unresolved" };
-    // The worktree-invocation landing (GH-404 F-6, AC-F6-1, TC-CLOSEOUT-001):
-    // the change lands normally whether merge is invoked from the worktree or
-    // the main checkout. The structural rule decides the landing directory —
-    // a checkout is the main checkout exactly when its top level is the common
-    // directory's parent (the delivered linked-only reading, GH-404 F-10) —
-    // and a LINKED-worktree invocation lands with `-C <main checkout>`: the
-    // base branch lives in the main checkout (parked on base per the
-    // worktree-lane premise), so the squash reaches base exactly as a
-    // main-checkout invocation does. A plain checkout from the worktree is
-    // refused by git with already-used-by-worktree (verified empirically), and
-    // the detach alternative was rejected empirically: its squash commit
-    // records on the detached head, never advancing base (containedOnBase
-    // false) — the change would not land. A main-checkout invocation keeps the
-    // delivered argv byte-for-byte (no prefix).
-    const toplevel = (await git(["rev-parse", "--show-toplevel"])).stdout.trim();
-    const commonDir = (
-      await git(["rev-parse", "--path-format=absolute", "--git-common-dir"])
-    ).stdout.trim();
-    const mainCheckout = dirname(commonDir);
-    const landingPrefix =
-      toplevel.replace(/\/+$/u, "") === mainCheckout.replace(/\/+$/u, "")
-        ? []
-        : ["-C", mainCheckout];
-    const checkout = await git([...landingPrefix, "checkout", input.baseRef]);
+    const checkout = await git(["checkout", input.baseRef]);
     if (checkout.status !== 0) return { ok: false, code: "checkout-failed" };
-    const merge = await git([...landingPrefix, "merge", "--squash", input.branch]);
+    const merge = await git(["merge", "--squash", input.branch]);
     if (merge.status !== 0) return { ok: false, code: "squash-failed" };
     const commit = await git([
-      ...landingPrefix,
       "commit",
       "--no-verify",
       "--no-gpg-sign",
@@ -249,12 +261,7 @@ export const createGitMergeSeam = (options: GitMergeSeamOptions = {}): GitMergeS
       input.message.length === 0 ? "Squash merge" : input.message,
     ]);
     if (commit.status !== 0) return { ok: false, code: "commit-failed" };
-    // The landing HEAD is read in the LANDING directory: a linked-worktree
-    // invocation records the squash on the main checkout's base, and the
-    // invoking worktree's own HEAD is stale by definition.
-    const landed = await git([...landingPrefix, "rev-parse", "HEAD"]);
-    const squashSha =
-      landed.status === 0 && isSafeSha(trim(landed.stdout)) ? trim(landed.stdout) : undefined;
+    const squashSha = await head();
     if (squashSha === undefined) return { ok: false, code: "landing-unresolved" };
     const contained = await isContained(squashSha, input.baseRef);
     return {
@@ -278,6 +285,7 @@ export const createGitMergeSeam = (options: GitMergeSeamOptions = {}): GitMergeS
 
   return {
     head,
+    isBranchCheckedOutInLinkedWorktree,
     resolveRef: async (ref) => {
       if (!isSafeRef(ref)) return false;
       const result = await git(["rev-parse", "--verify", ref]);

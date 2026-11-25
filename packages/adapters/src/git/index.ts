@@ -75,9 +75,10 @@ export type GitMutationResult =
 /**
  * One worktree creation outcome (GH-404 F-1, NFR-1): a typed refusal for every
  * git refusal — zero retries, zero fallbacks, zero overrides, no force path.
+ * The created worktree is DETACHED at the base tip (review Decision 1).
  */
 export type GitWorktreeAddResult =
-  | { readonly ok: true; readonly path: string; readonly branch: string }
+  | { readonly ok: true; readonly path: string; readonly base: string }
   | {
       readonly ok: false;
       /** `plan-restriction` is the seam's own input validation; `worktree-add-refused` is a git refusal. */
@@ -133,15 +134,15 @@ export type GitBranchSeam = {
   /** List local worktrees from `worktree list --porcelain` (read-only). */
   readonly listWorktrees: () => Promise<readonly GitWorktreeFact[]>;
   /**
-   * Create one LINKED worktree on a new branch at the tip of the given base
-   * branch (GH-404 F-1, NFR-1): fixed argv, no shell, local only, NO force
-   * flag. Every git refusal — the branch exists, the path exists, an unsafe
-   * parent, anything else — surfaces as a typed refusal: zero retries, zero
-   * fallbacks, zero overrides.
+   * Create one LINKED worktree DETACHED at the tip of the given base branch
+   * (GH-404 F-1, NFR-1; review Decision 1 — NO lane branch is ever created;
+   * the lane's own lifecycle creates its delivery branch inside the
+   * worktree): fixed argv, no shell, local only, NO force flag. Every git
+   * refusal — the path exists, an unsafe parent, anything else — surfaces as
+   * a typed refusal: zero retries, zero fallbacks, zero overrides.
    */
   readonly addWorktree: (input: {
     readonly path: string;
-    readonly newBranch: string;
     readonly baseRef: string;
   }) => Promise<GitWorktreeAddResult>;
   /** The repository's top-level working directory (local read only). */
@@ -266,16 +267,22 @@ const mainGitDirOf = (checkoutPath: string): string => `${normalizeListingPath(c
 
 /**
  * Parse one `worktree list --porcelain` output with the POSITION-INDEPENDENT
- * linked-only reading (GH-404 F-10, DEC-5): a porcelain block is the main
- * checkout exactly when its git directory is the repository's common
- * directory — the main worktree's git dir IS `<main-checkout>/.git`, which is
- * the common dir, while every linked worktree's git dir lives under the
- * common dir's `worktrees/` segment. The main checkout is excluded from the
- * linked inventory and linked worktrees are included regardless of block
- * order. `commonDir` must be the absolute common directory (the seam reads it
- * with `rev-parse --path-format=absolute --git-common-dir`).
+ * linked-only reading (GH-404 F-10, DEC-5; review F-12): a porcelain block is
+ * the main checkout exactly when ITS OWN git directory equals the
+ * repository's common directory. The default resolver encodes the standard
+ * layout (`<checkout>/.git`); the seam passes a resolver that RESOLVES each
+ * block's real git directory (one bounded `rev-parse --absolute-git-dir` per
+ * block) so separate-git-dir and submodule main checkouts classify correctly.
+ * The main checkout is excluded from the linked inventory and linked
+ * worktrees are included regardless of block order. `commonDir` must be the
+ * absolute common directory (the seam reads it with
+ * `rev-parse --path-format=absolute --git-common-dir`).
  */
-export const parseWorktreeListing = (porcelain: string, commonDir: string): WorktreeListing => {
+export const parseWorktreeListing = (
+  porcelain: string,
+  commonDir: string,
+  resolveGitDir: (checkoutPath: string) => string = mainGitDirOf,
+): WorktreeListing => {
   const commonDirPath = normalizeListingPath(commonDir);
   const linked: GitWorktreeFact[] = [];
   let mainCheckoutPath: string | undefined;
@@ -288,7 +295,7 @@ export const parseWorktreeListing = (porcelain: string, commonDir: string): Work
     // worktree: it is skipped entirely (the delivered positional reading
     // dropped it the same way).
     if (bare) continue;
-    if (mainGitDirOf(path) === commonDirPath) {
+    if (normalizeListingPath(resolveGitDir(normalizeListingPath(path))) === commonDirPath) {
       mainCheckoutPath = normalizeListingPath(path);
       continue;
     }
@@ -323,6 +330,25 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
       throw new Error(`git ${operation} failed (${result.timedOut ? "timeout" : result.status})`);
     }
     return result.stdout;
+  };
+
+  // F-12: resolve every porcelain block's OWN git directory (one bounded
+  // `rev-parse --absolute-git-dir` per block) so separate-git-dir and
+  // submodule main checkouts classify by resolved equality, not layout.
+  const resolveBlockGitDirs = async (
+    porcelain: string,
+  ): Promise<(checkoutPath: string) => string> => {
+    const resolved = new Map<string, string>();
+    for (const block of porcelain.split("\n\n")) {
+      const path = block
+        .split("\n")
+        .find((line) => line.startsWith("worktree "))
+        ?.slice("worktree ".length);
+      if (path === undefined || path.trim().length === 0) continue;
+      const dir = await git(["-C", path.trim(), "rev-parse", "--absolute-git-dir"]);
+      if (dir.status === 0) resolved.set(path.trim(), dir.stdout.trim());
+    }
+    return (checkoutPath: string) => resolved.get(checkoutPath) ?? mainGitDirOf(checkoutPath);
   };
 
   const restore = async (value: string): Promise<GitMutationResult> => {
@@ -424,14 +450,16 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
     },
     isCheckedOutElsewhere: async (input) => {
       if (!isSafeRef(input.branch)) return false;
+      const porcelain = await stdoutOrThrow(["worktree", "list", "--porcelain"], "worktrees");
       const listing = parseWorktreeListing(
-        await stdoutOrThrow(["worktree", "list", "--porcelain"], "worktrees"),
+        porcelain,
         (
           await stdoutOrThrow(
             ["rev-parse", "--path-format=absolute", "--git-common-dir"],
             "common-dir",
           )
         ).trim(),
+        await resolveBlockGitDirs(porcelain),
       );
       return listing.linked.some((fact) => fact.branch === input.branch);
     },
@@ -462,14 +490,16 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
       return { text, files, truncated };
     },
     listWorktrees: async () => {
+      const porcelain = await stdoutOrThrow(["worktree", "list", "--porcelain"], "worktrees");
       const listing = parseWorktreeListing(
-        await stdoutOrThrow(["worktree", "list", "--porcelain"], "worktrees"),
+        porcelain,
         (
           await stdoutOrThrow(
             ["rev-parse", "--path-format=absolute", "--git-common-dir"],
             "common-dir",
           )
         ).trim(),
+        await resolveBlockGitDirs(porcelain),
       );
       return listing.linked;
     },
@@ -477,22 +507,12 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
       if (!input.path.startsWith("/") || input.path.includes("\0") || input.path.endsWith("/")) {
         return { ok: false, code: "plan-restriction", detail: "unsafe worktree path" };
       }
-      if (!isSafeRef(input.newBranch)) {
-        return { ok: false, code: "plan-restriction", detail: "unsafe new branch name" };
-      }
       if (!isSafeRef(input.baseRef)) {
         return { ok: false, code: "plan-restriction", detail: "unsafe base ref" };
       }
-      const result = await git([
-        "worktree",
-        "add",
-        "-b",
-        input.newBranch,
-        input.path,
-        input.baseRef,
-      ]);
+      const result = await git(["worktree", "add", "--detach", input.path, input.baseRef]);
       if (result.status === 0) {
-        return { ok: true, path: input.path, branch: input.newBranch };
+        return { ok: true, path: input.path, base: input.baseRef };
       }
       return {
         ok: false,

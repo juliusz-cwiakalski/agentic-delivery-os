@@ -302,6 +302,58 @@ describe("TC-CONFIG-GH404 the lane worktree worker settings (DM-3, DM-4)", () =>
     expect(lane.value.disableWorktrees).toBeUndefined();
   });
 
+  test("a relative or tilde worktree-root is refused at the config boundary (review F-10)", () => {
+    for (const invalidRoot of ["relative/path", "~/worktrees"]) {
+      const resolved = resolveConfig({
+        sources: [
+          fileFacts(
+            "project-local",
+            {
+              lane: {
+                "liveness-interval": 30000,
+                "restart-budget": 3,
+                "worktree-root": invalidRoot,
+              },
+            },
+            11,
+          ),
+        ],
+      });
+      expect(resolved.ok, invalidRoot).toBe(true);
+      if (!resolved.ok) continue;
+      // The semantic refusal binds in resolveLaneSettings (the typed lane
+      // settings resolver), naming the key.
+      const lane = resolveLaneSettings(resolved.value.values, resolved.value.origins);
+      expect(lane.ok, invalidRoot).toBe(false);
+      if (!lane.ok) {
+        expect(lane.error.code).toBe("config.value.invalid");
+        expect(lane.error.key).toBe("lane.worktree-root");
+      }
+    }
+    // The trimmed absolute value resolves.
+    const absolute = resolveConfig({
+      sources: [
+        fileFacts(
+          "project-local",
+          {
+            lane: {
+              "liveness-interval": 30000,
+              "restart-budget": 3,
+              "worktree-root": "  /absolute/wt  ",
+            },
+          },
+          11,
+        ),
+      ],
+    });
+    expect(absolute.ok).toBe(true);
+    if (absolute.ok) {
+      const lane = resolveLaneSettings(absolute.value.values, absolute.value.origins);
+      expect(lane.ok).toBe(true);
+      if (lane.ok) expect(lane.value.worktreeRoot).toBe("/absolute/wt");
+    }
+  });
+
   test("wrong types fail closed naming the key", () => {
     for (const values of [
       { lane: { "liveness-interval": 30000, "restart-budget": 3, "worktree-root": 42 } },

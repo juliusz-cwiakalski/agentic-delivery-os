@@ -49,15 +49,54 @@ const BASE = join(process.cwd(), "tmp", "tmpdir");
  * minimal branch nominates `base` over the one clear provider, letting each
  * suite reach the credential, preflight, and truth paths it actually pins.
  *
- * GH-404 (conditional re-pin, phase 4): the fixture sandboxes pin today's
- * in-checkout delivery shape, so the document also sets the disable-worktrees
- * exception — with worktree lanes default-on, the fixture's dispatch suites
- * run the first-class exception mode (F-8) and stay hermetic; the DEFAULT
- * worktree composition is pinned by the dedicated lifecycle suites
- * (TC-ENV-001/002, TC-WT-003), which stub install/build per the testing
- * strategy and do not use this fixture.
+ * GH-404 (review F-6 re-work): the fixture sandboxes that pin the in-checkout
+ * delivery shape set the disable-worktrees exception here; the DEFAULT-mode
+ * production composition is pinned by
+ * tests/behaviour/dispatch-production-worktree.test.ts, which builds its own
+ * default-mode document (no exception flag) and does not consume this
+ * fixture's document.
  */
 export const PROVIDER_PROFILES_CONFIG_FILE = "config.yaml";
+
+/**
+ * The DEFAULT-mode document (review F-6): the delivered provider profiles
+ * WITHOUT the disable-worktrees exception — the worktree-lane default
+ * composition. Suites pinning the in-checkout shape keep
+ * `PROVIDER_PROFILES_CONFIG` (the exception); default-mode suites write this
+ * document instead.
+ */
+export const DEFAULT_MODE_PROVIDER_PROFILES_CONFIG = `provider:
+  defaultChain: default
+  credentials:
+    provider-a:
+      sourceKey:
+        style: literal
+        name: PROVIDER_A_KEY
+  entries:
+    provider-a:
+      class: subscription
+  chains:
+    default:
+      entries:
+        - provider-a
+      allowPaidFallback: false
+  profiles:
+    tiers:
+      build: {}
+    profiles:
+      base:
+        tier: build
+        providers:
+          - provider-a
+        seats:
+          pm:
+            model: provider-a/model-large
+            pacingClass: judgment
+            capability: text-only
+    preferenceChain:
+      base: base
+      fallbacks: []
+`;
 
 export const PROVIDER_PROFILES_CONFIG = `provider:
   defaultChain: default

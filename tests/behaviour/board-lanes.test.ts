@@ -6,6 +6,7 @@ import { describe, expect, test } from "bun:test";
 import { newestDispatchLaneWorktreePaths } from "../../packages/core/src/app/dispatch-lane-view";
 import {
   BOARD_LANE_PHASE_UNKNOWN_REASONS,
+  OWNER_GATE_SLA_POLICY,
   type DispatchLaneRecord,
 } from "../../packages/core/src/contracts/index";
 import { boardLanes, createBoardHarness } from "../fixtures/board/harness";
@@ -148,7 +149,7 @@ describe("TC-SURFACES-002 the board lane rows carry the worktree path", () => {
       ],
       omittedRepositories: 0,
       ownerHold: { active: false },
-      policy: {} as never,
+      policy: OWNER_GATE_SLA_POLICY,
       nowMs: 0,
       nowIso: "2026-11-25T12:00:00.000Z",
       dispatchWorktreePaths: newestDispatchLaneWorktreePaths([
@@ -177,7 +178,7 @@ describe("TC-SURFACES-002 the board lane rows carry the worktree path", () => {
       ],
       omittedRepositories: 0,
       ownerHold: { active: false },
-      policy: {} as never,
+      policy: OWNER_GATE_SLA_POLICY,
       nowMs: 0,
       nowIso: "2026-11-25T12:00:00.000Z",
       dispatchWorktreePaths: newestDispatchLaneWorktreePaths([laneRecord()]),

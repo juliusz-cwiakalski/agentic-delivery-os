@@ -61,13 +61,15 @@ export type CloseoutWorktreeOrderingPlan =
     };
 
 /**
- * Plan the removal ordering for one lane closeout (F-6, NFR-5).
+ * Plan the removal ordering for one lane closeout (F-6, NFR-5; review F-8).
  *
  * The ordering is the contract: the merge must be confirmed first (a stalled
  * lane without a merge always keeps its worktree), the lane's logs must
  * already be swept to their destination, and only then does the delivered
- * safety predicate decide. Every refusal keeps the worktree and the logs
- * intact; there is no force path.
+ * safety predicate decide — over the POST-sweep worktree state the caller
+ * observed (the swept paths are gone by then; the caller supplies
+ * `safety.clean` from its post-sweep observation). Every refusal keeps the
+ * worktree and the logs intact; there is no force path.
  */
 export const planCloseoutWorktreeRemoval = (input: {
   /** The merge is confirmed (squash landing observed for this lane's change). */

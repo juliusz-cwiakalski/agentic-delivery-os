@@ -20,21 +20,21 @@ describe("TC-WT-001 addWorktree creates a linked worktree at the base tip", () =
       const seam = createGitBranchSeam({ cwd: repo.directory, timeoutMs: 10_000 });
       const added = await seam.addWorktree({
         path: target,
-        newBranch: "lane/GH-1",
         baseRef: repo.baseRef,
       });
-      expect(added).toEqual({ ok: true, path: target, branch: "lane/GH-1" });
-      // The worktree exists, is checked out on the new branch, and the branch
-      // tip equals the base tip.
+      // Decision 1: DETACHED at the base tip — no lane branch is created.
+      expect(added).toEqual({ ok: true, path: target, base: repo.baseRef });
       const head = repo.run(["-C", target, "rev-parse", "HEAD"]);
       expect(head).toBe(repo.run(["rev-parse", repo.baseRef]));
       const branch = repo.run(["-C", target, "rev-parse", "--abbrev-ref", "HEAD"]);
-      expect(branch).toBe("lane/GH-1");
+      expect(branch).toBe("HEAD");
       // The linked-only enumeration includes it; the main checkout is absent.
       const linked = await seam.listWorktrees();
       expect(linked.some((fact) => fact.path === target)).toBe(true);
       expect(linked.some((fact) => fact.path === repo.directory)).toBe(false);
-      // The branch-checked-out-elsewhere check reads linked worktrees only.
+      // The branch-checked-out-elsewhere check reads linked worktrees only and
+      // resolves each block's OWN git directory (review F-12).
+      repo.run(["-C", target, "checkout", "-q", "-b", "lane/GH-1"]);
       expect(await seam.isCheckedOutElsewhere({ branch: "lane/GH-1" })).toBe(true);
       expect(await seam.isCheckedOutElsewhere({ branch: repo.baseRef })).toBe(false);
     } finally {
@@ -46,25 +46,15 @@ describe("TC-WT-001 addWorktree creates a linked worktree at the base tip", () =
     const repo = createTempRepo();
     try {
       const seam = createGitBranchSeam({ cwd: repo.directory, timeoutMs: 10_000 });
-      // The branch already exists.
-      const duplicateBranch = await seam.addWorktree({
-        path: join(mkdtempSync(join(tmpdir(), "gh404-wt-")), "wt"),
-        newBranch: repo.deliveryBranch,
-        baseRef: repo.baseRef,
-      });
-      expect(duplicateBranch.ok).toBe(false);
-      if (!duplicateBranch.ok) expect(duplicateBranch.code).toBe("worktree-add-refused");
       // The target path already exists.
       const occupied = await seam.addWorktree({
         path: repo.directory,
-        newBranch: "lane/GH-2",
         baseRef: repo.baseRef,
       });
       expect(occupied.ok).toBe(false);
       // An unsafe base ref is a plan restriction, never a git call.
       const unsafeBase = await seam.addWorktree({
         path: join(tmpdir(), "gh404-wt-unsafe"),
-        newBranch: "lane/GH-3",
         baseRef: "../escape",
       });
       expect(unsafeBase).toEqual({

@@ -1501,6 +1501,15 @@ export type MergeCommandComposition = {
    */
   readonly landingGap: () => CapabilityGapReason | undefined;
   /**
+   * Whether the resolved branch is checked out in a LINKED worktree (review
+   * F-3, Decision 2): when it is, the post-landing branch deletion defers as
+   * satisfied-by-closeout — closeout's delivered order removes the worktree,
+   * then deletes the branch. Absent keeps the delivered deletion.
+   */
+  readonly isBranchCheckedOutInLinkedWorktree?: (input: {
+    readonly branch: string;
+  }) => Promise<boolean>;
+  /**
    * Return the local checkout to the base ref. The provider landing leaves the
    * checkout on the delivery branch, so the delivered post-landing branch
    * deletion needs one local HEAD move to the base first (no fetch, no push, no
@@ -1638,6 +1647,19 @@ export const createMergeCommandRuntime = (
       land: (input) => composition.land(input),
       deleteBranch: async (input) => {
         if (input.branch === undefined) return "failed";
+        // Review F-3 / Decision 2: when the resolved change branch is checked
+        // out in the lane's worktree, the post-landing deletion DEFERS as
+        // satisfied-by-closeout — closeout's delivered order removes the
+        // worktree, THEN deletes the branch (the checkout-restore +
+        // branch-deletion delivered steps below still run for the
+        // main-checkout invocation).
+        if (
+          (await composition.isBranchCheckedOutInLinkedWorktree?.({
+            branch: input.branch,
+          })) === true
+        ) {
+          return "ok";
+        }
         // The provider landing leaves the checkout on the delivery branch, so the
         // delivered post-landing deletion first returns the checkout to the base
         // (one local HEAD move; never a fetch, push, or base mutation).
@@ -1887,10 +1909,11 @@ export type CloseoutComposition = {
   /** Per-work-item merged-diff read (F-5). */
   readonly diffReadFor?: (workItemRef: string) => CloseoutDiffRead | undefined;
   /**
-   * The lane-log sweep port (GH-404 F-6, NFR-5; TC-CLOSEOUT-002): moves the
-   * worktree's `tmp/tmpdir` gate evidence to its state-root destination
-   * BEFORE the worktree is removed — zero log loss, swept logs retrievable at
-   * their destination. The apply transaction invokes it exactly once, strictly
+   * The lane-log sweep port (GH-404 F-6, NFR-5; TC-CLOSEOUT-002; review
+   * Decision 3): moves the worktree's runner-log entries to its state-root
+   * destination BEFORE the worktree is removed — zero log loss, swept logs
+   * retrievable at their destination; the gate observes the POST-sweep
+   * cleanliness. The apply transaction invokes it exactly once, strictly
    * before the remove-worktree operation, and refuses the removal when it
    * fails. Absent keeps the delivered behaviour (no sweep, removal exactly as
    * delivered).
@@ -1969,10 +1992,11 @@ export type CloseoutCompositionOptions = {
   /** Per-work-item merged-diff read (F-5). */
   readonly diffReadFor?: (workItemRef: string) => CloseoutDiffRead | undefined;
   /**
-   * The lane-log sweep port (GH-404 F-6, NFR-5; TC-CLOSEOUT-002): moves the
-   * worktree's `tmp/tmpdir` gate evidence to its state-root destination
-   * BEFORE the worktree is removed — zero log loss, swept logs retrievable at
-   * their destination. The apply transaction invokes it exactly once, strictly
+   * The lane-log sweep port (GH-404 F-6, NFR-5; TC-CLOSEOUT-002; review
+   * Decision 3): moves the worktree's runner-log entries to its state-root
+   * destination BEFORE the worktree is removed — zero log loss, swept logs
+   * retrievable at their destination; the gate observes the POST-sweep
+   * cleanliness. The apply transaction invokes it exactly once, strictly
    * before the remove-worktree operation, and refuses the removal when it
    * fails. Absent keeps the delivered behaviour (no sweep, removal exactly as
    * delivered).
@@ -2514,7 +2538,9 @@ export const createCloseoutComposition = (
       // lane environment anchored inside it, DEC-6).
       worktreeOrderingFacts = {
         mergeConfirmed: mergedObserved,
-        laneLogsPresent: existsSync(`${deliveryWorktree.path}/tmp/tmpdir`),
+        // The runner-log directory (review Decision 3): the lane's real logs
+        // the closeout sweep preserves.
+        laneLogsPresent: existsSync(`${deliveryWorktree.path}/tmp/run-logs-runner`),
         safety,
       };
       const verdict = evaluateWorktreeSafety(safety);
@@ -7751,11 +7777,12 @@ export const createLanesCommandRuntime = (
         economics: composition.economics ?? {},
         degraded,
         ...(daemon.ok ? { daemonLanes: daemon.records } : {}),
-        // The ref-keyed worktree-path join source (GH-404 F-7,
-        // TC-SURFACES-002): the newest dispatch.lane record per ref, from the
-        // bounded retained-window read. The join contributes paths to
-        // existing rows only; a store read failure contributes nothing (the
-        // classified absence — the lanes surface renders exactly as today).
+        // The (repository, ref)-keyed worktree-path join source (GH-404 F-7,
+        // TC-SURFACES-002; review F-7): the NEWEST dispatch.lane record per
+        // (repository, ref), from the bounded retained-window read. The join
+        // contributes paths to existing rows only; a store read failure
+        // contributes nothing (the classified absence — the lanes surface
+        // renders exactly as today).
         ...(() => {
           const dispatchLanes = readDispatchLanes(composition.store);
           return dispatchLanes.ok

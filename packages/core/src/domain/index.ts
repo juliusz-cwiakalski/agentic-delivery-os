@@ -370,10 +370,7 @@ export {
   type DispatchResumeEconomics,
   type DispatchResumePlan,
   evaluateDispatchResumeEconomics,
-  type LaneWorktreeResumePlan,
-  laneWorktreeBranch,
   planDispatchResume,
-  planLaneWorktreeResume,
 } from "./dispatch-resume.js";
 export {
   DISPATCH_TRACKER_EXHAUSTED_IDENTITY,
@@ -487,6 +484,7 @@ export {
   planLaneLaunch,
 } from "./lane-launch-plan.js";
 export {
+  LANE_PROVISIONING_STDERR_TAIL_CHARS,
   checkoutBasenameOf,
   defaultLaneWorktreeRoot,
   deriveLaneWorktreeEnvironment,

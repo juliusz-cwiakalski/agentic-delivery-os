@@ -45,13 +45,18 @@ export type OperatorLaneReadFailure = {
  * surface rows only, never mints rows. The path value is the record's own
  * field, carried verbatim (one bound, reused).
  */
+const dispatchLaneJoinKey = (repository: string, ref: string): string => `${repository}|${ref}`;
+
 export const newestDispatchLaneWorktreePaths = (
   records: readonly DispatchLaneRecord[],
 ): Readonly<Record<string, string>> => {
   const paths: Record<string, string> = {};
   for (const record of records) {
-    if (record.worktreePath === undefined) continue;
-    paths[record.ref] = record.worktreePath;
+    const key = dispatchLaneJoinKey(record.repository, record.ref);
+    // The NEWEST record decides (review F-7): a newer context-less record
+    // supersedes an older path.
+    if (record.worktreePath === undefined) delete paths[key];
+    else paths[key] = record.worktreePath;
   }
   return paths;
 };
