@@ -253,20 +253,39 @@ phases:
   - id: 4
     title: Provisioning before the first phase — worktree creation, dependency install, gate build, gate temp dir; default-on with the exception honoured (OQ-1 settled)
     kind: delivery
-    summary: "settle OQ-1 by declaring the provisioning contract and wiring it into the dispatch engine (packages/core/src/app/dispatch-lane.ts, packages/core/src/app/dispatch-gate.ts), with the clone's physical-path resolution landed in packages/core/src/app/state-scope.ts (DoR iter-1 settlement, option a): state-scope gains the realpath resolution of the clone's location — the main checkout's location, the worktree-root and the derived sibling worktree path resolve from the clone's PHYSICAL location, never through a symlinked alias (NFR-7) — while its other resolutions (clone identity, state root) are unchanged and stay pinned by TC-IDENT-001, and the pure domain plan (phase 2) expresses the rule over injected already-resolved paths and stays free of I/O; after the repository lease is claimed (unchanged order, NG-2) and BEFORE the first phase (clarify_scope), dispatch of a work item whose lane has no worktree creates the worktree through addWorktree at the derived sibling path on a new branch at the base tip (F-2), then provisions the lane environment IN the worktree — dependencies installed with the pinned lockfile (pnpm install --frozen-lockfile), whatever the gates need built built there, the gate temporary directory created inside the worktree with the evidence literal $PWD/tmp/tmpdir anchored to the lane's working directory (DEC-6) — and records the worktree context on the lane record (DM-1) so resume and the surfaces can find it; the lane's spawn environment is the phase-2 derived plan (the worktree's node_modules/.bin leads PATH); worktree lanes are DEFAULT-ON from this phase; the disable-worktrees exception setting is honoured at this same seam — with it set no worktree is created or referenced and the lane runs in the invoking checkout exactly as today (F-8); the provisioning MEASUREMENT (what the gates needed, how long) is recorded during delivery as pm-notes evidence (NFR-9, TC-ENV-004) — no suite asserts any duration; pre-existing suite pins that trip on the default flip are re-pinned in THIS commit per the green-boundary fence."
+    summary: "settle OQ-1 by declaring the provisioning contract and wiring it into the dispatch engine — packages/core/src/app/dispatch.ts, whose runDispatch is the sole production writer of dispatch.lane records (active and terminal appends) and hosts the lease claim and pre-spawn sequence, with the lane resolver packages/core/src/app/dispatch-lane.ts (resume-side read) and the packages/core/src/app/dispatch-gate.ts use-cases (summary/divergence/handover) kept for their read-side extensions, and the lease-claim composition edge in packages/cli/src/production.ts that wires the provision step into the engine invocation — with the clone's physical-path resolution landed in packages/core/src/app/state-scope.ts (DoR iter-1 settlement, option a): state-scope gains the realpath resolution of the clone's location — the main checkout's location, the worktree-root and the derived sibling worktree path resolve from the clone's PHYSICAL location, never through a symlinked alias (NFR-7) — while its other resolutions (clone identity, state root) are unchanged and stay pinned by TC-IDENT-001, and the pure domain plan (phase 2) expresses the rule over injected already-resolved paths and stays free of I/O; after the repository lease is claimed (unchanged order, NG-2) and BEFORE the first phase (clarify_scope), dispatch of a work item whose lane has no worktree creates the worktree through addWorktree at the derived sibling path on a new branch at the base tip (F-2), then provisions the lane environment IN the worktree — dependencies installed with the pinned lockfile (pnpm install --frozen-lockfile), whatever the gates need built built there, the gate temporary directory created inside the worktree with the evidence literal $PWD/tmp/tmpdir anchored to the lane's working directory (DEC-6) — and records the worktree context on the lane record (DM-1) so resume and the surfaces can find it; the lane's spawn environment is the phase-2 derived plan (the worktree's node_modules/.bin leads PATH); worktree lanes are DEFAULT-ON from this phase; the disable-worktrees exception setting is honoured at this same seam — with it set no worktree is created or referenced and the lane runs in the invoking checkout exactly as today (F-8); the provisioning MEASUREMENT (what the gates needed, how long) is recorded during delivery as pm-notes evidence (NFR-9, TC-ENV-004) — no suite asserts any duration; pre-existing suite pins that trip on the default flip are re-pinned in THIS commit per the green-boundary fence."
     # TC ownership: TC-WT-003 (F-2, AC-F2-1 — creation ordering, lease before
     # provisioning), TC-ENV-001/002/003 (F-3, AC-F3-1, NFR-2, DEC-6),
     # TC-ENV-004 (F-3, AC-F3-2, NFR-9 — EVIDENCE ONLY, recorded in the change
     # pm-notes during delivery, no test file), TC-REG-002 (F-8, AC-F8-1 —
     # exception-mode variant). The proving suites land in phase 8; the
     # conditional-sweep fence moves any tripped pre-existing pin into this
-    # commit.
+    # commit. The enlarged fence (engine write site + lease-claim edge)
+    # keeps every mapped TC deliverable in this phase: TC-WT-003's
+    # creation-before-the-first-phase and lease-first order assert the
+    # runDispatch sequence itself; TC-ENV-001/002 assert the provisioned
+    # environment the engine binds; TC-REG-002 asserts the exception branch
+    # wired at the same seam.
     # Settlement (DoR iter-1, finding 2, option a declared): packages/core/
     # src/app/state-scope.ts is THIS phase's scope — the physical-path
     # resolution lands here, in the phase that first consumes the physical
     # location (the worktree creation above); phase 5's registration write
     # site consumes the resolved physical main-checkout path from it
     # unchanged in shape; TC-WT-005 proves zero alias resolutions.
+    # Write site (delivery blocker q-de70dae6-1ad2-45e9-bc78-d8ddd937e9d7):
+    # verified against the tree — packages/core/src/app/dispatch.ts is the
+    # ENGINE: runDispatch (:725) is the sole production writer of
+    # dispatch.lane records (terminal append :842-850, active append
+    # :1069-1084) and hosts the lease claim and pre-spawn sequence, so the
+    # provision-after-lease port and the DM-1 worktree context recording
+    # bind HERE (the phase-2 domain plan expresses the rules; this is where
+    # they bind). packages/cli/src/production.ts joins THIS phase as the
+    # lease-claim composition edge (:4272) wiring the provision step into
+    # the engine invocation; phase 5 keeps its own production.ts declaration
+    # for the host-index write-site fix — both phases may name the same
+    # file, each declaring the part it owns. dispatch-lane.ts (lane
+    # resolver, resume-side read) and dispatch-gate.ts (summary/divergence/
+    # handover) stay declared for their read-side extensions.
     # Ordering: after phase 3 (the seam exists); before resume (phase 5) and
     # the surfaces (phase 7). This is the change's central boundary: the
     # default flip happens here and nowhere else.
@@ -282,6 +301,8 @@ phases:
         - packages/core/src/app/dispatch-gate.ts
         - packages/core/src/app/state-scope.ts
         - packages/core/src/domain/lane-launch-plan.ts
+        - packages/core/src/app/dispatch.ts
+        - packages/cli/src/production.ts
     interactions:
       - kind: contract-file
         target: packages/core/src/app/dispatch-lane.ts
@@ -292,7 +313,7 @@ phases:
   - id: 5
     title: Resume reuse and registration pin — one worktree per work item; host index pinned to the main checkout (F-4, F-5)
     kind: delivery
-    summary: "resume and registration: resume of a lane whose record carries worktree context finds THAT worktree, verifies it is on the lane's branch (packages/core/src/domain/dispatch-resume.ts rules wired through packages/core/src/app/dispatch-lane.ts), and continues in it — zero second worktrees across any number of attempts; a missing or branch-mismatched worktree surfaces as a lane error naming the problem, never a silent re-provision (F-4, NFR-3); a lane whose record carries NO worktree context — every pre-change lane, including this change's own — resumes exactly as today in the invoking/main checkout under the disable-worktrees shape and never provisions a worktree (DEC-8); every lane command, whatever checkout invoked it, keeps the host-index entry's root at the MAIN checkout's path — and the flip source itself is fixed at its only write site: packages/cli/src/production.ts is the sole caller passing registration.root = current.checkoutRoot into maintainHostIndex, and from this phase that call site registers the main checkout's PHYSICAL path (the phase-4 state-scope resolution), never the invoking worktree's, while packages/core/src/app/host-index.ts keeps the maintenance logic and packages/core/src/app/projects.ts keeps only reading and resolving: zero root flips to a worktree path, a worktree removal never prunes a live clone's entry during maintenance, and worktrees never appear as rows of the flat record set — they surface only through the lane surfaces (F-5, DM-2, NFR-6)."
+    summary: "resume and registration: resume of a lane whose record carries worktree context finds THAT worktree, verifies it is on the lane's branch (packages/core/src/domain/dispatch-resume.ts rules bound at the engine's resume re-entry — packages/core/src/app/dispatch.ts imports and drives them at resume; packages/core/src/app/dispatch-lane.ts serves the resume-side lane-record reads), and continues in it — zero second worktrees across any number of attempts; a missing or branch-mismatched worktree surfaces as a lane error naming the problem, never a silent re-provision (F-4, NFR-3); a lane whose record carries NO worktree context — every pre-change lane, including this change's own — resumes exactly as today in the invoking/main checkout under the disable-worktrees shape and never provisions a worktree (DEC-8); every lane command, whatever checkout invoked it, keeps the host-index entry's root at the MAIN checkout's path — and the flip source itself is fixed at its only write site: packages/cli/src/production.ts is the sole caller passing registration.root = current.checkoutRoot into maintainHostIndex, and from this phase that call site registers the main checkout's PHYSICAL path (the phase-4 state-scope resolution), never the invoking worktree's, while packages/core/src/app/host-index.ts keeps the maintenance logic and packages/core/src/app/projects.ts keeps only reading and resolving: zero root flips to a worktree path, a worktree removal never prunes a live clone's entry during maintenance, and worktrees never appear as rows of the flat record set — they surface only through the lane surfaces (F-5, DM-2, NFR-6)."
     # TC ownership: TC-RESUME-001/002/003 (F-4, AC-F4-1, NFR-3, DEC-8, DM-1),
     # TC-HOSTIDX-001/002/003 (F-5, AC-F5-1, NFR-6, DM-2) — proven by the
     # phase-8 suites; tripped pre-existing pins ride this commit per the
@@ -304,6 +325,17 @@ phases:
     # projects.ts only reads/resolves, so it is THIS call-site change that
     # TC-HOSTIDX-001/002 exercise (entry root equals the main checkout after
     # every command, and the entry survives removal plus maintenance).
+    # Engine binding (rev 4, delivery blocker q-de70dae6 follow-through):
+    # the resume re-entry binds in the engine — packages/core/src/app/
+    # dispatch.ts imports and drives the dispatch-resume domain
+    # (admissionRefusalPair, admitDispatchRestart), so the reuse rules'
+    # re-entry — find, verify the branch, reuse, never re-provision; the
+    # DEC-8 context-less branch — binds there; dispatch.ts joins this
+    # phase's scope for that binding, production.ts stays declared for the
+    # host-index write-site fix above. Phases 6 and 7 verified clean: no
+    # engine references (closeout/merge do not touch dispatch.ts; the
+    # surfaces render the lane record's worktreePath from the record, no
+    # engine write) — left byte-identical.
     # Ordering: after phase 4 (there must be a recorded worktree context to
     # reuse); before merge/closeout (phase 6) so the lifecycle completes on
     # the reused worktree.
@@ -315,6 +347,7 @@ phases:
     scope:
       files:
         - packages/cli/src/production.ts
+        - packages/core/src/app/dispatch.ts
         - packages/core/src/app/dispatch-lane.ts
         - packages/core/src/domain/dispatch-resume.ts
         - packages/core/src/app/host-index.ts
@@ -508,3 +541,35 @@ phases:
 #           fence at every tripping phase), pre-change baseline tip recorded
 #           as the provenance origin. All phases, fences and mappings
 #           otherwise byte-identical (rev 2).
+#   rev 4 — 2026-11-25: delivery blocker q-de70dae6-1ad2-45e9-bc78-d8ddd937e9d7
+#           (coder-verified against the tree; delivery stopped at plan
+#           phase 4). Phase 4's declared scope named dispatch-lane.ts (the
+#           lane resolver, resume-side read) and dispatch-gate.ts
+#           (summary/divergence/handover use-cases) as the dispatch engine,
+#           but the lane-record write site and spawn flow live in
+#           packages/core/src/app/dispatch.ts — runDispatch (:725) is the
+#           sole production writer of dispatch.lane records (terminal
+#           append :842-850, active append :1069-1084) and hosts the lease
+#           claim and pre-spawn sequence — and the lease-claim composition
+#           edge lives in packages/cli/src/production.ts (:4272), making
+#           phase 4's contract (record DM-1 worktreePath; provision after
+#           the lease, before the first phase, lease-first order)
+#           mechanically impossible inside the declared scope. Amendment:
+#           (1) dispatch.ts joins phase 4's scope with a Write-site note —
+#           the provision-after-lease port and the DM-1 worktree context
+#           recording bind in runDispatch (the phase-2 domain plan expresses
+#           the rules; this is where they bind); (2) production.ts joins
+#           phase 4's scope as the lease-claim composition edge, while
+#           phase 5 KEEPS its production.ts declaration for the host-index
+#           write-site fix — both phases name the same file, each declaring
+#           the part it owns; (3) phases 5-7 checked for the same
+#           dependency: phase 5 gains dispatch.ts for the resume re-entry
+#           binding (dispatch.ts imports and drives the dispatch-resume
+#           domain: admissionRefusalPair, admitDispatchRestart); phases 6
+#           and 7 verified clean — no engine references (closeout/merge do
+#           not touch dispatch.ts; the surfaces render the lane record's
+#           worktreePath from the record, no engine write) — left
+#           byte-identical; (4) phase 4 and 5 mapping statements updated so
+#           TC-WT-003 / TC-ENV-001/002/003 / TC-REG-002 and the resume TCs
+#           stay deliverable inside the enlarged fences. All other phases,
+#           fences and mappings byte-identical (rev 3).
