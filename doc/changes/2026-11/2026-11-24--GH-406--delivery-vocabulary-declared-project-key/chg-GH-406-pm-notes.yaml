@@ -729,6 +729,27 @@ notes:
       12854 pass / 4 skip / 0 fail, OK new-code-naming 2505/0/4."
     type: info
     date: "2026-11-25"
+  - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 7 complete (commit
+      28cacb44): the behaviour-proof mechanism kept exactly as delivered and
+      its vocabulary updated to the amendment - wording-only.
+      tests/behaviour/clone-identity-fixtures.test.ts: G-2's header, describe
+      and test titles, disjoint-namespace comment, and the test-local
+      identifier now speak the product key (one repository cloned twice
+      resolves the SAME product key with different clone identities and
+      per-clone state roots; the product key is never compared against the
+      clone identity); G-3's header reads declared product-key grammar;
+      no persisted name touched, cloneKey untouched, no renamed-export
+      imports exist in either suite (verified - projects-clone-key.test.ts
+      needed no edit; its remaining 'declared field set' wording is generic,
+      not model vocabulary). tests/fixtures/projects/ helpers carry no
+      amendment surface (their 'declared' usages are generic mechanism
+      wording). NFR-7 double-run spot check: the fixture suite ran twice,
+      3/3 pass both runs. Boundary evidence: gate run 004343-pnpm-check-
+      gh406-amend-phase7.log green end-to-end - exit 0, 13/13 stages
+      in-chain, bun test 12854 pass / 4 skip / 0 fail, OK new-code-naming
+      2505/0/4."
+    type: info
+    date: "2026-11-25"
   - text: "DoR iter-4 verdict READY (focused closure gate, 10/10 facets PASS, 0
       blocking): iter-3 finding 1 verified remediated — renamed tracker title
       adopted byte-exact in spec front matter, test-plan H1, plan header; DEC-6
