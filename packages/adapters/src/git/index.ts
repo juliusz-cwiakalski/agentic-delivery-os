@@ -2,7 +2,10 @@
  * `@delivery-os/adapters/git` — the dedicated branch/checkout seam (GH-183 F-9/
  * F-10, PIN-16).
  *
- * The only spawn surface for closeout branch and checkout operations. Fixed
+ * The only spawn surface for closeout branch and checkout operations, and (GH-
+ * 404 F-1) for worktree creation: `addWorktree` creates a LINKED worktree on a
+ * new branch with fixed argv, no shell, no network, local only, and NO force
+ * flag — a git refusal is a refusal. Fixed
  * argv, no shell, no network, local-only; every child process is bounded by
  * `CLOSEOUT_OPERATION_TIMEOUT_MS` (or an injected short override) with
  * `SIGKILL`. The read-only `repo` metadata reader is untouched and never gains
@@ -69,6 +72,19 @@ export type GitMutationResult =
       readonly detail: string;
     };
 
+/**
+ * One worktree creation outcome (GH-404 F-1, NFR-1): a typed refusal for every
+ * git refusal — zero retries, zero fallbacks, zero overrides, no force path.
+ */
+export type GitWorktreeAddResult =
+  | { readonly ok: true; readonly path: string; readonly branch: string }
+  | {
+      readonly ok: false;
+      /** `plan-restriction` is the seam's own input validation; `worktree-add-refused` is a git refusal. */
+      readonly code: "plan-restriction" | "worktree-add-refused";
+      readonly detail: string;
+    };
+
 /** One bounded merged-diff read (GH-240 F-5). */
 export type GitMergedDiffRead = {
   readonly text: string;
@@ -116,6 +132,18 @@ export type GitBranchSeam = {
   readonly isCheckedOutElsewhere: (input: { readonly branch: string }) => Promise<boolean>;
   /** List local worktrees from `worktree list --porcelain` (read-only). */
   readonly listWorktrees: () => Promise<readonly GitWorktreeFact[]>;
+  /**
+   * Create one LINKED worktree on a new branch at the tip of the given base
+   * branch (GH-404 F-1, NFR-1): fixed argv, no shell, local only, NO force
+   * flag. Every git refusal — the branch exists, the path exists, an unsafe
+   * parent, anything else — surfaces as a typed refusal: zero retries, zero
+   * fallbacks, zero overrides.
+   */
+  readonly addWorktree: (input: {
+    readonly path: string;
+    readonly newBranch: string;
+    readonly baseRef: string;
+  }) => Promise<GitWorktreeAddResult>;
   /** The repository's top-level working directory (local read only). */
   readonly currentWorktreePath: () => Promise<string | undefined>;
   /** Whether one worktree path is clean (read-only, fixed argv). */
@@ -215,6 +243,67 @@ const withTimeout = async (
 
 const branchConvention = (workItemRef: string): RegExp =>
   new RegExp(`^[a-z][a-z0-9-]*/${workItemRef.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/.+$`);
+
+/** One parsed porcelain block's raw fields (GH-404 F-10). */
+export type ParsedWorktreeBlock = {
+  readonly path: string;
+  readonly branch?: string;
+  readonly head?: string;
+  readonly bare: boolean;
+  readonly locked: boolean;
+};
+
+/** The linked-only listing: the main checkout excluded structurally, linked worktrees in listing order. */
+export type WorktreeListing = {
+  /** The main checkout's path, when the listing contains a non-bare main entry. */
+  readonly mainCheckoutPath?: string;
+  readonly linked: readonly GitWorktreeFact[];
+};
+
+const normalizeListingPath = (value: string): string => value.replace(/\/+$/u, "");
+
+const mainGitDirOf = (checkoutPath: string): string => `${normalizeListingPath(checkoutPath)}/.git`;
+
+/**
+ * Parse one `worktree list --porcelain` output with the POSITION-INDEPENDENT
+ * linked-only reading (GH-404 F-10, DEC-5): a porcelain block is the main
+ * checkout exactly when its git directory is the repository's common
+ * directory — the main worktree's git dir IS `<main-checkout>/.git`, which is
+ * the common dir, while every linked worktree's git dir lives under the
+ * common dir's `worktrees/` segment. The main checkout is excluded from the
+ * linked inventory and linked worktrees are included regardless of block
+ * order. `commonDir` must be the absolute common directory (the seam reads it
+ * with `rev-parse --path-format=absolute --git-common-dir`).
+ */
+export const parseWorktreeListing = (porcelain: string, commonDir: string): WorktreeListing => {
+  const commonDirPath = normalizeListingPath(commonDir);
+  const linked: GitWorktreeFact[] = [];
+  let mainCheckoutPath: string | undefined;
+  for (const block of porcelain.split("\n\n")) {
+    const lines = block.split("\n");
+    const path = lines.find((line) => line.startsWith("worktree "))?.slice("worktree ".length);
+    if (path === undefined || path.trim().length === 0) continue;
+    const bare = lines.some((line) => line === "bare");
+    if (!bare && mainGitDirOf(path) === commonDirPath) {
+      mainCheckoutPath = normalizeListingPath(path);
+      continue;
+    }
+    const head = lines.find((line) => line.startsWith("HEAD "))?.slice("HEAD ".length);
+    const branch = lines
+      .find((line) => line.startsWith("branch refs/heads/"))
+      ?.slice("branch refs/heads/".length);
+    linked.push({
+      path: normalizeListingPath(path),
+      ...(branch === undefined ? {} : { branch }),
+      ...(head === undefined ? {} : { head }),
+      locked: lines.some((line) => line === "locked" || line.startsWith("locked ")),
+    });
+  }
+  return {
+    ...(mainCheckoutPath === undefined ? {} : { mainCheckoutPath }),
+    linked,
+  };
+};
 
 /** Build the bounded git seam over an injected (or production) child runner. */
 export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBranchSeam => {
@@ -331,11 +420,16 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
     },
     isCheckedOutElsewhere: async (input) => {
       if (!isSafeRef(input.branch)) return false;
-      const output = await stdoutOrThrow(["worktree", "list", "--porcelain"], "worktrees");
-      const worktrees = output.split("\n\n");
-      return worktrees
-        .slice(1)
-        .some((block) => block.includes(`branch refs/heads/${input.branch}`));
+      const listing = parseWorktreeListing(
+        await stdoutOrThrow(["worktree", "list", "--porcelain"], "worktrees"),
+        (
+          await stdoutOrThrow(
+            ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+            "common-dir",
+          )
+        ).trim(),
+      );
+      return listing.linked.some((fact) => fact.branch === input.branch);
     },
     currentWorktreePath: async () => {
       try {
@@ -364,27 +458,45 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
       return { text, files, truncated };
     },
     listWorktrees: async () => {
-      const output = await stdoutOrThrow(["worktree", "list", "--porcelain"], "worktrees");
-      return output
-        .split("\n\n")
-        .slice(1)
-        .map((block) => {
-          const lines = block.split("\n");
-          const path = lines
-            .find((line) => line.startsWith("worktree "))
-            ?.slice("worktree ".length);
-          const head = lines.find((line) => line.startsWith("HEAD "))?.slice("HEAD ".length);
-          const branch = lines
-            .find((line) => line.startsWith("branch refs/heads/"))
-            ?.slice("branch refs/heads/".length);
-          return {
-            path: path ?? "",
-            ...(branch === undefined ? {} : { branch }),
-            ...(head === undefined ? {} : { head }),
-            locked: lines.some((line) => line === "locked" || line.startsWith("locked ")),
-          };
-        })
-        .filter((worktree) => worktree.path.length > 0);
+      const listing = parseWorktreeListing(
+        await stdoutOrThrow(["worktree", "list", "--porcelain"], "worktrees"),
+        (
+          await stdoutOrThrow(
+            ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+            "common-dir",
+          )
+        ).trim(),
+      );
+      return listing.linked;
+    },
+    addWorktree: async (input) => {
+      if (!input.path.startsWith("/") || input.path.includes("\0") || input.path.endsWith("/")) {
+        return { ok: false, code: "plan-restriction", detail: "unsafe worktree path" };
+      }
+      if (!isSafeRef(input.newBranch)) {
+        return { ok: false, code: "plan-restriction", detail: "unsafe new branch name" };
+      }
+      if (!isSafeRef(input.baseRef)) {
+        return { ok: false, code: "plan-restriction", detail: "unsafe base ref" };
+      }
+      const result = await git([
+        "worktree",
+        "add",
+        "-b",
+        input.newBranch,
+        input.path,
+        input.baseRef,
+      ]);
+      if (result.status === 0) {
+        return { ok: true, path: input.path, branch: input.newBranch };
+      }
+      return {
+        ok: false,
+        code: "worktree-add-refused",
+        detail: result.timedOut
+          ? "worktree add timed out"
+          : `git refused the worktree creation (${result.status})`,
+      };
     },
     removeWorktree: async (input) => {
       if (!input.path.startsWith("/") || input.path.includes("\0")) {
@@ -457,17 +569,17 @@ export {
   type MergeGitRefreshResult,
 } from "./merge.js";
 export {
+  createGitPushSeam,
+  type GitPushChildRunner,
+  type GitPushOutcome,
+  type GitPushRunnerResult,
+  type GitPushSeam,
+  type GitPushSeamOptions,
+  PUSH_DEFAULT_TIMEOUT_MS,
+} from "./push.js";
+export {
   createWatchdogGitSeam,
   parseWatchdogStatus,
   type WatchdogGitSeam,
   type WatchdogGitSeamOptions,
 } from "./watchdog.js";
-export {
-  createGitPushSeam,
-  type GitPushChildRunner,
-  type GitPushOutcome,
-  PUSH_DEFAULT_TIMEOUT_MS,
-  type GitPushRunnerResult,
-  type GitPushSeam,
-  type GitPushSeamOptions,
-} from "./push.js";

@@ -52,6 +52,34 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Plan phase 2 complete (commit 4c281841): the pure domain layer landed —
+      new packages/core/src/domain/lane-worktree-plan.ts (deterministic path
+      scheme <worktree-root>/<checkout-basename>-<ref> over injected PHYSICAL
+      paths, the sibling-of-main-checkout default root, the new lane branch
+      lane/<ref>, the ordered provisioning steps install -> gate build -> gate
+      temp dir as data, the environment derivation with the worktree bin
+      leading PATH and the gate temporary directory inside the worktree, the
+      evidence literal $PWD/tmp/tmpdir unchanged); resume verification in
+      dispatch-resume.ts (a context-less record plans today's in-checkout
+      shape per DEC-8; a missing or branch-mismatched worktree is a lane error
+      naming the problem, never a re-provision); closeout ordering in
+      closeout-worktree.ts layered AROUND the delivered evaluateWorktreeSafety
+      predicate (reused, not redefined): merge confirmed, then logs swept,
+      then the predicate — a stalled lane keeps its worktree; and the
+      worktree consumption point in lane-launch-plan.ts (worktree bin leads
+      PATH, TMPDIR anchored inside the worktree; absent keeps the in-checkout
+      launch byte-for-byte). Export barrels and the two structure inventory
+      fixtures updated for the new module. Boundary evidence per the
+      TC-RELEASE-001 escalation note: gate run
+      tmp/run-logs-runner/2026-11-25/060042-pnpm-check.log — stages 1-3 green
+      (the tests/structure/inventory.json format drift fixed in this commit),
+      bun test 12863 pass / 4 skip / 1 known-deferred fail (TC-RELEASE-001
+      only; full-test log tmp/run-logs-runner/2026-11-25/060125-pnpm-test-only.log),
+      stages 5-13 verified green standalone
+      (tmp/run-logs-runner/2026-11-25/062054-phase2-post-test-stages.log,
+      10/10 exit 0; privacy-release isolated: 6 pass / 1 known fail)."
+    type: info
+    date: "2026-11-25"
   - text: "Plan phase 2 boundary finding (ESCALATION, trigger-2 shape; GH-406
       precedent applied): tests/checks/privacy-release.test.ts TC-RELEASE-001
       asserts a BRANCH-level release property — with no changeset added on the

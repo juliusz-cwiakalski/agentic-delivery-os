@@ -3420,7 +3420,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "validateWorkflowMap",
     "stateMappingFor",
   ],
-  "adapters/src/git/index.ts": ["createGitBranchSeam"],
+  "adapters/src/git/index.ts": ["createGitBranchSeam", "parseWorktreeListing"],
   "adapters/src/git/watchdog.ts": ["createWatchdogGitSeam", "parseWatchdogStatus"],
   "adapters/src/repo/index.ts": [
     "findGitRoot",
