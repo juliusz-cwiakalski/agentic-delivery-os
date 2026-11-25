@@ -633,6 +633,17 @@ export const DISPATCH_FLOOR_CONSECUTIVE_DATES = 7 as const;
 export const DISPATCH_LIVENESS_INTERVAL_KEY = "lane.liveness-interval" as const;
 export const DISPATCH_RESTART_BUDGET_KEY = "lane.restart-budget" as const;
 
+/**
+ * The worker settings keys for worktree lanes (GH-404 DM-3, DM-4); additive,
+ * co-located with the delivered `lane.*` keys. `lane.worktree-root` declares
+ * the root under which lane worktrees are created (unset means the
+ * sibling-of-main-checkout default, derived from the clone's physical
+ * location); `lane.disable-worktrees` is the opt-in exception (unset or false
+ * keeps worktree lanes on; true is byte-for-byte today's behaviour).
+ */
+export const DISPATCH_WORKTREE_ROOT_KEY = "lane.worktree-root" as const;
+export const DISPATCH_DISABLE_WORKTREES_KEY = "lane.disable-worktrees" as const;
+
 /* ------------------------------------------------------------------------- */
 /* GH-347 — the dispatch-owned durable lane record, the fresh-spawn title     */
 /* fact, and the injected delay vocabulary. Data and types only.              */
@@ -674,6 +685,13 @@ export type DispatchLaneRecord = {
   readonly state: DispatchLaneState;
   readonly lastToken?: DispatchToken;
   readonly lastOutcome?: HarnessOutcome;
+  /**
+   * The lane's worktree path (GH-404 DM-1): present exactly when the lane runs
+   * in its provisioned worktree. Absent on pre-change records and on
+   * disable-worktrees lanes — absence is the detectable context-less shape
+   * (DEC-8); nothing migrates (spec §19).
+   */
+  readonly worktreePath?: string;
   readonly recordedAt: string;
 };
 

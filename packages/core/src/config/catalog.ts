@@ -466,19 +466,25 @@ const HARNESS_BRANCH = {
 } as const satisfies CatalogField;
 
 /**
- * The typed `lane` branch (GH-235 F-7, DM-6, DEC-5, D-12).
+ * The typed `lane` branch (GH-235 F-7, DM-6, DEC-5, D-12; GH-404 DM-3, DM-4).
  *
  * `lane.liveness-interval` is the lane liveness evaluation cadence in
  * milliseconds (integer > 0). `lane.restart-budget` is the per-delivery restart
- * bound (integer >= 0; zero is a valid admit-no-restarts policy). Both keys are
- * policy-as-data: the shipped defaults live in the defaults layer, and no bound
- * literal lives in the gate.
+ * bound (integer >= 0; zero is a valid admit-no-restarts policy).
+ * `lane.worktree-root` is the root under which lane worktrees are created (a
+ * path string; unset means the sibling-of-main-checkout default derived at
+ * dispatch time). `lane.disable-worktrees` is the worktree-lane exception
+ * (boolean; unset or false keeps worktree lanes on). All four keys are
+ * policy-as-data: no default literal lives in the gate — the two new keys stay
+ * unset by default and their defaults are derived at the consumption seam.
  */
 export const LANE_BRANCH = {
   type: "object",
   fields: {
     "liveness-interval": { type: "number" },
     "restart-budget": { type: "number" },
+    "worktree-root": { type: "string" },
+    "disable-worktrees": { type: "boolean" },
   },
 } as const satisfies CatalogField;
 
@@ -620,12 +626,23 @@ export const catalogPaths = (catalog: ConfigCatalog): Array<[string, CatalogFiel
   return result;
 };
 
-/** The resolved lane branch: cadence and bound, with units declared. */
+/** The resolved lane branch: cadence, bound, and the worktree lane settings. */
 export type LaneSettings = {
   /** Lane liveness evaluation cadence in milliseconds. */
   readonly livenessIntervalMs: number;
   /** Restarts per delivery; zero admits no restarts. */
   readonly restartBudget: number;
+  /**
+   * The lane worktree root (GH-404 DM-3); absent means the
+   * sibling-of-main-checkout default derived from the clone's physical
+   * location at dispatch time.
+   */
+  readonly worktreeRoot?: string;
+  /**
+   * The worktree-lane exception (GH-404 DM-4); absent or false keeps worktree
+   * lanes on — `true` restores today's in-checkout behaviour byte-for-byte.
+   */
+  readonly disableWorktrees?: boolean;
 };
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
@@ -664,7 +681,12 @@ export const resolveLaneSettings = (
   const branch = values.lane;
   if (!isPlainRecord(branch)) return laneFailure("config.value.invalid", origins, "lane");
   for (const key of Object.keys(branch)) {
-    if (key !== "liveness-interval" && key !== "restart-budget") {
+    if (
+      key !== "liveness-interval" &&
+      key !== "restart-budget" &&
+      key !== "worktree-root" &&
+      key !== "disable-worktrees"
+    ) {
       return laneFailure("config.key.unknown", origins, `lane.${key}`);
     }
   }
@@ -676,7 +698,28 @@ export const resolveLaneSettings = (
   if (typeof budget !== "number" || !Number.isInteger(budget) || budget < 0) {
     return laneFailure("config.value.invalid", origins, "lane.restart-budget");
   }
-  return { ok: true, value: { livenessIntervalMs: interval, restartBudget: budget } };
+  const worktreeRoot = branch["worktree-root"];
+  if (
+    worktreeRoot !== undefined &&
+    (typeof worktreeRoot !== "string" || worktreeRoot.trim().length === 0)
+  ) {
+    return laneFailure("config.value.invalid", origins, "lane.worktree-root");
+  }
+  const disableWorktrees = branch["disable-worktrees"];
+  if (disableWorktrees !== undefined && typeof disableWorktrees !== "boolean") {
+    return laneFailure("config.value.invalid", origins, "lane.disable-worktrees");
+  }
+  return {
+    ok: true,
+    value: {
+      livenessIntervalMs: interval,
+      restartBudget: budget,
+      ...(typeof worktreeRoot === "string" && worktreeRoot.trim().length > 0
+        ? { worktreeRoot }
+        : {}),
+      ...(disableWorktrees === true ? { disableWorktrees: true } : {}),
+    },
+  };
 };
 
 /** The resolved `coordinator` branch: six policy values with declared units. */

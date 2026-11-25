@@ -100,6 +100,24 @@ export const INVALID_LANE_CASES: readonly InvalidLaneCase[] = [
     code: "config.value.invalid",
     key: "lane",
   },
+  {
+    id: "worktree-root-number",
+    lane: { "liveness-interval": 30000, "restart-budget": 3, "worktree-root": 42 },
+    code: "config.value.invalid",
+    key: "lane",
+  },
+  {
+    id: "worktree-root-empty",
+    lane: { "liveness-interval": 30000, "restart-budget": 3, "worktree-root": "   " },
+    code: "config.value.invalid",
+    key: "lane.worktree-root",
+  },
+  {
+    id: "disable-worktrees-string",
+    lane: { "liveness-interval": 30000, "restart-budget": 3, "disable-worktrees": "no" },
+    code: "config.value.invalid",
+    key: "lane",
+  },
 ] as const;
 
 /** A resolvable zero bound: the positive control proving budget 0 is valid (D-12). */
@@ -112,4 +130,29 @@ export const ZERO_BUDGET_SOURCE: ConfigSourceFacts = laneSource({
 export const VALID_LANE_SOURCE: ConfigSourceFacts = laneSource({
   "liveness-interval": 15000,
   "restart-budget": 5,
+});
+
+/**
+ * A valid branch carrying both GH-404 worktree worker settings: the explicit
+ * worktree root (DM-3) and the set exception flag (DM-4).
+ */
+export const WORKTREE_SETTINGS_SOURCE: ConfigSourceFacts = laneSource({
+  "liveness-interval": 30000,
+  "restart-budget": 3,
+  "worktree-root": "/tmp/lane-worktrees",
+  "disable-worktrees": false,
+});
+
+/** A valid branch with only the worktree root set (DM-3 without DM-4). */
+export const WORKTREE_ROOT_SOURCE: ConfigSourceFacts = laneSource({
+  "liveness-interval": 30000,
+  "restart-budget": 3,
+  "worktree-root": "/var/lane-worktrees",
+});
+
+/** A valid branch with only the exception flag set (DM-4 without DM-3). */
+export const DISABLE_WORKTREES_SOURCE: ConfigSourceFacts = laneSource({
+  "liveness-interval": 30000,
+  "restart-budget": 3,
+  "disable-worktrees": true,
 });

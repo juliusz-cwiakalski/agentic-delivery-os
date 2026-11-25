@@ -3,12 +3,20 @@ import { createGitMergeSeam } from "@delivery-os/adapters/git";
 import { createMergeCommandRuntime } from "../../packages/cli/src/edge";
 import type { ConfigValue } from "../../packages/core/src/contracts/config";
 import {
+  DISPATCH_DISABLE_WORKTREES_KEY,
+  DISPATCH_LIVENESS_INTERVAL_KEY,
+  DISPATCH_RESTART_BUDGET_KEY,
+  DISPATCH_WORKTREE_ROOT_KEY,
+} from "../../packages/core/src/contracts/index";
+import {
   BOOTSTRAP_DESCRIPTOR,
   type ConfigCatalog,
   generateConfigSchema,
+  LANE_BRANCH,
   PRODUCTION_CATALOG,
   PRODUCTION_SCHEMA,
   resolveConfig,
+  resolveLaneSettings,
 } from "../../packages/core/src/index";
 import {
   createNodeStateEdge,
@@ -17,6 +25,11 @@ import {
 } from "../../packages/core/src/state/index";
 import { FIXTURE_CATALOG } from "../fixtures/config/catalog";
 import { fileFacts } from "../fixtures/config/facts";
+import {
+  DISABLE_WORKTREES_SOURCE,
+  WORKTREE_ROOT_SOURCE,
+  WORKTREE_SETTINGS_SOURCE,
+} from "../fixtures/config/lane";
 
 describe("TC-CONFIG-008/009/011 canonical schema, partial and final", () => {
   test("production exposes the typed provider branch and shipped defaults", () => {
@@ -209,6 +222,109 @@ describe("TC-REGRESS-006 commit.phaseCommit branch", () => {
     });
     expect(invalid.ok).toBe(false);
     if (!invalid.ok) expect(invalid.error.code).toBe("config.value.invalid");
+  });
+});
+
+describe("TC-CONFIG-GH404 the lane worktree worker settings (DM-3, DM-4)", () => {
+  test("the two additive keys are declared in the catalog under the lane branch", () => {
+    expect(Object.keys(LANE_BRANCH.fields)).toEqual([
+      "liveness-interval",
+      "restart-budget",
+      "worktree-root",
+      "disable-worktrees",
+    ]);
+    expect(LANE_BRANCH.fields["worktree-root"]).toMatchObject({ type: "string" });
+    expect(LANE_BRANCH.fields["disable-worktrees"]).toMatchObject({ type: "boolean" });
+    expect(PRODUCTION_SCHEMA).toEqual(generateConfigSchema(PRODUCTION_CATALOG));
+  });
+
+  test("the contracts key constants name the section-prefixed catalog paths", () => {
+    expect(DISPATCH_WORKTREE_ROOT_KEY).toBe("lane.worktree-root");
+    expect(DISPATCH_DISABLE_WORKTREES_KEY).toBe("lane.disable-worktrees");
+    expect(DISPATCH_LIVENESS_INTERVAL_KEY).toBe("lane.liveness-interval");
+    expect(DISPATCH_RESTART_BUDGET_KEY).toBe("lane.restart-budget");
+    expect(Object.hasOwn(LANE_BRANCH.fields, "worktree-root")).toBe(true);
+    expect(Object.hasOwn(LANE_BRANCH.fields, "disable-worktrees")).toBe(true);
+  });
+
+  test("the delivered keys keep their values and origins when the new keys are absent", () => {
+    const resolved = resolveConfig();
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    const lane = resolveLaneSettings(resolved.value.values, resolved.value.origins);
+    expect(lane.ok).toBe(true);
+    if (!lane.ok) return;
+    expect(lane.value).toEqual({ livenessIntervalMs: 30000, restartBudget: 3 });
+    expect(resolved.value.origins["lane.worktree-root"]).toBeUndefined();
+    expect(resolved.value.origins["lane.disable-worktrees"]).toBeUndefined();
+  });
+
+  test("an explicit worktree root and the exception flag resolve as additive settings", () => {
+    const both = resolveConfig({ sources: [WORKTREE_SETTINGS_SOURCE] });
+    expect(both.ok).toBe(true);
+    if (!both.ok) return;
+    const lane = resolveLaneSettings(both.value.values, both.value.origins);
+    expect(lane.ok).toBe(true);
+    if (!lane.ok) return;
+    expect(lane.value).toEqual({
+      livenessIntervalMs: 30000,
+      restartBudget: 3,
+      worktreeRoot: "/tmp/lane-worktrees",
+    });
+    expect(both.value.origins["lane.worktree-root"]).toMatchObject({
+      layer: "project-committed",
+    });
+    expect(both.value.origins["lane.disable-worktrees"]).toMatchObject({
+      layer: "project-committed",
+    });
+    expect(lane.value.disableWorktrees).toBeUndefined();
+  });
+
+  test("the exception flag set true projects disableWorktrees true", () => {
+    const disabled = resolveConfig({ sources: [DISABLE_WORKTREES_SOURCE] });
+    expect(disabled.ok).toBe(true);
+    if (!disabled.ok) return;
+    const lane = resolveLaneSettings(disabled.value.values, disabled.value.origins);
+    expect(lane.ok).toBe(true);
+    if (!lane.ok) return;
+    expect(lane.value.disableWorktrees).toBe(true);
+    expect(lane.value.worktreeRoot).toBeUndefined();
+  });
+
+  test("the worktree root alone resolves without the exception flag", () => {
+    const rootOnly = resolveConfig({ sources: [WORKTREE_ROOT_SOURCE] });
+    expect(rootOnly.ok).toBe(true);
+    if (!rootOnly.ok) return;
+    const lane = resolveLaneSettings(rootOnly.value.values, rootOnly.value.origins);
+    expect(lane.ok).toBe(true);
+    if (!lane.ok) return;
+    expect(lane.value.worktreeRoot).toBe("/var/lane-worktrees");
+    expect(lane.value.disableWorktrees).toBeUndefined();
+  });
+
+  test("wrong types fail closed naming the key", () => {
+    for (const values of [
+      { lane: { "liveness-interval": 30000, "restart-budget": 3, "worktree-root": 42 } },
+      { lane: { "liveness-interval": 30000, "restart-budget": 3, "disable-worktrees": "no" } },
+    ] as readonly Record<string, ConfigValue>[]) {
+      const resolved = resolveConfig({ sources: [fileFacts("project-local", values, 9)] });
+      expect(resolved.ok).toBe(false);
+      if (!resolved.ok) expect(resolved.error.code).toBe("config.value.invalid");
+    }
+    const emptyRoot = resolveConfig({
+      sources: [
+        fileFacts(
+          "project-local",
+          { lane: { "liveness-interval": 30000, "restart-budget": 3, "worktree-root": "   " } },
+          9,
+        ),
+      ],
+    });
+    expect(emptyRoot.ok).toBe(true);
+    if (emptyRoot.ok) {
+      const lane = resolveLaneSettings(emptyRoot.value.values, emptyRoot.value.origins);
+      expect(lane).toMatchObject({ ok: false, error: { key: "lane.worktree-root" } });
+    }
   });
 });
 
