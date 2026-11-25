@@ -12,7 +12,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-24T20:14:24.288Z }
   delivery: { started: null, completed: 2026-11-25T00:26:05.533Z }
   system_spec_update: { started: null, completed: 2026-11-25T00:29:51.342Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-25T00:36:59.047Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -796,3 +796,26 @@ notes:
       readiness-review/readiness-iter-4.md. Amended delivery may execute."
     type: decision
     date: "2026-11-24"
+  - text: "Review iter-3 verdict PASS over the AMENDED tree (code-review/
+      review-iter-3.yaml; no remediation phase): 4 findings, 0 blocking (2 low,
+      2 info). Amendment verified end to end in code + docs — renamed exports
+      present with old names at zero occurrences in tracked source; headers
+      PRODUCT/REPOSITORY (+CLONE) with the four legacy headers asserted absent;
+      amended 8-term table, retirement clause, Jira-project rule, both prose
+      rules and neutral examples in both vocabulary docs; ODR-0006 re-worded
+      whole-record (Proposed/decision_date null, no earlier record touched); all
+      eight fences re-verified live (zero-rename, --flat byte-identity,
+      groups.v1 no-grammar, phase-9 hardening preserved, four exceptions exact,
+      naming 2505/0/4, no headers added); amendment suite diffs wording-only;
+      disclosed deviations check out (scanner live-header pin refresh rode phase
+      3 per the binding wording-only fence; TC-DAEMON-121 load flake disclosed,
+      never weakened; two format nits). Review-time rows re-verified on the
+      amended diff. New non-blocking: F-7 (low) doc/00-index.md:40 pre-amendment
+      prose noun in the feature-projects row (written by the A-extended ride,
+      outside every declared scope; GH-408/follow-up); F-8 (info) concrete
+      inventory of RSK-5 remainder: 6 pre-existing banned-phrase hits in 4
+      milestone-root planning docs, zero-diff vs base. Carried: F-5 dead
+      originalLineAt helper (follow-up deletion disposition), F-6
+      exemption-window delta."
+    type: decision
+    date: "2026-11-25"
