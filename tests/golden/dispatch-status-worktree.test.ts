@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { renderDispatchStatusText } from "../../packages/cli/src/output/dispatch-text";
 import type { DispatchLaneRecord } from "../../packages/core/src/contracts/index";
 
-const GOAL = join(process.cwd(), "tests/fixtures/dispatch/golden");
+const GOAL = join(process.cwd(), "tests/golden");
 const readGolden = (name: string): string => readFileSync(join(GOAL, name), "utf8");
 
 const record = (worktreePath?: string): DispatchLaneRecord => ({
