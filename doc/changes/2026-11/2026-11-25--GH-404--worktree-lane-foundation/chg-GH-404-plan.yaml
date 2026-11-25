@@ -175,7 +175,7 @@ phases:
   - id: 1
     title: Lane and config contracts — additive worktree context (DM-1) and worker settings worktree-root / disable-worktrees (DM-3, DM-4)
     kind: delivery
-    summary: "declare the additive contract surface every later phase consumes: the dispatch.lane record payload in packages/core/src/contracts/dispatch.ts gains an optional worktree context — the worktree path the lane runs in, ABSENT exactly for pre-change lanes and disable-worktrees lanes so DEC-8 stays detectable and nothing migrates (spec §19) — and the worker settings gain the two additive keys with catalog entries in packages/core/src/config/catalog.ts: worktree-root (DM-3; default places each lane worktree as a sibling of the main checkout, named <checkout-basename>-<ref>) and the disable-worktrees exception setting (DM-4; opt-in; with it set behaviour is byte-for-byte today's); no existing key is renamed and no key changes meaning (NG-4); the config fixtures that enumerate catalog keys (tests/fixtures/config/catalog.ts, tests/fixtures/config/lane.ts) and the schema suite tests/behaviour/config-schema.test.ts are re-pinned and extended for the two new keys in the SAME commit so the boundary is proven, not merely compiled — this commit carries TC-WT-004's config half (AC-F2-1, DM-3, DM-4); the setting keys follow the delivered lane-key pattern (lane.liveness-interval, lane.restart-budget) in contracts/dispatch.ts."
+    summary: "declare the additive contract surface every later phase consumes: the dispatch.lane record payload in packages/core/src/contracts/dispatch.ts gains an optional worktree context — the worktree path the lane runs in, ABSENT exactly for pre-change lanes and disable-worktrees lanes so DEC-8 stays detectable and nothing migrates (spec §19) — and the worker settings gain the two additive keys with catalog entries in packages/core/src/config/catalog.ts: worktree-root (DM-3; default places each lane worktree as a sibling of the main checkout, named <checkout-basename>-<ref>) and the disable-worktrees exception setting (DM-4; opt-in; with it set behaviour is byte-for-byte today's); no existing key is renamed and no key changes meaning (NG-4); the config fixtures that enumerate catalog keys (tests/fixtures/config/catalog.ts, tests/fixtures/config/lane.ts) and the schema suite tests/behaviour/config-schema.test.ts are re-pinned and extended for the two new keys in the SAME commit so the boundary is proven, not merely compiled — this commit carries TC-WT-004's config half (AC-F2-1, DM-3, DM-4); the two keys are pinned to the config catalog's section-prefixed lane section as literal key constants co-located with the delivered lane keys in contracts/dispatch.ts — the exact literal key paths are lane.worktree-root (DM-3; a path string, unset means the sibling-of-main-checkout default) and lane.disable-worktrees (DM-4; a boolean flag, unset or false means worktree lanes on) — following the delivered pattern of lane.liveness-interval and lane.restart-budget."
     # TC ownership: TC-WT-004 config half (F-2, AC-F2-1, DM-3, DM-4). DM-1 and
     # DM-4 are declared here and consumed from phase 4; their scenario
     # coverage rides phases 8/9 (TC-RESUME-003, TC-REG-001/002).
@@ -253,7 +253,7 @@ phases:
   - id: 4
     title: Provisioning before the first phase — worktree creation, dependency install, gate build, gate temp dir; default-on with the exception honoured (OQ-1 settled)
     kind: delivery
-    summary: "settle OQ-1 by declaring the provisioning contract and wiring it into the dispatch engine (packages/core/src/app/dispatch-lane.ts, packages/core/src/app/dispatch-gate.ts): after the repository lease is claimed (unchanged order, NG-2) and BEFORE the first phase (clarify_scope), dispatch of a work item whose lane has no worktree creates the worktree through addWorktree at the derived sibling path on a new branch at the base tip (F-2), then provisions the lane environment IN the worktree — dependencies installed with the pinned lockfile (pnpm install --frozen-lockfile), whatever the gates need built built there, the gate temporary directory created inside the worktree with the evidence literal $PWD/tmp/tmpdir anchored to the lane's working directory (DEC-6) — and records the worktree context on the lane record (DM-1) so resume and the surfaces can find it; the lane's spawn environment is the phase-2 derived plan (the worktree's node_modules/.bin leads PATH); worktree lanes are DEFAULT-ON from this phase; the disable-worktrees exception setting is honoured at this same seam — with it set no worktree is created or referenced and the lane runs in the invoking checkout exactly as today (F-8); the provisioning MEASUREMENT (what the gates needed, how long) is recorded during delivery as pm-notes evidence (NFR-9, TC-ENV-004) — no suite asserts any duration; pre-existing suite pins that trip on the default flip are re-pinned in THIS commit per the green-boundary fence."
+    summary: "settle OQ-1 by declaring the provisioning contract and wiring it into the dispatch engine (packages/core/src/app/dispatch-lane.ts, packages/core/src/app/dispatch-gate.ts), with the clone's physical-path resolution landed in packages/core/src/app/state-scope.ts (DoR iter-1 settlement, option a): state-scope gains the realpath resolution of the clone's location — the main checkout's location, the worktree-root and the derived sibling worktree path resolve from the clone's PHYSICAL location, never through a symlinked alias (NFR-7) — while its other resolutions (clone identity, state root) are unchanged and stay pinned by TC-IDENT-001, and the pure domain plan (phase 2) expresses the rule over injected already-resolved paths and stays free of I/O; after the repository lease is claimed (unchanged order, NG-2) and BEFORE the first phase (clarify_scope), dispatch of a work item whose lane has no worktree creates the worktree through addWorktree at the derived sibling path on a new branch at the base tip (F-2), then provisions the lane environment IN the worktree — dependencies installed with the pinned lockfile (pnpm install --frozen-lockfile), whatever the gates need built built there, the gate temporary directory created inside the worktree with the evidence literal $PWD/tmp/tmpdir anchored to the lane's working directory (DEC-6) — and records the worktree context on the lane record (DM-1) so resume and the surfaces can find it; the lane's spawn environment is the phase-2 derived plan (the worktree's node_modules/.bin leads PATH); worktree lanes are DEFAULT-ON from this phase; the disable-worktrees exception setting is honoured at this same seam — with it set no worktree is created or referenced and the lane runs in the invoking checkout exactly as today (F-8); the provisioning MEASUREMENT (what the gates needed, how long) is recorded during delivery as pm-notes evidence (NFR-9, TC-ENV-004) — no suite asserts any duration; pre-existing suite pins that trip on the default flip are re-pinned in THIS commit per the green-boundary fence."
     # TC ownership: TC-WT-003 (F-2, AC-F2-1 — creation ordering, lease before
     # provisioning), TC-ENV-001/002/003 (F-3, AC-F3-1, NFR-2, DEC-6),
     # TC-ENV-004 (F-3, AC-F3-2, NFR-9 — EVIDENCE ONLY, recorded in the change
@@ -261,6 +261,12 @@ phases:
     # exception-mode variant). The proving suites land in phase 8; the
     # conditional-sweep fence moves any tripped pre-existing pin into this
     # commit.
+    # Settlement (DoR iter-1, finding 2, option a declared): packages/core/
+    # src/app/state-scope.ts is THIS phase's scope — the physical-path
+    # resolution lands here, in the phase that first consumes the physical
+    # location (the worktree creation above); phase 5's registration write
+    # site consumes the resolved physical main-checkout path from it
+    # unchanged in shape; TC-WT-005 proves zero alias resolutions.
     # Ordering: after phase 3 (the seam exists); before resume (phase 5) and
     # the surfaces (phase 7). This is the change's central boundary: the
     # default flip happens here and nowhere else.
@@ -274,6 +280,7 @@ phases:
       files:
         - packages/core/src/app/dispatch-lane.ts
         - packages/core/src/app/dispatch-gate.ts
+        - packages/core/src/app/state-scope.ts
         - packages/core/src/domain/lane-launch-plan.ts
     interactions:
       - kind: contract-file
@@ -285,11 +292,18 @@ phases:
   - id: 5
     title: Resume reuse and registration pin — one worktree per work item; host index pinned to the main checkout (F-4, F-5)
     kind: delivery
-    summary: "resume and registration: resume of a lane whose record carries worktree context finds THAT worktree, verifies it is on the lane's branch (packages/core/src/domain/dispatch-resume.ts rules wired through packages/core/src/app/dispatch-lane.ts), and continues in it — zero second worktrees across any number of attempts; a missing or branch-mismatched worktree surfaces as a lane error naming the problem, never a silent re-provision (F-4, NFR-3); a lane whose record carries NO worktree context — every pre-change lane, including this change's own — resumes exactly as today in the invoking/main checkout under the disable-worktrees shape and never provisions a worktree (DEC-8); every lane command, whatever checkout invoked it, keeps the host-index entry's root at the MAIN checkout's path (packages/core/src/app/host-index.ts, with the flat-record registration surface in packages/core/src/app/projects.ts): zero root flips to a worktree path, a worktree removal never prunes a live clone's entry during maintenance, and worktrees never appear as rows of the flat record set — they surface only through the lane surfaces (F-5, DM-2, NFR-6)."
+    summary: "resume and registration: resume of a lane whose record carries worktree context finds THAT worktree, verifies it is on the lane's branch (packages/core/src/domain/dispatch-resume.ts rules wired through packages/core/src/app/dispatch-lane.ts), and continues in it — zero second worktrees across any number of attempts; a missing or branch-mismatched worktree surfaces as a lane error naming the problem, never a silent re-provision (F-4, NFR-3); a lane whose record carries NO worktree context — every pre-change lane, including this change's own — resumes exactly as today in the invoking/main checkout under the disable-worktrees shape and never provisions a worktree (DEC-8); every lane command, whatever checkout invoked it, keeps the host-index entry's root at the MAIN checkout's path — and the flip source itself is fixed at its only write site: packages/cli/src/production.ts is the sole caller passing registration.root = current.checkoutRoot into maintainHostIndex, and from this phase that call site registers the main checkout's PHYSICAL path (the phase-4 state-scope resolution), never the invoking worktree's, while packages/core/src/app/host-index.ts keeps the maintenance logic and packages/core/src/app/projects.ts keeps only reading and resolving: zero root flips to a worktree path, a worktree removal never prunes a live clone's entry during maintenance, and worktrees never appear as rows of the flat record set — they surface only through the lane surfaces (F-5, DM-2, NFR-6)."
     # TC ownership: TC-RESUME-001/002/003 (F-4, AC-F4-1, NFR-3, DEC-8, DM-1),
     # TC-HOSTIDX-001/002/003 (F-5, AC-F5-1, NFR-6, DM-2) — proven by the
     # phase-8 suites; tripped pre-existing pins ride this commit per the
     # fence.
+    # Write site (DoR iter-1, finding 1): the registration root fix lands at
+    # packages/cli/src/production.ts, at the maintainHostIndex call passing
+    # registration.root = current.checkoutRoot — verified as the ONLY such
+    # write site at the tip; host-index.ts holds maintenance logic only and
+    # projects.ts only reads/resolves, so it is THIS call-site change that
+    # TC-HOSTIDX-001/002 exercise (entry root equals the main checkout after
+    # every command, and the entry survives removal plus maintenance).
     # Ordering: after phase 4 (there must be a recorded worktree context to
     # reuse); before merge/closeout (phase 6) so the lifecycle completes on
     # the reused worktree.
@@ -300,6 +314,7 @@ phases:
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-resume.test.ts tests/behaviour/projects-host-index.test.ts tests/behaviour/projects-identity.test.ts (tripped pins re-pinned here per the fence); TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed plus fence-authorized re-pins.
     scope:
       files:
+        - packages/cli/src/production.ts
         - packages/core/src/app/dispatch-lane.ts
         - packages/core/src/domain/dispatch-resume.ts
         - packages/core/src/app/host-index.ts
@@ -459,3 +474,29 @@ phases:
 #           (5), merge/closeout (6), surfaces (7), proof part 1 (8), proof
 #           part 2 (9), changeset + reconciliation declaration (10). Non-goal
 #           boundaries NG-1..NG-7 and DEC-8 are binding fences, not prose.
+#   rev 2 — 2026-11-25: DoR iter-1 remediation (three findings; all other
+#           phases, fences and mappings byte-identical; no tasks key, no
+#           progress records):
+#           (1) BLOCKING — phase 5 scope gains packages/cli/src/production.ts,
+#           the verified sole write site of the host-index registration root
+#           (the maintainHostIndex call passing registration.root =
+#           current.checkoutRoot); phase 5's mapping statement now names the
+#           call-site fix explicitly — the main checkout's physical path is
+#           registered at the call site, never the invoking worktree's — so
+#           TC-HOSTIDX-001/002 (F-5, AC-F5-1, NFR-6) are deliverable inside
+#           phase 5's own scope;
+#           (2) CONDITIONAL SETTLED, option (a) declared: physical-path
+#           resolution lands in packages/core/src/app/state-scope.ts, added
+#           to phase 4's scope — the phase that first consumes the physical
+#           location (worktree creation); state-scope's other resolutions
+#           (clone identity, state root) unchanged, TC-IDENT-001's pin
+#           stands; the phase-2 domain plan expresses the rule over injected
+#           already-resolved paths and stays free of I/O; TC-WT-005 (NFR-7)
+#           proves zero alias resolutions;
+#           (3) MINOR — phase 1 pins the exact literal config keys to the
+#           catalog's section-prefixed lane section: lane.worktree-root
+#           (DM-3, path string, unset = sibling default) and
+#           lane.disable-worktrees (DM-4, boolean flag, unset/false = lanes
+#           on), as key constants co-located with the delivered
+#           lane.liveness-interval / lane.restart-budget in
+#           contracts/dispatch.ts.

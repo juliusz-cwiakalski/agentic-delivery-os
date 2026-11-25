@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-25T03:29:05.413Z }
   specification: { started: null, completed: 2026-11-25T03:37:50.066Z }
   test_planning: { started: null, completed: 2026-11-25T03:43:23.337Z }
-  delivery_planning: { started: null, completed: 2026-11-25T03:52:22.224Z }
+  delivery_planning: { started: null, completed: 2026-11-25T04:01:30.268Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -42,13 +42,45 @@ decisions:
       only."
     date: "2026-11-25"
 open_questions:
-  - text: "To settle during planning (ticket directive, not a human blocker): what
-      the gates need in a fresh worktree (install, build) and how long that
-      takes — record the measurement during delivery. The GH-412 sync-commit
-      choice is explicitly out of scope here."
+  - text: "SETTLED IN PLAN (delivery_planning, DoR iter-1 cycle): the gates need the
+      worktree's dependencies installed (pnpm install --frozen-lockfile) and the
+      gate build done in the worktree before the first phase — declared as plan
+      phase 4's provisioning contract. Remaining: record the timing MEASUREMENT
+      as delivery evidence during phase 6 (NFR-9, TC-ENV-004 — no timing
+      assertion). The GH-412 sync-commit choice is explicitly out of scope
+      here."
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "DoR gate iter-1 verdict NOT_READY (readiness-iter-1.md in the change
+      folder): 8 PASS / 2 FAIL facets. Blocking major (owning phase
+      delivery_planning): plan phase 5 scope omits the host-index registration
+      WRITE site packages/cli/src/production.ts (verified tip lines 2160-2172,
+      drifted from the ticket's 2079 at 4f1a7ddc; site unchanged) — the only
+      caller passing registration.root = current.checkoutRoot into
+      maintainHostIndex; TC-HOSTIDX-001/002 are undeliverable without it.
+      Minors: literal config-key paths for worktree-root/disable-worktrees
+      unpinned vs the section-prefixed catalog pattern (delivery_planning);
+      TC-IDENT-002 guard-form status lags the plan's position-independence
+      settlement (test_planning). Nits: stale OQ-1 status strings in spec
+      section 14 (specification) and pm-notes (fixed by PM); TC-REG-001's
+      preserved-pin source unnamed (test_planning). Remediation: phase
+      delivery_planning reopened; plan-writer fixes blocking + config keys;
+      bundled minor/nit touch-ups ride the same cycle per the gate's explicit
+      allowance; then plan validate + phase complete + DoR re-gate (iteration
+      2)."
+    type: info
+    date: "2026-11-25"
+  - text: "Retro: the DoR gate caught a real scope gap the authors missed — plan
+      phase 5 declared host-index.ts (maintenance logic) but not the
+      registration write site in production.ts, the exact hazard file the ticket
+      named. Lesson: plan-scope derivation must trace behaviour to its CALL
+      SITES (who passes the value in), not just the module owning the logic;
+      verify fences make an omitted write site an undeliverable test. The gate
+      earning its keep on iteration 1 is the process working, not a process
+      failure."
+    type: retro
+    date: "2026-11-25"
   - text: "Intake observed 2026-11-25: ticket open, milestone 'M4: Jaiship-native
       delivery' attached (verified from the existing milestone set), five owner
       comments read bottom-up — the 2026-11-25 CEO comment governs scope. No
