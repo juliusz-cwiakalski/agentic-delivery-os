@@ -1,0 +1,461 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-404
+tier:
+  name: full
+  escalationTriggers:
+    - "a non-zero output delta on any exception-mode pin (TC-REG-001, F-8, NFR-4, DM-4) is a change DEFECT: the exception-mode goldens capture PRESERVED data — today's pre-change behaviour — and are never regenerated to match drift; stop, fix the conditional rendering or provisioning branch that leaked worktree state into the exception path, re-run; a golden update is never the remedy"
+    - "a host-index entry whose root is observed as a worktree path, or a live clone's entry pruned after a worktree removal plus a maintenance pass (TC-HOSTIDX-001/002, F-5, NFR-6, DM-2) is a change DEFECT: stop — the registration pin to the main checkout is the contract; a fixture relaxation is never the remedy"
+    - "a worktree removal observed before the merge is confirmed, or a lane log lost by the closeout sweep (TC-CLOSEOUT-002/003/005, F-6, NFR-5) is a change DEFECT: stop — the ordering is the contract; both closeout mutants must stay red, and weakening a mutant or its assertion is never the remedy"
+    - "a force flag, a shell invocation, a retry, a fallback, or an override path observed anywhere in the addWorktree create path (TC-WT-002, F-1, NFR-1) is a change DEFECT: stop — a git refusal is surfaced as a refusal; the source-scan canary must stay green and its planted canaries must stay contained"
+    - "a pre-existing suite that cannot be greened without renaming a base-delivered identifier, changing clone-identity or state-root derivation, or weakening an assertion is evidence of a forbidden change (NG-2..NG-5, DEC-4): stop and report to PM via a pm-notes notes entry; never weaken or delete the assertion to go green — identifiers stay until GH-408 and the derivation is pinned, not altered"
+    - "a lane whose record carries no worktree context being provisioned a worktree at resume (TC-RESUME-003, DEC-8) is a change DEFECT: stop — context-less lanes resume exactly as today in the invoking checkout, including this change's own lane; retroactive provisioning is never the remedy"
+# ---------------------------------------------------------------------------
+# Title (tracker title, adopted verbatim): M4-S36: A work item's whole
+# lifecycle runs in its own worktree (default on) (M4)
+#
+# Plan-level decision record (spec §15 DEC-1..DEC-8): the governing scope is
+# the CEO comment on GH-404 dated 2026-11-25, comment 5 of 5 (DEC-1); the
+# scope split reserves parallel lanes and their satellites for GH-412
+# (DEC-2); worktree lanes are default-on with the disable-worktrees exception
+# as the escape hatch (DEC-3); the GH-406 vocabulary governs the prose and
+# identifiers stay until GH-408 (DEC-4); worktree means a LINKED worktree
+# only (DEC-5); the gate temporary directory lives inside the lane's worktree
+# and the pm-notes evidence keeps the literal $PWD/tmp/tmpdir (DEC-6); a
+# decision record from this change, if ever written, is TDR-0077 as Proposed
+# with decision_date null (DEC-7); a pre-change context-less lane resumes
+# exactly as today (DEC-8).
+#
+# OQ-1 SETTLED IN THIS PLAN (rev 1) — the ticket's settle-during-planning
+# item. What the gates need in a fresh worktree, declared as the provisioning
+# contract of phase 4 and executed strictly before the first phase
+# (clarify_scope):
+#   1. dependencies installed in the worktree from the committed lockfile
+#      (pnpm install --frozen-lockfile, the workspace's pinned package
+#      manager);
+#   2. whatever the gates need built, built in the worktree (the build the
+#      aggregate gate consumes);
+#   3. the gate temporary directory created inside the worktree — the
+#      evidence keeps the literal $PWD/tmp/tmpdir because the lane's working
+#      directory IS the worktree (DEC-6).
+# The TIMING MEASUREMENT (what it cost, how long) is delivery evidence
+# recorded in the change pm-notes during delivery (NFR-9, TC-ENV-004) — no
+# suite asserts any duration and no threshold is imposed. No decision record
+# is authored for this settlement: it is this plan's declared phase 4,
+# owner-visible at PR review; the TDR-0077 reservation stays unused unless
+# delivery reveals a decision-worthy provisioning choice.
+#
+# F-10 FORM CHOSEN IN THIS PLAN (DEC-5 directs the plan to choose): the
+# linked-worktree enumeration and the branch-checked-out-elsewhere check are
+# made POSITION-INDEPENDENT in phase 3 — linked-only membership is decided
+# structurally (a porcelain block is the main checkout exactly when its git
+# directory is the repository's common directory), never by list position —
+# and the guard test proves order-insensitivity by shuffling fixture block
+# order. Rationale: it removes the git-version brittleness (RSK-5, RSK-T2)
+# instead of pinning it. The positional-pin alternative stays the documented
+# fallback (spec §7.3) should implementation reveal a git-version constraint;
+# both forms satisfy AC-F10-1 / NFR-8.
+#
+# Constants fixed by this plan (spec F-2/F-3, DM-1..DM-5, NFR-6/NFR-7;
+# delivery conventions per pm-notes):
+#   - worktree path scheme:  <worktree-root>/<checkout-basename>-<ref>; the
+#                            default worktree-root places the worktree as a
+#                            SIBLING of the main checkout; created on a NEW
+#                            branch at the tip of the base branch; all paths
+#                            resolved from the clone's PHYSICAL location
+#                            (real path), never through a symlinked alias
+#   - provisioning steps:    install (pinned lockfile) -> gate build -> gate
+#                            temp dir inside the worktree -> lane environment
+#                            derived (the worktree's node_modules/.bin leads
+#                            PATH) — all before the first phase
+#   - lane record context:   the dispatch.lane record gains its worktree
+#                            context ADDITIVELY (DM-1); absence of the
+#                            context is the detectable pre-change /
+#                            disable-worktrees shape (DEC-8); nothing
+#                            migrates (spec §19)
+#   - evidence literal:      $PWD/tmp/tmpdir — the convention string is
+#                            unchanged; its physical resolution anchors to
+#                            the lane's worktree (DEC-6)
+#   - suite file names:      pinned VERBATIM from test plan §7 with ONE
+#                            settlement — §7 left the enumeration-guard file
+#                            open between tests/structure/ and
+#                            tests/behaviour/; this plan pins
+#                            tests/behaviour/git-adapter-worktree-enumeration.test.ts
+#                            (the adapter suites exercising temp git
+#                            repositories live in tests/behaviour per the
+#                            test plan's own layer mapping, §4): the new
+#                            suites are
+#                            tests/behaviour/git-adapter-worktree-seam.test.ts,
+#                            tests/checks/worktree-seam-house-style.test.ts,
+#                            tests/behaviour/git-adapter-worktree-enumeration.test.ts,
+#                            tests/behaviour/dispatch-worktree-lifecycle.test.ts,
+#                            tests/behaviour/host-index-worktree-pin.test.ts;
+#                            the updated suites are exactly §7's Existing -
+#                            Update rows
+#   - exception-mode pins:   golden cases or fixture files under
+#                            tests/golden/ pinning today's preserved output
+#                            for the disable-worktrees mode (TC-REG-001)
+#   - changeset:             .changeset/gh-404-worktree-lane-foundation-minor.md
+#                            declaring the five fixed-group packages
+#                            (@delivery-os/core, @delivery-os/adapters,
+#                            @delivery-os/cli, @delivery-os/mcp,
+#                            @delivery-os/opencode) at minor (spec front
+#                            matter version_impact: minor; lockstep config)
+#
+# Plan-wide delivery fences (binding), in force on every phase below:
+#   - Zero-rename fence (NG-4, DEC-4): no base-delivered command name,
+#     subcommand, payload field, configuration key, or schema id is renamed,
+#     removed, or re-keyed anywhere in this change; the two new worker
+#     settings are ADDITIVE keys; new code names the clone identity
+#     cloneKey and the declared product key declaredProductKey, never the
+#     bare legacy token — the GH-406 naming check with its committed
+#     baseline runs in pnpm check and governs every new file from birth.
+#   - Non-goal fence (NG-1..NG-7): no parallel lanes, no per-lane leases, no
+#     per-repository cap, no second-lane admission (GH-412); the repository
+#     lease is unchanged — claimed before any provisioning, one lane at a
+#     time (NG-2); the dispatch result pr-open semantics unchanged (NG-3);
+#     no sync-before-PR and no behind indicator (NG-6); clone-identity and
+#     state-root derivation unchanged — pinned by fixture (TC-IDENT-001),
+#     altered nothing (NG-5); no per-lane spend (GH-378/GH-412) and no
+#     planning-horizon change (NG-7 / GH-407).
+#   - DEC-8 fence: a lane whose record carries no worktree context never
+#     provisions a worktree at resume and completes and closes out under
+#     today's behaviour, in the invoking/main checkout. THIS CHANGE'S OWN
+#     LANE is such a lane: GH-404 is delivered in the main checkout, and its
+#     lane record predates DM-1 — if it is resumed mid-delivery after phase 4
+#     lands, DEC-8 keeps it in the main checkout. The first worktree lane is
+#     the next lane dispatched after this change's PR lands.
+#   - Byte-for-byte fence (F-8, NFR-4): with the disable-worktrees setting
+#     set, dispatch, resume, dispatch status, lanes, board, merge and
+#     closeout behave byte-for-byte as today; the exception path is a
+#     first-class tested mode (TC-REG-001/002), never a dead branch.
+#   - Lease-order fence: the repository lease is claimed before any worktree
+#     provisioning, exactly as today (TC-WT-003 asserts the order).
+#   - Physical-path fence (NFR-7): worktree creation, sibling placement and
+#     host-index registration resolve from the clone's physical location —
+#     zero resolutions through a symlinked alias (TC-WT-005 proves it with a
+#     symlink strictly inside the harness's own temp workspace).
+#   - Green-boundary / conditional-sweep fence: every phase below is ONE
+#     commit through the commit primitive on branch
+#     feat/GH-404/worktree-lane-foundation, and each phase boundary is green
+#     under TMPDIR=$PWD/tmp/tmpdir pnpm check (narrow suites during
+#     iteration; the full gate at the boundary). Phase 4 turns worktree
+#     lanes on by default, so pre-existing suites whose pins assert today's
+#     in-checkout behaviour (resume economics, gate evidence, goldens) may
+#     trip THERE: any such tripped pin is re-pinned in the SAME phase commit
+#     as the behaviour change that tripped it, with the trip and its
+#     deliberate default-mode re-pin verdict recorded as a pm-notes notes
+#     entry — never deferred to a later phase (that would strand a red
+#     boundary), never a silent weakening, and never applied to the
+#     exception-mode pins (escalation trigger 1). Files legitimately touched
+#     by more than one phase are declared in each phase that touches them
+#     (plan diff echoes the first covering phase — an accepted, bounded
+#     observation, the GH-406 shared-file precedent).
+#   - Golden discipline fence (RSK-T1, testing strategy): goldens that pin
+#     preserved data are updated deliberately in review, never
+#     blanket-rewritten; default-mode goldens gain the worktree line only in
+#     the phase that changes the surface; exception-mode goldens equal
+#     today's output byte-for-byte forever.
+#   - Hermeticity fence (test plan §6): every new suite runs hermetic —
+#     temporary git repositories, temporary state stores, seeded bins and
+#     logs created and cleaned up by the harness; no live network, no live
+#     credentials, no live tracker or PR calls (merge fakes per the
+#     merge-deploy-no-live-calls pattern); suites stay order-independent and
+#     parallel-safe per the existing isolation checks; zero assertions
+#     against a moving base (no origin/main-tools...HEAD diffs anywhere —
+#     RSK-T6); ZERO timing assertions — TC-ENV-004 is delivery evidence in
+#     the pm-notes, and no bun test fixture may assert an install/build
+#     duration.
+#   - Phase-gate fence: the PR targeting main-tools, merge authority, tracker
+#     transitions, and the lifecycle review/quality-gates phases belong to
+#     the lifecycle, not this plan; gate evidence during delivery uses
+#     TMPDIR=$PWD/tmp/tmpdir; no doc edit outside a declared phase scope may
+#     leak into any commit.
+# ---------------------------------------------------------------------------
+phases:
+  - id: 1
+    title: Lane and config contracts — additive worktree context (DM-1) and worker settings worktree-root / disable-worktrees (DM-3, DM-4)
+    kind: delivery
+    summary: "declare the additive contract surface every later phase consumes: the dispatch.lane record payload in packages/core/src/contracts/dispatch.ts gains an optional worktree context — the worktree path the lane runs in, ABSENT exactly for pre-change lanes and disable-worktrees lanes so DEC-8 stays detectable and nothing migrates (spec §19) — and the worker settings gain the two additive keys with catalog entries in packages/core/src/config/catalog.ts: worktree-root (DM-3; default places each lane worktree as a sibling of the main checkout, named <checkout-basename>-<ref>) and the disable-worktrees exception setting (DM-4; opt-in; with it set behaviour is byte-for-byte today's); no existing key is renamed and no key changes meaning (NG-4); the config fixtures that enumerate catalog keys (tests/fixtures/config/catalog.ts, tests/fixtures/config/lane.ts) and the schema suite tests/behaviour/config-schema.test.ts are re-pinned and extended for the two new keys in the SAME commit so the boundary is proven, not merely compiled — this commit carries TC-WT-004's config half (AC-F2-1, DM-3, DM-4); the setting keys follow the delivered lane-key pattern (lane.liveness-interval, lane.restart-budget) in contracts/dispatch.ts."
+    # TC ownership: TC-WT-004 config half (F-2, AC-F2-1, DM-3, DM-4). DM-1 and
+    # DM-4 are declared here and consumed from phase 4; their scenario
+    # coverage rides phases 8/9 (TC-RESUME-003, TC-REG-001/002).
+    # Ordering: first delivery phase by design — contracts before every
+    # consumer; purely additive at the base (existing configuration keeps
+    # loading, spec §8.5).
+    # Fences in force: zero-rename (additive keys only, NG-4); naming check
+    # governs nothing new yet (no new source file — extensions only).
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/config-schema.test.ts; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed.
+    scope:
+      files:
+        - packages/core/src/contracts/dispatch.ts
+        - packages/core/src/config/catalog.ts
+        - tests/behaviour/config-schema.test.ts
+        - tests/fixtures/config/catalog.ts
+        - tests/fixtures/config/lane.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/dispatch.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/config/catalog.ts
+        role: producer
+  - id: 2
+    title: "Pure domain — lane worktree plan: sibling path scheme, environment derivation, resume verification, closeout ordering rules"
+    kind: delivery
+    summary: "author the pure domain layer as packages/core/src/domain/lane-worktree-plan.ts (new file): the deterministic worktree path scheme <worktree-root>/<checkout-basename>-<ref> with the sibling-of-main-checkout default derived from worktree-root, all paths resolved from the clone's PHYSICAL location (real path, never a symlinked alias — NFR-7); the lane-environment derivation contract — the worktree's node_modules/.bin leads PATH, the gate temporary directory anchored inside the worktree (the evidence literal stays $PWD/tmp/tmpdir because the lane's working directory IS the worktree, DEC-6), and the ordered provisioning steps (install from the pinned lockfile, then the gate build) as data consumed before the first phase; the resume verification rules — find the recorded worktree, verify it is on the lane's branch, never plan a second worktree, a missing or mismatched worktree is a lane error never a silent re-provision, and a record without worktree context plans today's in-checkout shape (DEC-8) — extending packages/core/src/domain/dispatch-resume.ts; and the closeout ordering rules — sweep the lane's logs before removal, removal strictly after merge confirmation, stalled lanes keep their worktrees — extending the delivered safety predicate in packages/core/src/domain/closeout-worktree.ts (predicate reused, not redefined) with the spawn-plan consumption point in packages/core/src/domain/lane-launch-plan.ts; pure functions over injected inputs: no I/O, no spawn, no clock, no configuration reads."
+    # TC ownership: the domain rules are PROVEN by the phase-8/9 suites —
+    # TC-ENV-002/003 (F-3, AC-F3-1), TC-RESUME-001/002/003 (F-4, AC-F4-1,
+    # DEC-8), TC-CLOSEOUT-002/003/004/005 (F-6, NFR-5), TC-WT-003/005 (F-2,
+    # NFR-7). No new suite lands in this phase: pure domain is additive and
+    # nothing consumes it yet, so the boundary stays green trivially.
+    # Ordering: domain before adapters and app services (delegation: contract
+    # types first, pure domain second); the closeout predicate extension
+    # precedes the closeout command wiring in phase 6.
+    # Fences in force: purity per .ai/rules/typescript.md (domain reads no
+    # configuration, performs no I/O); the safety predicate is REUSED — the
+    # ordering is added around it, never a predicate redefinition (spec §12).
+    # Verify: pnpm typecheck; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary (existing suites untouched and green); git status confirms only the declared paths changed.
+    scope:
+      files:
+        - packages/core/src/domain/lane-worktree-plan.ts
+        - packages/core/src/domain/dispatch-resume.ts
+        - packages/core/src/domain/closeout-worktree.ts
+        - packages/core/src/domain/lane-launch-plan.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/lane-worktree-plan.ts
+        role: producer
+  - id: 3
+    title: Git adapter — addWorktree seam in the house style; linked-only enumeration made position-independent (F-10)
+    kind: delivery
+    summary: "add the missing create operation to the git adapter worktree family in packages/adapters/src/git/index.ts: addWorktree creates a LINKED worktree on a new branch at the tip of the given base branch, in the exact house style of listWorktrees / currentWorktreePath / isWorktreeClean / removeWorktree — fixed argv, no shell, local only, NO force flag — and every git refusal (branch exists, path exists, unsafe parent, anything else) surfaces as a typed refusal: zero retries, zero fallbacks, zero overrides (F-1, NFR-1); in the SAME commit the linked-worktree enumeration and the branch-checked-out-elsewhere check are made POSITION-INDEPENDENT (F-10, DEC-5 — this plan's chosen form): a porcelain block is the main checkout exactly when its git directory is the repository's common directory, never because it is first, so the main checkout is excluded from the linked inventory and linked worktrees are included regardless of block order; for every listing shape delivered today (main checkout first) the enumeration output is unchanged, so existing adapter suites stay green at this boundary; the positional-pin alternative remains the documented fallback (spec §7.3) if implementation reveals a git-version constraint."
+    # TC ownership: TC-WT-001/002 unit halves and TC-IDENT-002 are PROVEN by
+    # the phase-8 suites (tests/behaviour/git-adapter-worktree-seam.test.ts,
+    # tests/checks/worktree-seam-house-style.test.ts,
+    # tests/behaviour/git-adapter-worktree-enumeration.test.ts) — the seam
+    # and its guard land before any consumer, so the boundary is green with
+    # the proof landing in phase 8 (the GH-406 pattern: the standing rule
+    # exists from birth, its suite rides the proof phase).
+    # Ordering: adapters after pure domain and before app services; the
+    # create capability must exist before phase 4 consumes it.
+    # Fences in force: house-style seam contract (fixed argv, no shell, no
+    # network, no force — NFR-1); the enumeration change is
+    # behaviour-preserving for every delivered listing shape; no other seam
+    # is touched.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary (existing git-adapter and closeout suites stay green); git status confirms only the declared path changed.
+    scope:
+      files:
+        - packages/adapters/src/git/index.ts
+    interactions:
+      - kind: contract-file
+        target: packages/adapters/src/git/index.ts
+        role: producer
+  - id: 4
+    title: Provisioning before the first phase — worktree creation, dependency install, gate build, gate temp dir; default-on with the exception honoured (OQ-1 settled)
+    kind: delivery
+    summary: "settle OQ-1 by declaring the provisioning contract and wiring it into the dispatch engine (packages/core/src/app/dispatch-lane.ts, packages/core/src/app/dispatch-gate.ts): after the repository lease is claimed (unchanged order, NG-2) and BEFORE the first phase (clarify_scope), dispatch of a work item whose lane has no worktree creates the worktree through addWorktree at the derived sibling path on a new branch at the base tip (F-2), then provisions the lane environment IN the worktree — dependencies installed with the pinned lockfile (pnpm install --frozen-lockfile), whatever the gates need built built there, the gate temporary directory created inside the worktree with the evidence literal $PWD/tmp/tmpdir anchored to the lane's working directory (DEC-6) — and records the worktree context on the lane record (DM-1) so resume and the surfaces can find it; the lane's spawn environment is the phase-2 derived plan (the worktree's node_modules/.bin leads PATH); worktree lanes are DEFAULT-ON from this phase; the disable-worktrees exception setting is honoured at this same seam — with it set no worktree is created or referenced and the lane runs in the invoking checkout exactly as today (F-8); the provisioning MEASUREMENT (what the gates needed, how long) is recorded during delivery as pm-notes evidence (NFR-9, TC-ENV-004) — no suite asserts any duration; pre-existing suite pins that trip on the default flip are re-pinned in THIS commit per the green-boundary fence."
+    # TC ownership: TC-WT-003 (F-2, AC-F2-1 — creation ordering, lease before
+    # provisioning), TC-ENV-001/002/003 (F-3, AC-F3-1, NFR-2, DEC-6),
+    # TC-ENV-004 (F-3, AC-F3-2, NFR-9 — EVIDENCE ONLY, recorded in the change
+    # pm-notes during delivery, no test file), TC-REG-002 (F-8, AC-F8-1 —
+    # exception-mode variant). The proving suites land in phase 8; the
+    # conditional-sweep fence moves any tripped pre-existing pin into this
+    # commit.
+    # Ordering: after phase 3 (the seam exists); before resume (phase 5) and
+    # the surfaces (phase 7). This is the change's central boundary: the
+    # default flip happens here and nowhere else.
+    # Fences in force: lease-order fence; physical-path fence; DEC-8 fence
+    # (this change's own lane stays in the main checkout); byte-for-byte
+    # fence (the exception branch is wired in the same commit as the default
+    # flip — the escape hatch can never lag the default); hermeticity fence
+    # (suites stub install/build — RSK-T5).
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-harness-lease.test.ts tests/behaviour/dispatch-resume.test.ts tests/behaviour/dispatch-gate-evidence.test.ts (tripped pins re-pinned here per the fence); TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed plus fence-authorized re-pins.
+    scope:
+      files:
+        - packages/core/src/app/dispatch-lane.ts
+        - packages/core/src/app/dispatch-gate.ts
+        - packages/core/src/domain/lane-launch-plan.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/app/dispatch-lane.ts
+        role: consumer
+      - kind: contract-file
+        target: packages/core/src/app/dispatch-gate.ts
+        role: consumer
+  - id: 5
+    title: Resume reuse and registration pin — one worktree per work item; host index pinned to the main checkout (F-4, F-5)
+    kind: delivery
+    summary: "resume and registration: resume of a lane whose record carries worktree context finds THAT worktree, verifies it is on the lane's branch (packages/core/src/domain/dispatch-resume.ts rules wired through packages/core/src/app/dispatch-lane.ts), and continues in it — zero second worktrees across any number of attempts; a missing or branch-mismatched worktree surfaces as a lane error naming the problem, never a silent re-provision (F-4, NFR-3); a lane whose record carries NO worktree context — every pre-change lane, including this change's own — resumes exactly as today in the invoking/main checkout under the disable-worktrees shape and never provisions a worktree (DEC-8); every lane command, whatever checkout invoked it, keeps the host-index entry's root at the MAIN checkout's path (packages/core/src/app/host-index.ts, with the flat-record registration surface in packages/core/src/app/projects.ts): zero root flips to a worktree path, a worktree removal never prunes a live clone's entry during maintenance, and worktrees never appear as rows of the flat record set — they surface only through the lane surfaces (F-5, DM-2, NFR-6)."
+    # TC ownership: TC-RESUME-001/002/003 (F-4, AC-F4-1, NFR-3, DEC-8, DM-1),
+    # TC-HOSTIDX-001/002/003 (F-5, AC-F5-1, NFR-6, DM-2) — proven by the
+    # phase-8 suites; tripped pre-existing pins ride this commit per the
+    # fence.
+    # Ordering: after phase 4 (there must be a recorded worktree context to
+    # reuse); before merge/closeout (phase 6) so the lifecycle completes on
+    # the reused worktree.
+    # Fences in force: DEC-8 fence (the context-less branch is the disable-
+    # worktrees shape, never a provisioning path); registration-pin fence —
+    # the entry root is the main checkout even when the command runs from a
+    # worktree; zero-rename (DM-2 is behavioural, no field renamed).
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-resume.test.ts tests/behaviour/projects-host-index.test.ts tests/behaviour/projects-identity.test.ts (tripped pins re-pinned here per the fence); TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed plus fence-authorized re-pins.
+    scope:
+      files:
+        - packages/core/src/app/dispatch-lane.ts
+        - packages/core/src/domain/dispatch-resume.ts
+        - packages/core/src/app/host-index.ts
+        - packages/core/src/app/projects.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/app/host-index.ts
+        role: producer
+  - id: 6
+    title: Merge and closeout on a worktree branch — resolution from worktree or main checkout; sweep-then-remove after merge confirmation (F-6)
+    kind: delivery
+    summary: "the lifecycle completes on a worktree-checked-out branch: merge resolves the change from the worktree or the main checkout (packages/cli/src/commands/merge.ts with the git merge seam in packages/adapters/src/git/merge.ts) so a branch checked out in its worktree lands normally — the repository lease and the dispatch result pr-open semantics untouched (NG-2, NG-3); closeout (packages/cli/src/commands/closeout.ts, ordering rules in packages/core/src/domain/closeout-worktree.ts) sweeps the lane's logs BEFORE removal — zero log loss, swept logs retrievable at their destination — and removes the worktree ONLY after the merge is confirmed, never before, behind the delivered local worktree safety predicate reused as-is (F-6, NFR-5); a lane stopped without a merge keeps its worktree until it is resumed and completes or is closed out; a second closeout stays a no-op satisfaction per the delivered idempotency suite; pre-existing closeout and merge pins that trip are re-pinned in THIS commit per the green-boundary fence."
+    # TC ownership: TC-CLOSEOUT-001 (F-6, AC-F6-1 — merge from both
+    # checkouts), TC-CLOSEOUT-002/003/004 (ordering, refusals, stalled-lane
+    # retention), TC-CLOSEOUT-005 (mutants) — proven by the phase-9 suites;
+    # tripped pre-existing pins ride this commit per the fence.
+    # Ordering: after phase 5 (the worktree is found and reused before the
+    # lifecycle completes); merge and closeout in ONE phase — the removal
+    # ordering is only meaningful against the merge resolution it follows.
+    # Fences in force: closeout-ordering fence (sweep before remove; remove
+    # strictly after merge confirmation — escalation trigger 3); the safety
+    # predicate is reused, not redefined (spec §12); no sync-before-PR and
+    # no pr-open change (NG-3, NG-6).
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/merge-production-composition.test.ts tests/behaviour/closeout-worktree.test.ts tests/behaviour/closeout-worktree-refusal.test.ts tests/behaviour/closeout-worktree-idempotency.test.ts (tripped pins re-pinned here per the fence); TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed plus fence-authorized re-pins.
+    scope:
+      files:
+        - packages/cli/src/commands/merge.ts
+        - packages/cli/src/commands/closeout.ts
+        - packages/core/src/domain/closeout-worktree.ts
+        - packages/adapters/src/git/merge.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/closeout-worktree.ts
+        role: consumer
+  - id: 7
+    title: CLI surfaces — worktree path in dispatch status, lanes and board (F-7)
+    kind: delivery
+    summary: "visibility: dispatch status, lanes and board (packages/cli/src/commands/dispatch.ts, packages/cli/src/commands/lanes.ts, packages/cli/src/commands/board.ts, rendered text in packages/cli/src/output/dispatch-text.ts) show each lane's worktree path, read from the lane record's additive worktree context (DM-1), so an operator can always answer where a lane is working (F-7, AC-F7-1); lanes WITHOUT worktree context render exactly today's output — the field is additive and conditionally rendered, which is the mechanical basis of the exception-mode byte-for-byte guarantee (F-8) proven by TC-REG-001 in phase 9; default-mode goldens that gain the worktree line are re-pinned in THIS commit (the surface-touching phase, golden-discipline fence); exception-mode pins are never regenerated to match drift (escalation trigger 1)."
+    # TC ownership: TC-SURFACES-001/002 (F-7, AC-F7-1, DM-1) — proven by the
+    # phase-9 golden suites; the default-mode golden re-pins land HERE per
+    # the golden-discipline fence (the worktree line appears on the surface
+    # in this phase, for lanes that carry the context).
+    # Ordering: after phases 4/5 (the context exists on lane records); before
+    # the proof phases.
+    # Fences in force: zero-rename (existing fields, envelopes and exit codes
+    # unchanged — one additive rendered field); byte-for-byte fence (the
+    # no-context rendering is byte-identical to today's); golden-discipline
+    # fence.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/golden/dispatch-text.test.ts tests/golden/dispatch-summary.test.ts tests/golden/lanes-list.test.ts tests/golden/lanes-show.test.ts tests/golden/board-grid.test.ts tests/behaviour/board-lanes.test.ts (default-mode goldens re-pinned here per the fence); TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed plus fence-authorized re-pins.
+    scope:
+      files:
+        - packages/cli/src/commands/dispatch.ts
+        - packages/cli/src/commands/lanes.ts
+        - packages/cli/src/commands/board.ts
+        - packages/cli/src/output/dispatch-text.ts
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/output/dispatch-text.ts
+        role: consumer
+  - id: 8
+    title: Behaviour proof I — adapter, provisioning, resume, host-index and identity suites (governing fixtures and guards)
+    kind: delivery
+    summary: "the governing fixtures and guards from test plan §7, part 1 — NEW suites: tests/behaviour/git-adapter-worktree-seam.test.ts (TC-WT-001: addWorktree creates a linked worktree on a new branch at the base tip, asserted seam-contract style against a temp git repository); tests/checks/worktree-seam-house-style.test.ts (TC-WT-002: refusal matrix — existing branch, existing path, unsafe parent all surface as refusals with zero retries — plus the source-scan canary in the no-shell-dispatch pattern: no shell, no force token, no network in the create path, planted canaries contained); tests/behaviour/git-adapter-worktree-enumeration.test.ts (TC-IDENT-002: the linked-only reading asserted with SHUFFLED porcelain block order — main checkout excluded, linked worktrees included, zero position-dependent reads); tests/behaviour/dispatch-worktree-lifecycle.test.ts (TC-WT-003 creation before the first phase with the lease-first order; TC-WT-004 default sibling vs explicit worktree-root placement; TC-WT-005 physical-path resolution via a harness-internal symlink alias; TC-ENV-001 the governing fixture AC1 — full lifecycle in the worktree with the main checkout on the base branch and clean at every observed point; TC-ENV-002 derived environment: worktree bin leads PATH, gate temp dir inside, install/build stubbed before the first phase; TC-REG-002 the exception-mode variant: no worktree created or referenced, lane runs in the main checkout); tests/behaviour/host-index-worktree-pin.test.ts (TC-HOSTIDX-001 zero root flips across lane commands run from the worktree; TC-HOSTIDX-002 the entry survives removal plus maintenance and repos list keeps its row; TC-HOSTIDX-003 worktrees never rows of the flat record set) — UPDATED suites: tests/behaviour/dispatch-resume-economics.test.ts (TC-RESUME-001 reuse with zero second worktrees over repeated resumes; TC-RESUME-002 missing/mismatched worktree is a lane error; TC-RESUME-003 the DEC-8 pre-change context-less lane), tests/behaviour/dispatch-gate-evidence.test.ts (TC-ENV-003 the literal $PWD/tmp/tmpdir), tests/behaviour/projects-identity.test.ts and tests/structure/state-scope.test.ts (TC-IDENT-001: the linked worktree resolves the SAME clone identity and state root as the main checkout, marker in the git common directory unchanged); all hermetic per the testing strategy — temp repositories, temp state stores, no live network, order-independent, zero timing assertions anywhere (TC-ENV-004 is delivery evidence in the pm-notes, not a suite)."
+    # TC ownership: TC-WT-001..005, TC-ENV-001/002/003, TC-RESUME-001/002/003,
+    # TC-HOSTIDX-001/002/003, TC-IDENT-001/002, TC-REG-002. TC-ENV-004 is
+    # explicitly NOT here: it is the pm-notes evidence entry recorded during
+    # delivery (NFR-9) — the test plan §8.3 forbids a timing assertion.
+    # Ordering: after every consumer phase (4-7) so the suites prove the
+    # delivered behaviour end-to-end; the §7 To-Implement rows land here in
+    # full, the Existing - Update rows for part 1 land here (any row already
+    # re-pinned at an earlier tripping boundary per the fence is verified and
+    # recorded here).
+    # Fences in force: hermeticity fence; isolation conventions inherited
+    # from the existing isolation checks; fixture work strictly under the
+    # harness temp root (TC-WT-005's symlink never leaves it).
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/git-adapter-worktree-seam.test.ts tests/checks/worktree-seam-house-style.test.ts tests/behaviour/git-adapter-worktree-enumeration.test.ts tests/behaviour/dispatch-worktree-lifecycle.test.ts tests/behaviour/host-index-worktree-pin.test.ts tests/behaviour/dispatch-resume-economics.test.ts tests/behaviour/dispatch-gate-evidence.test.ts tests/behaviour/projects-identity.test.ts tests/structure/state-scope.test.ts; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed.
+    scope:
+      files:
+        - tests/behaviour/git-adapter-worktree-seam.test.ts
+        - tests/checks/worktree-seam-house-style.test.ts
+        - tests/behaviour/git-adapter-worktree-enumeration.test.ts
+        - tests/behaviour/dispatch-worktree-lifecycle.test.ts
+        - tests/behaviour/host-index-worktree-pin.test.ts
+        - tests/behaviour/dispatch-resume-economics.test.ts
+        - tests/behaviour/dispatch-gate-evidence.test.ts
+        - tests/behaviour/projects-identity.test.ts
+        - tests/structure/state-scope.test.ts
+    interactions:
+      - kind: contract-file
+        target: tests/behaviour/dispatch-worktree-lifecycle.test.ts
+        role: consumer
+  - id: 9
+    title: Behaviour proof II — closeout ordering, merge composition, surface goldens, exception-mode regression
+    kind: delivery
+    summary: "lifecycle completion and regression proof from test plan §7, part 2 — UPDATED suites: tests/behaviour/merge-production-composition.test.ts (TC-CLOSEOUT-001: merge lands a change whose branch is checked out in its worktree, invoked from the worktree AND from the main checkout — hermetic production composition with tracker/PR fakes); tests/behaviour/closeout-worktree.test.ts and tests/behaviour/closeout-worktree-idempotency.test.ts (TC-CLOSEOUT-002: logs swept before removal, retrievable at their destination, removal only after merge confirmation, second closeout a no-op satisfaction; TC-CLOSEOUT-004: a stalled lane without a merge keeps its worktree); tests/behaviour/closeout-worktree-refusal.test.ts (TC-CLOSEOUT-003: every refusal path leaves the worktree and the logs intact); tests/checks/closeout-mutants.test.ts (TC-CLOSEOUT-005: the remove-before-sweep and remove-before-merge-confirmation mutants each turn the suite red, canaries contained); tests/behaviour/board-lanes.test.ts and the golden suites under tests/golden (TC-SURFACES-001: the worktree path pinned in dispatch text and summary; TC-SURFACES-002: lanes list/show and board grid — 3 of 3 surfaces with phase 8's fixture; TC-REG-001: the exception-mode byte-for-byte pins across dispatch text/summary/errors, resume, dispatch status, lanes list/show, board grid, merge and closeout envelope/residue — 0-byte delta against today's preserved output with the disable-worktrees setting set); golden discipline: default-mode pins updated deliberately with the explicit regeneration command in review, exception-mode pins are preserved data and never blanket-rewritten (escalation trigger 1)."
+    # TC ownership: TC-CLOSEOUT-001..005, TC-SURFACES-001/002, TC-REG-001.
+    # Ordering: after phase 8 (part 1 proves the lane and the pin; part 2
+    # proves the completion and the exception guarantee); the exception-mode
+    # pins require the surfaces phase (7) to have landed so the conditional
+    # rendering exists to be pinned.
+    # Fences in force: hermeticity fence (merge fakes, no live calls);
+    # closeout-ordering fence (both mutants red); byte-for-byte fence;
+    # golden-discipline fence.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/merge-production-composition.test.ts tests/behaviour/closeout-worktree.test.ts tests/behaviour/closeout-worktree-idempotency.test.ts tests/behaviour/closeout-worktree-refusal.test.ts tests/checks/closeout-mutants.test.ts tests/behaviour/board-lanes.test.ts; TMPDIR=$PWD/tmp/tmpdir bun test tests/golden; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths/folders changed.
+    scope:
+      files:
+        - tests/behaviour/merge-production-composition.test.ts
+        - tests/behaviour/closeout-worktree.test.ts
+        - tests/behaviour/closeout-worktree-idempotency.test.ts
+        - tests/behaviour/closeout-worktree-refusal.test.ts
+        - tests/checks/closeout-mutants.test.ts
+        - tests/behaviour/board-lanes.test.ts
+      folders:
+        - tests/golden
+    interactions:
+      - kind: contract-file
+        target: tests/behaviour/closeout-worktree.test.ts
+        role: consumer
+  - id: 10
+    title: Release changeset (minor, five fixed groups) and system-spec reconciliation declaration (doc-syncer scope)
+    kind: delivery
+    summary: "release and reconciliation declaration: .changeset/gh-404-worktree-lane-foundation-minor.md declares the feature (minor) across the five fixed-group packages (@delivery-os/core, @delivery-os/adapters, @delivery-os/cli, @delivery-os/mcp, @delivery-os/opencode) per the lockstep configuration and the spec front matter version_impact: minor, its body stating the worktree-lane foundation — default-on worktree lanes with the disable-worktrees exception, provisioning before the first phase, resume reuse, registration pinned to the main checkout, merge/closeout ordering, worktree-path visibility — in the delivered GH-406 vocabulary; the six feature-spec entries (doc/spec/features/feature-dispatch-engine.md, feature-closeout.md, feature-projects.md, feature-board.md, feature-config-layer.md, feature-state-layer.md) are DECLARATION ONLY — doc-syncer executes the contract-truth reconciliation in the lifecycle system_spec_update phase per the pm-notes doc-impacts list (worktree creation and derived lane environment in the dispatch-engine spec; log sweep and removal-after-merge-confirmation in closeout; the host-index root pin and the never-a-flat-row rule in projects; the worktree-path column in board and the lanes/dispatch-status surfaces; the two worker settings in the config layer; the shared clone-identity pin in the state layer); no coder task edits them in this phase's commit, whose artifact is the changeset; the PR targeting main-tools, merge authority and tracker transitions belong to the lifecycle, not this plan."
+    # TC ownership: TC-RELEASE-001 shape (the changeset exists on the branch —
+    # publishable-diff precondition holds); the feature-spec reconciliation is
+    # doc-syncer's lifecycle scope declared here so it lands inside a declared
+    # boundary (GH-394/GH-406 precedent).
+    # Ordering: final phase — the release artifact lands after the behaviour
+    # and its proof.
+    # Fences in force: zero-rename (the changeset names no renamed
+    # identifier — there are none); the feature-spec entries are declaration
+    # only, executed by doc-syncer in the lifecycle.
+    # Verify: the changeset file parses as YAML front matter declaring the five fixed-group packages at minor; the phase commit contains exactly the changeset file (plus the pm-notes evidence ride); TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed.
+    scope:
+      files:
+        - .changeset/gh-404-worktree-lane-foundation-minor.md
+        - doc/spec/features/feature-dispatch-engine.md
+        - doc/spec/features/feature-closeout.md
+        - doc/spec/features/feature-projects.md
+        - doc/spec/features/feature-board.md
+        - doc/spec/features/feature-config-layer.md
+        - doc/spec/features/feature-state-layer.md
+# Plan revision log:
+#   rev 1 — 2026-11-25: initial ten-phase plan from spec v1.0 (0cb77658) +
+#           test plan v1.0 (a50a1503). OQ-1 settled in-plan: the fresh-worktree
+#           provisioning contract (install from the pinned lockfile, gate
+#           build, gate temp dir inside the worktree — all before the first
+#           phase) is declared as phase 4; the timing measurement is delivery
+#           evidence in the pm-notes (NFR-9/TC-ENV-004), never a suite
+#           assertion; no decision record authored, TDR-0077 stays reserved
+#           and unused. F-10 form chosen in-plan: position-independent
+#           enumeration (phase 3), the positional pin kept as the documented
+#           fallback (spec §7.3). Enumeration-guard suite file name settled
+#           as tests/behaviour/git-adapter-worktree-enumeration.test.ts
+#           (§7 left the directory open). Phases ordered so each boundary is
+#           green: contracts (1), pure domain (2), adapter seam + enumeration
+#           (3), provisioning + default flip (4), resume + registration pin
+#           (5), merge/closeout (6), surfaces (7), proof part 1 (8), proof
+#           part 2 (9), changeset + reconciliation declaration (10). Non-goal
+#           boundaries NG-1..NG-7 and DEC-8 are binding fences, not prose.
