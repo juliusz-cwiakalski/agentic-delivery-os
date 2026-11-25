@@ -173,3 +173,87 @@ describe("TC-RESUME-004 an identical replay converges without a second effect", 
     }
   });
 });
+
+/**
+ * TC-RESUME-001/002/003 (GH-404 F-4, AC-F4-1, NFR-3, DEC-8, DM-1) — the
+ * worktree resume rules over the delivered pure policy: reuse with zero
+ * second worktrees, missing/branch-mismatched worktrees are lane errors
+ * naming the problem, and the pre-change context-less lane resumes exactly as
+ * today (never provisioning a worktree).
+ */
+import { planLaneWorktreeResume } from "../../packages/core/src/domain/dispatch-resume";
+
+describe("TC-RESUME-001 the resume reuses the lane's worktree", () => {
+  test("a recorded, present, on-branch worktree is reused — never re-provisioned", () => {
+    const plan = planLaneWorktreeResume({
+      worktreePath: "/repos/checkout-GH-404",
+      ref: "GH-404",
+      worktreePresent: true,
+      worktreeBranch: "lane/GH-404",
+    });
+    expect(plan).toEqual({
+      kind: "reuse",
+      worktreePath: "/repos/checkout-GH-404",
+      branch: "lane/GH-404",
+    });
+  });
+
+  test("repeated resumes reuse the same worktree: zero second worktrees", () => {
+    const attempts = [1, 2, 3].map(() =>
+      planLaneWorktreeResume({
+        worktreePath: "/repos/checkout-GH-404",
+        ref: "GH-404",
+        worktreePresent: true,
+        worktreeBranch: "lane/GH-404",
+      }),
+    );
+    for (const attempt of attempts) {
+      expect(attempt).toEqual({
+        kind: "reuse",
+        worktreePath: "/repos/checkout-GH-404",
+        branch: "lane/GH-404",
+      });
+    }
+  });
+});
+
+describe("TC-RESUME-002 a missing or branch-mismatched worktree is a lane error", () => {
+  test("a missing worktree names the path and never re-provisions", () => {
+    const plan = planLaneWorktreeResume({
+      worktreePath: "/repos/checkout-GH-404",
+      ref: "GH-404",
+      worktreePresent: false,
+    });
+    expect(plan.kind).toBe("lane-error");
+    if (plan.kind === "lane-error") {
+      expect(plan.reason).toBe("worktree-missing");
+      expect(plan.detail).toContain("/repos/checkout-GH-404");
+      expect(plan.detail).toContain("resume never re-provisions");
+    }
+  });
+
+  test("a branch-mismatched worktree names observed vs expected and never moves it", () => {
+    const plan = planLaneWorktreeResume({
+      worktreePath: "/repos/checkout-GH-404",
+      ref: "GH-404",
+      worktreePresent: true,
+      worktreeBranch: "some-other-branch",
+    });
+    expect(plan.kind).toBe("lane-error");
+    if (plan.kind === "lane-error") {
+      expect(plan.reason).toBe("branch-mismatch");
+      expect(plan.detail).toContain("some-other-branch");
+      expect(plan.detail).toContain("lane/GH-404");
+    }
+  });
+});
+
+describe("TC-RESUME-003 the pre-change context-less lane resumes exactly as today", () => {
+  test("a record without worktree context plans the in-checkout shape", () => {
+    const plan = planLaneWorktreeResume({
+      ref: "GH-183",
+      worktreePresent: false,
+    });
+    expect(plan).toEqual({ kind: "in-checkout" });
+  });
+});

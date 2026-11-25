@@ -10,12 +10,11 @@ import {
   appendDispatchAttempt,
   appendDispatchDivergence,
 } from "../../packages/core/src/app/dispatch-ledger";
+import { requiredCorroboration } from "../../packages/core/src/domain/dispatch-comparison";
 import {
   evaluateHandoverGate,
   foldEvidenceWindow,
 } from "../../packages/core/src/domain/dispatch-gate";
-import { requiredCorroboration } from "../../packages/core/src/domain/dispatch-comparison";
-import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import {
   buildAttempts,
   dayAt,
@@ -23,8 +22,8 @@ import {
   missingClassSpecs,
   uncorroboratedSpecs,
 } from "../fixtures/dispatch/evidence-windows";
-import { makeAttempt } from "../fixtures/dispatch/ledger";
-import { REPOSITORY } from "../fixtures/dispatch/ledger";
+import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
+import { makeAttempt, REPOSITORY } from "../fixtures/dispatch/ledger";
 
 const seed = (
   scenario: ReturnType<typeof createCommandScenario>,
@@ -238,5 +237,42 @@ describe("TC-GATE-008 family-wise comparison parity and TC-GATE-010 corroboratio
     } finally {
       scenario.dispose();
     }
+  });
+});
+
+/**
+ * TC-ENV-003 (GH-404 F-3, AC-F3-1, DEC-6) — the pm-notes evidence convention
+ * keeps the literal `$PWD/tmp/tmpdir`: the convention string is unchanged, and
+ * its physical resolution anchors to the lane's worktree because the lane's
+ * working directory IS the worktree. The derived lane environment is pure
+ * data (the phase-2 contract), so the evidence literal and its physical
+ * anchor are pinned here without I/O.
+ */
+import { deriveLaneWorktreeEnvironment } from "../../packages/core/src/domain/lane-worktree-plan";
+
+describe("TC-ENV-003 the gate evidence keeps the literal $PWD/tmp/tmpdir", () => {
+  test("the derived environment anchors the gate temporary directory inside the worktree", () => {
+    const derived = deriveLaneWorktreeEnvironment({
+      worktreePath: "/repos/checkout-GH-404",
+    });
+    expect(derived.gateTemporaryDirectory).toBe("/repos/checkout-GH-404/tmp/tmpdir");
+    expect(derived.gateTemporaryDirectoryEvidenceLiteral).toBe("$PWD/tmp/tmpdir");
+    expect(derived.workingDirectory).toBe("/repos/checkout-GH-404");
+    // The physical resolution anchors to the lane's working directory: the
+    // literal stays `$PWD/tmp/tmpdir` because `$PWD` IS the worktree.
+    expect(
+      derived.gateTemporaryDirectory.endsWith(
+        derived.gateTemporaryDirectoryEvidenceLiteral.replace("$PWD", ""),
+      ),
+    ).toBe(true);
+  });
+
+  test("a different worktree derives a different anchor with the same literal", () => {
+    const first = deriveLaneWorktreeEnvironment({ worktreePath: "/repos/a-GH-1" });
+    const second = deriveLaneWorktreeEnvironment({ worktreePath: "/repos/b-GH-2" });
+    expect(first.gateTemporaryDirectory).not.toBe(second.gateTemporaryDirectory);
+    expect(first.gateTemporaryDirectoryEvidenceLiteral).toBe(
+      second.gateTemporaryDirectoryEvidenceLiteral,
+    );
   });
 });

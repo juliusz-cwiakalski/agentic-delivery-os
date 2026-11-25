@@ -284,7 +284,11 @@ export const parseWorktreeListing = (porcelain: string, commonDir: string): Work
     const path = lines.find((line) => line.startsWith("worktree "))?.slice("worktree ".length);
     if (path === undefined || path.trim().length === 0) continue;
     const bare = lines.some((line) => line === "bare");
-    if (!bare && mainGitDirOf(path) === commonDirPath) {
+    // A bare repository row is neither the main checkout nor a linked
+    // worktree: it is skipped entirely (the delivered positional reading
+    // dropped it the same way).
+    if (bare) continue;
+    if (mainGitDirOf(path) === commonDirPath) {
       mainCheckoutPath = normalizeListingPath(path);
       continue;
     }
