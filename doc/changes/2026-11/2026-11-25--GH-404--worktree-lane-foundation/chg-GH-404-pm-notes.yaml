@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-25T03:29:05.413Z }
   specification: { started: null, completed: 2026-11-25T03:37:50.066Z }
   test_planning: { started: null, completed: 2026-11-25T03:43:23.337Z }
-  delivery_planning: { started: null, completed: 2026-11-25T10:15:46.345Z }
+  delivery_planning: { started: null, completed: 2026-11-25T14:25:48.675Z }
   dor_check: { started: null, completed: 2026-11-25T04:08:42.685Z }
   delivery: { started: null, completed: 2026-11-25T13:57:22.115Z }
   system_spec_update: { started: null, completed: null }
@@ -52,25 +52,49 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Phase-7 (system_spec_update) reconciliation result: 19 current-truth
+      files reconciled (dispatch-engine lane-worktrees section; closeout
+      removal-ordering gate + closeout-lane-logs destination; projects realpath
+      registration pin; board/scheduling-engine ref-keyed join; config-layer
+      lane.worktree-root + lane.disable-worktrees with the corrected
+      no-config-key paragraph; state-layer shared-store + closeout-lane-logs;
+      merge -C structural landing; delivery-lifecycle, economics,
+      resident-daemon, queue-ready adjacency; two test-specs;
+      engine-first-operations + change-lifecycle guides; architecture overview;
+      ubiquitous language; doc index). Feature-spec coverage fully resolved —
+      the worktree contract lives in feature-dispatch-engine.md (deliberately no
+      separate feature page: one contract, one truth). THREE RESIDUALS: (1)
+      doc/spec/nonfunctional.md worktree-lane NFR row missing — blocked by the
+      operation-count-pages line-pin invariant (a code-side pin map must move
+      first; doc-sync has no code mandate) — THIS CHANGE'S GAP, resolved
+      in-change via plan rev 8 remediation + @coder + doc-sync verification pass
+      before the phase completes; (2) feature-branding-seam.md two pre-existing
+      broken ../../../guides/local-install.md links — PRE-EXISTING, not this
+      change's, declared residual for a later docs-only pass; (3)
+      doc/planning/oss-tooling/milestones/m1/commands/dispatch.md status field
+      list omits worktreePath — planning record outside the doc-sync write
+      allowlist, declared residual for the planning owner. Phase 7 stays open
+      until (1) lands and verification passes."
+    type: info
+    date: "2026-11-25"
   - text: "Delivery-boundary defect FOUND AND FIXED immediately after the boundary
       act: the phase-10 exclusion disclosure revealed the dispatch-status
       worktree golden's two FIXTURE files (status-worktree.txt,
-      status-context-less.txt) were untracked strays — I had placed them
-      under tests/fixtures/dispatch/golden/, outside the plan's declared
-      tests/golden folder, so the commit primitive excluded them and the
-      committed golden suite (tests/golden/dispatch-status-worktree.test.ts,
-      landed in phase 9) would have failed in a clean checkout at its
-      readFileSync. Fix: the fixtures MOVED into tests/golden/ (the declared
-      folder — goldens live with their suite), the suite's GOAL path updated,
-      the suite re-run green (3/3), and the fixtures committed through the
-      primitive (commit 9934afbb, exactly three staged files, zero drift;
-      full tests/golden battery re-run green, 348 tests). The branch is now
-      self-contained. LESSON (capture bar): when a plan declares a FOLDER
-      scope for new test fixtures, place the fixtures inside that folder — a
-      fixture beside its suite in an undeclared directory is a stray the
-      commit primitive will silently exclude, and the boundary commit
-      completes with a broken clean-checkout suite. The exclusion disclosure
-      is what surfaced it — read it on every landed commit."
+      status-context-less.txt) were untracked strays — I had placed them under
+      tests/fixtures/dispatch/golden/, outside the plan's declared tests/golden
+      folder, so the commit primitive excluded them and the committed golden
+      suite (tests/golden/dispatch-status-worktree.test.ts, landed in phase 9)
+      would have failed in a clean checkout at its readFileSync. Fix: the
+      fixtures MOVED into tests/golden/ (the declared folder — goldens live with
+      their suite), the suite's GOAL path updated, the suite re-run green (3/3),
+      and the fixtures committed through the primitive (commit 9934afbb, exactly
+      three staged files, zero drift; full tests/golden battery re-run green,
+      348 tests). The branch is now self-contained. LESSON (capture bar): when a
+      plan declares a FOLDER scope for new test fixtures, place the fixtures
+      inside that folder — a fixture beside its suite in an undeclared directory
+      is a stray the commit primitive will silently exclude, and the boundary
+      commit completes with a broken clean-checkout suite. The exclusion
+      disclosure is what surfaced it — read it on every landed commit."
     type: retro
     date: "2026-11-25"
   - text: "Plan phase 10 complete (commit d583b2ba): the release changeset

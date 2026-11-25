@@ -607,6 +607,42 @@ phases:
         - doc/spec/features/feature-board.md
         - doc/spec/features/feature-config-layer.md
         - doc/spec/features/feature-state-layer.md
+  - id: 11
+    title: Phase-7 residual remediation — worktree-lane NFR row and the operation-count line-pin map
+    kind: delivery
+    summary: "post-delivery remediation (all ten plan phases landed; phase complete GH-404 delivery recorded; phase-7 system-doc reconciliation left exactly ONE this-change gap): doc/spec/nonfunctional.md has no worktree-lane NFR row, and the file is line-pinned by the repository invariant tests/checks/operation-count-pages.test.ts — adding the row shifts lines and fails the invariant unless the pin map moves in the same change; doc-sync has no code mandate, so the remediation rides the plan as this declared phase; declared change: (1) update the operation-count-pages pinned line map for the shifted lines — the pin map is INLINE in the check (the named statement table with per-statement line entries; no separate data file exists — the coder's 'or the pinned map data file it reads' resolves to the check itself, verified at the tip); (2) add the worktree-lane NFR row to the nonfunctional page's NFR table — worktree provisioning/resume/exception guarantees with a pointer to doc/spec/features/feature-dispatch-engine.md as the owning spec — plus the one-sentence closeout sweep/removal-ordering mention with a pointer to doc/spec/features/feature-closeout.md; (3) run bun test tests/checks/operation-count-pages.test.ts plus the targeted doc checks green; the pin map moves with the prose in the SAME commit so the invariant and the page land together."
+    # Remediation (phase-7 residual, doc-sync report 2026-11-25): the
+    # worktree-lane NFR row is this change's one unresolved doc gap; the pin
+    # map moves with the prose in the same commit so the invariant and the
+    # page land together.
+    # Timing: POST-DELIVERY — phases 1-10 landed (phase complete GH-404
+    # delivery recorded); this phase completes the phase-7 system-doc
+    # reconciliation residual; delivery_planning reopened for this declared
+    # entry (house shape: appended declared remediation phase, the GH-406
+    # phase-9 precedent).
+    # Pin map: INLINE — tests/checks/operation-count-pages.test.ts carries
+    # the named statement table with per-statement line entries (the
+    # nonfunctional.parity row names the statement's own line; the file's
+    # own header records that the page moved before and the map followed);
+    # no pinned map data file exists.
+    # Prose direction: the NFR row states the worktree-lane guarantees —
+    # provisioning before the first phase, resume reuse (never a second
+    # worktree), the disable-worktrees byte-for-byte exception — pointing
+    # at doc/spec/features/feature-dispatch-engine.md as the owning spec;
+    # the one-sentence closeout mention states the log-sweep-before-removal
+    # and removal-only-after-merge-confirmation ordering, pointing at
+    # doc/spec/features/feature-closeout.md; vocabulary per GH-406
+    # (worktree = linked worktree; main checkout; lane), zero-rename fence
+    # respected (prose only, no identifier renamed).
+    # Fences in force: green-boundary fence (the pin map and the prose land
+    # in ONE commit — a prose-only commit would strand a red invariant);
+    # golden-discipline fence untouched (no command surface changes — no
+    # golden re-pin); exception-mode pins untouched.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/operation-count-pages.test.ts; targeted doc checks green (the doc-side suites this page feeds); TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the two declared paths changed.
+    scope:
+      files:
+        - doc/spec/nonfunctional.md
+        - tests/checks/operation-count-pages.test.ts
 # Plan revision log:
 #   rev 1 — 2026-11-25: initial ten-phase plan from spec v1.0 (0cb77658) +
 #           test plan v1.0 (a50a1503). OQ-1 settled in-plan: the fresh-worktree
@@ -833,3 +869,27 @@ phases:
 #           owner-gate-sla.ts (projectBoard + renderBoardHuman) ->
 #           commands/board.ts. Phases 1-6 and 8-10 byte-identical; no tasks
 #           key; no progress records.
+#   rev 8 — 2026-11-25: post-delivery remediation declaration (phase-7
+#           residual; delivery_planning reopened; all ten plan phases
+#           landed, phase complete GH-404 delivery recorded). The phase-7
+#           system-doc reconciliation left exactly ONE this-change gap:
+#           doc/spec/nonfunctional.md has no worktree-lane NFR row, and the
+#           file is line-pinned by the repository invariant
+#           tests/checks/operation-count-pages.test.ts — adding the row
+#           shifts lines and fails the invariant unless the pin map moves
+#           in the same change. Doc-sync has no code mandate, so the
+#           remediation rides the plan as a declared appended phase
+#           (phase 11, the GH-406 phase-9 house shape): (1) update the
+#           operation-count-pages pinned line map for the shifted lines —
+#           the pin map is INLINE in the check (named statement table with
+#           per-statement line entries; no separate data file — the coder's
+#           alternative resolves to the check itself, verified at the tip);
+#           (2) add the worktree-lane NFR row (provisioning / resume /
+#           exception guarantees, pointer to feature-dispatch-engine.md as
+#           the owning spec) plus the one-sentence closeout
+#           sweep/removal-ordering mention (pointer to
+#           feature-closeout.md); (3) bun test
+#           tests/checks/operation-count-pages.test.ts plus the targeted
+#           doc checks green. The pin map moves with the prose in the SAME
+#           commit so the invariant and the page land together. Phases
+#           1-10 byte-identical; no tasks key; no progress records.

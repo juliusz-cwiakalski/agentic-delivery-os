@@ -3,11 +3,11 @@ ados_distribution: internal
 id: TEST-SPEC-DISPATCH-ENGINE
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-23
+last_updated: 2026-11-25
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-286", "GH-289", "GH-293", "GH-347", "GH-354", "GH-386"]
+  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-286", "GH-289", "GH-293", "GH-347", "GH-354", "GH-386", "GH-404"]
   related_decisions: ["TDR-0049", "TDR-0050", "TDR-0051", "TDR-0052", "TDR-0053", "TDR-0054", "TDR-0058"]
   feature_spec: doc/spec/features/feature-dispatch-engine.md
 ---
@@ -38,6 +38,10 @@ The dispatch suite protects one property: a delivery verdict is trustworthy only
 - `tests/behaviour/dispatch-dual-run-floor.test.ts`, `dispatch-gate-evidence.test.ts`, `dispatch-gate-window.test.ts`, `dispatch-divergence.test.ts` — floor-only semantics, corroboration, incident-exclusive window, and divergence folding.
 - `tests/behaviour/dispatch-delivered-evidence-divergence.test.ts` — the delivered-evidence predicate over the classifier outcome and readable ledger, at most one open divergence per (repository, work-item reference), the divergence-before-attempt order, the failed-divergence-append and orphan directions, replay, and summary counting.
 - `tests/behaviour/dispatch-resolve-diagnostics.test.ts` — local-only resolve, preserved `state` identities with their own projections, the distinguishable not-found sentinel mapped to `input.value.rejected`, note clamping, and replay idempotency.
+- `tests/behaviour/dispatch-worktree-lifecycle.test.ts` — the governing worktree-lane fixture over real temporary git repositories: lease → provision → spawn order, the sibling placement at the base tip, the main checkout on its base branch and clean throughout, the lane record's worktree path, the provisioning refusal releasing the lease with zero retries and zero spawns, the explicit `lane.worktree-root`, the symlink alias never participating in the placement, the derived lane environment, and the in-checkout exception at the same seam.
+- `tests/behaviour/git-adapter-worktree-seam.test.ts`, `git-adapter-worktree-enumeration.test.ts` — linked-worktree creation on the new branch at the base tip, the linked-only enumeration, the branch-checked-out-elsewhere check both ways, the typed refusal matrix with zero inventory residue, and the position-independent main-versus-linked reading proven over shuffled and reversed listings.
+- `tests/checks/worktree-seam-house-style.test.ts` — no shell, no force token, and no network in the create path, the fixed argv form, planted canaries that fail the scan, and the refusal matrix proving one git call per refusal and zero git calls behind the seam-side validations.
+- `tests/behaviour/host-index-worktree-pin.test.ts` — the registration root derived from a worktree invocation equals the physical main checkout across lane commands (zero flips), the entry survives worktree removal plus maintenance (zero prunes, `repos list` keeps its row), and worktrees never appear as rows of the flat record set.
 
 ### Command and ledger tests
 
@@ -326,6 +330,16 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 - **Given** a planned lane and the daemon composition
 - **When** the daemon starts, observes, collects, and resumes the lane
 - **Then** the planner returns the lifecycle prompt and declared variable names, the lane record is written, and one attempt record is appended with the same token and outcome a one-shot dispatch derives from the same evidence.
+
+### Scenario: worktree lane provisioning and reuse
+
+- **Given** a clean main checkout and a dispatch whose composition supplies the provisioning port
+- **When** the work item is dispatched
+- **Then** a linked worktree exists at `<worktree-root>/<checkout-basename>-<ref>` on branch `lane/<REF>` at the base tip before the first phase, the dependencies and gate build are provisioned inside it, the spawn's working directory is the worktree, the lane record carries the path, and the main checkout is on the base branch and clean.
+- **And when** the lane is resumed
+- **Then** the recorded worktree is reused after its existence and branch are observed, and a missing worktree or a branch mismatch refuses the resume naming the problem without re-provisioning.
+- **And when** `lane.disable-worktrees` is set
+- **Then** the lane runs in the invoking checkout and every pinned output is byte-identical to a composition without worktrees.
 
 ### Scenario: controlled end-to-end proof
 

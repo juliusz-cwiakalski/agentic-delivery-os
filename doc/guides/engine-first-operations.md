@@ -3,11 +3,11 @@ ados_distribution: redistributable
 id: GUIDE-ENGINE-FIRST-OPERATIONS
 status: Current
 created: 2026-11-18
-last_updated: 2026-11-23
+last_updated: 2026-11-25
 owners: ["engineering"]
 summary: "Operating guide for engine-first delivery: the daily routine, the four per-reference inspection queries, how to read the handover gate and the fleet row, how a per-repository flip and its reversal are performed, the typed Mode A loop beside its shell fallback, and the declared residuals."
 links:
-  related_changes: ["GH-293", "GH-348", "GH-354", "GH-388", "GH-386"]
+  related_changes: ["GH-293", "GH-348", "GH-354", "GH-388", "GH-386", "GH-404"]
   related_decisions: ["TDR-0031", "TDR-0056", "TDR-0057", "TDR-0058"]
 ---
 
@@ -42,6 +42,21 @@ engine primitives; `@pr-manager` never merges and the platform merge command is
 not the primary path. Every command is daemon-free: no step needs a resident
 daemon, a scheduler tick, or a background watcher.
 
+Each dispatch runs the work item's whole lifecycle in its own linked worktree,
+created after the repository lease is claimed and before the first phase. By
+default the worktree is a sibling of the main checkout named
+`<checkout-basename>-<ref>`, on the branch `lane/<ref>`; `lane.worktree-root`
+declares another root. Dependencies and the workspace gate build are provisioned
+in the worktree before the first phase, so the lane's gates run there and the main
+checkout stays on the base branch and clean while you keep working. A resumed lane
+reuses its recorded worktree; `dispatch status <ref>` shows where it is. An
+environment that cannot create worktrees sets `lane.disable-worktrees: true` and
+runs every lane in the invoking checkout, byte-for-byte the behaviour of a
+composition without worktrees. Closeout sweeps the
+lane's gate evidence to `<state root>/closeout-lane-logs/<ref>` and removes the
+worktree only once the merge is confirmed, so a stalled lane keeps its worktree
+until it is resumed or closed out.
+
 The bash entry points (`deliver-ticket.sh`, `batch-deliver.sh`, `ceo-loop.sh`,
 `pm-liveness.sh`) stay executable throughout. In `dual-run` they behave exactly as
 before; after an owner flip they keep their output and exits and print the bounded
@@ -70,9 +85,10 @@ process start, no deletion, and no read of `tmp/deliver-ticket/**` or
 
 **Inspect a live delivery.** `dispatch status <ref>` reports `delivering`,
 `marker` (`active`, `terminal`, or `absent`), `probe` (`live`, `dead`, `unknown`,
-or `not-applicable`), the owner `pid`, the `sessionId`, and the lane facts
+or `not-applicable`), the owner `pid`, the `sessionId`, the lane facts
 (`attemptId`, `harness`, `iterationOrdinal`, `restartsConsumed`,
-`ownerStartedAt`, `lastToken`, `lastOutcome`, `recordedAt`). Read it as:
+`ownerStartedAt`, `lastToken`, `lastOutcome`, `recordedAt`), and — for a worktree
+lane — `worktreePath`, the directory the lane is working in. Read it as:
 
 - `marker=active` with `probe=live` is a live delivery; `delivering=true`.
 - `marker=terminal` is a finished lane; `lastToken` and `lastOutcome` carry the

@@ -9,7 +9,7 @@ created: 2026-02-03
 owners: ["engineering"]
 summary: "End-to-end change delivery workflow (planning to PR) with PM-led gates and artifacts." 
 links:
-  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242", "GH-268", "GH-313", "GH-300", "GH-366"]
+  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242", "GH-268", "GH-313", "GH-300", "GH-366", "GH-404"]
 ---
 
 # Change Lifecycle
@@ -75,6 +75,8 @@ All lifecycle commits route through the `commit` primitive, directly or through 
 - Breaking-change detection and classified failure identities
 
 Lifecycle phase state is written only through the `phase` family (`phase list`, `phase complete`, `phase reopen`). No prompt hand-edits phase timestamps or the PR-URL field; the PR URL is a pm-notes `notes:` entry. The typed engine is the regular delivery path: `dispatch <ref>` appends real `pilot` attempts, and the lifecycle merge and closeout run through the engine primitives. The shell entry points (`deliver-ticket.sh`, `batch-deliver.sh`, `pm-liveness.sh`, `ceo-loop.sh`) are the documented, still-executable fallback, and their authoritative-mode deprecation pointer names `dispatch <ref>` and `dispatch handover <repo> --revert`. A repository is flipped only by a separate owner act (`dispatch handover <repo>`) once its gate reads eligible; nothing in the lifecycle flips one.
+
+A dispatched work item runs its whole lifecycle in its own linked worktree, created before the first phase, so the main checkout stays on the base branch and clean while the lane delivers. `lane.worktree-root` places the worktrees elsewhere and `lane.disable-worktrees: true` runs a lane in the invoking checkout instead ([Engine-first Delivery Operations](engine-first-operations.md)).
 
 ### Pure-Writer Agents
 

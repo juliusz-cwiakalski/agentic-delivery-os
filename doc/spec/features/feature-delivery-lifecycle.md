@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-DELIVERY-LIFECYCLE
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-19
+last_updated: 2026-11-25
 owners: ["engineering"]
 service: delivery-os
 summary: "The deterministic 11-phase spec→plan→deliver→review→PR change delivery workflow with PM-led orchestration, Definition of Ready / Definition of Done gating, phase reopening, the per-change artifact set, variant-aware read-only ledger verification at finalization, phase-7 documentation reconciliation that closes documentation gaps in-change across current-truth docs (including feature-spec first-authoring when needed), and the one-lifecycle cross-repository change: one spec, plan, test plan, and shared definition of done over a declared member set with a branch and pull request per member and one review flow."
 links:
-  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178", "GH-226", "GH-225", "GH-242", "GH-313", "GH-310", "GH-347"]
+  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178", "GH-226", "GH-225", "GH-242", "GH-313", "GH-310", "GH-347", "GH-404"]
   guides:
     - "doc/guides/change-lifecycle.md"
     - "doc/guides/definition-of-ready.md"
@@ -159,6 +159,8 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 ### Delivery execution lanes
 
 The eleven phases are executed by a session. The typed dispatch lane is the engine that runs one, and it is parity-complete for the eleven result classes and the shell's supervision semantics: a durable per-ref lane record, an atomic admission verdict, recorded-attempt resume, the tracker retry ladder, the stall termination, the in-process bounded restart loop, and the resolved spawn identity, title, and lifecycle prompt. It has no shell dependency: every harness process is a fixed argv with no shell and no script path, and the offline parity battery reproduces the eleven classes with no live network, no real child process, and no wall-clock assertion ([Dispatch Engine](feature-dispatch-engine.md)).
+
+A dispatched work item's whole lifecycle runs in its own linked worktree: dispatch provisions it after the repository lease is claimed and before `clarify_scope`, dependencies and the gate build are in place before the first phase, the lane's working directory is the worktree from `clarify_scope` to `pr_creation`, and closeout removes it only after the merge is confirmed. The main checkout stays on the base branch and clean for the whole lane, so an operator can keep working while a lane delivers.
 
 The shell entry points remain the documented fallback and stay executable. Their retirement is a separate owner act, not a consequence of the typed lane reaching parity; until that act, a repository in `dual-run` keeps the shell as its authoritative path and the typed lane records evidence beside it ([Autonomous Delivery](feature-autonomous-delivery.md)).
 

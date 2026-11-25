@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-SCHEDULING-ENGINE
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-19
+last_updated: 2026-11-25
 owners: ["engineering"]
 service: delivery-os
-summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; per-member entries for a cross-repository change keyed by the derived `<canonicalChangeRef>@<repoKey>` ref with one lane per member, per-member dependency edges, release, and landing removal, and the additive `data.members[]` on `queue add`; readiness re-derived on the delivered six-condition model with scheduler sources; a global owner-hold gate that outranks parks and provider windows; repo-exclusive leases with a fence-token claim, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding, over the closed six-cause park vocabulary (`peak-window`, `owner-hold`, and the supervised-stall cause `liveness-stall` riding the delivered condition types, battery-written only and refused by name on the operator path); the complete queue lifecycle — reason-bearing append-only removal whose append position decides presence, the `dep add`/`dep remove` edge grammar, the per-ref single-flight admission refusal that names the holder at the envelope root, and bounded tracker-truth reconciliation; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, the `peakEnforcement` machine read, the additive `leaseHolder` and `until` lane fields, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; seven proof-backed integrity properties (claim, park, reconcile, CRUD, reason-bearing removal, single-flight, append-position presence) each with a declared control and no behaviour widening; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
+summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; per-member entries for a cross-repository change keyed by the derived `<canonicalChangeRef>@<repoKey>` ref with one lane per member, per-member dependency edges, release, and landing removal, and the additive `data.members[]` on `queue add`; readiness re-derived on the delivered six-condition model with scheduler sources; a global owner-hold gate that outranks parks and provider windows; repo-exclusive leases with a fence-token claim, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding, over the closed six-cause park vocabulary (`peak-window`, `owner-hold`, and the supervised-stall cause `liveness-stall` riding the delivered condition types, battery-written only and refused by name on the operator path); the complete queue lifecycle — reason-bearing append-only removal whose append position decides presence, the `dep add`/`dep remove` edge grammar, the per-ref single-flight admission refusal that names the holder at the envelope root, and bounded tracker-truth reconciliation; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, the `peakEnforcement` machine read, the additive `leaseHolder`, `until`, and `worktreePath` lane fields, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; seven proof-backed integrity properties (claim, park, reconcile, CRUD, reason-bearing removal, single-flight, append-position presence) each with a declared control and no behaviour widening; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
 links:
-  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280", "GH-286", "GH-288", "GH-292", "GH-294", "GH-295", "GH-309", "GH-310", "GH-297", "GH-347", "GH-349"]
+  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280", "GH-286", "GH-288", "GH-292", "GH-294", "GH-295", "GH-309", "GH-310", "GH-297", "GH-347", "GH-349", "GH-404"]
   related_decisions: ["ADR-0003", "TDR-0005", "ODR-0003", "TDR-0026", "TDR-0027", "TDR-0030", "TDR-0050"]
   contracts:
     - "packages/core/src/contracts/queue.ts"
@@ -224,8 +224,9 @@ than discovering work by hand.
   plan declaring no members keeps the delivered single canonical ref.
 - **One lane fold.** `lanes list|show` projects the same schedule: identity is
   the canonical queue ref — the change ref, or the derived member ref for an
-  entry of a declared member set — and no lane record kind or stored lane state
-  exists. The closed state set is `delivering`, `idle-with-reason`, `parked`,
+  entry of a declared member set — and the fold stores no lane state of its own
+  and owns no record kind (the one dispatch-owned fact it reads is the lane
+  record's worktree path). The closed state set is `delivering`, `idle-with-reason`, `parked`,
   `merge-ready`, `in-review`, `failed`; an idle lane always carries a declared
   reason token, and a parked lane carries `parked:<cause>` over the closed
   six-cause set (`provider-window`, `provider-quota`,
@@ -246,6 +247,13 @@ than discovering work by hand.
   exactly when a live lease exists and equal to that lease's recorded holder;
   it adds no field requirement to a delivered lane, and the payload identity
   and the human lane text are unchanged. It carries an additive optional
+  `worktreePath` — the lane's linked-worktree path — sourced by a ref-keyed join
+  over the newest `dispatch.lane` record for that reference, read in one bounded
+  retained-window pass. The join contributes a path to a lane the fold already
+  produced and never mints a lane, a lane whose newest dispatch record carries no
+  worktree path renders byte-identically to a lane with no worktree member, and a store
+  read failure contributes nothing rather than a fabricated path
+  ([Dispatch Engine](feature-dispatch-engine.md#lane-worktrees)). It carries an additive optional
   `until` — the active expiry-carrying park's recorded re-entry instant —
   present exactly when such a park stands for the lane, equal to the park
   record's expiry, and absent otherwise, never inferred and never defaulted; an

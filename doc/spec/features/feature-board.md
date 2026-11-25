@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-BOARD
 status: Current
 created: 2026-11-16
-last_updated: 2026-11-17
+last_updated: 2026-11-25
 owners: ["engineering"]
 service: delivery-os
-summary: "The read-only `board` command and its bounded delivery.board.v1 payload: the delivered four sections (active lanes, open gates, owner asks, parked work) plus the additive actions section, in declared order from the one shared delivery.status-facts.v1 bundle, the repository's own action registry, and the shipped lane/phase fold; the preserved owner-gate SLA as the gates section; repository selection (invoking checkout, `--project <repoKey>`, `--all`) over the managed set with the 128-included-repository cap and counted overflow; the additive `repositories[]`, `stateSource`, `scope`, `selection`, `ownerHold`, and `omittedBySection` members; per-section row identity, ordering, bounds, and the declared byte-guard drop order; the deterministic five-section human screen; exit `0`/`1`/`2` with `board.repository-unknown`, `board.state-unavailable`, the delivered collector family, and `fallback.invocation`; the read-only carve-out for the idempotent owner-gate decision record; and the mount as the 21st prompt-required family."
+summary: "The read-only `board` command and its bounded delivery.board.v1 payload: the delivered four sections (active lanes, open gates, owner asks, parked work) plus the additive actions section, in declared order from the one shared delivery.status-facts.v1 bundle, the repository's own action registry, and the shipped lane/phase fold; the preserved owner-gate SLA as the gates section; the additive optional lane-row worktree path, contributed by a ref-keyed join over the newest dispatch lane record that never mints rows; repository selection (invoking checkout, `--project <repoKey>`, `--all`) over the managed set with the 128-included-repository cap and counted overflow; the additive `repositories[]`, `stateSource`, `scope`, `selection`, `ownerHold`, and `omittedBySection` members; per-section row identity, ordering, bounds, and the declared byte-guard drop order; the deterministic five-section human screen; exit `0`/`1`/`2` with `board.repository-unknown`, `board.state-unavailable`, the delivered collector family, and `fallback.invocation`; the read-only carve-out for the idempotent owner-gate decision record; and the mount as the 21st prompt-required family."
 links:
-  related_changes: ["GH-229", "GH-237", "GH-230", "GH-288", "GH-294", "GH-309", "GH-297", "GH-296", "GH-287", "GH-295"]
+  related_changes: ["GH-229", "GH-237", "GH-230", "GH-288", "GH-294", "GH-309", "GH-297", "GH-296", "GH-287", "GH-295", "GH-404"]
   related_decisions: ["PDR-0003", "ODR-0004"]
   contracts:
     - "packages/core/src/contracts/owner-gate-sla.ts"
@@ -74,7 +74,7 @@ The screen and the payload carry the same declared sections in the same declared
 
 Every row names its repository key, its ref (or the source's declared absence), and its owner. Within each array the order is repository key ascending, then the section's declared rank or ref order; no collector, provider, filesystem, or host-index return order influences a rendered order. Every identity is unique within its array, so two repositories holding the same ref produce two distinct rows.
 
-**Lanes.** An active-lane row carries `repository`, `ref`, `laneId`, `state` (`delivering` or `failed`), `phase`, optional `phaseUnknownReason`, `holder`, optional `leaseId`, optional `reason`, `owner`, and `ownerSource: "lane-lease-holder"`. `phase` is the one phase-state entry the shipped fold reports in progress (`completed: null`); when several entries are open, the open entry latest in the canonical lifecycle order is reported. No phase record yields `phase: null` with `phaseUnknownReason: "phase-unrecorded"`; a record whose entries are all completed yields `phase: null` with `"phases-complete"`. `holder` is the recorded live lease holder, or `null`; the row's `owner` equals that holder. Neither value is inferred. Idle, waiting, parked, merge-ready, and in-review lanes are not board rows; `lanes list` remains the complete lane surface ([Scheduling Engine](feature-scheduling-engine.md)).
+**Lanes.** An active-lane row carries `repository`, `ref`, `laneId`, `state` (`delivering` or `failed`), `phase`, optional `phaseUnknownReason`, `holder`, optional `leaseId`, optional `reason`, `owner`, `ownerSource: "lane-lease-holder"`, and one additive optional `worktreePath`. `phase` is the one phase-state entry the shipped fold reports in progress (`completed: null`); when several entries are open, the open entry latest in the canonical lifecycle order is reported. No phase record yields `phase: null` with `phaseUnknownReason: "phase-unrecorded"`; a record whose entries are all completed yields `phase: null` with `"phases-complete"`. `holder` is the recorded live lease holder, or `null`; the row's `owner` equals that holder. Neither value is inferred. A lane's `worktreePath` comes from a ref-keyed join over the newest `dispatch.lane` record for the row's reference: the join contributes a path to a row that already exists and never mints a row, and a row whose lane carries no worktree (the disable-worktrees shape) renders byte-identically to a row with no worktree member. Idle, waiting, parked, merge-ready, and in-review lanes are not board rows; `lanes list` remains the complete lane surface ([Scheduling Engine](feature-scheduling-engine.md)).
 
 **Gates.** A gate row extends the delivered gate record — `id`, `kind`, `ref`, `age`, optional `ageUnknownReason`, `slaState`, `default`, `waivedBy` — with `repository`, `condition` (`<kind>:<slaState>`), `owner`, and `ownerSource`. The owner is the recorded waiver authorizer for a `waiver` gate and the owner audience for an `owner-review` gate; `ownerSource` names which. The gates section carries the delivered SLA semantics unchanged; see [Owner-Gate SLA](feature-owner-gate-sla.md) for the mechanism.
 
@@ -125,7 +125,7 @@ board.data = {
   scope: "repository" | "unbound",
   selection: "current" | "project" | "all",
   repositories: ["<repoKey>", ...],
-  lanes:   [{ repository, ref, laneId, state, phase, phaseUnknownReason?, holder, leaseId?, reason?, owner, ownerSource }],
+  lanes:   [{ repository, ref, laneId, state, phase, phaseUnknownReason?, holder, leaseId?, reason?, owner, ownerSource, worktreePath? }],
   gates:   [{ repository, id, kind, ref, age, ageUnknownReason?, slaState, default, waivedBy, condition, owner, ownerSource }],
   asks:    [{ repository, id, type, ref, lane, question, askedAt, age, status, owner, ownerSource, drawnDefault, defaultState }],
   actions: [{ repository, actionId, owner, level, age, agingState, window, windowOpenCount, windowLimit }],
@@ -241,7 +241,7 @@ counted. See [Retro Action Registry](feature-retro-action-registry.md).
 - **`projectBoard(input: BoardProjectionInput): BoardProjection`** — the only board projection; returns the bounded payload and the per-repository decisions the edge must append.
 - **`renderBoardHuman(data, brand): string`** — the only human renderer; reads no source and uses the injected brand binary name.
 - **`evaluateOwnerGateSla(input)` / `toBoardData(...)`** — the delivered gate evaluation and gate payload projection the gates section composes; see [Owner-Gate SLA](feature-owner-gate-sla.md).
-- **`createBoardCommandDefinition(runtime: BoardCommandRuntime): CommandDefinition`** — declares `flags: ["--all", "--project"]`, `requiresValue: ["--project"]`, the `--all`/`--project` conflict, `positionals.max: 0`, the human renderer, and a handler over `resolve`, `loadRepository`, `appendDecision`, `ownerHold`, `policy`, `nowIso`, and `nowMs`.
+- **`createBoardCommandDefinition(runtime: BoardCommandRuntime): CommandDefinition`** — declares `flags: ["--all", "--project"]`, `requiresValue: ["--project"]`, the `--all`/`--project` conflict, `positionals.max: 0`, the human renderer, and a handler over `resolve`, `loadRepository`, `appendDecision`, `ownerHold`, `policy`, `nowIso`, and `nowMs`, plus the optional `dispatchWorktreePaths` join source (absent leaves the delivered payload byte-identical; a store read failure contributes an empty map).
 
 The contracts and domain import only the shared contracts; the CLI command composes the core root and the edge types. No new package, subpath, or runtime-API location is introduced.
 
@@ -252,6 +252,7 @@ The contracts and domain import only the shared contracts; the CLI command compo
 | Board payload | `delivery.board.v1` `data` inside the `delivery.result.v1` envelope; projection only, never persisted |
 | State-source identity | `delivery.status-facts.v1`, a contract constant carried on the board, status, and brief payloads |
 | Lane lease holder | Additive optional `leaseHolder` on the shipped `delivery.lanes.v1` projection; present exactly when a live lease exists; every delivered lane field and the human lane text unchanged |
+| Lane worktree path | Additive optional `worktreePath` on the board lane row, contributed by a ref-keyed join over the newest `dispatch.lane` record per reference from one bounded retained-window read; absent on a lane with no worktree context, and the join never mints a row |
 | Decision record | The delivered `delivery.owner-gate.decision.v1` payload under `owner-gate.decisions:<gateId>`; the only durable write |
 | Host index | The shipped `delivery.projects.host-index.v1` document, read once for `--all`/`--project` and never maintained by the board |
 
@@ -274,7 +275,7 @@ The contracts and domain import only the shared contracts; the CLI command compo
 | Shared source | `board.data.stateSource` equals `status.data.stateSource` and `brief.data.stateSource` on every successful repository-scoped run; 0 sections read an unnamed source. |
 | Row identity and containment | 0 duplicate identities per section; two repositories holding one ref produce 2 rows; row counts equal the sum of the included per-repository boards before byte-guard drops, with every drop counted. |
 | Bounds | Per-repository caps 8 gates / 20 lanes / 8 asks / 8 actions / 8 parked; 128 included repositories with counted overflow; `data` ≤ 65 536 UTF-8 bytes; human ≤ 24 lines / 4 096 bytes; ≤ 400 bytes per line; every drop or clamp marked. |
-| Read cost | One bounded pass per included repository — one tracker page (100 items), one delivery-request page (100), one CI page (20), one blocker read, one queue ledger read, one park read, one action-registry read, one local-context read, one spend read, at most one phase read per active lane, and at most one decision-history read (shared by the ask join); no pagination, retry, or duplicate client stack; one host-index read per `--all`/`--project` run and 0 for the default form. |
+| Read cost | One bounded pass per included repository — one tracker page (100 items), one delivery-request page (100), one CI page (20), one blocker read, one queue ledger read, one park read, one action-registry read, one local-context read, one spend read, at most one phase read per active lane, at most one decision-history read (shared by the ask join), and one bounded retained-window dispatch-lane read per run for the lane-row worktree join; no pagination, retry, or duplicate client stack; one host-index read per `--all`/`--project` run and 0 for the default form. |
 | Write discipline | ≤ 1 appended decision record per newly defaulted gate and 0 when one exists; 0 index maintenance, 0 prune, 0 edit or delete; exactly the 2 delivered store-opening side effects. |
 | Purity | 0 LLM calls, 0 non-GET provider requests, 0 timers or loops, 0 hardcoded product or binary names. |
 | Responsiveness | Pure projection and render of a cap-sized two-repository board completes inside 50 ms (warm median of 5 runs, I/O excluded). |

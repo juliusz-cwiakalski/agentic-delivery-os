@@ -3,11 +3,11 @@ ados_distribution: internal
 id: TEST-SPEC-STATE-LAYER
 status: Current
 created: 2026-11-05
-last_updated: 2026-11-19
+last_updated: 2026-11-25
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-174", "GH-222", "GH-227", "GH-223", "GH-232", "GH-241", "GH-291", "GH-320", "GH-296", "GH-287", "GH-346"]
+  related_changes: ["GH-174", "GH-222", "GH-227", "GH-223", "GH-232", "GH-241", "GH-291", "GH-320", "GH-296", "GH-287", "GH-346", "GH-404"]
   feature_spec: doc/spec/features/feature-state-layer.md
 ---
 
@@ -55,6 +55,7 @@ Every integration store lives under a per-test temporary root and is driven thro
 - `action-store-boundary.test.ts` — the action registry's two-kind boundary validation, the valid/verified-empty verdicts with entry-level malformation in band, the `retro-action-registry` fence namespace, and write refusal for a nonconforming payload. The consumer contract is in [Retro Action Registry](../../spec/features/feature-retro-action-registry.md).
 - `telemetry-storage-migration.test.ts`, `telemetry-storage-damage.test.ts`, `telemetry-storage-growth.test.ts`, `telemetry-storage-coexistence.test.ts` — version-declared re-read equality with no in-place mutation or dropped record, the torn/unsupported-version damage identities, linear per-step and per-session-close growth, and the v2 and closeout planes coexisting. The record contract is in [Harness Telemetry v2](../../spec/features/feature-telemetry-v2.md).
 - `install-compatibility.test.ts` — the installed artifact's read-only state-format check over the ledger header: the advisory on the install write paths, the typed verdict on the report path, the bounded header-only enumeration with its cap and truncation flag, and deterministic reporting. The contract is in [Installable Artifact and Install Lifecycle](../../spec/features/feature-install-lifecycle.md).
+- `tests/structure/state-scope.test.ts` (lane placement cases) and `projects-identity.test.ts` — the lane-worktree placement rule over the clone's physical root with the explicit `lane.worktree-root` override, and the shared clone identity: a linked worktree resolves the same clone identity and project state root as its main checkout. The contract is in [Repositories and the Host Overview](../../spec/features/feature-projects.md) and [Dispatch Engine](../../spec/features/feature-dispatch-engine.md#lane-worktrees).
 - `prior-identity-state-fallback.test.ts` — the host-root selection of an identity that declares a prior identity: an absolute `<PREFIX>_STATE_DIR` override disables the fallback, the current default root wins when both exist, the prior default root is selected when only it exists, no second root is created, a prior-prefix state-directory override is never read, and one effective root serves the reads and store operations that follow. The policy contract is in [Repositories and the Host Overview](../../spec/features/feature-projects.md).
 
 ### Contract, Structure, and Boundary Tests
