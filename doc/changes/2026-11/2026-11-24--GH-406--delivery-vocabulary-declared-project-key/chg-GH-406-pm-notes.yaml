@@ -14,7 +14,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-25T00:29:51.342Z }
   review_fix: { started: null, completed: 2026-11-25T00:36:59.047Z }
   quality_gates: { started: null, completed: 2026-11-25T00:57:00.848Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-25T00:57:54.988Z }
   pr_creation: { started: null, completed: null }
 decisions: []
 open_questions: []
@@ -837,4 +837,22 @@ notes:
       tmp/run-logs-runner/2026-11-25/013756-gh406-quality-gate-pnpm-check.log
       and 015601-gh406-commit-range-lint.log."
     type: info
+    date: "2026-11-25"
+  - text: "DoD check RE-RUN PASS post-amendment (lifecycle phase 10). Ledger: 9/9
+      prior lifecycle phases completed with verified timestamps; plan
+      completion: phases 2-8 re-executed with fresh commits and per-phase
+      pm-notes gate evidence (2 e3cf6d34, 3 71f22a5b, 4 135f7909, 5 d0c5c225, 6
+      9b9918eb, 7 28cacb44, 8 f0a4c94d), phases 1 and 9 carry their delivered
+      evidence (0b49e404, 5e57e3af) per the re-execution accounting fence with
+      amendment-independence declared and reviewer-verified; all 12 amended ACs
+      satisfied per the amended evidence map, re-verified by review iter-3 PASS
+      (amendment end to end in code + docs, fences live, review-time rows
+      re-verified); current-truth documentation complete — doc-syncer
+      post-amendment zero residual gaps (116/116 battery); gates green (13/13
+      exit 0, 12854/0/4; range lint 42 commits 0 offending). Non-blocking
+      residuals dispositioned, none block DoD: F-7 (00-index.md prose noun,
+      GH-408/follow-up), F-5 + F-6 (carried dispositions), F-8 (GH-408 remainder
+      inventory), GH-408 routed deferrals, TC-DAEMON-121 load flake (disclosed,
+      green standalone and in final runs)."
+    type: decision
     date: "2026-11-25"
