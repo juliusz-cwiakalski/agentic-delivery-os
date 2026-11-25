@@ -52,6 +52,61 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Plan phase 14 (rev-11 review-iter-3 delta) applied in ONE commit
+      through the commit primitive. PM ADJUDICATIONS EXECUTED: F-34 FIX
+      (reviewer-recommended option), F-38 FIX, F-37 CARRY as a declared
+      residual. FINAL STATUS. F-34 ADDRESSED by REMOVAL, not by routing
+      around the checker: the shell-fallback output path is gone from the
+      swept set and from the plan-time exclusion everywhere it existed —
+      packages/cli/src/production.ts (the sweep comment, removeEphemeral and
+      its doc comment) and packages/cli/src/edge.ts (LANE_SWEPT_PATHSPECS) —
+      and no such literal remains in the dispatch-flow surface. The committed
+      no-shell invariant was NOT narrowed and its allowlist was NOT touched:
+      TC-SHELL-002, TC-BATTLE-001 and TC-BATTLE-004 go green because the
+      literals no longer exist; `bun run scripts/checks/no-shell-dispatch.ts`
+      reports clean (43 surface files). packages/core/src/domain
+      /lane-worktree-plan.ts was declared but carries no swept-set constant
+      (the phase-13 implementation put it in edge.ts), so it is untouched. The
+      swept set is now the runner logs plus tmp/tmpdir and the ad-hoc
+      tmp/*.log files, matching DEC-11. F-35 ADDRESSED — CloseoutLaneLogSweepData
+      added to BOTH module lists of tests/fixtures/ports
+      /v1-contract-inventory.json (after CloseoutLabelArguments in each);
+      TC-PORT-001 green. F-36 ADDRESSED — the stale placement.branch assertion
+      is retired; the test asserts the ABSENCE of a branch member
+      (Object.hasOwn) and the comment states AC-F2-1's detached contract;
+      TC-IDENT-001 green. F-38 ADDRESSED — a same-named destination entry is
+      now MERGED (recursive copy keeps the earlier sweep's distinct files; a
+      same-named file takes the newer bytes) with per-placed-FILE verification
+      (equal bytes), while a NEW entry still lands by atomic rename from the
+      verified staging sibling; the newest-first byte cap is unchanged. New
+      production-composition scenario 9b (distinct file names in one date
+      directory, twice swept: all three files preserved), scenario 9 stays as
+      the same-named complement. F-37 CARRIED as a declared residual with
+      owner visibility: a refused sweep still surfaces as the transient
+      retryable closeout.write.failed with its detail dropped, but the sweep
+      refuses SAFELY (sources intact, destination empty); the classified
+      projection plus a transaction-level refused-sweep scenario is the
+      follow-up, named in the PR body. OTHER DECLARED RESIDUALS, unchanged
+      reasons: F-39 (exclusion/sweep reach hand-created delivery worktrees —
+      gate on the newest dispatch.lane record), F-40 (non-recursive tmp/*.log
+      deletion after the sources move), F-41 (over-cap detail/omitted names),
+      F-42 (active-lane-missing proof, [0, 2] pins, comment), F-43 (board map
+      not cleared on a reused runtime), F-44..F-46 (info notes), F-26/F-27/F-28
+      and F-31/F-32 as previously declared; F-45's doc list (including the
+      DEC-11 wording and the retired spawn-failed prose mirror) and F-33/F-23
+      wording ride the doc-sync re-run; F-23's code half is named as a PR-BODY
+      follow-up (no ticket minted). VERIFICATION (observed): no-shell check
+      clean; tests/checks + tests/structure + tests/conformance 4265 pass / 0
+      fail across 445 files (the five previously red tests green); the
+      phase-13 behaviour set 582 pass / 0 fail across 81 files including
+      tests/golden 348 with NO byte changes; the production suite 16 pass / 0
+      fail; pnpm typecheck green for all six packages plus tests/types; biome
+      lint 0 errors and biome format clean; boundaries, ambient globals,
+      workspace entrypoints, secret-read boundary, new-code naming and
+      forbidden-literals green. SCOPE: the six declared code/test files plus
+      this pm-notes note; lane-worktree-plan.ts declared and untouched."
+    type: info
+    date: "2026-11-25"
   - text: "Review iter-3 verdict FAIL (code-review/review-iter-3.yaml): the three
       iteration-2 blockers ARE FIXED and production-reproduced (F-18 second
       sweep end-to-end; F-19 non-tmp-ignoring repo plans+applies; F-20

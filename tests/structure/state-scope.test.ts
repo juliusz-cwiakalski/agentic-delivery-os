@@ -375,10 +375,11 @@ describe("TC-IDENT-001 the linked worktree resolves the shared identity and stat
       physicalCheckoutRoot: "/repos/checkout",
       ref: "GH-404",
     });
-    // The sibling default and the deterministic lane branch.
+    // The sibling default and the deterministic worktree path. The placement
+    // is DETACHED (AC-F2-1, Decision 1): no lane branch member exists.
     expect(placement.worktreeRoot).toBe("/repos");
     expect(placement.worktreePath).toBe("/repos/checkout-GH-404");
-    expect(placement.branch).toBe("lane/GH-404");
+    expect(Object.hasOwn(placement, "branch")).toBe(false);
     // The explicit setting wins over the sibling default.
     const explicit = resolveLaneWorktreePlacement({
       physicalCheckoutRoot: "/repos/checkout",

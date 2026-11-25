@@ -2419,12 +2419,7 @@ const mergedSquashSha = (store: StateStorePort, workItemRef: string): string | u
  * adapter check passes no exclusion. Kept in step with
  * `createLaneLogSweep`'s ephemeral removals in `production.ts`.
  */
-const LANE_SWEPT_PATHSPECS = [
-  "tmp/run-logs-runner",
-  "tmp/tmpdir",
-  "tmp/deliver-ticket",
-  "tmp/*.log",
-] as const;
+const LANE_SWEPT_PATHSPECS = ["tmp/run-logs-runner", "tmp/tmpdir", "tmp/*.log"] as const;
 
 export const createCloseoutComposition = (
   options: CloseoutCompositionOptions,

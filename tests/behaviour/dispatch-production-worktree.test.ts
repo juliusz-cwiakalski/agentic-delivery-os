@@ -38,7 +38,10 @@
  * 8. F-18: a SECOND lane of the same ref after the first closeout sweeps into
  *    the same destination and succeeds (never wedges).
  * 9. F-18: one worktree swept twice with new logs in between, same date and a
- *    later date, replaces/extends the destination.
+ *    later date, extends the destination (a same-named file takes the newer
+ *    bytes).
+ * 9b. F-38: a same-date re-sweep with DISTINCT file names preserves every file
+ *    the first sweep placed (scenario 9's same-named pin is the complement).
  * 10. F-21: the byte cap's truncation is disclosed in the applied payload, and
  *    a sweep that could preserve nothing refuses instead of deleting silently.
  * 11. F-25: a stale worktree registration names the path and the `git worktree
@@ -1074,12 +1077,56 @@ describe("GH-404 review iteration 2 — merge and closeout END TO END through th
       expect(second.swept).toBe(true);
       const destination = join(world.stateDirectory, "closeout-lane-logs", "GH-942");
       expect(readdirSync(destination).sort()).toEqual(["2026-11-25", "2026-11-26"]);
-      // The replaced same-date entry holds the NEW content, not the old.
+      // The merged same-date entry takes the NEW bytes for a same-named file
+      // (scenario 9b proves distinct files are preserved beside it).
       expect(readFileSync(join(destination, "2026-11-25", "gate.log"), "utf8")).toBe(
         "rewritten gate evidence\n",
       );
       expect(readFileSync(join(destination, "2026-11-26", "closeout.log"), "utf8")).toBe(
         "later evidence\n",
+      );
+    } finally {
+      world.dispose();
+    }
+  });
+
+  test("scenario 9b — a same-date re-sweep with distinct file names preserves the earlier files (F-38)", async () => {
+    // the production sweep closure again: one date directory, a second sweep
+    // writing a DIFFERENT file into it must keep what the first sweep placed.
+    const world = makeLifecycleWorld("swept-twice-distinct", { ignoreTmp: true });
+    try {
+      const provider = laneProvider(world, "GH-945", "feat/GH-945/slug");
+      world.setReply(provider.reply);
+      const lane = await seedLane(world, "GH-945", "slug", { runnerLogs: false });
+      const sameDate = join(lane.worktree, "tmp", "run-logs-runner", "2026-11-25");
+      mkdirSync(sameDate, { recursive: true });
+      writeFileSync(join(sameDate, "090001-phase-gates.log"), "gate one\n");
+      writeFileSync(join(sameDate, "090002-commit-range-lint.log"), "lint two\n");
+      const sweep = createLaneLogSweep({ stateDirectory: world.stateDirectory });
+      const first = await sweep({ workItemRef: "GH-945", worktreePath: lane.worktree });
+      expect(first.ok).toBe(true);
+      // The re-sweep writes a DISTINCT file into the same date directory.
+      mkdirSync(sameDate, { recursive: true });
+      writeFileSync(join(sameDate, "100003-after-cleanup.log"), "after cleanup\n");
+      const second = await sweep({ workItemRef: "GH-945", worktreePath: lane.worktree });
+      expect(second.ok).toBe(true);
+      if (!second.ok) return;
+      expect(second.swept).toBe(true);
+      expect(second.truncated).toBe(false);
+      expect(second.omittedBytes).toBe(0);
+      const preserved = join(world.stateDirectory, "closeout-lane-logs", "GH-945", "2026-11-25");
+      // Every file lands: the first sweep's two and the re-sweep's one.
+      expect(readdirSync(preserved).sort()).toEqual([
+        "090001-phase-gates.log",
+        "090002-commit-range-lint.log",
+        "100003-after-cleanup.log",
+      ]);
+      expect(readFileSync(join(preserved, "090001-phase-gates.log"), "utf8")).toBe("gate one\n");
+      expect(readFileSync(join(preserved, "090002-commit-range-lint.log"), "utf8")).toBe(
+        "lint two\n",
+      );
+      expect(readFileSync(join(preserved, "100003-after-cleanup.log"), "utf8")).toBe(
+        "after cleanup\n",
       );
     } finally {
       world.dispose();
