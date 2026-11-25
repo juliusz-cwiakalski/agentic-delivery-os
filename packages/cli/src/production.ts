@@ -11,9 +11,11 @@ import {
   appendFileSync,
   cpSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -1988,36 +1990,47 @@ export const createLaneLogSweep = (deps: {
     return total;
   };
   /**
-   * Merge one staged tree into an existing destination entry (review F-38):
-   * a same-named file is replaced by the newer bytes, while a file only the
-   * earlier sweep placed is kept. Recursive, no removal of the destination.
+   * Merge one staged tree into an existing destination entry (review F-38).
+   * The copy PRIMITIVE does the merge (review F-47/F-48): it keeps the files
+   * an earlier sweep placed, a same-named file takes the newer bytes, it
+   * REFUSES instead of writing through a linked destination directory, and it
+   * copies a staged link as a link — no `statSync`-driven recursion of our own
+   * that could follow a symlink.
    */
   const mergeTree = (from: string, to: string): void => {
-    const stat = statSync(from);
-    if (!stat.isDirectory()) {
-      cpSync(from, to);
-      return;
-    }
-    mkdirSync(to, { recursive: true });
-    for (const child of readdirSync(from, { withFileTypes: true })) {
-      mergeTree(join(from, child.name), join(to, child.name));
-    }
+    cpSync(from, to, { recursive: true });
   };
   /**
-   * Per-placed-FILE verification (review F-38): every file in the staged tree
-   * exists at the destination with equal bytes. A directory is a container,
-   * not a placed file, so a merge that kept extra files still passes.
+   * Per-placed-FILE verification (review F-38/F-47): every placed file exists
+   * at the destination with equal SIZE (equal byte count, not a content
+   * comparison — F-53), a staged link is a link with the same target, and a
+   * directory is a container (extra files from the earlier sweep are fine).
+   * `lstatSync` so the verification itself never follows a symlink.
    */
   const placedFilesMatch = (from: string, to: string): boolean => {
-    const stat = statSync(from);
-    if (!stat.isDirectory()) {
-      if (!existsSync(to)) return false;
-      const placed = statSync(to);
-      return !placed.isDirectory() && placed.size === stat.size;
+    let source: ReturnType<typeof lstatSync>;
+    try {
+      source = lstatSync(from);
+    } catch {
+      return false;
     }
-    return readdirSync(from, { withFileTypes: true }).every((child) =>
-      placedFilesMatch(join(from, child.name), join(to, child.name)),
-    );
+    let placed: ReturnType<typeof lstatSync>;
+    try {
+      placed = lstatSync(to);
+    } catch {
+      return false;
+    }
+    if (source.isSymbolicLink()) {
+      if (!placed.isSymbolicLink()) return false;
+      return readlinkSync(from) === readlinkSync(to);
+    }
+    if (source.isDirectory()) {
+      if (!placed.isDirectory()) return false;
+      return readdirSync(from, { withFileTypes: true }).every((child) =>
+        placedFilesMatch(join(from, child.name), join(to, child.name)),
+      );
+    }
+    return !placed.isDirectory() && placed.size === source.size;
   };
   return async (input) => {
     const worktreeTmp = join(input.worktreePath, "tmp");
@@ -2087,25 +2100,40 @@ export const createLaneLogSweep = (deps: {
           );
         }
         const at = join(destination, entry.name);
-        if (existsSync(at)) {
-          // A same-date re-sweep MERGES: the files the earlier sweep preserved
-          // stay, a same-named file takes the newer bytes (review F-38).
-          mergeTree(staged, at);
+        const merged = existsSync(at);
+        try {
+          if (merged) {
+            // A same-date re-sweep MERGES: the files the earlier sweep
+            // preserved stay, a same-named file takes the newer bytes, and a
+            // linked destination directory is REFUSED, never written through
+            // (review F-38/F-47); a shape mismatch is refused the same way
+            // (F-48).
+            mergeTree(staged, at);
+          } else {
+            // A NEW entry lands atomically from the verified staging sibling.
+            renameSync(staged, at);
+          }
+        } catch (error) {
+          rmSync(staging, { recursive: true, force: true });
+          // F-48: the refusal names the entry, its destination and the next
+          // action (the carried F-37 projection still drops the detail).
+          const reason = (error instanceof Error ? error.message : String(error)).slice(-400);
+          return failure(
+            `the runner-log entry ${entry.name} could not be placed at ${at} (${reason}); the logs stay intact in the worktree — remove or fix the named destination entry, then retry`,
+          );
+        }
+        if (merged) {
           if (!placedFilesMatch(staged, at)) {
             rmSync(staging, { recursive: true, force: true });
             return failure(
               `the merged entry ${entry.name} is not retrievable at ${at}; the logs stay intact in the worktree`,
             );
           }
-        } else {
-          // A NEW entry lands atomically from the verified staging sibling.
-          renameSync(staged, at);
-          if (treeBytes(at) !== size) {
-            rmSync(staging, { recursive: true, force: true });
-            return failure(
-              `the placed entry ${entry.name} holds ${String(treeBytes(at))} of ${String(size)} bytes; nothing was moved out of the worktree`,
-            );
-          }
+        } else if (treeBytes(at) !== size) {
+          rmSync(staging, { recursive: true, force: true });
+          return failure(
+            `the placed entry ${entry.name} holds ${String(treeBytes(at))} of ${String(size)} bytes; nothing was moved out of the worktree`,
+          );
         }
         placed.push(entry.name);
         copiedBytes += size;

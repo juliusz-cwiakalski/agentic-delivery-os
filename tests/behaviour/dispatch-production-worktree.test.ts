@@ -48,18 +48,31 @@
  *    prune` recovery, and a refused rollback discloses the path and remedy.
  * 12. F-20: the board renders the lane worktree path when its derived
  *    repository key differs from the dispatch.lane record's origin identity.
+ * 13. F-29: the merge-deferral check matches the exact branch line and skips
+ *    prunable registrations.
+ * 14. F-47: symlink shapes — a re-targeted date-entry link is refused without
+ *    writing through it (both victim targets intact), and a staged directory
+ *    link is copied AS A LINK, never dereferenced.
+ * 15. F-48: the type/shape flips are handled safely — the three type-mismatch
+ *    shapes are refused with the entry, destination and next action in the
+ *    detail (sources intact, staging cleaned); a read-only earlier FILE is
+ *    replaced by the newer bytes by the primitive's directory merge, and a
+ *    read-only CONTAINER refuses safely.
  */
 import { describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
+  readlinkSync,
   rmSync,
   statSync,
+  symlinkSync,
   truncateSync,
   writeFileSync,
 } from "node:fs";
@@ -1320,6 +1333,258 @@ describe("GH-404 review iteration 2 — refusals name the path and the board joi
       expect(await seam.isBranchCheckedOutInLinkedWorktree({ branch: "feat/GH-1/ab" })).toBe(true);
     } finally {
       rmSync(base, { recursive: true, force: true });
+    }
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* F-47 / F-48 (delta review of phase 14): the sweep's on-disk shape         */
+/* hardening. The production sweep closure over real files; the reviewer's   */
+/* HEAD~1/HEAD controls are these assertions.                                 */
+/* ------------------------------------------------------------------------- */
+
+type SweepFixture = {
+  readonly root: string;
+  readonly worktree: string;
+  readonly stateDirectory: string;
+  readonly ref: string;
+  readonly sweep: ReturnType<typeof createLaneLogSweep>;
+  readonly logs: (date: string) => string;
+  readonly destination: (date: string) => string;
+  readonly dispose: () => void;
+};
+
+type SweepResult = Awaited<ReturnType<ReturnType<typeof createLaneLogSweep>>>;
+
+const makeSweepFixture = (label: string, ref = "GH-950"): SweepFixture => {
+  const root = mkdtempSync(join(tmpdir(), `gh404-sweep-${label}-`));
+  const worktree = join(root, "worktree");
+  const stateDirectory = join(root, "state");
+  mkdirSync(worktree, { recursive: true });
+  mkdirSync(stateDirectory, { recursive: true });
+  return {
+    root,
+    worktree,
+    stateDirectory,
+    ref,
+    sweep: createLaneLogSweep({ stateDirectory }),
+    logs: (date) => join(worktree, "tmp", "run-logs-runner", date),
+    destination: (date) => join(stateDirectory, "closeout-lane-logs", ref, date),
+    dispose: () => rmSync(root, { recursive: true, force: true }),
+  };
+};
+
+const expectSafeRefusal = (result: SweepResult): void => {
+  expect(result.ok).toBe(false);
+  if (result.ok) return;
+  // F-48: the refusal names the entry/destination and the next action.
+  expect(result.detail).toContain("could not be placed");
+  expect(result.detail).toContain("retry");
+};
+
+describe("F-47 symlink shapes — the sweep never follows a link", () => {
+  test("scenario 14a — a re-targeted date-entry link is refused, both victims intact", async () => {
+    const fixture = makeSweepFixture("symlink-retarget");
+    try {
+      mkdirSync(fixture.logs("2026-11-25"), { recursive: true });
+      writeFileSync(join(fixture.logs("2026-11-25"), "gate.log"), "first\n");
+      const first = await fixture.sweep({
+        workItemRef: fixture.ref,
+        worktreePath: fixture.worktree,
+      });
+      expect(first.ok).toBe(true);
+      // An earlier sweep's date entry replaced by a directory link, then
+      // re-targeted to a second victim (the reviewer's HEAD~1 shape).
+      const victimA = join(fixture.root, "victim-a");
+      const victimB = join(fixture.root, "victim-b");
+      mkdirSync(victimA, { recursive: true });
+      mkdirSync(victimB, { recursive: true });
+      writeFileSync(join(victimA, "gate.log"), "VICTIM-A\n");
+      writeFileSync(join(victimB, "gate.log"), "VICTIM-B\n");
+      const dateAt = fixture.destination("2026-11-25");
+      rmSync(dateAt, { recursive: true, force: true });
+      symlinkSync(victimA, dateAt);
+      rmSync(dateAt);
+      symlinkSync(victimB, dateAt);
+      // The re-sweep writes the same-named file.
+      mkdirSync(fixture.logs("2026-11-25"), { recursive: true });
+      writeFileSync(join(fixture.logs("2026-11-25"), "gate.log"), "second\n");
+      const second = await fixture.sweep({
+        workItemRef: fixture.ref,
+        worktreePath: fixture.worktree,
+      });
+      expectSafeRefusal(second);
+      // Neither target was written through; the link is still a link.
+      expect(readFileSync(join(victimA, "gate.log"), "utf8")).toBe("VICTIM-A\n");
+      expect(readFileSync(join(victimB, "gate.log"), "utf8")).toBe("VICTIM-B\n");
+      expect(lstatSync(dateAt).isSymbolicLink()).toBe(true);
+      // Sources intact, staging cleaned.
+      expect(readFileSync(join(fixture.logs("2026-11-25"), "gate.log"), "utf8")).toBe("second\n");
+      expect(
+        existsSync(join(fixture.stateDirectory, "closeout-lane-logs", `.staging-${fixture.ref}`)),
+      ).toBe(false);
+    } finally {
+      fixture.dispose();
+    }
+  });
+
+  test("scenario 14b — a staged directory link is copied AS A LINK, never dereferenced", async () => {
+    const fixture = makeSweepFixture("symlink-staged");
+    try {
+      const target = join(fixture.root, "target");
+      mkdirSync(target, { recursive: true });
+      writeFileSync(join(target, "inside.log"), "inside\n");
+      mkdirSync(fixture.logs("2026-11-25"), { recursive: true });
+      writeFileSync(join(fixture.logs("2026-11-25"), "gate.log"), "gate\n");
+      symlinkSync(target, join(fixture.logs("2026-11-25"), "linked"));
+      const result = await fixture.sweep({
+        workItemRef: fixture.ref,
+        worktreePath: fixture.worktree,
+      });
+      expect(result.ok).toBe(true);
+      const placed = join(fixture.destination("2026-11-25"), "linked");
+      expect(lstatSync(placed).isSymbolicLink()).toBe(true);
+      expect(readlinkSync(placed)).toBe(target);
+      // The target's contents were NOT copied into the destination as a real
+      // directory; the target itself is untouched.
+      expect(readdirSync(fixture.destination("2026-11-25")).sort()).toEqual(["gate.log", "linked"]);
+      expect(readdirSync(target)).toEqual(["inside.log"]);
+      // The MERGE path refuses a same-named staged LINK safely (the primitive
+      // will not merge a link onto an existing link): the existing link and
+      // its target stay untouched, and the source stays in the worktree.
+      mkdirSync(fixture.logs("2026-11-25"), { recursive: true });
+      symlinkSync(target, join(fixture.logs("2026-11-25"), "linked"));
+      const merged = await fixture.sweep({
+        workItemRef: fixture.ref,
+        worktreePath: fixture.worktree,
+      });
+      expectSafeRefusal(merged);
+      expect(lstatSync(join(fixture.destination("2026-11-25"), "linked")).isSymbolicLink()).toBe(
+        true,
+      );
+      expect(readdirSync(target)).toEqual(["inside.log"]);
+    } finally {
+      fixture.dispose();
+    }
+  });
+});
+
+describe("F-48 shape flips — refused safely, naming the entry and the next action", () => {
+  test("scenario 15a — a file in the earlier sweep is a directory in the re-sweep", async () => {
+    const fixture = makeSweepFixture("flip-file-dir");
+    try {
+      mkdirSync(fixture.logs("2026-11-25"), { recursive: true });
+      writeFileSync(join(fixture.logs("2026-11-25"), "slot"), "a file\n");
+      expect(
+        (await fixture.sweep({ workItemRef: fixture.ref, worktreePath: fixture.worktree })).ok,
+      ).toBe(true);
+      rmSync(join(fixture.logs("2026-11-25")), { recursive: true, force: true });
+      mkdirSync(join(fixture.logs("2026-11-25"), "slot"), { recursive: true });
+      writeFileSync(join(fixture.logs("2026-11-25"), "slot", "inner.log"), "inner\n");
+      const refused = await fixture.sweep({
+        workItemRef: fixture.ref,
+        worktreePath: fixture.worktree,
+      });
+      expectSafeRefusal(refused);
+      // Sources intact; the destination date entry still exists.
+      expect(existsSync(join(fixture.logs("2026-11-25"), "slot", "inner.log"))).toBe(true);
+      expect(existsSync(fixture.destination("2026-11-25"))).toBe(true);
+    } finally {
+      fixture.dispose();
+    }
+  });
+
+  test("scenario 15b — a directory in the earlier sweep is a file in the re-sweep", async () => {
+    const fixture = makeSweepFixture("flip-dir-file");
+    try {
+      mkdirSync(join(fixture.logs("2026-11-25"), "slot"), { recursive: true });
+      writeFileSync(join(fixture.logs("2026-11-25"), "slot", "inner.log"), "inner\n");
+      expect(
+        (await fixture.sweep({ workItemRef: fixture.ref, worktreePath: fixture.worktree })).ok,
+      ).toBe(true);
+      rmSync(join(fixture.logs("2026-11-25")), { recursive: true, force: true });
+      mkdirSync(fixture.logs("2026-11-25"), { recursive: true });
+      writeFileSync(join(fixture.logs("2026-11-25"), "slot"), "now a file\n");
+      const refused = await fixture.sweep({
+        workItemRef: fixture.ref,
+        worktreePath: fixture.worktree,
+      });
+      expectSafeRefusal(refused);
+      expect(existsSync(join(fixture.logs("2026-11-25"), "slot"))).toBe(true);
+      expect(lstatSync(join(fixture.destination("2026-11-25"), "slot")).isDirectory()).toBe(true);
+    } finally {
+      fixture.dispose();
+    }
+  });
+
+  test("scenario 15c — a non-directory at the destination date entry refuses a new entry", async () => {
+    const fixture = makeSweepFixture("flip-date-file");
+    try {
+      mkdirSync(fixture.logs("2026-11-25"), { recursive: true });
+      writeFileSync(join(fixture.logs("2026-11-25"), "gate.log"), "gate\n");
+      expect(
+        (await fixture.sweep({ workItemRef: fixture.ref, worktreePath: fixture.worktree })).ok,
+      ).toBe(true);
+      // Replace the destination date entry with a FILE, then re-sweep.
+      const dateAt = fixture.destination("2026-11-25");
+      rmSync(dateAt, { recursive: true, force: true });
+      writeFileSync(dateAt, "blocker\n");
+      mkdirSync(fixture.logs("2026-11-25"), { recursive: true });
+      writeFileSync(join(fixture.logs("2026-11-25"), "gate.log"), "gate two\n");
+      const refused = await fixture.sweep({
+        workItemRef: fixture.ref,
+        worktreePath: fixture.worktree,
+      });
+      expectSafeRefusal(refused);
+      expect(lstatSync(dateAt).isDirectory()).toBe(false);
+      expect(readFileSync(dateAt, "utf8")).toBe("blocker\n");
+      expect(readFileSync(join(fixture.logs("2026-11-25"), "gate.log"), "utf8")).toBe("gate two\n");
+    } finally {
+      fixture.dispose();
+    }
+  });
+
+  test("scenario 15d — a read-only earlier file is replaced; a read-only directory refuses safely", async () => {
+    const fixture = makeSweepFixture("flip-readonly");
+    try {
+      mkdirSync(fixture.logs("2026-11-25"), { recursive: true });
+      writeFileSync(join(fixture.logs("2026-11-25"), "gate.log"), "old\n");
+      expect(
+        (await fixture.sweep({ workItemRef: fixture.ref, worktreePath: fixture.worktree })).ok,
+      ).toBe(true);
+      const placed = join(fixture.destination("2026-11-25"), "gate.log");
+      chmodSync(placed, 0o400);
+      mkdirSync(fixture.logs("2026-11-25"), { recursive: true });
+      writeFileSync(join(fixture.logs("2026-11-25"), "gate.log"), "new\n");
+      // The primitive's directory MERGE unlinks the destination child before
+      // copying, so a read-only EARLIER FILE alone is replaced by the newer
+      // bytes (no refusal, source intact) — verified Bun 1.4.4 behaviour. The
+      // safe refusal of F-48's permission family is the read-only CONTAINER.
+      const replaced = await fixture.sweep({
+        workItemRef: fixture.ref,
+        worktreePath: fixture.worktree,
+      });
+      expect(replaced.ok).toBe(true);
+      expect(readFileSync(placed, "utf8")).toBe("new\n");
+      // A read-only DATE DIRECTORY cannot be replaced into: the refusal is
+      // typed and names the entry and the next action; nothing is moved.
+      const dateAt = fixture.destination("2026-11-25");
+      const mode = statSync(dateAt).mode & 0o777;
+      chmodSync(dateAt, 0o500);
+      try {
+        mkdirSync(fixture.logs("2026-11-25"), { recursive: true });
+        writeFileSync(join(fixture.logs("2026-11-25"), "gate.log"), "third\n");
+        const refused = await fixture.sweep({
+          workItemRef: fixture.ref,
+          worktreePath: fixture.worktree,
+        });
+        expectSafeRefusal(refused);
+        expect(readFileSync(join(fixture.logs("2026-11-25"), "gate.log"), "utf8")).toBe("third\n");
+      } finally {
+        chmodSync(dateAt, mode);
+      }
+    } finally {
+      fixture.dispose();
     }
   });
 });

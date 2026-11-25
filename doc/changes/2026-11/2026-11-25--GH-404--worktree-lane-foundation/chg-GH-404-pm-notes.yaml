@@ -52,6 +52,55 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Plan phase 15 (rev-12 delta-review micro-remediation) applied in ONE
+      commit through the commit primitive. FINAL STATUS. F-47 ADDRESSED — the
+      hand-written recursive merge is replaced by the copy PRIMITIVE
+      (cpSync(from, to, { recursive: true })), so the merge arm never follows a
+      link: a re-targeted date-entry link is REFUSED without writing through it
+      (both victim targets byte-identical, the link still a link), a staged
+      directory link is copied AS A LINK on a new entry (target contents never
+      materialized as a real directory), and per-placed-file verification now
+      uses lstat (file size equality, link target equality) so the verifier
+      itself never follows a symlink. F-48 ADDRESSED as the primitive's
+      delivered behaviour: the three TYPE-MISMATCH shapes are refused safely
+      (file->dir, dir->file, a non-directory at the destination date entry) —
+      typed failure, no throw, detail names the entry, the destination and the
+      next action, sources intact, staging cleaned; verified empirically under
+      Bun 1.4.4 that a read-only EARLIER FILE alone is now REPLACED by the
+      newer bytes by the primitive's directory merge (it unlinks before
+      copying), so the safe permission refusal is exercised through a
+      read-only CONTAINER instead — this is disclosed as a deviation from the
+      review's four-refusal list, and it is safe (the same-named file takes the
+      newer bytes, no distinct log is lost). Scenarios 9 and 9b re-verified
+      green (same-date preservation unaffected). F-55 ADDRESSED — the changeset
+      prose is rewritten to the delivered contract (detached worktree at the
+      base tip, no lane branch, the lane's own intake creates the delivery
+      branch; provider-landing merge with the post-landing deletion deferred to
+      closeout; bounded runner-log sweep with disclosed truncation and the
+      tmp/tmpdir scratch discarded; (repository, ref)-keyed worktree-path
+      visibility on dispatch status/lanes/board; lane.worktree-root and
+      lane.disable-worktrees; host-index registration pinned to the main
+      checkout; shared clone identity). It remains the branch's single
+      package-minor changeset for the five groups — frontmatter, bump and
+      package list untouched; TC-RELEASE-001 green. VERIFICATION (observed):
+      no-shell check clean (43 surface files); the production suite 22 pass / 0
+      fail (14a/14b/15a-15d new); the phase-14 behaviour set 588 pass / 0 fail
+      across 81 files including tests/golden 348 with NO byte changes; pnpm
+      typecheck green for all six packages plus tests/types; biome lint 0
+      errors and biome format clean; boundaries, workspace entrypoints and
+      secret-read boundary green; TC-RELEASE-001 (privacy-release) 7 pass / 0
+      fail. CARRIED RESIDUALS unchanged: F-49 (tmp/deliver-ticket is neither
+      excluded nor removed — the F-37 masked-dirt family), F-50 (merge not
+      atomic per entry; a retry completes it, no distinct log lost), F-51 (the
+      cap bounds one sweep, not the merged destination — DEC-11's per-sweep
+      wording rides the doc-sync re-run), F-52 (resolved by the primitive
+      adoption), F-53 (verification compares sizes, not content — wording), and
+      the phase-13/14 carrier list (F-26..F-28, F-31/F-32, F-33 + F-23 wording,
+      F-37, F-39..F-46; F-54 folded with F-42's suite hardening). SCOPE: the
+      three declared files plus this pm-notes note (drift disclosed by the
+      primitive)."
+    type: info
+    date: "2026-11-25"
   - text: "Delta verification of phase 14 (code-review/review-delta-phase-14.yaml):
       APPROVE — proceed to quality gates. F-34 is genuine compliance restoration
       (invariant file/test/allowlist untouched across the whole branch; removal,
