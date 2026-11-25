@@ -286,6 +286,26 @@ phases:
     # file, each declaring the part it owns. dispatch-lane.ts (lane
     # resolver, resume-side read) and dispatch-gate.ts (summary/divergence/
     # handover) stay declared for their read-side extensions.
+    # Binding chain (delivery blocker q-5f1d0808-de2e-417b-b209-b3f8f850a2cf):
+    # the port still cannot bind through the composition edge — TWO
+    # additions in packages/cli/src/edge.ts, THIS phase's scope:
+    # (1) the closed composition type DispatchComposition
+    # (edge.ts:7736-7863) gains the optional provisionWorktree member in
+    # the claimLease (ref) style — without the type member the production
+    # literal in production.ts:4222 (typed DispatchComposition) is an
+    # excess-property compile error;
+    # (2) the tree's SOLE runDispatch assembly (edge.ts:8202-8283) gains
+    # one conditional forwarding line mirroring the claimLease pattern
+    # (:8255) — the assembly forwards fields explicitly, so without the
+    # forwarding line the capability is dead in production and the default
+    # flip would be false.
+    # Chain verified complete (rev 5): production.ts (composition literal:
+    # dispatchComposition :4222, lease-claim :4272) -> edge.ts (type :7736
+    # + sole assembly :8202) -> dispatch.ts (engine :725) — every link
+    # declared in THIS phase; no other closed type, assembly, or forwarding
+    # site stands between them (verified: runDispatch has no other call
+    # site, domain/dispatch-tracker.ts assembles no dispatch ports, the
+    # daemon lane path does not run runDispatch).
     # Ordering: after phase 3 (the seam exists); before resume (phase 5) and
     # the surfaces (phase 7). This is the change's central boundary: the
     # default flip happens here and nowhere else.
@@ -303,6 +323,7 @@ phases:
         - packages/core/src/domain/lane-launch-plan.ts
         - packages/core/src/app/dispatch.ts
         - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
     interactions:
       - kind: contract-file
         target: packages/core/src/app/dispatch-lane.ts
@@ -573,3 +594,35 @@ phases:
 #           TC-WT-003 / TC-ENV-001/002/003 / TC-REG-002 and the resume TCs
 #           stay deliverable inside the enlarged fences. All other phases,
 #           fences and mappings byte-identical (rev 3).
+#   rev 5 — 2026-11-25: delivery blocker q-5f1d0808-de2e-417b-b209-b3f8f850a2cf
+#           (coder-verified to compile-level precision; delivery stopped at
+#           plan phase 4 a second time). Rev-4 additions stand verified —
+#           dispatch.ts is the sole dispatch.lane writer (terminal append
+#           :842-850, active :1070-1084, lease claim :778, descriptor
+#           pass-throughs :1010/:1020) and production.ts:4272 is the
+#           lease-claim composition inside dispatchComposition() (:4222) —
+#           BUT the port still cannot bind: dispatchComposition() returns a
+#           literal typed as DispatchComposition, a CLOSED type declared in
+#           packages/cli/src/edge.ts:7736-7863 and undeclared in every
+#           phase, so a provisionWorktree member on the production literal
+#           is an excess-property compile error; and the tree's sole
+#           runDispatch assembly (edge.ts:8202-8283) forwards fields
+#           explicitly (the claimLease pattern at :8255), so without a
+#           forwarding line the port never reaches the engine. Verified
+#           negatives: no other runDispatch call site exists;
+#           domain/dispatch-tracker.ts assembles no dispatch ports; the
+#           daemon lane path does not run runDispatch. Amendment (rev 5,
+#           mechanical): packages/cli/src/edge.ts joins phase 4's scope with
+#           a Binding-chain note recording the two additions — (1)
+#           DispatchComposition gains the optional provisionWorktree member
+#           (claimLease (ref) style), (2) the runDispatch assembly gains one
+#           conditional forwarding line mirroring :8255 — and why the file
+#           is load-bearing (no type member = the production literal cannot
+#           compile; no forwarding line = the capability is dead in
+#           production and the default flip would be false). Binding-chain
+#           verification (one pass, reflected in the phase-4 comment):
+#           production.ts -> edge.ts -> dispatch.ts, all links declared in
+#           phase 4, no other closed type, assembly, or forwarding site
+#           between them. Phases 1-3 and 5-10 byte-identical (phase 5
+#           already declares its own dispatch.ts + production.ts parts); no
+#           tasks key; no progress records.

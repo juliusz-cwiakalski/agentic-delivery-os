@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-25T03:29:05.413Z }
   specification: { started: null, completed: 2026-11-25T03:37:50.066Z }
   test_planning: { started: null, completed: 2026-11-25T03:43:23.337Z }
-  delivery_planning: { started: null, completed: 2026-11-25T05:49:35.567Z }
+  delivery_planning: { started: null, completed: 2026-11-25T05:58:15.253Z }
   dor_check: { started: null, completed: 2026-11-25T04:08:42.685Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -52,35 +52,62 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "PM adjudication of the phase-4 second blocker (q-5f1d0808,
+      spec-ambiguity): ACCEPTED — plan rev 5 ordered, exactly per the coder's
+      compile-level remedy: packages/cli/src/edge.ts joins phase 4's declared
+      scope with two mechanical additions — (1) the closed DispatchComposition
+      type gains the optional provisionWorktree member (claimLease style), and
+      (2) the runDispatch assembly gains one conditional forwarding line
+      mirroring the claimLease pattern (:8255). Everything else from rev 4
+      stands. The rev-5 instruction additionally requires the plan-writer to
+      verify the FULL binding chain this time (composition literal production.ts
+      -> type + assembly edge.ts -> engine dispatch.ts) so no third link
+      surfaces."
+    type: decision
+    date: "2026-11-25"
+  - text: "Retro (third instance of the write-site lesson class — PM process fix
+      this time): the rev-4 remediation instruction told the plan-writer to
+      'check phases 5-7' with a HAND-NAMED file list, and the plan-writer
+      checked exactly that list — it never grep'd edge.ts, which is where the
+      runDispatch assembly lives. The dependency question was framed as
+      reference-grep, but the missing link was TYPE-LEVEL (the closed
+      composition type + the forwarding assembly). Rule for remediation
+      instructions: never hand-name the file set to check; require a binding-
+      chain trace from the composition root to the engine (who builds the
+      object, what type closes it, who forwards its members, who consumes them)
+      in one pass. Cost so far: two amendment cycles at the same phase boundary
+      — the fence held both times, but the PM's remedy scoping should have
+      caught the chain in one pass."
+    type: retro
+    date: "2026-11-25"
   - text: "Plan phase 4 boundary finding, second pass (BLOCKED again; rev-4
       follow-through verification): the rev-4 scope additions stand verified —
       packages/core/src/app/dispatch.ts is confirmed the sole dispatch.lane
-      writer (terminal append :842-850, active append :1070-1084) with the
-      lease claim at :778 and the spawn/resume descriptor pass-throughs at
+      writer (terminal append :842-850, active append :1070-1084) with the lease
+      claim at :778 and the spawn/resume descriptor pass-throughs at
       :1010/:1020, and packages/cli/src/production.ts:4272 is confirmed the
       lease-claim composition inside dispatchComposition() (:4222). But the
       engine port still cannot be BOUND: the composition object production.ts
       builds is typed as DispatchComposition — a CLOSED type declared in
       packages/cli/src/edge.ts:7736-7863, undeclared in every phase — so a
-      provisionWorktree member on the production literal is an
-      excess-property compile error; and even with the member declared, the
-      only runDispatch assembly (edge.ts :8202-8283) forwards fields
-      explicitly (the claimLease pattern at :8255), so the port can never
-      reach the engine without a forwarding line there. Verified: edge.ts
-      :8202 is the tree's sole runDispatch call site; the tracker ladder
-      (domain/dispatch-tracker.ts) does not assemble dispatch ports; the
-      daemon lane path does not run runDispatch. NO phase-4 code was written:
-      landing the engine port alone would be dead capability (production
-      dispatch could never provision — the default flip would be false in
-      production), and landing the production binding alone cannot
-      type-check. Remedy (rev 5, mechanical, two additions in ONE undeclared
-      file): edge.ts joins phase 4's scope — (1) DispatchComposition gains
-      the optional provisionWorktree member (the claimLease (ref) style), and
-      (2) the runDispatch assembly gains the one conditional forwarding line
-      (mirroring :8255). Everything else from rev 4 stands unchanged.
-      Phases 1-3 commits and evidence stand (e25deabe, 4c281841, 816d23e2,
-      def013bb); tree clean; the accepted first blocker q-de70dae6 was
-      answered with the rev-4 acceptance; typed blocker
+      provisionWorktree member on the production literal is an excess-property
+      compile error; and even with the member declared, the only runDispatch
+      assembly (edge.ts :8202-8283) forwards fields explicitly (the claimLease
+      pattern at :8255), so the port can never reach the engine without a
+      forwarding line there. Verified: edge.ts :8202 is the tree's sole
+      runDispatch call site; the tracker ladder (domain/dispatch-tracker.ts)
+      does not assemble dispatch ports; the daemon lane path does not run
+      runDispatch. NO phase-4 code was written: landing the engine port alone
+      would be dead capability (production dispatch could never provision — the
+      default flip would be false in production), and landing the production
+      binding alone cannot type-check. Remedy (rev 5, mechanical, two additions
+      in ONE undeclared file): edge.ts joins phase 4's scope — (1)
+      DispatchComposition gains the optional provisionWorktree member (the
+      claimLease (ref) style), and (2) the runDispatch assembly gains the one
+      conditional forwarding line (mirroring :8255). Everything else from rev 4
+      stands unchanged. Phases 1-3 commits and evidence stand (e25deabe,
+      4c281841, 816d23e2, def013bb); tree clean; the accepted first blocker
+      q-de70dae6 was answered with the rev-4 acceptance; typed blocker
       q-5f1d0808-de2e-417b-b209-b3f8f850a2cf published with this finding.
       Delivery remains stopped at phase 4."
     type: info
