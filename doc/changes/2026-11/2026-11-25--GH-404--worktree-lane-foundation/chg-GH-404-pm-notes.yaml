@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-25T03:29:05.413Z }
   specification: { started: null, completed: 2026-11-25T03:37:50.066Z }
   test_planning: { started: null, completed: 2026-11-25T03:43:23.337Z }
-  delivery_planning: { started: null, completed: 2026-11-25T05:58:15.253Z }
+  delivery_planning: { started: null, completed: 2026-11-25T08:18:49.372Z }
   dor_check: { started: null, completed: 2026-11-25T04:08:42.685Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -52,135 +52,179 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "PM adjudication of the phase-6 blocker (q-fa489f9a, spec-ambiguity):
+      ACCEPTED — plan rev 6 ordered per the coder's verified site map. Phase 6's
+      declared scope gains (1) packages/cli/src/edge.ts (the closeout runtime
+      parts: createCloseoutCommandRuntime :2738, worktree facts + mergedObserved
+      gate :2440-2530 — shared-file discipline: phase 4 owns its dispatch parts
+      of edge.ts, phase 6 owns its closeout parts), and (2) packages/core/src/
+      domain/closeout.ts (worktreeStep :1322-1373, step order :117-129,
+      runCloseout :2472, remove-worktree executor :1820-1836 — the lane-log
+      sweep step binds here, BEFORE removal; the sweep is also the mechanical
+      precondition for removal feasibility since untracked gate artifacts would
+      keep the worktree dirty and the delivered cleanliness predicate refusing
+      forever). Rev 6 must also reconcile the phase-2 ordering rules: either
+      domain/closeout.ts consumes closeout-worktree.ts's ordering helpers or the
+      ordering binds in closeout.ts directly with closeout-worktree.ts remaining
+      the pure-rules home — declared explicitly, whichever the author chooses.
+      The merge half binds in the already-declared adapters/src/git/merge.ts
+      (checkout --detach landing per the coder's empirical sandbox).
+      Binding-chain verification required in one pass: commands/closeout.ts ->
+      edge.ts runtime -> domain/closeout.ts planner/ executor -> git seam."
+    type: decision
+    date: "2026-11-25"
+  - text: "Retro (call-site class, third instance — this one ANTICIPATED): the
+      coder's recon flagged the closeout home files during phase 4 and confirmed
+      the site map to line precision before phase 6, so the blocker arrived
+      pre-verified. Structural lesson for THIS repo's future plans: vertical
+      behavior lives in edge.ts runtimes and domain planners, NOT in command
+      files or *-submodule files — plans should declare the shared behavior
+      homes (edge.ts, domain planners) with per-phase part ownership UP FRONT,
+      and run a recon-before-scope pass that maps each phase's behavior to its
+      real bind points before declaring file lists. The three-cycle cost (rev 4,
+      5, 6) is the plan schema's file-scope model colliding with the repo's real
+      layering; the fence held every time and no code ever landed undeclared,
+      but the same lesson now has three data points — promote to the
+      plan-authoring convention."
+    type: retro
+    date: "2026-11-25"
+  - text: "PM accepts the coder's incident record from the phases 4-5 stretch as
+      delivered (all root-caused, none bypassed a check): (1) commit primitive
+      once failed commitlint because a server restart dropped node_modules/.bin
+      from PATH — the probe's ENOENT surfaced as the 'rejected' fallback;
+      repaired by restoring the repo bin dir to PATH, after which the message
+      was genuinely linted (safe-direction fallback confirmed). (2) One mid-gate
+      edit race invalidated a gate run — rerun clean, the invalidated run is not
+      evidence. (3) Gate run 2's 56 conformance failures root-caused to the
+      parity fixture's missing exception config and fixed as recorded. (4) A
+      mechanics experiment mis-fired into the repo tree — verified no harm
+      (HEAD/branch/worktree state intact, residue pruned)."
+    type: decision
+    date: "2026-11-25"
   - text: "Plan phase 6 boundary finding (BLOCKED, spec-ambiguity shape; rev-6
-      request; third instance of the call-site class): phase 6's declared
-      scope (commands/merge.ts, commands/closeout.ts, domain/
-      closeout-worktree.ts, adapters/src/git/merge.ts) cannot deliver the
-      phase's contract, because the closeout behavior lives elsewhere —
-      (1) the sweep-before-removal binding: the closeout runtime that builds
-      the worktree facts and evaluates the delivered safety predicate is
-      packages/cli/src/edge.ts (createCloseoutCommandRuntime :2738; the
-      worktree facts + mergedObserved gate at :2440-2530), and the closeout
-      step planning/execution — worktreeStep :1322-1373, the declared step
-      order :117-129 (worktree-cleanup before branch-cleanup), runCloseout
-      :2472, and the remove-worktree executor :1820-1836 — is packages/core/
+      request; third instance of the call-site class): phase 6's declared scope
+      (commands/merge.ts, commands/closeout.ts, domain/ closeout-worktree.ts,
+      adapters/src/git/merge.ts) cannot deliver the phase's contract, because
+      the closeout behavior lives elsewhere — (1) the sweep-before-removal
+      binding: the closeout runtime that builds the worktree facts and evaluates
+      the delivered safety predicate is packages/cli/src/edge.ts
+      (createCloseoutCommandRuntime :2738; the worktree facts + mergedObserved
+      gate at :2440-2530), and the closeout step planning/execution —
+      worktreeStep :1322-1373, the declared step order :117-129
+      (worktree-cleanup before branch-cleanup), runCloseout :2472, and the
+      remove-worktree executor :1820-1836 — is packages/core/
       src/domain/closeout.ts. NEITHER file is declared in phase 6 (edge.ts is
-      phase 4's; domain/closeout.ts is in no phase). The lane-log sweep
-      (the worktree's tmp/tmpdir gate evidence moved to its destination in
-      the state root BEFORE the worktree is removed — also the mechanical
-      precondition for the delivered cleanliness predicate to ever pass on a
-      worktree lane, since untracked gate artifacts make the worktree dirty)
-      has no consumption point inside the declared files, and
-      domain/closeout-worktree.ts's ordering rules (phase 2) are consumed by
-      nothing in the real flow — evaluateWorktreeSafety is called directly by
-      edge.ts. (2) The merge half CAN bind in scope: verified empirically in
-      a hermetic sandbox — from a worktree whose base branch is parked in the
-      main checkout, `git checkout <base>` refuses ('already used by
-      worktree', exit 128 — the delivered git/merge.ts squashLand's first
-      argv at :215), while `git checkout --detach <base>` succeeds, so
-      adapters/src/git/merge.ts (declared) carries the worktree-invocation
-      landing mechanics. commands/merge.ts and commands/closeout.ts are thin
-      grammar delegators with no behavior to change. NO phase-6 code was
-      written: a partial phase (merge seam without the sweep) would strand
-      the phase, which the plan explicitly forbids (merge and closeout in
-      ONE phase). Remedy (rev 6): packages/cli/src/edge.ts (the closeout
-      runtime: the sweep binding + the removal-after-merge-confirmation
-      ordering it already gates) and packages/core/src/domain/closeout.ts
-      (a lane-log sweep step ordered before worktree-cleanup) join phase 6's
-      scope; git/merge.ts's landing mechanics stay in scope as declared.
-      Phases 1-5 stand (e25deabe, 4c281841, 816d23e2, def013bb, b2fff27d,
-      7a5b0fe4, fd8831ae); the phase-5 evidence note is in this commit;
-      typed blocker q-fa489f9a-22a7-4a27-ad0c-8d400b9ea1ec published with
-      this finding. Delivery stops at phase 6; phases 7-10 (surfaces,
-      proofs, changeset) depend on the lifecycle completing and are stopped
-      with it."
+      phase 4's; domain/closeout.ts is in no phase). The lane-log sweep (the
+      worktree's tmp/tmpdir gate evidence moved to its destination in the state
+      root BEFORE the worktree is removed — also the mechanical precondition for
+      the delivered cleanliness predicate to ever pass on a worktree lane, since
+      untracked gate artifacts make the worktree dirty) has no consumption point
+      inside the declared files, and domain/closeout-worktree.ts's ordering
+      rules (phase 2) are consumed by nothing in the real flow —
+      evaluateWorktreeSafety is called directly by edge.ts. (2) The merge half
+      CAN bind in scope: verified empirically in a hermetic sandbox — from a
+      worktree whose base branch is parked in the main checkout, `git checkout
+      <base>` refuses ('already used by worktree', exit 128 — the delivered
+      git/merge.ts squashLand's first argv at :215), while `git checkout
+      --detach <base>` succeeds, so adapters/src/git/merge.ts (declared) carries
+      the worktree-invocation landing mechanics. commands/merge.ts and
+      commands/closeout.ts are thin grammar delegators with no behavior to
+      change. NO phase-6 code was written: a partial phase (merge seam without
+      the sweep) would strand the phase, which the plan explicitly forbids
+      (merge and closeout in ONE phase). Remedy (rev 6):
+      packages/cli/src/edge.ts (the closeout runtime: the sweep binding + the
+      removal-after-merge-confirmation ordering it already gates) and
+      packages/core/src/domain/closeout.ts (a lane-log sweep step ordered before
+      worktree-cleanup) join phase 6's scope; git/merge.ts's landing mechanics
+      stay in scope as declared. Phases 1-5 stand (e25deabe, 4c281841, 816d23e2,
+      def013bb, b2fff27d, 7a5b0fe4, fd8831ae); the phase-5 evidence note is in
+      this commit; typed blocker q-fa489f9a-22a7-4a27-ad0c-8d400b9ea1ec
+      published with this finding. Delivery stops at phase 6; phases 7-10
+      (surfaces, proofs, changeset) depend on the lifecycle completing and are
+      stopped with it."
     type: info
     date: "2026-11-25"
   - text: "Plan phase 5 complete (commit 7a5b0fe4): resume reuse and the
-      registration pin landed — (1) production.ts's provisioning port reuse
-      arm now VERIFIES the recorded worktree before reuse (F-4, NFR-3,
+      registration pin landed — (1) production.ts's provisioning port reuse arm
+      now VERIFIES the recorded worktree before reuse (F-4, NFR-3,
       TC-RESUME-001/002): existence observed (a missing worktree is the
-      lane-worktree-missing lane error naming the path and the expected
-      branch) and the branch observed through the composer's injected git
-      child runner via a cwd-targeted readCheckout (a branch mismatch is the
+      lane-worktree-missing lane error naming the path and the expected branch)
+      and the branch observed through the composer's injected git child runner
+      via a cwd-targeted readCheckout (a branch mismatch is the
       lane-worktree-branch-mismatch lane error naming observed vs expected);
       neither re-provisions, moves, or touches the inventory — zero second
       worktrees across attempts; the DEC-8 context-less arm (a recorded lane
-      without worktree context answers in-checkout) is unchanged from phase
-      4. (2) The registration pin (F-5, DM-2, NFR-6): the sole host-index
-      write site (production.ts, the maintainHostIndex registration) now
-      registers dirname(realpath(commonDir)) — the MAIN checkout's PHYSICAL
-      path for every lane command, whatever checkout invoked it, zero
-      resolutions through an alias (NFR-7) — so a worktree path never flips
-      the entry and a later worktree removal can never prune a live clone's
-      registration; host-index.ts keeps its maintenance logic and projects.ts
-      keeps reading/resolving, both unchanged. Declared-but-unchanged files
-      (the scope is an upper bound): dispatch-lane.ts (the resolver's handle
-      treeRoot is opencode session-id metadata, adapter :653, and the resume
-      working directory flows through the engine's worktree-scoped
-      descriptor — no resolver change needed), dispatch-resume.ts (the
-      phase-2 rules already express the reuse/verify/DEC-8 decision; the
-      binding consumed them via the port), host-index.ts and projects.ts
-      (the pin is at the call site). Boundary evidence:
-      tmp/run-logs-runner/2026-11-25/phase5-gate.log — stages 1-3 and 5-13
-      green; bun test 12863 pass / 4 skip / 1 known-deferred fail
-      (TC-RELEASE-001 only). Environment incident, recorded for the ledger:
-      the first commit attempt failed commit.commitlint-failed because the
-      server restart dropped node_modules/.bin from PATH — the commitlint
-      probe's ENOENT surfaced as the 'rejected' fallback (empty output,
-      non-zero exit); repaired by restoring the repository's own bin
-      directory to PATH for the invocation, after which the message was
-      linted by the repository's commitlint config for real. No check was
-      bypassed or weakened."
+      without worktree context answers in-checkout) is unchanged from phase 4.
+      (2) The registration pin (F-5, DM-2, NFR-6): the sole host-index write
+      site (production.ts, the maintainHostIndex registration) now registers
+      dirname(realpath(commonDir)) — the MAIN checkout's PHYSICAL path for every
+      lane command, whatever checkout invoked it, zero resolutions through an
+      alias (NFR-7) — so a worktree path never flips the entry and a later
+      worktree removal can never prune a live clone's registration;
+      host-index.ts keeps its maintenance logic and projects.ts keeps
+      reading/resolving, both unchanged. Declared-but-unchanged files (the scope
+      is an upper bound): dispatch-lane.ts (the resolver's handle treeRoot is
+      opencode session-id metadata, adapter :653, and the resume working
+      directory flows through the engine's worktree-scoped descriptor — no
+      resolver change needed), dispatch-resume.ts (the phase-2 rules already
+      express the reuse/verify/DEC-8 decision; the binding consumed them via the
+      port), host-index.ts and projects.ts (the pin is at the call site).
+      Boundary evidence: tmp/run-logs-runner/2026-11-25/phase5-gate.log — stages
+      1-3 and 5-13 green; bun test 12863 pass / 4 skip / 1 known-deferred fail
+      (TC-RELEASE-001 only). Environment incident, recorded for the ledger: the
+      first commit attempt failed commit.commitlint-failed because the server
+      restart dropped node_modules/.bin from PATH — the commitlint probe's
+      ENOENT surfaced as the 'rejected' fallback (empty output, non-zero exit);
+      repaired by restoring the repository's own bin directory to PATH for the
+      invocation, after which the message was linted by the repository's
+      commitlint config for real. No check was bypassed or weakened."
     type: info
     date: "2026-11-25"
   - text: "Plan phase 4 complete (commit b2fff27d): the provision-after-lease
       binding-chain landed — (1) engine (app/dispatch.ts): the optional
       provisionWorktree port on DispatchPorts invoked exactly once after the
-      lease claim and before any phase, spawn, or session (the lease-first
-      order is the engine's own sequence, NG-2); a provisioning refusal
-      releases the lease and surfaces as dispatch.session.spawn-failed naming
-      the step (zero retries, NFR-1); the worktree-scoped descriptor
-      (working directory = the worktree) applies to the fresh spawn AND every
-      restart resume; and BOTH lane-record appends (terminal :842-850, active
-      :1070-1084) record the additive worktreePath (DM-1, absent = the
-      DEC-8 context-less shape). (2) The provisioning outcome is a three-mode
-      union: worktree / in-checkout / refused — in-checkout answers the
-      disable-worktrees exception AND the pre-change context-less record
-      (never retroactive provisioning, DEC-8) at the same seam (TC-REG-002).
-      (3) edge.ts: DispatchComposition gains the optional provisionWorktree
-      member and the sole runDispatch assembly gains the one conditional
-      forwarding line (the rev-5 two-line binding chain). (4) production.ts:
-      provisionLaneWorktree reuses the recorded worktree (F-4; branch
-      verification lands in phase 5) or creates via the phase-3 seam through
-      the composer's ONE injected git child runner (hermetic end to end —
-      no second, un-injected runner), at the resolved placement
-      (state-scope's new resolveLaneWorktreePlacement over the PHYSICAL
-      checkout root, NFR-7), then the gate temporary directory inside the
-      worktree (DEC-6) and the ordered steps — install --frozen-lockfile,
-      gate build — fixed argv, no shell, zero retries, with the worktree bin
-      leading PATH and TMPDIR anchored inside (the phase-2 derived
-      environment). Conditional re-pins (recorded per the fence): the
-      production-composition fixture sandboxes (queue/production harness
-      config.yaml + the dispatch parity harness config.yaml) set
-      lane.disable-worktrees so the suites pinning today's in-checkout shape
-      stay hermetic and byte-identical in subject; the default-mode worktree
-      composition is pinned by phase 8's dedicated lifecycle suites
-      (TC-ENV-001/002, TC-WT-003, install/build stubbed per RSK-T5).
-      content-inventory gains the state-scope export row. Engine-sequence
-      probe verified hermetically: lease -> provision ordering, spawn cwd =
-      worktree, worktreePath on the lane record. Boundary evidence: full
-      13-stage battery (tmp/run-logs-runner/2026-11-25/phase4-gate3.log) —
+      lease claim and before any phase, spawn, or session (the lease-first order
+      is the engine's own sequence, NG-2); a provisioning refusal releases the
+      lease and surfaces as dispatch.session.spawn-failed naming the step (zero
+      retries, NFR-1); the worktree-scoped descriptor (working directory = the
+      worktree) applies to the fresh spawn AND every restart resume; and BOTH
+      lane-record appends (terminal :842-850, active :1070-1084) record the
+      additive worktreePath (DM-1, absent = the DEC-8 context-less shape). (2)
+      The provisioning outcome is a three-mode union: worktree / in-checkout /
+      refused — in-checkout answers the disable-worktrees exception AND the
+      pre-change context-less record (never retroactive provisioning, DEC-8) at
+      the same seam (TC-REG-002). (3) edge.ts: DispatchComposition gains the
+      optional provisionWorktree member and the sole runDispatch assembly gains
+      the one conditional forwarding line (the rev-5 two-line binding chain).
+      (4) production.ts: provisionLaneWorktree reuses the recorded worktree
+      (F-4; branch verification lands in phase 5) or creates via the phase-3
+      seam through the composer's ONE injected git child runner (hermetic end to
+      end — no second, un-injected runner), at the resolved placement
+      (state-scope's new resolveLaneWorktreePlacement over the PHYSICAL checkout
+      root, NFR-7), then the gate temporary directory inside the worktree
+      (DEC-6) and the ordered steps — install --frozen-lockfile, gate build —
+      fixed argv, no shell, zero retries, with the worktree bin leading PATH and
+      TMPDIR anchored inside (the phase-2 derived environment). Conditional
+      re-pins (recorded per the fence): the production-composition fixture
+      sandboxes (queue/production harness config.yaml + the dispatch parity
+      harness config.yaml) set lane.disable-worktrees so the suites pinning
+      today's in-checkout shape stay hermetic and byte-identical in subject; the
+      default-mode worktree composition is pinned by phase 8's dedicated
+      lifecycle suites (TC-ENV-001/002, TC-WT-003, install/build stubbed per
+      RSK-T5). content-inventory gains the state-scope export row.
+      Engine-sequence probe verified hermetically: lease -> provision ordering,
+      spawn cwd = worktree, worktreePath on the lane record. Boundary evidence:
+      full 13-stage battery (tmp/run-logs-runner/2026-11-25/phase4-gate3.log) —
       stages 1-3 and 5-13 green; bun test initially 12862/2/4 (TC-RELEASE-001
-      known-deferred + TC-SPEND-032: the spend-readonly source-scan tripped
-      on the literal word 'spawn' inside my doc comment in edge.ts; fixed by
+      known-deferred + TC-SPEND-032: the spend-readonly source-scan tripped on
+      the literal word 'spawn' inside my doc comment in edge.ts; fixed by
       rewording MY comment, never the guard), then the post-fix stage-4 rerun
       (tmp/run-logs-runner/2026-11-25/phase4-stage4.log): 12863 pass / 1
-      known-deferred fail (TC-RELEASE-001 only) / 4 skip. Two intermediate
-      gate runs were discarded: run 1 raced live edits (invalid), run 2's
-      56 conformance failures were root-caused to the parity fixture
-      sandboxes lacking the exception config (fixed as recorded above; the
-      production provisioning seam now uses the injected runner)."
+      known-deferred fail (TC-RELEASE-001 only) / 4 skip. Two intermediate gate
+      runs were discarded: run 1 raced live edits (invalid), run 2's 56
+      conformance failures were root-caused to the parity fixture sandboxes
+      lacking the exception config (fixed as recorded above; the production
+      provisioning seam now uses the injected runner)."
     type: info
     date: "2026-11-25"
   - text: "PM adjudication of the phase-4 second blocker (q-5f1d0808,

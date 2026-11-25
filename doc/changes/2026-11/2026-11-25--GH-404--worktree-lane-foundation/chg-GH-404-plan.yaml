@@ -380,11 +380,47 @@ phases:
   - id: 6
     title: Merge and closeout on a worktree branch — resolution from worktree or main checkout; sweep-then-remove after merge confirmation (F-6)
     kind: delivery
-    summary: "the lifecycle completes on a worktree-checked-out branch: merge resolves the change from the worktree or the main checkout (packages/cli/src/commands/merge.ts with the git merge seam in packages/adapters/src/git/merge.ts) so a branch checked out in its worktree lands normally — the repository lease and the dispatch result pr-open semantics untouched (NG-2, NG-3); closeout (packages/cli/src/commands/closeout.ts, ordering rules in packages/core/src/domain/closeout-worktree.ts) sweeps the lane's logs BEFORE removal — zero log loss, swept logs retrievable at their destination — and removes the worktree ONLY after the merge is confirmed, never before, behind the delivered local worktree safety predicate reused as-is (F-6, NFR-5); a lane stopped without a merge keeps its worktree until it is resumed and completes or is closed out; a second closeout stays a no-op satisfaction per the delivered idempotency suite; pre-existing closeout and merge pins that trip are re-pinned in THIS commit per the green-boundary fence."
+    summary: "the lifecycle completes on a worktree-checked-out branch: merge resolves the change from the worktree or the main checkout (packages/cli/src/commands/merge.ts — thin grammar delegator — with the git merge seam in packages/adapters/src/git/merge.ts carrying the worktree-invocation landing: from a worktree whose base branch is parked in the main checkout, git checkout <base> refuses with already-used-by-worktree exit 128 while git checkout --detach <base> succeeds) so a branch checked out in its worktree lands normally — the repository lease and the dispatch result pr-open semantics untouched (NG-2, NG-3); closeout binds where the behavior lives — the runtime in packages/cli/src/edge.ts (worktree facts plus the mergedObserved gate calling the delivered evaluateWorktreeSafety directly at :2469; createCloseoutCommandRuntime :2738, the sole closeout runtime assembly) and the step planning/execution in packages/core/src/domain/closeout.ts (the declared step order :117-129, worktreeStep :1322-1373, the remove-worktree executor :1820-1836, runCloseout :2472), which consumes closeout-worktree.ts's ordering helpers so the phase-2 pure-rules home is load-bearing in the real flow — sweeps the lane's logs BEFORE removal, the sweep moving the worktree's tmp/tmpdir gate evidence to its state-root destination first (the mechanical precondition for the cleanliness predicate to ever pass on a worktree lane: untracked gate artifacts make the worktree dirty, so without the sweep the predicate refuses forever) — zero log loss, swept logs retrievable at their destination — and removes the worktree ONLY after the merge is confirmed, never before, behind the delivered local worktree safety predicate reused as-is (F-6, NFR-5); a lane stopped without a merge keeps its worktree until it is resumed and completes or is closed out; a second closeout stays a no-op satisfaction per the delivered idempotency suite; pre-existing closeout and merge pins that trip are re-pinned in THIS commit per the green-boundary fence."
     # TC ownership: TC-CLOSEOUT-001 (F-6, AC-F6-1 — merge from both
     # checkouts), TC-CLOSEOUT-002/003/004 (ordering, refusals, stalled-lane
     # retention), TC-CLOSEOUT-005 (mutants) — proven by the phase-9 suites;
     # tripped pre-existing pins ride this commit per the fence.
+    # Binding sites (delivery blocker q-fa489f9a-22a7-4a27-ad0c-8d400b9ea1ec):
+    # the closeout behavior lives OUTSIDE the rev-5 scope — two files join
+    # THIS phase:
+    # (1) packages/cli/src/edge.ts — its CLOSEOUT parts: the worktree facts
+    # plus mergedObserved gate (:2440-2530, evaluateWorktreeSafety called
+    # directly at :2469) and createCloseoutCommandRuntime (:2738, the sole
+    # closeout runtime assembly, mounted once at :5859). Shared-file
+    # discipline: phase 4 owns edge.ts's DISPATCH parts (the composition
+    # type, the runDispatch assembly, the forwarding line), phase 6 owns its
+    # CLOSEOUT parts — each phase declares the part it owns.
+    # (2) packages/core/src/domain/closeout.ts — the closeout step planning
+    # and execution: the declared step order (:117-129), worktreeStep
+    # (:1322-1373), the remove-worktree executor (:1820-1836), runCloseout
+    # (:2472, the sole step executor). The lane-log sweep step binds HERE,
+    # ordered BEFORE worktree removal: the sweep moves the worktree's
+    # tmp/tmpdir gate evidence to its state-root destination BEFORE the
+    # worktree is removed — and it is the mechanical precondition for the
+    # delivered cleanliness predicate to ever pass on a worktree lane
+    # (untracked gate artifacts make the worktree dirty, so without the
+    # sweep the predicate refuses forever).
+    # Reconciliation (declared, option a): domain/closeout.ts CONSUMES
+    # closeout-worktree.ts's ordering helpers, making the phase-2 pure-rules
+    # home load-bearing in the real flow; evaluateWorktreeSafety stays
+    # called directly by edge.ts as delivered — the delivered safety
+    # predicate is reused, not redefined.
+    # The merge half binds in the ALREADY-declared packages/adapters/src/
+    # git/merge.ts: from a worktree whose base branch is parked in the main
+    # checkout, git checkout <base> refuses (already used by worktree,
+    # exit 128) while git checkout --detach <base> succeeds — the squash
+    # landing carries the detach-based worktree-invocation mechanics.
+    # commands/merge.ts and commands/closeout.ts stay declared (verified
+    # thin delegators: grammar/validation only, zero runtime references).
+    # TC deliverability: TC-CLOSEOUT-001..005 remain deliverable inside the
+    # enlarged fence — the ordering TCs assert the sweep step and the step
+    # order in closeout.ts, the refusal TCs the predicate gate in edge.ts,
+    # the merge TC the detach landing in adapters/src/git/merge.ts.
     # Ordering: after phase 5 (the worktree is found and reused before the
     # lifecycle completes); merge and closeout in ONE phase — the removal
     # ordering is only meaningful against the merge resolution it follows.
@@ -399,6 +435,8 @@ phases:
         - packages/cli/src/commands/closeout.ts
         - packages/core/src/domain/closeout-worktree.ts
         - packages/adapters/src/git/merge.ts
+        - packages/cli/src/edge.ts
+        - packages/core/src/domain/closeout.ts
     interactions:
       - kind: contract-file
         target: packages/core/src/domain/closeout-worktree.ts
@@ -625,4 +663,55 @@ phases:
 #           phase 4, no other closed type, assembly, or forwarding site
 #           between them. Phases 1-3 and 5-10 byte-identical (phase 5
 #           already declares its own dispatch.ts + production.ts parts); no
+#           tasks key; no progress records.
+#   rev 6 — 2026-11-25: delivery blocker q-fa489f9a-22a7-4a27-ad0c-8d400b9ea1ec
+#           (coder-verified to line precision; delivery stopped at plan
+#           phase 6). Phase 6's rev-5 scope could not deliver the phase
+#           contract because the closeout behavior lives elsewhere: the
+#           sweep-before-removal binding is packages/cli/src/edge.ts
+#           (createCloseoutCommandRuntime :2738 — the sole closeout runtime
+#           assembly, mounted once at :5859; the worktree facts +
+#           mergedObserved gate :2440-2530 with evaluateWorktreeSafety
+#           called directly at :2469) and packages/core/src/domain/
+#           closeout.ts (the closeout step planning/execution: declared
+#           step order :117-129, worktreeStep :1322-1373, remove-worktree
+#           executor :1820-1836, runCloseout :2472 — the sole step
+#           executor); NEITHER was declared in phase 6 (edge.ts was phase
+#           4's for its dispatch parts; domain/closeout.ts was in no
+#           phase). The lane-log sweep (the worktree's tmp/tmpdir gate
+#           evidence moved to its state-root destination BEFORE removal) is
+#           the mechanical precondition for the delivered cleanliness
+#           predicate to ever pass on a worktree lane — untracked gate
+#           artifacts make the worktree dirty, so without the sweep the
+#           predicate refuses forever. domain/closeout-worktree.ts's
+#           phase-2 ordering rules were consumed by nothing in the real
+#           flow (evaluateWorktreeSafety is called directly by edge.ts).
+#           The merge half CAN bind in scope (hermetically verified): from
+#           a worktree whose base branch is parked in the main checkout,
+#           git checkout <base> refuses (already used by worktree, exit
+#           128) while git checkout --detach <base> succeeds — the
+#           already-declared adapters/src/git/merge.ts carries the
+#           worktree-invocation landing; commands/merge.ts and
+#           commands/closeout.ts are thin grammar delegators (verified:
+#           zero runtime references). Amendment (rev 6): edge.ts joins
+#           phase 6 for its CLOSEOUT parts (shared-file discipline: phase 4
+#           owns its dispatch parts, phase 6 its closeout parts — each
+#           phase declares the part it owns) and domain/closeout.ts joins
+#           with the sweep step bound before removal (with the
+#           removal-feasibility rationale); reconciliation declared (option
+#           a): closeout.ts consumes closeout-worktree.ts's ordering
+#           helpers — the phase-2 pure-rules home becomes load-bearing;
+#           evaluateWorktreeSafety stays called by edge.ts as delivered
+#           (predicate reused, not redefined); phase 6's mapping statement
+#           updated — TC-CLOSEOUT-001..005 deliverable inside the enlarged
+#           fence, merge half binding in adapters/src/git/merge.ts (detach
+#           landing), thin delegators stay declared. Binding-chain
+#           verification (one pass): commands/closeout.ts (grammar) ->
+#           edge.ts (closeout runtime: facts + gate + createCloseout-
+#           CommandRuntime) -> domain/closeout.ts (planner/executor:
+#           worktreeStep, step order, runCloseout, remove-worktree
+#           executor) -> adapters/src/git (git seam) — every link now
+#           declared in phase 6; no other closed type or execution path
+#           stands between them (sole closeout runtime assembly, sole step
+#           executor confirmed). Phases 1-5 and 7-10 byte-identical; no
 #           tasks key; no progress records.
