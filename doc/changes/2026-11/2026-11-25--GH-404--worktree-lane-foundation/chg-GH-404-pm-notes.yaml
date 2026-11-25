@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-25T03:29:05.413Z }
   specification: { started: null, completed: 2026-11-25T03:37:50.066Z }
   test_planning: { started: null, completed: 2026-11-25T03:43:23.337Z }
-  delivery_planning: { started: null, completed: 2026-11-25T08:18:49.372Z }
+  delivery_planning: { started: null, completed: 2026-11-25T10:15:46.345Z }
   dor_check: { started: null, completed: 2026-11-25T04:08:42.685Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -52,84 +52,132 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
-  - text: "Plan phase 7 boundary finding (BLOCKED, spec-ambiguity shape; rev-7
-      request; fourth instance of the call-site class): phase 7's declared
-      scope (commands/dispatch.ts, commands/lanes.ts, commands/board.ts,
-      output/dispatch-text.ts) is the thin grammar delegators plus ONE
-      renderer — the worktree path cannot reach ANY of the three surfaces
-      through them, because the lane data flows through undeclared plumbing:
-      (1) dispatch status renders DispatchStatusData (contracts/dispatch.ts)
-      built by buildStatusData (domain/dispatch-operator-view.ts) from the
-      lane record — the record's worktreePath (DM-1) never enters the data;
-      (2) the lanes surface renders QueueLanesData/QueueLane
-      (contracts/queue.ts) folded by foldLanes (domain/queue-lanes.ts) over
-      QUEUE schedule entries + DAEMON lanes (edge.ts readLanes :7709) — the
-      dispatch.lane family is not in this fold at all; (3) the board renders
-      BoardData.lanes = BoardLaneRow[] (contracts/owner-gate-sla.ts) built by
-      the board runtime (edge.ts). AC-F7-1 (each surface shows the lane's
-      worktree path) therefore requires, at minimum: DispatchStatusData +
-      QueueLane + BoardLaneRow gaining the additive worktree path
-      (classified-absent null for context-less lanes, the DM-1 pattern),
-      buildStatusData/foldLanes/board-runtime mapping it, and the edge
-      readLanes joining dispatch.lane records — contracts/dispatch.ts,
+  - text: "PM design decision for rev 7 (the blocker's named PM question — how
+      dispatch-lane worktree paths surface on lanes/board): OPTION (a) REF-KEYED
+      JOIN, JOIN-ONLY. The lane-row types gain an additive optional worktreePath
+      (contracts queue.ts QueueLane, owner-gate-sla.ts BoardLaneRow;
+      DispatchStatusData likewise for dispatch status — unambiguous there),
+      sourced from the NEWEST dispatch.lane record per (repository, ref) via the
+      established bounded retained-window read (the same filter-by-repository
+      then fold-newest-per-ref pattern the operator lane view already uses). The
+      join CONTRIBUTES the path to EXISTING rows only — it never mints new rows;
+      the row universe stays queue-schedule + daemon lanes (dispatch status
+      remains the authoritative per-ref view). Absence renders exactly as today
+      (no member / classified-absent null, the DM-1 pattern). The path value
+      carries the same bound as the lane record's own worktreePath field — one
+      bound, reused, not a second one. Default-mode golden re-pins for the
+      changed surfaces ride the amended phase 7 per the golden- discipline
+      fence; exception-mode pins untouched. Rationale: minimal shape change, one
+      established read pattern, no duplicate lane identity in a second structure
+      (an additive section was rejected — the owner would read two places and
+      the board's one-screen budget strains)."
+    type: decision
+    date: "2026-11-25"
+  - text: "PM adjudication of the phase-6 recorded deviation + phase-7 blocker: (1)
+      the merge-landing deviation is ACCEPTED — rev 6 named the detach landing,
+      but the coder's hermetic sandbox rejected it empirically (the squash
+      records on the detached head; containedOnBase=false; the change would
+      never land); the -C main-checkout resolution in the DECLARED
+      adapters/src/git/merge.ts satisfies AC-F6-1 (TC-CLOSEOUT-001 'lands
+      normally'). Evidence over plan text, disclosed via the commit primitive.
+      (2) The phase-7 blocker (q-8b0e7f76, spec-ambiguity) is ACCEPTED — plan
+      rev 7 ordered: phase 7's declared scope gains contracts/dispatch.ts,
       contracts/queue.ts, contracts/owner-gate-sla.ts,
-      domain/dispatch-operator-view.ts, domain/queue-lanes.ts and the
-      edge.ts readLanes/board-runtime parts, all undeclared. A DESIGN
-      QUESTION rides the amendment for the PM: the lanes/board surfaces
-      render the QUEUE/daemon lane family — the form in which DISPATCH-lane
-      worktree paths surface there (a join keyed on ref, an additive
-      section, or another declared shape) is the PM's call; the dispatch
-      status surface is unambiguous (the record IS the lane's data). NO
-      phase-7 code was written. Golden re-pins (default-mode goldens gaining
-      the worktree line) ride the amended phase's commit per the
-      golden-discipline fence. Phases 1-6 stand (e25deabe, 4c281841,
-      816d23e2, def013bb, b2fff27d, 7a5b0fe4, 9d8b062f, 0b120f4e); typed
-      blocker q-8b0e7f76-3800-4d45-b8d7-d7473b0d000f published with this
-      finding. Delivery stops at phase 7; phases 8-10 (proofs, changeset)
-      depend on the surfaces and are stopped with it."
+      domain/dispatch-operator-view.ts, domain/queue-lanes.ts, and the edge.ts
+      readLanes/board-runtime parts (shared-file discipline: phases 4/6 own
+      their edge.ts parts, phase 7 owns its lane-data parts), implementing the
+      design decision above."
+    type: decision
+    date: "2026-11-25"
+  - text: "Retro (call-site class, fourth instance — now at the DATA-FLOW level):
+      phase 7 declared the surfaces' thin command files + one renderer, but
+      surface data is BUILT in domain folds and CONTRACT types — the render
+      pipeline (contract type -> domain fold -> edge runtime -> command
+      delegator -> renderer) is the real unit of declaration for any
+      surface-facing phase. Combined with the three earlier instances, the full
+      plan-authoring convention for this repo is now: declare (a) write sites,
+      (b) binding chains (literal -> type -> assembly -> engine), (c) data-flow
+      pipelines (contract -> fold -> runtime -> renderer) — three traces per
+      surface-facing phase, one pass each, BEFORE declaring file lists. The
+      coder's recon-to-line-precision pipeline keeps catching the gaps cheaply,
+      but rev 7 should have been foreseeable at planning time from the spec's
+      own DM-1 row (it named the surfaces)."
+    type: retro
+    date: "2026-11-25"
+  - text: "Plan phase 7 boundary finding (BLOCKED, spec-ambiguity shape; rev-7
+      request; fourth instance of the call-site class): phase 7's declared scope
+      (commands/dispatch.ts, commands/lanes.ts, commands/board.ts,
+      output/dispatch-text.ts) is the thin grammar delegators plus ONE renderer
+      — the worktree path cannot reach ANY of the three surfaces through them,
+      because the lane data flows through undeclared plumbing: (1) dispatch
+      status renders DispatchStatusData (contracts/dispatch.ts) built by
+      buildStatusData (domain/dispatch-operator-view.ts) from the lane record —
+      the record's worktreePath (DM-1) never enters the data; (2) the lanes
+      surface renders QueueLanesData/QueueLane (contracts/queue.ts) folded by
+      foldLanes (domain/queue-lanes.ts) over QUEUE schedule entries + DAEMON
+      lanes (edge.ts readLanes :7709) — the dispatch.lane family is not in this
+      fold at all; (3) the board renders BoardData.lanes = BoardLaneRow[]
+      (contracts/owner-gate-sla.ts) built by the board runtime (edge.ts).
+      AC-F7-1 (each surface shows the lane's worktree path) therefore requires,
+      at minimum: DispatchStatusData + QueueLane + BoardLaneRow gaining the
+      additive worktree path (classified-absent null for context-less lanes, the
+      DM-1 pattern), buildStatusData/foldLanes/board-runtime mapping it, and the
+      edge readLanes joining dispatch.lane records — contracts/dispatch.ts,
+      contracts/queue.ts, contracts/owner-gate-sla.ts,
+      domain/dispatch-operator-view.ts, domain/queue-lanes.ts and the edge.ts
+      readLanes/board-runtime parts, all undeclared. A DESIGN QUESTION rides the
+      amendment for the PM: the lanes/board surfaces render the QUEUE/daemon
+      lane family — the form in which DISPATCH-lane worktree paths surface there
+      (a join keyed on ref, an additive section, or another declared shape) is
+      the PM's call; the dispatch status surface is unambiguous (the record IS
+      the lane's data). NO phase-7 code was written. Golden re-pins
+      (default-mode goldens gaining the worktree line) ride the amended phase's
+      commit per the golden-discipline fence. Phases 1-6 stand (e25deabe,
+      4c281841, 816d23e2, def013bb, b2fff27d, 7a5b0fe4, 9d8b062f, 0b120f4e);
+      typed blocker q-8b0e7f76-3800-4d45-b8d7-d7473b0d000f published with this
+      finding. Delivery stops at phase 7; phases 8-10 (proofs, changeset) depend
+      on the surfaces and are stopped with it."
     type: info
     date: "2026-11-25"
   - text: "Plan phase 6 complete (commit 9d8b062f): merge and closeout on a
       worktree-checked-out branch — (1) MERGE (adapters/src/git/merge.ts, the
       declared seam): squashLand resolves the landing directory by the
-      structural worktree rule (top level = the common directory's parent →
-      main checkout) — a LINKED-worktree invocation lands with
-      `git -C <main checkout>` prefix (checkout base, merge --squash, commit,
-      head read all against the landing directory), so the squash reaches
-      base exactly as a main-checkout invocation does ('lands normally',
-      TC-CLOSEOUT-001); a main-checkout invocation keeps the delivered argv
-      byte-for-byte. RECORDED DEVIATION from the plan's mechanism sentence:
-      rev 6 named the detach landing, but the detach form was rejected
-      EMPIRICALLY (hermetic sandbox: the squash commit records on the
-      detached head, containedOnBase=false, base never advances — the change
-      would NOT land); the -C resolution satisfies the spec contract
-      (AC-F6-1 'lands, resolved from the worktree or the main checkout')
-      inside the declared file. (2) CLOSEOUT (domain/closeout.ts + edge.ts
-      closeout parts + production.ts): the worktree-removal gate
-      gateWorktreeRemoval runs strictly before the remove-worktree operation —
-      (a) the merge+safety arms of planCloseoutWorktreeRemoval consumed with
-      no side effects (refusal leaves worktree AND logs intact —
-      TC-CLOSEOUT-003), (b) the lane-log sweep port moves the worktree's
-      tmp/tmpdir gate evidence to
-      <state root>/closeout-lane-logs/<work item ref> (copy, verify at the
-      destination, then delete the source — zero log loss; also the
-      mechanical precondition for the cleanliness predicate to pass on a
-      worktree lane), (c) the full ordering rules re-consumed with the
-      runtime sweep fact — the phase-2 pure-rules home is LOAD-BEARING in the
-      real flow (rev-6 reconciliation, option a); a sweep failure refuses the
-      removal; a stalled (unmerged) lane is refused at the edge facts gate
-      and keeps its worktree (TC-CLOSEOUT-004); idempotent second closeout
-      unchanged. The sweep port is bound in the production composition; a
-      composition without it keeps the delivered removal behaviour (logs arm
-      neutralized, merge+safety arms enforced). Boundary evidence: full
-      13-stage battery tmp/run-logs-runner/2026-11-25/phase6-gate.log —
-      stages 1-3, 5-13 green; bun test 12858/6 fail — five
-      closeout-composition-facts failures ROOT-CAUSED to a stale-dist
-      artifact (the bare bun-test diagnostics ran the pre-fix gate from
-      dist; the logs-arm neutralization fix was in src unbuilt) — after
-      pnpm build the post-fix rerun (phase6-gate2.log): 12863 pass / 4
-      skip / 1 known-deferred fail (TC-RELEASE-001 only), all other stages
-      green. OPERATIONAL LESSON recorded: after editing core/cli sources,
+      structural worktree rule (top level = the common directory's parent → main
+      checkout) — a LINKED-worktree invocation lands with `git -C <main
+      checkout>` prefix (checkout base, merge --squash, commit, head read all
+      against the landing directory), so the squash reaches base exactly as a
+      main-checkout invocation does ('lands normally', TC-CLOSEOUT-001); a
+      main-checkout invocation keeps the delivered argv byte-for-byte. RECORDED
+      DEVIATION from the plan's mechanism sentence: rev 6 named the detach
+      landing, but the detach form was rejected EMPIRICALLY (hermetic sandbox:
+      the squash commit records on the detached head, containedOnBase=false,
+      base never advances — the change would NOT land); the -C resolution
+      satisfies the spec contract (AC-F6-1 'lands, resolved from the worktree or
+      the main checkout') inside the declared file. (2) CLOSEOUT
+      (domain/closeout.ts + edge.ts closeout parts + production.ts): the
+      worktree-removal gate gateWorktreeRemoval runs strictly before the
+      remove-worktree operation — (a) the merge+safety arms of
+      planCloseoutWorktreeRemoval consumed with no side effects (refusal leaves
+      worktree AND logs intact — TC-CLOSEOUT-003), (b) the lane-log sweep port
+      moves the worktree's tmp/tmpdir gate evidence to <state
+      root>/closeout-lane-logs/<work item ref> (copy, verify at the destination,
+      then delete the source — zero log loss; also the mechanical precondition
+      for the cleanliness predicate to pass on a worktree lane), (c) the full
+      ordering rules re-consumed with the runtime sweep fact — the phase-2
+      pure-rules home is LOAD-BEARING in the real flow (rev-6 reconciliation,
+      option a); a sweep failure refuses the removal; a stalled (unmerged) lane
+      is refused at the edge facts gate and keeps its worktree
+      (TC-CLOSEOUT-004); idempotent second closeout unchanged. The sweep port is
+      bound in the production composition; a composition without it keeps the
+      delivered removal behaviour (logs arm neutralized, merge+safety arms
+      enforced). Boundary evidence: full 13-stage battery
+      tmp/run-logs-runner/2026-11-25/phase6-gate.log — stages 1-3, 5-13 green;
+      bun test 12858/6 fail — five closeout-composition-facts failures
+      ROOT-CAUSED to a stale-dist artifact (the bare bun-test diagnostics ran
+      the pre-fix gate from dist; the logs-arm neutralization fix was in src
+      unbuilt) — after pnpm build the post-fix rerun (phase6-gate2.log): 12863
+      pass / 4 skip / 1 known-deferred fail (TC-RELEASE-001 only), all other
+      stages green. OPERATIONAL LESSON recorded: after editing core/cli sources,
       bare `bun test` on cli-level suites needs `pnpm build` first — the
       workspace resolves @delivery-os/core from dist."
     type: info

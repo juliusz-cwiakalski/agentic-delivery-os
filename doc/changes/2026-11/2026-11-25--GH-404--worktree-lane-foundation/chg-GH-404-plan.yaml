@@ -444,11 +444,62 @@ phases:
   - id: 7
     title: CLI surfaces — worktree path in dispatch status, lanes and board (F-7)
     kind: delivery
-    summary: "visibility: dispatch status, lanes and board (packages/cli/src/commands/dispatch.ts, packages/cli/src/commands/lanes.ts, packages/cli/src/commands/board.ts, rendered text in packages/cli/src/output/dispatch-text.ts) show each lane's worktree path, read from the lane record's additive worktree context (DM-1), so an operator can always answer where a lane is working (F-7, AC-F7-1); lanes WITHOUT worktree context render exactly today's output — the field is additive and conditionally rendered, which is the mechanical basis of the exception-mode byte-for-byte guarantee (F-8) proven by TC-REG-001 in phase 9; default-mode goldens that gain the worktree line are re-pinned in THIS commit (the surface-touching phase, golden-discipline fence); exception-mode pins are never regenerated to match drift (escalation trigger 1)."
-    # TC ownership: TC-SURFACES-001/002 (F-7, AC-F7-1, DM-1) — proven by the
-    # phase-9 golden suites; the default-mode golden re-pins land HERE per
-    # the golden-discipline fence (the worktree line appears on the surface
-    # in this phase, for lanes that carry the context).
+    summary: "visibility: dispatch status, lanes and board show each lane's worktree path, read from the lane record's additive worktree context (DM-1) via the PM's ref-keyed join-only decision (delivery blocker q-8b0e7f76): the row types gain an additive optional worktreePath — QueueLane (contracts/queue.ts), BoardLaneRow (contracts/owner-gate-sla.ts), and DispatchStatusData (contracts/dispatch.ts; phase 1 owns that file's DM-3/DM-4 key-constant parts — shared-file discipline, each phase declares the part it owns) — sourced from the NEWEST dispatch.lane record per (repository, ref) through the established bounded retained-window read; the join CONTRIBUTES the path to EXISTING rows only and never mints new rows, so the row universe stays queue-schedule + daemon lanes and dispatch status remains the authoritative per-ref view; absence renders exactly as today (no member / classified-absent null — the DM-1 pattern), the mechanical basis of the exception-mode byte-for-byte guarantee (F-8) proven by TC-REG-001 in phase 9; the bindings: dispatch status via buildStatusData (domain/dispatch-operator-view.ts) composed by readOperatorStatus (app/dispatch-lane-view.ts — the retained-window pattern's home), lanes via foldLanes + renderLanesHuman (domain/queue-lanes.ts) over the edge readLanes (:7709) fold, board via the edge board runtime's lane facts through projectBoard + renderBoardHuman (domain/owner-gate-sla.ts) — with the edge lane-data parts (readLanes, board runtime) declared here (phases 4/6 own their edge.ts parts; phase 7 owns its lane-data parts); output/dispatch-text.ts (declared) renders the dispatch-status path; the command files stay declared as thin delegators; so an operator can always answer where a lane is working (F-7, AC-F7-1); default-mode goldens that gain the worktree line are re-pinned in THIS commit (the surface-touching phase, golden-discipline fence); exception-mode pins are never regenerated to match drift (escalation trigger 1)."
+    # TC ownership: TC-SURFACES-001/002 (F-7, AC-F7-1, DM-1, ticket AC6) —
+    # proven by the phase-9 golden suites; deliverable inside the enlarged
+    # fence: dispatch status via the buildStatusData mapping
+    # (dispatch-operator-view.ts composed by readOperatorStatus),
+    # lanes/board via the ref-keyed join in foldLanes/readLanes and the
+    # board runtime; the default-mode golden re-pins land HERE per the
+    # golden-discipline fence (the worktree line appears on the surface in
+    # this phase, for lanes that carry the context); exception-mode pins
+    # untouched.
+    # Data path (delivery blocker q-8b0e7f76-3800-4d45-b8d7-d7473b0d000f):
+    # the rev-6 scope was thin grammar delegators plus ONE renderer — the
+    # worktree path could not reach any surface through them. Verified data
+    # paths: (1) dispatch status renders DispatchStatusData
+    # (contracts/dispatch.ts) built by buildStatusData
+    # (domain/dispatch-operator-view.ts :117) — the lane record's
+    # worktreePath never entered the data; (2) the lanes surface renders
+    # QueueLanesData/QueueLane (contracts/queue.ts :899/:940) folded by
+    # foldLanes (domain/queue-lanes.ts :106; renderLanesHuman :207 — same
+    # file) over queue schedule + daemon lanes (edge.ts readLanes :7709) —
+    # the dispatch.lane family was not in this fold at all; (3) the board
+    # renders BoardData.lanes = BoardLaneRow[] (contracts/owner-gate-sla.ts
+    # :250/:420-426) built by the board runtime (edge.ts :4138 lane facts)
+    # through projectBoard (domain/owner-gate-sla.ts :580) and rendered by
+    # renderBoardHuman (:738 — same file).
+    # PM DESIGN DECISION (binding, recorded verbatim): OPTION (a) REF-KEYED
+    # JOIN, JOIN-ONLY. The row types gain an additive optional worktreePath
+    # (QueueLane, BoardLaneRow, and DispatchStatusData for dispatch status —
+    # unambiguous there), sourced from the NEWEST dispatch.lane record per
+    # (repository, ref) via the established bounded retained-window read
+    # (the same filter-by-repository then fold-newest-per-ref pattern the
+    # operator lane view already uses). The join CONTRIBUTES the path to
+    # EXISTING rows only — it never mints new rows; the row universe stays
+    # queue-schedule + daemon lanes (dispatch status remains the
+    # authoritative per-ref view). Absence renders exactly as today (no
+    # member / classified-absent null, the DM-1 pattern). The path value
+    # carries the SAME bound as the lane record's own worktreePath field —
+    # one bound, reused, not a second one. Default-mode golden re-pins for
+    # the changed surfaces ride phase 7 per the golden-discipline fence;
+    # exception-mode pins untouched. An additive-section alternative was
+    # rejected (duplicate lane identity in a second structure; board
+    # one-screen budget).
+    # Verification-found links (one-pass data-flow trace, beyond the
+    # amendment's six files): (a) packages/core/src/domain/owner-gate-sla.ts
+    # — projectBoard (:580) is the fold between the edge runtime's
+    # BoardLaneFact[] and BoardData.lanes, and renderBoardHuman (:738) is
+    # the board renderer — neither reachable through the declared contract
+    # file alone; (b) packages/core/src/app/dispatch-lane-view.ts —
+    # readOperatorStatus (:53, calling buildStatusData at :64) is the
+    # status query path, and its header (:6) describes the retained-window
+    # newest-per-ref pattern the PM decision mandates mirroring. Without
+    # these two, phase 7's contract is mechanically impossible — the same
+    # gap class as blockers q-de70dae6 / q-5f1d0808 / q-fa489f9a. All other
+    # fold/runtime candidates checked: renderLanesHuman shares
+    # queue-lanes.ts with foldLanes (declared); domain/index.ts is a
+    # re-export only.
     # Ordering: after phases 4/5 (the context exists on lane records); before
     # the proof phases.
     # Fences in force: zero-rename (existing fields, envelopes and exit codes
@@ -462,6 +513,14 @@ phases:
         - packages/cli/src/commands/lanes.ts
         - packages/cli/src/commands/board.ts
         - packages/cli/src/output/dispatch-text.ts
+        - packages/core/src/contracts/dispatch.ts
+        - packages/core/src/contracts/queue.ts
+        - packages/core/src/contracts/owner-gate-sla.ts
+        - packages/core/src/domain/dispatch-operator-view.ts
+        - packages/core/src/domain/queue-lanes.ts
+        - packages/cli/src/edge.ts
+        - packages/core/src/domain/owner-gate-sla.ts
+        - packages/core/src/app/dispatch-lane-view.ts
     interactions:
       - kind: contract-file
         target: packages/cli/src/output/dispatch-text.ts
@@ -715,3 +774,62 @@ phases:
 #           stands between them (sole closeout runtime assembly, sole step
 #           executor confirmed). Phases 1-5 and 7-10 byte-identical; no
 #           tasks key; no progress records.
+#   rev 7 — 2026-11-25: delivery blocker q-8b0e7f76-3800-4d45-b8d7-d7473b0d000f
+#           (coder-verified at the data-flow level; delivery stopped at plan
+#           phase 7). Phase 7's rev-6 scope was thin grammar delegators plus
+#           ONE renderer — the worktree path could not reach any of the
+#           three surfaces through them. Verified data paths: (1) dispatch
+#           status renders DispatchStatusData (contracts/dispatch.ts) built
+#           by buildStatusData (domain/dispatch-operator-view.ts :117) —
+#           the lane record's worktreePath (DM-1) never entered the data;
+#           (2) the lanes surface renders QueueLanesData/QueueLane
+#           (contracts/queue.ts :899/:940) folded by foldLanes
+#           (domain/queue-lanes.ts :106) over queue schedule + daemon lanes
+#           (edge.ts readLanes :7709) — the dispatch.lane family was not in
+#           this fold at all; (3) the board renders BoardData.lanes =
+#           BoardLaneRow[] (contracts/owner-gate-sla.ts :250/:420-426) built
+#           by the board runtime (edge.ts). PM DESIGN DECISION (binding,
+#           recorded verbatim in the phase-7 comment): OPTION (a) REF-KEYED
+#           JOIN, JOIN-ONLY — the row types gain an additive optional
+#           worktreePath (QueueLane, BoardLaneRow, DispatchStatusData)
+#           sourced from the NEWEST dispatch.lane record per (repository,
+#           ref) via the established bounded retained-window read; the join
+#           CONTRIBUTES the path to EXISTING rows only, never mints rows;
+#           the row universe stays queue-schedule + daemon lanes; absence
+#           renders exactly as today (DM-1 pattern); the path value carries
+#           the SAME bound as the lane record's own worktreePath field —
+#           one bound, reused; default-mode golden re-pins ride phase 7,
+#           exception-mode pins untouched; the additive-section alternative
+#           was rejected (duplicate lane identity; board one-screen budget).
+#           Amendment (rev 7): phase 7's scope gains contracts/dispatch.ts
+#           (shared with phase 1's key-constant parts — shared-file
+#           discipline), contracts/queue.ts, contracts/owner-gate-sla.ts,
+#           domain/dispatch-operator-view.ts, domain/queue-lanes.ts, and
+#           edge.ts's lane-data parts (readLanes :7709 + board runtime;
+#           phases 4/6 own their edge.ts parts); phase 7's mapping
+#           statement updated — TC-SURFACES-001/002 deliverable inside the
+#           enlarged fence, command files stay declared as thin delegators.
+#           Data-flow verification (one pass, REQUIRED): the three chains
+#           trace clean, and the verification found TWO load-bearing links
+#           outside the amendment's list — packages/core/src/domain/
+#           owner-gate-sla.ts (projectBoard :580, the fold between the edge
+#           runtime's BoardLaneFact[] and BoardData.lanes, and
+#           renderBoardHuman :738, the board renderer) and packages/core/
+#           src/app/dispatch-lane-view.ts (readOperatorStatus :53, calling
+#           buildStatusData :64 — the status query path, and the home of
+#           the retained-window newest-per-ref pattern the PM decision
+#           mandates mirroring) — the same gap class as blockers
+#           q-de70dae6 / q-5f1d0808 / q-fa489f9a; both join phase 7's scope
+#           under the amendment's own verification clause (every link
+#           declared), flagged here for PM review. renderLanesHuman shares
+#           queue-lanes.ts with foldLanes (declared); domain/index.ts is a
+#           re-export only; no other fold/runtime stands between the links.
+#           Chain statements: dispatch status = contracts/dispatch.ts ->
+#           dispatch-operator-view.ts -> dispatch-lane-view.ts -> edge
+#           status query -> commands/dispatch.ts -> output/dispatch-text.ts;
+#           lanes = contracts/queue.ts -> queue-lanes.ts (foldLanes +
+#           renderLanesHuman) -> edge readLanes -> commands/lanes.ts; board
+#           = contracts/owner-gate-sla.ts -> edge board runtime ->
+#           owner-gate-sla.ts (projectBoard + renderBoardHuman) ->
+#           commands/board.ts. Phases 1-6 and 8-10 byte-identical; no tasks
+#           key; no progress records.
