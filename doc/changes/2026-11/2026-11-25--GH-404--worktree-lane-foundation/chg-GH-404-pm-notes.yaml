@@ -13,7 +13,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-25T14:40:48.779Z }
   review_fix: { started: null, completed: 2026-11-25T19:47:14.257Z }
   quality_gates: { started: null, completed: 2026-11-25T20:07:02.614Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-25T20:11:08.125Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Scope split per CEO comment on GH-404 (2026-11-25): this ticket delivers
@@ -52,6 +52,32 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "DoD check (phase 10) evidence: (1) ALL previous lifecycle phases
+      completed — clarify_scope, specification, test_planning,
+      delivery_planning, dor_check, system_spec_update, review_fix,
+      quality_gates in the root-A ledger view, and delivery completed
+      2026-11-25T13:57:22.115Z in the root-B ledger (operation complete, outcome
+      landed, commitSha 57f3655b, an ancestor of HEAD) — verified by the
+      runner's cross-root read. (2) Plan completion: all 15 declared plan phases
+      (1..15) carry pm-notes evidence entries naming the phase id, commit hash
+      (e25deabe, 4c281841, 816d23e2, b2fff27d, 7a5b0fe4, 9d8b062f, 5a9c58dd,
+      ae9837de, f31212b1, d583b2ba, 2bb07ad4, 3d8faceb, 96f6228a, a34bbda4,
+      99168098) and their test evidence, plus the boundary-defect fix 9934afbb.
+      (3) Spec ACs: reviewer iterations verified spec compliance (iter-1
+      blockers all fixed and production-reproduced; delta re-check PROCEED; the
+      final FAIL was tree-level and was fixed in phases 14–15), AC coverage
+      traced through the test plan. (4) Current-truth docs: doc-sync COMPLETE
+      (15 files re-reconciled; doc invariants green in the battery). (5) Quality
+      gates PASS (12926/4/0; range gate PASS 40/0/none). ENVIRONMENT FINDING
+      (owner-visible, no ticket): the state is split across two roots for this
+      identity (agentic-delivery-os-gh-288-2c548742) — ~/.delivery-os-state
+      holds 8 phase records incl. quality_gates, ~/.jaiship-state holds
+      delivery; phase list reads one root and omits the other. Both roots are
+      durable and checksum-verified; the split is a state-root identity artifact
+      (GH-365 namespace era), not a lost record. Also: eight pre-existing lane/*
+      local branches remain in the live checkout (retired-model hygiene)."
+    type: info
+    date: "2026-11-25"
   - text: "Quality gates PASS (both gates, one battery run on the clean tree at
       f1a028b3). Gate 1 — TMPDIR=$PWD/tmp/tmpdir pnpm check: exit 0, 18m00s,
       12926 pass / 4 skip / 0 fail, 118561 expect calls across 1530+ files, all
