@@ -1937,16 +1937,25 @@ export const resolveCompositionTransportSelection = async (
 };
 
 /**
- * The lane-log sweep (GH-404 F-6, NFR-5; review F-2/F-8, Decision 3): the
- * lane's logs are the RUNNER-LOG directories (`<worktree>/tmp/run-logs-runner`),
- * copied newest-first, BOUNDED at `LANE_LOG_SWEEP_BYTE_CAP` (the truncation is
- * a disclosed fact), to `<state root>/closeout-lane-logs/<work item ref>`.
- * `tmp/tmpdir` is ephemeral scratch — DELETED, never preserved. The destination
- * verification checks the COPIED ENTRIES (existence, count, recursive bytes),
- * never a directory the sweep itself created; the swept paths then leave the
- * worktree and `isWorktreeClean` observes the POST-sweep state the ordering
- * gate evaluates. A failure moves nothing and refuses the removal (the logs
- * stay intact in the worktree).
+ * The lane-log sweep (GH-404 F-6, NFR-5; review F-2/F-8/F-18/F-21/F-30,
+ * Decision 3): the lane's logs are the RUNNER-LOG directories
+ * (`<worktree>/tmp/run-logs-runner`), copied newest-first, BOUNDED at
+ * `LANE_LOG_SWEEP_BYTE_CAP`, to `<state root>/closeout-lane-logs/<work item
+ * ref>`. `tmp/tmpdir`, `tmp/deliver-ticket` and `tmp/*.log` are ephemeral
+ * artifacts — DELETED, never preserved (the plan-time cleanliness exclusion in
+ * the closeout composition names the same set).
+ *
+ * PER-ENTRY replace-and-verify (review F-18): every entry is copied to a
+ * staging sibling of the destination, its placed bytes are measured, then it
+ * replaces `destination/<entry>`; verification checks the entries THIS sweep
+ * placed (placed bytes == measured source bytes), never a whole-directory
+ * count. Older differently named entries stay, so a SECOND sweep of the same
+ * ref — or a re-sweep with new logs — succeeds instead of wedging forever.
+ * A failure moves no source entry (the logs stay intact in the worktree).
+ *
+ * Truncation is disclosed (review F-21): used when the cap leaves entries
+ * uncopied. A sweep that could preserve NOTHING is a refusal (the logs stay in
+ * the worktree and the removal is refused) rather than a silent full loss.
  *
  * Exported so the production closure is provable over real files (the
  * production-composition suite), not only through an injected fake.
@@ -1960,7 +1969,10 @@ export const createLaneLogSweep = (deps: {
       readonly swept: boolean;
       readonly destination?: string;
       readonly postSweepClean?: boolean;
+      /** The declared cap left entries uncopied: disclosed, never silent. */
       readonly truncated?: boolean;
+      /** Recursive bytes the cap left uncopied (sum of the skipped entries). */
+      readonly omittedBytes?: number;
     }
   | { readonly ok: false; readonly code: string; readonly detail: string }
 >) => {
@@ -1975,62 +1987,111 @@ export const createLaneLogSweep = (deps: {
     return total;
   };
   return async (input) => {
-    const worktreeTmp = `${input.worktreePath}/tmp`;
+    const worktreeTmp = join(input.worktreePath, "tmp");
     const runnerLogs = join(worktreeTmp, LANE_RUNNER_LOG_DIRECTORY);
     const destination = join(deps.stateDirectory, "closeout-lane-logs", input.workItemRef);
+    // Same filesystem, sibling of the destination: the staging copy is atomic
+    // to replace from and never survives a run.
+    const staging = join(
+      deps.stateDirectory,
+      "closeout-lane-logs",
+      `.staging-${input.workItemRef}`,
+    );
     const scratch = join(input.worktreePath, LANE_SCRATCH_DIRECTORY);
-    if (!existsSync(runnerLogs)) {
-      // Nothing to preserve; the scratch still goes with the worktree.
+    /**
+     * Remove the ephemeral lane artifacts the plan-time cleanliness check
+     * excludes (review F-19/F-30): the gate scratch, the deliver-ticket
+     * scratch and the ad-hoc `tmp/*.log` files. Never preserved.
+     */
+    const removeEphemeral = (): void => {
       rmSync(scratch, { recursive: true, force: true });
-      return { ok: true as const, swept: false };
-    }
+      rmSync(join(worktreeTmp, "deliver-ticket"), { recursive: true, force: true });
+      if (!existsSync(worktreeTmp)) return;
+      for (const name of readdirSync(worktreeTmp)) {
+        if (name.endsWith(".log")) rmSync(join(worktreeTmp, name), { force: true });
+      }
+    };
+    const failure = (detail: string) => ({
+      ok: false as const,
+      code: "closeout.lane-log-sweep-failed",
+      detail,
+    });
     try {
+      if (!existsSync(runnerLogs)) {
+        // Nothing to preserve; the ephemeral artifacts still go with the
+        // worktree (inside the try: a failure is the declared refusal shape).
+        removeEphemeral();
+        return { ok: true as const, swept: false };
+      }
       const entries = readdirSync(runnerLogs, { withFileTypes: true })
         .map((entry) => ({ name: entry.name, path: join(runnerLogs, entry.name) }))
         // Newest-first by modified time (the runner writes date directories).
         .sort((left, right) => statSync(right.path).mtimeMs - statSync(left.path).mtimeMs);
+      rmSync(staging, { recursive: true, force: true });
+      mkdirSync(staging, { recursive: true });
       mkdirSync(destination, { recursive: true });
-      let copied = 0;
-      let bytes = 0;
+      const placed: { readonly name: string; readonly bytes: number }[] = [];
+      let copiedBytes = 0;
       let truncated = false;
+      let omittedBytes = 0;
       for (const entry of entries) {
         const size = treeBytes(entry.path);
-        if (bytes + size > LANE_LOG_SWEEP_BYTE_CAP) {
+        if (truncated || copiedBytes + size > LANE_LOG_SWEEP_BYTE_CAP) {
+          // Newest-first: once the cap is met, the rest are disclosed as
+          // omitted and leave with the worktree.
           truncated = true;
-          break;
+          omittedBytes += size;
+          continue;
         }
-        cpSync(entry.path, join(destination, entry.name), { recursive: true });
-        bytes += size;
-        copied += 1;
+        const staged = join(staging, entry.name);
+        cpSync(entry.path, staged, { recursive: true });
+        const stagedBytes = treeBytes(staged);
+        if (stagedBytes !== size) {
+          rmSync(staging, { recursive: true, force: true });
+          return failure(
+            `the staged copy of ${entry.name} placed ${String(stagedBytes)} of ${String(size)} bytes; nothing was moved out of the worktree`,
+          );
+        }
+        // The staged copy is verified; replace this entry's destination
+        // counterpart (an older sweep's same-named entry is superseded).
+        rmSync(join(destination, entry.name), { recursive: true, force: true });
+        renameSync(staged, join(destination, entry.name));
+        const placedBytes = treeBytes(join(destination, entry.name));
+        if (placedBytes !== size) {
+          rmSync(staging, { recursive: true, force: true });
+          return failure(
+            `the placed entry ${entry.name} holds ${String(placedBytes)} of ${String(size)} bytes; nothing was moved out of the worktree`,
+          );
+        }
+        placed.push({ name: entry.name, bytes: size });
+        copiedBytes += size;
       }
-      // The destination verification checks the COPIED ENTRIES: existence,
-      // count, and recursive bytes — never a directory the sweep created.
-      const copiedEntries = readdirSync(destination, { withFileTypes: true });
-      const copiedBytes = copiedEntries.reduce(
-        (total, entry) => total + treeBytes(join(destination, entry.name)),
-        0,
-      );
-      if (
-        copiedEntries.length !== copied ||
-        copiedBytes !== bytes ||
-        copiedEntries.some((entry) => !existsSync(join(destination, entry.name)))
-      ) {
-        return {
-          ok: false as const,
-          code: "closeout.lane-log-sweep-failed",
-          detail:
-            `the swept logs are not retrievable at ${destination} ` +
-            `(copied ${String(copied)} entries / ${String(bytes)} bytes, verified ${String(copiedEntries.length)} / ${String(copiedBytes)})`,
-        };
+      rmSync(staging, { recursive: true, force: true });
+      if (placed.length === 0 && entries.length > 0) {
+        // Nothing could be preserved: refuse instead of silently deleting the
+        // lane's whole log tree (review F-21, NFR-5).
+        return failure(
+          `no runner-log entry fits the ${String(LANE_LOG_SWEEP_BYTE_CAP)}-byte cap (${String(omittedBytes)} bytes omitted); the logs stay intact in the worktree`,
+        );
       }
-      // The swept paths leave the worktree (post-sweep cleanliness); an entry
-      // beyond the byte cap is disclosed as truncated and leaves with the
-      // worktree. The scratch is deleted, never preserved.
+      // The verification covers the entries THIS sweep placed: existence and
+      // recursive bytes equal to the measured source — never a whole-directory
+      // count that a previous sweep could make fail.
+      for (const entry of placed) {
+        const at = join(destination, entry.name);
+        if (!existsSync(at) || treeBytes(at) !== entry.bytes) {
+          return failure(
+            `the swept entry ${entry.name} is not retrievable at ${destination}; the logs stay intact in the worktree`,
+          );
+        }
+      }
+      // Only now do the source entries leave the worktree (post-sweep
+      // cleanliness), followed by the ephemeral artifacts.
       for (const entry of entries) {
         rmSync(entry.path, { recursive: true, force: true });
       }
       rmSync(runnerLogs, { recursive: true, force: true });
-      rmSync(scratch, { recursive: true, force: true });
+      removeEphemeral();
       const postSweepClean =
         deps.isWorktreeClean === undefined
           ? undefined
@@ -2040,17 +2101,23 @@ export const createLaneLogSweep = (deps: {
         swept: true,
         destination,
         ...(postSweepClean === undefined ? {} : { postSweepClean }),
-        ...(truncated ? { truncated: true } : {}),
+        // Review F-21: the fact is ALWAYS carried (false is a fact too).
+        truncated,
+        omittedBytes,
       };
     } catch (error) {
-      return {
-        ok: false as const,
-        code: "closeout.lane-log-sweep-failed",
-        detail:
-          error instanceof Error
-            ? `the lane-log sweep failed: ${error.message}`
-            : "the lane-log sweep failed",
-      };
+      return failure(
+        error instanceof Error
+          ? `the lane-log sweep failed: ${error.message}`
+          : "the lane-log sweep failed",
+      );
+    } finally {
+      try {
+        rmSync(staging, { recursive: true, force: true });
+      } catch {
+        // A blocked destination path may be a FILE (the refusal shape): the
+        // staging sibling cannot exist there, and nothing was moved.
+      }
     }
   };
 };
@@ -4478,9 +4545,22 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             // The REUSED lane's session environment (review F-5): the same
             // derived PATH/TMPDIR the fresh provision binds, so a resumed lane
             // spawns in its worktree with the worktree's binaries leading.
-            activeLaneEnvironment = deriveLaneWorktreeEnvironment({
+            // Review F-30: the reused arm CREATES the TMPDIR anchor it binds —
+            // a resume after a refused closeout must not spawn with a missing
+            // TMPDIR.
+            const reusedEnvironment = deriveLaneWorktreeEnvironment({
               worktreePath: latest.worktreePath,
             });
+            try {
+              mkdirSync(reusedEnvironment.gateTemporaryDirectory, { recursive: true });
+            } catch {
+              return {
+                ok: false,
+                code: "worktree-provision-refused",
+                detail: `the gate temporary directory ${reusedEnvironment.gateTemporaryDirectory} could not be created while resuming ${input.ref}`,
+              };
+            }
+            activeLaneEnvironment = reusedEnvironment;
             return {
               ok: true,
               mode: "worktree",

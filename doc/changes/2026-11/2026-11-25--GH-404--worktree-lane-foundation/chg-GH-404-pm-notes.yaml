@@ -52,6 +52,83 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Plan phase 13 (rev-10 review-iter-2 remediation) applied in ONE commit
+      through the commit primitive. FINAL STATUS PER FINDING. F-18 ADDRESSED —
+      createLaneLogSweep replaces and verifies PER ENTRY (staging sibling,
+      atomic destination/<entry> replace, placed bytes == measured source
+      bytes; destination verification covers only the entries this sweep
+      placed; older differently named entries stay). The whole-directory
+      comparison that wedged a ref forever is gone: scenario 8 drives a SECOND
+      lane of the same ref through dispatch + closeout, scenario 9 sweeps one
+      worktree twice with same-date replacement and a later date. F-19
+      ADDRESSED — planFacts observes worktree cleanliness with the swept paths
+      excluded (tmp/run-logs-runner, tmp/tmpdir, tmp/deliver-ticket,
+      tmp/*.log) via the new isWorktreeClean exclude parameter; the apply-time
+      post-sweep observation stays authoritative and the pre-removal adapter
+      check passes no exclusion. Scenario 7 is a repository that does NOT
+      ignore tmp/: plan says would-apply (not dirty) and apply sweeps, removes
+      the worktree and deletes the branch. F-20 ADDRESSED — the board's
+      worktree-path map is built from EACH repository's own store inside
+      loadRepositoryFacts and re-keyed to the BOARD's repository key; scenario
+      12 proves the derived key differs from the dispatch.lane record's
+      github.com/owner/repo identity and the lane row still carries the path.
+      F-21 ADDRESSED — the sweep returns truncated + omittedBytes, the domain
+      carries them on CloseoutStep.laneLogSweep (bounded identifier-only
+      contract field) and renders them in the human digest; a sparse entry over
+      the cap is disclosed in the applied payload (scenario 10) and a sweep
+      that could preserve NOTHING refuses with the logs intact (scenario 10b).
+      F-22 ADDRESSED — scenarios 4 and 5 are now explicitly justified
+      seam-level proofs, and scenario 7 runs verify gates + merge in the lane
+      worktree (post-landing deletion DEFERRED, branch retained) followed by
+      closeout --apply from the main checkout through the composer; the
+      resume-economics header is reworded to what scenario 2 asserts.
+      F-25 ADDRESSED — the addWorktree refusal names the worktree path, a
+      bounded git stderr tail and the recovery (git worktree prune, or remove
+      the named path); the removeWorktree refusals name the path and the
+      remedy; the production rollback disclosure keeps the path. Scenario 11a
+      removes a lane worktree directory without git worktree remove and
+      asserts the refusal names the path, prune and exit 128; scenario 11b
+      leaves a partial-install file, asserts the refused rollback discloses
+      the path and prune. F-29 ADDRESSED — the deferral check parses the exact
+      branch refs/heads/<branch> line (no substring) and skips prunable or
+      missing worktree blocks; scenario 13 covers feat/GH-1/a vs
+      feat/GH-1/ab and a pruned registration. F-30 ADDRESSED — the no-logs
+      scratch deletion sits inside the try (a read-only tmp returns the
+      declared refusal, scenario 5) and the reuse arm creates the TMPDIR
+      anchor it binds (scenario 2). F-9 CLOSURE — the error-table row states
+      that a lane-worktree provisioning or resume-verification refusal records
+      NO attempt and the hint promises no guaranteed retry; the events
+      baseline, the supervise baseline, Appendix D and the two structure
+      mirrors moved together and error-table-sync plus the structure suites
+      are green. DECLARED RESIDUALS: F-26 GH-412 adjacency (detached-ancestor
+      or recorded-SHA resume refinement rides parallel-lane planning); F-27
+      defense-in-depth follow-up (the refusal already surfaces; the
+      misattribution is cosmetic); F-28 fold the two branch-convention
+      matchers at the GH-408 rename; F-31 commit-primitive subject typing
+      follow-up; F-32 placement-from-the-invoking-directory follow-up; F-33
+      contradicted doc sentences and F-23 guide wording ride the
+      orchestrator's doc-sync re-run after code lands (F-23's code half is a
+      follow-up work item); F-24 is DONE (spec v1.1 landed in 31f8226a); the
+      eight leftover lane/* local branches are workspace hygiene for LOCAL
+      cleanup, not repository content. VERIFICATION (observed): pnpm
+      typecheck green for all six packages plus tests/types; the production
+      suite 15 pass / 0 fail; the targeted set (production suite, lifecycle,
+      host-index, resume economics, merge composition, three closeout worktree
+      suites, retirement pin, house style, error-table-sync, enumeration,
+      seam, board, config, both structure error suites, content-inventory,
+      tests/golden) 746 pass / 0 fail across 84 files; the dispatch behaviour
+      glob 511 pass / 0 fail across 64 files; tests/golden 348 pass / 0 fail
+      with NO golden byte changes; biome lint 0 errors and biome format clean;
+      boundaries, ambient globals, workspace entrypoints, secret-read
+      boundary, new-code naming and forbidden-literals green. DRIFT
+      DISCLOSED: the declared 11 files plus four mechanical mirrors the
+      chosen fixes require — packages/core/src/contracts/index.ts (the new
+      type's #contracts re-export), tests/fixtures/supervise/
+      error-table-baseline.json and the two tests/structure error-row mirrors
+      (the synchronized copies of the F-9 row; leaving them would red the
+      error-table-sync and supervision invariants)."
+    type: info
+    date: "2026-11-25"
   - text: "Review iter-2 verdict FAIL (code-review/review-iter-2.yaml; swept at the
       review_fix completion): the six iteration-1 blockers/majors are VERIFIED
       FIXED through the production composer (F-1 resume accepted detached AND on

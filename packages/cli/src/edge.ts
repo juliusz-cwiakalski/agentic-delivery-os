@@ -2411,6 +2411,21 @@ const mergedSquashSha = (store: StateStorePort, workItemRef: string): string | u
   return undefined;
 };
 
+/**
+ * The lane-owned paths the closeout sweep removes and the plan-time
+ * cleanliness check therefore EXCLUDES (GH-404 F-19): a repository that does
+ * not ignore `tmp/` must still plan and apply the worktree cleanup. The
+ * apply-mode post-sweep observation stays authoritative; the pre-removal
+ * adapter check passes no exclusion. Kept in step with
+ * `createLaneLogSweep`'s ephemeral removals in `production.ts`.
+ */
+const LANE_SWEPT_PATHSPECS = [
+  "tmp/run-logs-runner",
+  "tmp/tmpdir",
+  "tmp/deliver-ticket",
+  "tmp/*.log",
+] as const;
+
 export const createCloseoutComposition = (
   options: CloseoutCompositionOptions,
 ): CloseoutComposition => {
@@ -2514,7 +2529,14 @@ export const createCloseoutComposition = (
       const worktreeClean =
         git.isWorktreeClean === undefined
           ? cleanWorktree
-          : await git.isWorktreeClean({ path: deliveryWorktree.path });
+          : // Plan-time cleanliness EXCLUDES the lane's own swept paths (review
+            // F-19): otherwise a repository that does not ignore `tmp/` sees
+            // the lane's logs as dirt and refuses before the sweep can run.
+            // Apply-time post-sweep cleanliness remains authoritative.
+            await git.isWorktreeClean({
+              path: deliveryWorktree.path,
+              exclude: LANE_SWEPT_PATHSPECS,
+            });
       const mergedObserved =
         mergedRequest.observation === "observed" && mergedRequest.value.reviewState === "merged";
       const safety: WorktreeSafetyInput = {
@@ -4019,6 +4041,14 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
   };
 
   const repositoryStores = new Map<string, StateStorePort>();
+  /**
+   * The board worktree-path join source (GH-404 F-7/F-20): built from EACH
+   * repository's own store inside `loadRepositoryFacts` and keyed by the
+   * BOARD's repository key + ref. The board names a repository by its derived
+   * key while a dispatch.lane record carries its origin identity, so a map
+   * keyed by the record's own string never matches a board row.
+   */
+  const boardDispatchWorktreePaths: Record<string, string> = {};
 
   let resolvedSelection:
     | {
@@ -4061,6 +4091,19 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
       };
     }
     repositoryStores.set(repository, store);
+    // GH-404 F-20: this repository's own dispatch.lane records feed the board
+    // join; re-key the newest-per-(repository, ref) paths onto the BOARD's
+    // repository key so the row lookup in `projectBoard` hits.
+    const laneRead = readDispatchLanes(store);
+    if (laneRead.ok) {
+      for (const [recordKey, path] of Object.entries(
+        newestDispatchLaneWorktreePaths(laneRead.records),
+      )) {
+        const separator = recordKey.indexOf("|");
+        const ref = separator === -1 ? recordKey : recordKey.slice(separator + 1);
+        boardDispatchWorktreePaths[`${repository}|${ref}`] = path;
+      }
+    }
     // The board's actions surface reads the repository's own action registry
     // once (GH-287 F-6): a failed read is disclosed and fabricates no row.
     const actionFacts = boardActionsFrom(store, composition.nowMs());
@@ -4309,15 +4352,13 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
     policy: OWNER_GATE_SLA_POLICY,
     nowIso: composition.nowIso,
     nowMs: composition.nowMs,
-    // The ref-keyed worktree-path join source (GH-404 F-7, TC-SURFACES-002):
-    // the newest dispatch.lane record per ref, from the bounded
-    // retained-window read. The join contributes paths to existing lane rows
-    // only; a store read failure contributes an empty map (the join's
-    // classified absence — the board renders exactly as today).
-    dispatchWorktreePaths: () => {
-      const lanes = readDispatchLanes(composition.store);
-      return lanes.ok ? newestDispatchLaneWorktreePaths(lanes.records) : {};
-    },
+    // The (repository, ref)-keyed worktree-path join source (GH-404 F-7,
+    // TC-SURFACES-002; review F-20): each repository's own store contributed
+    // its newest dispatch.lane record during `loadRepositoryFacts`, keyed by
+    // the board's repository key. The join contributes paths to existing lane
+    // rows only; a repository whose load reported no records contributes
+    // nothing (the classified absence — the board renders exactly as today).
+    dispatchWorktreePaths: () => boardDispatchWorktreePaths,
   };
 };
 

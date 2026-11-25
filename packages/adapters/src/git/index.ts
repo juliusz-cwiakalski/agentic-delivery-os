@@ -147,8 +147,16 @@ export type GitBranchSeam = {
   }) => Promise<GitWorktreeAddResult>;
   /** The repository's top-level working directory (local read only). */
   readonly currentWorktreePath: () => Promise<string | undefined>;
-  /** Whether one worktree path is clean (read-only, fixed argv). */
-  readonly isWorktreeClean: (input: { readonly path: string }) => Promise<boolean>;
+  /**
+   * Whether one worktree path is clean (read-only, fixed argv). `exclude`
+   * names literal/glob pathspecs removed from the observation (GH-404 F-19:
+   * the lane's own swept paths must not make its worktree look dirty at plan
+   * time); the apply-time pre-removal observation passes no exclusion.
+   */
+  readonly isWorktreeClean: (input: {
+    readonly path: string;
+    readonly exclude?: readonly string[];
+  }) => Promise<boolean>;
   /**
    * One bounded added-line read of a recorded squash landing: fixed argv,
    * no shell, local only. Absent refs are a classified absence, never a throw.
@@ -177,7 +185,8 @@ export type GitBranchSeam = {
 
 const REF_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
 const FORBIDDEN_REF = /(\.\.|~|\^|:|\?|\*|\[|\\|\s)/;
-
+/** The bounded git stderr tail a worktree refusal surfaces (GH-404 F-25). */
+const GIT_REFUSAL_STDERR_TAIL_CHARS = 400;
 const isSafeRef = (value: string): boolean =>
   REF_PATTERN.test(value) && !FORBIDDEN_REF.test(value) && !value.startsWith("-");
 
@@ -472,7 +481,14 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
     },
     isWorktreeClean: async (input) => {
       if (!input.path.startsWith("/") || input.path.includes("\0")) return false;
-      const result = await git(["-C", input.path, "status", "--porcelain"]);
+      const excludes = (input.exclude ?? []).map((entry) => `:(exclude)${entry}`);
+      const result = await git([
+        "-C",
+        input.path,
+        "status",
+        "--porcelain",
+        ...(excludes.length === 0 ? [] : ["--", ".", ...excludes]),
+      ]);
       return result.status === 0 && result.stdout.trim().length === 0;
     },
     readMergedDiff: async (input) => {
@@ -514,12 +530,21 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
       if (result.status === 0) {
         return { ok: true, path: input.path, base: input.baseRef };
       }
+      // GH-404 F-25: a refusal names the exact worktree path, the bounded git
+      // stderr tail and the recovery step — never a bare exit code. A stale
+      // registration (the directory removed without `git worktree remove`) is
+      // the common cause and is recovered with `git worktree prune`.
+      const stderrTail = result.stderr.trim().slice(-GIT_REFUSAL_STDERR_TAIL_CHARS);
+      const reason = result.timedOut
+        ? `timed out after ${String(timeoutMs)} ms`
+        : `exit ${String(result.status)}`;
       return {
         ok: false,
         code: "worktree-add-refused",
-        detail: result.timedOut
-          ? "worktree add timed out"
-          : `git refused the worktree creation (${result.status})`,
+        detail:
+          `git refused the worktree creation at ${input.path} (${reason})` +
+          (stderrTail.length === 0 ? "" : ` stderr: ${stderrTail}`) +
+          "; if this path is already registered, run git worktree prune, otherwise remove the named path and retry",
       };
     },
     removeWorktree: async (input) => {
@@ -553,13 +578,17 @@ export const createGitBranchSeam = (options: GitBranchSeamOptions = {}): GitBran
         return {
           ok: false,
           code: "closeout.branch.unsafe",
-          detail: "worktree is dirty or unreadable",
+          detail: `the worktree at ${input.path} is dirty or unreadable; clean or remove the named path, or run git worktree prune if it is stale`,
         };
       }
       const result = await git(["worktree", "remove", input.path]);
       return result.status === 0
         ? { ok: true }
-        : { ok: false, code: "closeout.branch.unsafe", detail: "git refused the worktree removal" };
+        : {
+            ok: false,
+            code: "closeout.branch.unsafe",
+            detail: `git refused the removal of the worktree at ${input.path} (exit ${String(result.status)}); remove the named path or run git worktree prune`,
+          };
     },
     isClean: async () => {
       const output = await stdoutOrThrow(["status", "--porcelain"], "status");

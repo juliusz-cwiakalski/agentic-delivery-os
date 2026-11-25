@@ -582,6 +582,7 @@ export {
   type CloseoutGapReason,
   type CloseoutGitRuntime,
   type CloseoutLabelArguments,
+  type CloseoutLaneLogSweepData,
   type CloseoutMemberCleanup,
   type CloseoutMemberCleanupApplyOutcome,
   type CloseoutMemberCleanupPlanOutcome,

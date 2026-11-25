@@ -12,12 +12,19 @@ import {
   planDispatchResume,
 } from "../../packages/core/src/domain/dispatch-resume";
 
-// TC-RESUME-001/002/003 (GH-404 F-4) are proven on the PRODUCTION path in
-// tests/behaviour/dispatch-production-worktree.test.ts (scenario 2 exercises
-// the composed reuse arm: resume after the lane created its delivery branch is
-// accepted, the same recorded worktree is reused — zero second worktrees).
-// The review remediation retired the pure planLaneWorktreeResume helper the
-// earlier additions here tested; production composes the verification inline.
+// The worktree-resume rules are proven on the PRODUCTION path in
+// tests/behaviour/dispatch-production-worktree.test.ts:
+// - scenario 2 accepts a resume after the lane created its delivery branch
+//   (<type>/<REF>/<slug>, the TC-RESUME-001 accepted state) and reuses the SAME
+//   recorded worktree (zero second worktrees);
+// - the same scenario's negative control covers the BRANCH-MISMATCH half of
+//   TC-RESUME-002 (a genuinely foreign branch refuses, naming it);
+// - the missing-worktree half of TC-RESUME-002 and TC-RESUME-003's context-less
+//   lane are covered by the terminal-record scenario 6 and the delivered
+//   in-checkout arm respectively (the context-less arm is exercised by the
+//   existing exception-mode/engine suites).
+// The review remediation retired the pure planLaneWorktreeResume helper these
+// earlier additions tested; production composes the verification inline.
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
 

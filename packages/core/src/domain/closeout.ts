@@ -52,6 +52,7 @@ import {
   type CloseoutGapReason,
   type CloseoutGitRuntime,
   type CloseoutLabelArguments,
+  type CloseoutLaneLogSweepData,
   type CloseoutOperation,
   type CloseoutOperationIdentityInputs,
   type CloseoutOperationName,
@@ -1797,6 +1798,8 @@ export type CloseoutRunInput = {
         readonly postSweepClean?: boolean;
         /** Disclosed fact: the newest-first sweep hit the declared byte cap. */
         readonly truncated?: boolean;
+        /** Recursive bytes the cap left uncopied (review F-21). */
+        readonly omittedBytes?: number;
       }
     | { readonly ok: false; readonly code: string; readonly detail: string }
   >;
@@ -1833,7 +1836,8 @@ const gateWorktreeRemoval = async (
   input: CloseoutRunInput,
   operation: CloseoutOperation,
 ): Promise<
-  { readonly ok: true } | { readonly ok: false; readonly code: string; readonly detail: string }
+  | { readonly ok: true; readonly laneLogSweep?: CloseoutLaneLogSweepData }
+  | { readonly ok: false; readonly code: string; readonly detail: string }
 > => {
   const ordering = input.worktreeOrdering;
   const worktreePath =
@@ -1867,6 +1871,7 @@ const gateWorktreeRemoval = async (
   // state the port observes.
   let logsSwept = false;
   let postSweepClean: boolean | undefined;
+  let laneLogSweep: CloseoutLaneLogSweepData | undefined;
   if (input.sweepLaneLogs !== undefined && worktreePath !== undefined) {
     const swept = await input.sweepLaneLogs({
       workItemRef: input.plan.workItemRef,
@@ -1881,6 +1886,15 @@ const gateWorktreeRemoval = async (
     }
     logsSwept = true;
     postSweepClean = swept.postSweepClean;
+    // Review F-21: the sweep's own disclosure travels into the applied step —
+    // a truncation is a recorded fact, never a silent one.
+    if (swept.truncated !== undefined) {
+      laneLogSweep = {
+        swept: true,
+        truncated: swept.truncated,
+        omittedBytes: swept.omittedBytes ?? 0,
+      };
+    }
   }
   // (c) The full ordering rules with the runtime sweep facts (review F-8):
   // the cleanliness arm evaluates the POST-sweep worktree state the sweep
@@ -1906,7 +1920,7 @@ const gateWorktreeRemoval = async (
       };
     }
   }
-  return { ok: true };
+  return laneLogSweep === undefined ? { ok: true } : { ok: true, laneLogSweep };
 };
 
 /** The apply-orchestrator result: bounded data or a classified identity. */
@@ -3032,6 +3046,7 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
       }
       let applied = 0;
       let failed = 0;
+      let laneLogSweep: CloseoutLaneLogSweepData | undefined;
       for (const operation of step.operations) {
         if (stateFailure !== undefined) break;
         const existing = persisted[operation.operationId];
@@ -3065,6 +3080,7 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
             }
             break;
           }
+          if (gate.laneLogSweep !== undefined) laneLogSweep = gate.laneLogSweep;
         }
         const result = await executeOperation(operation, input.provider, input.git, mergedHeadSha);
         if (!result.ok) {
@@ -3113,7 +3129,11 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
           : applied > 0
             ? "applied"
             : "satisfied";
-      steps.push({ ...step, outcome });
+      steps.push({
+        ...step,
+        outcome,
+        ...(laneLogSweep === undefined ? {} : { laneLogSweep }),
+      });
     }
     // GH-292 F-2: the landed-removal hook runs after the closeout writes and
     // inside the fence the transaction already holds; it is fail-open and
@@ -3218,6 +3238,13 @@ export const renderCloseoutHuman = (data: CloseoutData): string => {
     }
     if (step.truncation?.truncated === true) {
       lines.push(`   - truncated (omitted ${step.truncation.omitted})`);
+    }
+    if (step.laneLogSweep !== undefined) {
+      // Review F-21: the sweep disclosure is visible, bytes included.
+      const omitted = step.laneLogSweep.truncated
+        ? `, truncated (${String(step.laneLogSweep.omittedBytes)} bytes omitted by the cap)`
+        : "";
+      lines.push(`   - lane logs: ${step.laneLogSweep.swept ? "swept" : "absent"}${omitted}`);
     }
   });
   if (data.residue !== undefined && data.residue.length > 0) {

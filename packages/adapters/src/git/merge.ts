@@ -7,6 +7,7 @@
  * union is the declared contract set and contains no force-capable variant.
  */
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import {
   MERGE_GIT_OPERATIONS,
   type MergeGitOperation,
@@ -229,6 +230,9 @@ export const createGitMergeSeam = (options: GitMergeSeamOptions = {}): GitMergeS
           .find((line) => line.startsWith("worktree "))
           ?.slice("worktree ".length);
         if (path === undefined || path.trim().length === 0) continue;
+        // GH-404 F-29: a prunable block (its directory is gone) holds no
+        // branch — its stale registration must never defer a deletion.
+        if (block.split("\n").includes("prunable") || !existsSync(path.trim())) continue;
         // The main checkout is the block whose OWN git directory equals the
         // common directory (review F-3 with F-12's resolved-equality rule);
         // every other block is linked. A resolution failure falls back to the
@@ -238,7 +242,13 @@ export const createGitMergeSeam = (options: GitMergeSeamOptions = {}): GitMergeS
           resolved.status === 0 ? resolved.stdout.trim() : `${path.replace(/\/+$/u, "")}/.git`
         ).replace(/\/+$/u, "");
         if (ownGitDir === commonDir) continue;
-        if (block.includes(`branch refs/heads/${input.branch}`)) return true;
+        // GH-404 F-29: the EXACT ref line, never a substring — a parked
+        // `feat/GH-1/ab` must not defer the deletion of `feat/GH-1/a`.
+        const branchLine = block
+          .split("\n")
+          .find((line) => line.startsWith("branch "))
+          ?.slice("branch ".length);
+        if (branchLine === `refs/heads/${input.branch}`) return true;
       }
       return false;
     };
