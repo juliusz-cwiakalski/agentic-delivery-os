@@ -52,6 +52,53 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Plan phase 8 complete (commit ae9837de): the governing fixtures and
+      guards landed — NEW suites: tests/behaviour/git-adapter-worktree-seam.test.ts
+      (TC-WT-001 over a REAL temp git repository: linked worktree on the new
+      branch at the base tip, linked-only enumeration, branch-elsewhere both
+      ways; the typed refusal matrix with zero inventory residue), tests/
+      checks/worktree-seam-house-style.test.ts (TC-WT-002: no shell, no force
+      token, no network in the create path; the fixed argv form asserted
+      whitespace-tolerantly; planted canaries fail the scan and stay
+      contained; the refusal matrix through a counting child runner proves
+      ONE git call per refusal and zero git calls behind the seam-side
+      validations), tests/behaviour/git-adapter-worktree-enumeration.test.ts
+      (TC-IDENT-002: the common-dir rule asserted directly, order-insensitivity
+      proven by shuffled/reversed permutations, locked/bare attributes
+      position-independent, the main checkout's branch never leaking into the
+      linked inventory), tests/behaviour/dispatch-worktree-lifecycle.test.ts
+      (TC-WT-003 lease-first order with a REAL worktree: lease -> provision ->
+      spawn, spawn cwd = the worktree, the sibling placement at the base tip,
+      main checkout on base and clean throughout, DM-1 worktreePath on the
+      lane record, the join source mapping it; the provisioning refusal
+      releasing the lease with zero retries and zero spawns; TC-WT-004
+      sibling default vs explicit root; TC-WT-005 the symlink alias never
+      participating in the placement; TC-ENV-002 the derived environment
+      contract; TC-REG-002 the exception at the same seam — in-checkout, no
+      worktree created or referenced), tests/behaviour/host-index-worktree-pin.test.ts
+      (TC-HOSTIDX-001/002/003 over real git: the registration root derived
+      from the worktree equals the physical main checkout across three lane
+      commands — zero flips; the entry survives worktree removal plus
+      maintenance — zero prunes, repos list keeps its row; worktrees never
+      rows of the flat record set). UPDATED suites: dispatch-resume-economics
+      (TC-RESUME-001/002/003 the reuse/verify/DEC-8 rules), dispatch-gate-evidence
+      (TC-ENV-003 the literal $PWD/tmp/tmpdir anchored per worktree),
+      projects-identity (TC-IDENT-001 the worktree's own root differs while
+      identity and state root match), state-scope (the placement rule over
+      the physical root + the explicit setting). install/build STUBBED
+      everywhere (RSK-T5); zero timing assertions (TC-ENV-004 is the recorded
+      pm-notes evidence). Fence-authorized re-pins: content-inventory gains
+      the dispatch-lane-view export row; the new-code-naming baseline gains a
+      reason-bearing entry for the host-index pin suite's delivered
+      HostIndexRegistration field-name keys (projectKey — the zero-rename
+      fence forbids renaming the delivered field; the GH-406 baseline
+      pattern). Boundary evidence: full 13-stage battery (phase8-gate.log) —
+      stages 1-3, 5-8, 10-13 green; bun test 12891/2 fail (TC-RELEASE-001
+      known-deferred + the naming unit test on the unbaselined fixture keys);
+      post-baseline stage-4 rerun (phase8-stage4.log): 12892 pass / 1
+      known-deferred fail / 4 skip."
+    type: info
+    date: "2026-11-25"
   - text: "Plan phase 7 complete (commit 5a9c58dd): the worktree-path visibility
       landed on all three surfaces via the PM's binding design (option a,
       REF-KEYED JOIN, JOIN-ONLY) — (1) dispatch status:

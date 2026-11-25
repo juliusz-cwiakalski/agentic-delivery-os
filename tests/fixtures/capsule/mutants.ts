@@ -440,6 +440,26 @@ export const CAPSULE_MUTANTS: readonly CapsuleMutant[] = [
     suite: "tests/structure/error-table.test.ts",
     signal: "closeout.step.unknown-step.failed",
   },
+  {
+    id: "MUT-GH404-01",
+    guard: "worktree removal without the sweep/ordering gate",
+    file: "packages/core/src/domain/closeout.ts",
+    find: 'if (step.stepId === "worktree-cleanup" && operation.name === "remove-worktree") {',
+    replace: "if (false) {",
+    all: true,
+    suite: "tests/behaviour/closeout-worktree.test.ts",
+    signal: "the sweep/ordering gate skipped",
+  },
+  {
+    id: "MUT-GH404-02",
+    guard: "worktree removal before merge confirmation",
+    file: "packages/core/src/domain/closeout.ts",
+    find: "mergeConfirmed: ordering.mergeConfirmed,",
+    replace: "mergeConfirmed: true,",
+    all: true,
+    suite: "tests/behaviour/closeout-worktree.test.ts",
+    signal: "worktree removal before merge confirmation",
+  },
 ];
 
 export type CapsuleMutantGuard = {

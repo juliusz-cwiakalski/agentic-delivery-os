@@ -75,14 +75,17 @@ const runSuite = (copy: string, suite: string) => {
 };
 
 describe("TC-CAP-058 mutant execution", () => {
-  test("the registry enumerates exactly the 44 named ids", () => {
-    expect(CAPSULE_MUTANTS.length).toBe(44);
-    expect(new Set(CAPSULE_MUTANTS.map((mutant) => mutant.id)).size).toBe(44);
+  test("the registry enumerates exactly the 46 named ids", () => {
+    expect(CAPSULE_MUTANTS.length).toBe(46);
+    expect(new Set(CAPSULE_MUTANTS.map((mutant) => mutant.id)).size).toBe(46);
     for (let index = 1; index <= 44; index += 1) {
       expect(CAPSULE_MUTANTS.map((mutant) => mutant.id)).toContain(
         `MUT-CAP-${String(index).padStart(2, "0")}`,
       );
     }
+    // The GH-404 ordering mutants (TC-CLOSEOUT-005).
+    expect(CAPSULE_MUTANTS.map((mutant) => mutant.id)).toContain("MUT-GH404-01");
+    expect(CAPSULE_MUTANTS.map((mutant) => mutant.id)).toContain("MUT-GH404-02");
   });
 
   test("every mutant kills its declared suite for the declared reason", () => {
