@@ -1,0 +1,311 @@
+version: 1
+iteration: 4
+mode: local
+work_item_ref: GH-406
+branch: feat/GH-406/delivery-vocabulary-declared-project-key
+status: PASS
+summary: >
+  Focused verify pass after the CEO's PR #411 review fixes (six directed
+  leftovers; fixes landed as 8a6a2763 + a54c2dff + 0c8bb103 + 706a781f on top
+  of the standing iter-3 PASS): PASS — all six fixes landed exactly and
+  exactly scoped. (1) ODR-0006 renamed by git mv to
+  ODR-0006-delivery-vocabulary.md (96% similarity) with the H1 byte-identical
+  to the decision-index row title (term: product key, NO "declared") — the
+  index link, the delivery-vocabulary suite RECORD const and the index-row
+  literal all follow; the old filename survives only in append-only history
+  (pm-notes entries, review-iter-1/3); front matter untouched (status
+  Proposed, decision_date null). (2) The ODR Product mapping row now states
+  named exceptions ONLY groupKey / delivery.projects.groups.v1 (local layer)
+  / <configDirectoryName>/projects.yaml, with the portable manifest declared
+  not-yet-existing and GH-401-created with the new names directly (schema
+  delivery.products.manifest.v1, file products.yaml, key product.key) — NOT a
+  named exception; mirrors amended spec Appendix A v1.3 (whose own document
+  history records the spec-side fix in 6ccea4e8); zero tracked hits of
+  delivery.projects.manifest.v1 anywhere. (3) feature-project-groups.md
+  Overview rewritten (product = one or more repositories delivered as one;
+  repository belongs to exactly one product; group = today's code name with
+  project group / groupKey / projects list as named exceptions) and the
+  scoping paragraph reads "one repository". (4) Glossary watchdog Lane row
+  reads "in one repository". (5) doc/00-index.md reads "the additive
+  product-key and clone-key contracts" — zero "declared-project-key" and
+  zero "one project repository" prose hits across current-truth docs (the
+  only readiness-review hit quotes the fix itself); F-7 retired. (6) The
+  contract suite renamed by git mv with 100% similarity (content identical),
+  the naming-baseline path updated with reason substance unchanged, the dead
+  originalLineAt helper deleted with only history-record residue — F-5
+  retired, biome lint on every touched file is clean (zero new diagnostics)
+  — and the changeset renamed 0-delta content-identical with TC-RELEASE-001
+  green live. Nothing else moved: af0d6da7..HEAD touches exactly the declared
+  files (the three pre-fix commits are planning-artifact record-keeping:
+  spec v1.3, test-plan v1.3, plan rev 5 — planning before execution); the
+  zero-rename fence is intact (packages/** vs base 22b15d31 still shows
+  exactly iter-3's five wording-only removed lines, zero packages changes
+  since af0d6da7, so the --flat byte-identity and fixtures verdicts carry);
+  F-8's four milestone-root planning docs remain zero-diff vs base. Gates:
+  the coder's boundary gate at 8a6a2763 confirmed from its log (exit 0, the
+  13-stage &&-chain, Ran 12858 tests across 1526 files = 12854 pass / 4 skip
+  / 0 fail, new-code-naming 2505/0/4) plus this review's live runs at final
+  HEAD 706a781f: narrow ladder under the NEW suite path 53 pass / 0 fail
+  (197 expect calls, matching iter-3 exactly), privacy-release (TC-RELEASE-001)
+  7 pass / 0 fail — the suite derives the branch changeset from
+  BASE...HEAD -- .changeset/ where the branch-internal rename collapses to
+  exactly one A line for the new path —, new-code-naming live exit 0 at
+  2505/0/4, and the doc-asserting ladder (doc-conformance + naming-boundary +
+  content-inventory + port-contract-inventory) 102 pass / 0 fail at final
+  HEAD, closing the one evidence gap (the boundary gate pre-dated the doc
+  fixes by one commit). The disclosed TC-RELEASE-001 red on the staged-rename
+  intermediate state is coherent: privacy-release derives from committed
+  history, and the committed shape resolves to one A line, which the live
+  run proves. One new non-blocking info observation: the doc-fix commit
+  706a781f (fixes 3/4/5) rode only the system_spec_update phase stamp with
+  no dedicated pm-notes notes: entry describing the doc-fix execution (the
+  phase's original entry convention includes one); verification evidence for
+  those fixes is supplied by this review instead. No remediation phase
+  required.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 3
+spec_compliance: PASS
+plan_compliance: PASS
+directed_fixes:
+  fix_1_odr_rename:
+    verdict: PASS
+    evidence: >
+      git mv confirmed (96% similarity, 2 content lines); H1 byte-compared
+      equal to the decision-index row title "Delivery Vocabulary — Product,
+      Repository, Main Checkout, Worktree, Lane, Work Item, Clone Identity,
+      Product Key" (no "declared"); index link at doc/decisions/00-index.md:30
+      updated; delivery-vocabulary.test.ts RECORD const and index-row literal
+      updated with the asserted row otherwise byte-identical; grep: old
+      filename only in pm-notes history entries and review-iter-1/3;
+      historical records unedited (git log shows no touch to iter-1/2/3
+      bodies); front matter status Proposed / decision_date null intact.
+  fix_2_mapping_row:
+    verdict: PASS
+    evidence: >
+      The Product row now names exactly groupKey, delivery.projects.groups.v1
+      (local layer) and <configDirectoryName>/projects.yaml as the named
+      exceptions and states the portable manifest does not exist yet — GH-401
+      creates schema delivery.products.manifest.v1, file
+      <configDirectoryName>/products.yaml, key product.key — NOT a named
+      exception; mirrors chg-GH-406-spec.md Appendix A v1.3 verbatim modulo a
+      trivial word-order difference in the file reference; spec document
+      history v1.3 records the CEO-directed spec-side fix; grep:
+      delivery.projects.manifest.v1 zero hits anywhere tracked.
+  fix_3_project_groups_overview:
+    verdict: PASS
+    evidence: >
+      Overview definition sentences rewritten in 706a781f exactly as
+      directed (product / repository-belonging-to-exactly-one-product /
+      group-as-code-name with project group, groupKey, projects list kept as
+      named exceptions denoting a product); scoping paragraph "one project
+      repository" → "one repository"; last_updated bumped to 2026-11-25;
+      grep: "one project repository" zero hits outside the readiness-review
+      iter-3 record quoting the before state.
+  fix_4_glossary_lane_row:
+    verdict: PASS
+    evidence: >
+      Watchdog Lane row now reads "one work item's delivery in one
+      repository"; last_updated bumped; no other glossary row touched.
+  fix_5_index_phrase:
+    verdict: PASS
+    evidence: >
+      doc/00-index.md feature-projects row now reads "the additive
+      product-key and clone-key contracts"; grep "declared-project-key"
+      across doc/ (excluding the change folder and doc/planning) returns
+      zero hits; carried F-7 retired.
+  fix_6_suite_and_changeset:
+    verdict: PASS
+    evidence: >
+      Suite renamed by git mv with 100% similarity (content identical);
+      new-code-naming.baseline.json path updated, reason substance
+      unchanged, still 4 entries; originalLineAt helper deleted (6 lines)
+      with zero callers verified and only pm-notes/review-record residue;
+      biome lint on the four touched files reports zero diagnostics;
+      changeset renamed by git mv with 0 line delta (content identical, the
+      iter-3-verified amendment wording with the renamed names intact);
+      TC-RELEASE-001 green live (7 pass / 0 fail) with the suite resolving
+      exactly one added changeset for the new path from committed history.
+scope_audit:
+  diff_range: af0d6da7..HEAD
+  verdict: PASS
+  evidence: >
+    Exactly the declared files: changeset rename, doc/00-index.md, change
+    folder (plan/pm-notes/spec/test-plan), doc/decisions/00-index.md, ODR-0006
+    rename, glossary.md, feature-project-groups.md, naming baseline, suite
+    rename, delivery-vocabulary.test.ts, vocabulary-conformance.test.ts.
+    Per-commit: 6ccea4e8/5596d275/60316905 are planning-artifact
+    record-keeping (spec v1.3 mapping correction, test-plan v1.3 suite-path
+    adoption, plan rev 5 rename adoption with corrected "file name KEPT"
+    clauses) landing BEFORE the fixes — planning before execution; 8a6a2763
+    is fixes 1/2/6; a54c2dff/0c8bb103 are pm-notes evidence and the delivery
+    boundary (the YAML emitter re-wrapped the entry, text byte-identical);
+    706a781f is fixes 3/4/5 plus the system_spec_update stamp. Zero
+    packages/** changes since af0d6da7.
+fences:
+  zero_rename: PASS
+  flat_alias_byte_identity: PASS
+  additive_contracts_same_value_alias: PASS
+  groups_v1_no_grammar: PASS
+  naming_check_surface_and_baseline: PASS
+  fence_notes: >
+    Zero-rename re-inspected: packages/** vs base 22b15d31 still shows
+    exactly iter-3's five removed non-comment lines (two "primary checkout"
+    sentences, the --project option description, the GROUP and KEY header
+    literals) plus five comment lines — nothing new. The other fences carry
+    from iter-3's fresh verification because zero packages/** changes landed
+    since af0d6da7; the boundary gate at 8a6a2763 re-ran the full 12858-test
+    battery including the --flat alias and clone-identity fixtures suites
+    green.
+gates:
+  boundary_gate_8a6a2763:
+    verdict: PASS_CONFIRMED_FROM_LOG
+    evidence: >
+      tmp/run-logs-runner/2026-11-25/025041-gh406-ceofix-boundary-gate-pnpm-check.log:
+      exitcode file 0, duration 1062s, chain line confirms 13 &&-linked
+      stages (lint, format:check, typecheck, test, boundaries,
+      allowlist-tripwire, memory, forbidden-literals, new-code-naming,
+      namespace-tree, prompt-conformance, help-guide-coverage,
+      exports-parity), "Ran 12858 tests across 1526 files" (= 12854 pass /
+      4 skip / 0 fail), "OK new-code-naming: 2505 governed file(s) scanned,
+      0 violations, 4 baseline entry(ies)", green chain end (prompt-
+      conformance 5 clean, help-guide-coverage OK, exports-parity OK).
+  tc_release_001_staged_tree_red:
+    verdict: DISCLOSED_AND_COHERENT
+    evidence: >
+      The 022624 failed attempt ran pnpm check with the renames staged but
+      uncommitted; privacy-release.test.ts derives the branch's added
+      changeset via git diff --name-status BASE...HEAD -- .changeset/ plus
+      ls-files, so the staged-rename intermediate state breaks the exactly-
+      one-added-changeset derivation. On the committed tree the rename is
+      invisible to BASE...HEAD (one A line for the new path). This review's
+      live privacy-release run at HEAD 706a781f passes 7/7, proving the
+      committed shape — matching the pm-notes argument; no test was edited.
+  live_at_final_head:
+    verdict: PASS
+    evidence: >
+      Reviewer-run at HEAD 706a781f: narrow ladder (declared-product-key +
+      delivery-vocabulary + vocabulary-conformance) 53 pass / 0 fail / 197
+      expect calls under the NEW suite path; privacy-release 7 pass / 0
+      fail; new-code-naming exit 0 at 2505/0/4; biome lint on the touched
+      test files and baseline json: zero diagnostics; doc-asserting ladder
+      (doc-conformance + naming-boundary + content-inventory +
+      port-contract-inventory) 102 pass / 0 fail — this closes the gap that
+      the boundary gate pre-dated the doc fixes by one commit.
+plan_audit:
+  open_phases: none
+  evidence_missing: >
+    One evidence-hygiene gap, recorded as advisory F-9 (info, non-blocking):
+    the reopened system_spec_update phase (doc fixes 3/4/5, commit 706a781f)
+    carries only its phase stamp — no dedicated pm-notes notes: entry
+    describing the doc-fix execution, unlike the delivery-phase entry that
+    fully documents fixes 1/2/6 and the phase's own original entry
+    convention. This review's diff inspection and live runs supply the
+    verification evidence; the dod_check re-run can cite review-iter-4.
+  scope_deviations: >
+    None beyond directed work. Plan rev 5 correctly carries the two directed
+    renames (fixes 1 and 6) into phases 2 and 5, correcting the former "file
+    name KEPT — an identifier" clauses to "RENAMED per the CEO's PR #411
+    review fix"; phase ids and ordering preserved; all other rev-4 content
+    byte-intact per the revision-log entry. Fixes 3/4 land inside plan
+    phase 4's vocabulary-documentation scope; fix 5 (doc/00-index.md) is
+    outside any declared phase scope but is the owner's direct review
+    directive retiring carried F-7 — sanctioned mechanism, verified exact.
+f6_f8_status:
+  f6_exemption_window: >
+    Still present, carried forward unchanged: the config-key sense-exemption
+    window remains the fixed normalized-text slice
+    normalized.slice(offset, offset + match.length + 2) (now at
+    tests/structure/vocabulary-conformance.test.ts:105 after the helper
+    deletion shifted lines), admitting the wrapped/multi-space form toward
+    R3 while leaving the real tree unchanged. No action required.
+  f8_gh408_inventory: >
+    Remains the GH-408 inventory, unchanged: all four milestone-root
+    planning docs (m4/install-model.md, m2/contracts.md, m2/backlog.md,
+    m2/architecture.md) verified zero-diff vs base 22b15d31 on the current
+    tree.
+retired_findings:
+  f5: RETIRED — the dead originalLineAt helper is deleted; the repository's
+    new-lint-warning delta is zero (biome clean on every touched file; the
+    boundary gate's lint stage green).
+  f7: RETIRED — doc/00-index.md now reads "the additive product-key and
+    clone-key contracts"; zero retired-term prose hits in current-truth docs.
+findings:
+  - id: F-5
+    severity: info
+    confidence: high
+    category: code-quality
+    location: tests/structure/vocabulary-conformance.test.ts
+    message: >
+      RETIRED (was low, carried from iter-2/iter-3): the dead originalLineAt
+      helper was deleted by the fix commit 8a6a2763 with zero callers
+      verified; biome lint on the touched files is clean, so the repository's
+      new-lint-warning delta is zero. Recorded as retired lineage; no action.
+    suggestion: None — resolved and verified.
+    suppressed: true
+  - id: F-6
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/structure/vocabulary-conformance.test.ts:105
+    message: >
+      Carried forward from iter-2/iter-3, still present and untouched by this
+      fix round: the config-key sense-exemption window (fixed slice on
+      normalized text) admits the wrapped/multi-space form, a deliberate-
+      toward-R3 delta that leaves the real tree unchanged and widens no named
+      exception. Recorded so the delta stays known.
+    suggestion: >
+      No action required. At the next touch of this suite, optionally add one
+      synthetic arm pinning the multi-space config-key form's semantics.
+    suppressed: false
+  - id: F-7
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/00-index.md:40
+    message: >
+      RETIRED (was low, from iter-3): the landing page's feature-projects row
+      now reads "the additive product-key and clone-key contracts" (fix
+      commit 706a781f); grep confirms zero "declared-project-key" prose hits
+      across current-truth docs. Recorded as retired lineage; no action.
+    suggestion: None — resolved and verified.
+    suppressed: true
+  - id: F-8
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/planning/oss-tooling/milestones/m4/install-model.md
+    message: >
+      Carried forward from iter-3, unchanged: six pre-existing banned-phrase
+      hits in four milestone-root planning docs outside the declared
+      conformance scope, all verified zero-diff vs base on the current tree
+      (inherited, not introduced). This remains the GH-408 remainder-sweep
+      inventory.
+    suggestion: >
+      No action in this change. Fold the four milestone-root planning docs
+      into GH-408's mechanical-rename sweep inventory.
+    suppressed: false
+  - id: F-9
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-24--GH-406--delivery-vocabulary-declared-project-key/chg-GH-406-pm-notes.yaml
+    message: >
+      The doc-fix execution (fixes 3/4/5, commit 706a781f) is recorded in the
+      capsule only as the reopened system_spec_update phase stamp; no
+      dedicated pm-notes notes: entry describes the doc-fix delta, unlike the
+      delivery-phase entry that fully documents fixes 1/2/6 and the phase's
+      own original-entry convention. The fixes themselves are fully verified
+      by this review (diff inspection, negative sweeps, live suite runs at
+      final HEAD), so nothing is unverified — this is an evidence-trail
+      thinness, not a substance gap.
+    suggestion: >
+      Optionally append one short pm-notes entry naming the doc-fix commit
+      and its three files (or let the dod_check re-run cite review-iter-4 as
+      the evidence of record) before phase 10 closes the reopened cycle.
+    suppressed: false
+reviewed_at: 2026-11-25T03:45:00Z
+next_step: PROCEED

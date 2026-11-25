@@ -97,7 +97,7 @@ describe("TC-INST-010 a linked-worktree target is refused before anything is wri
     expect(summary).toContain(checkouts.worktree);
     expect(summary).toContain("git dir");
     expect(summary).toContain("common dir");
-    expect(summary).toContain("primary checkout");
+    expect(summary).toContain("main checkout");
     expect(summary).toContain("deleted after merge");
     expect(snapshotTree(scratch.base)).toEqual(before);
   });

@@ -23,7 +23,7 @@ project root beneath it:
   host-index.json                 the derived host index (not a store artifact)
   owner-hold                      the host-wide owner hold (unchanged; see below)
   projects/
-    <project key>/                one project state root per checkout
+    <clone identity>/             one clone state root per checkout
       ledger.<workspace>.jsonl
       header.<workspace>.json
       index.<workspace>.sqlite
@@ -62,22 +62,22 @@ directory move, once per host. The superseding decision record
 pins the rename, and the alias is the transition path — nothing has to change
 on the day you migrate.
 
-## Choose the primary checkout
+## Choose the main checkout
 
-Designate exactly **one** checkout as the primary project and run any state-opening
-command inside it (for example `status`). That command registers the project and
-prints the derived project key and state location.
+Designate exactly **one** checkout as the main checkout and run any state-opening
+command inside it (for example `status`). That command registers the clone and
+prints the derived clone identity and state location.
 
 Why one: queue entries, phase transitions, and audit records carry no repository
 attribution, so any split of the historical store across repositories would be
-inference presented as evidence. The primary project keeps the history it had.
+inference presented as evidence. The main checkout keeps the history it had.
 
 ## Perform the move
 
 1. Stop the foreground coordinator (and any resident daemon) so nothing writes
    while the files move.
-2. Resolve the primary checkout's state root with `repos list --json` — its
-   `stateLocation` is `<host root>/projects/<project key>`.
+2. Resolve the main checkout's state root with `repos list --json` — its
+   `stateLocation` is `<host root>/projects/<clone identity>`.
 3. Move every artifact named above from the host root into that directory,
    keeping its name and its mode. The artifact set moves as one unit: the ledger,
    the header, the index, the fence, `documents.<workspace>/`,
@@ -88,8 +88,8 @@ inference presented as evidence. The primary project keeps the history it had.
 
 ## Verify
 
-- `repos list` shows the primary checkout and its state location.
-- A read command inside the primary checkout serves the moved history: the
+- `repos list` shows the main checkout and its state location.
+- A read command inside the main checkout serves the moved history: the
   audit chain still verifies, `retro` still reads its sidecar, and the phase
   position is unchanged.
 - `status` reports no migration warning. A warning means the move is incomplete.
@@ -128,7 +128,7 @@ The CLI-independent shell fallback reads its **own** pre-freeze state-root
 variable, with its unchanged precedence: that variable first, then the
 repository-local default (`<checkout>/.ai/local/state`), then the home default.
 Its exact name is declared — and documented — at the top of
-`scripts/lib/dispatch-authority.sh`: the product's pre-freeze prefix plus
+`scripts/lib/dispatch-authority.sh`: the tool's pre-freeze prefix plus
 `DISPATCH_STATE_ROOT`. The typed commands read `<PREFIX>_STATE_DIR`. The two
 names are separate contracts, so on a host that sets the typed override you must
 also export the fallback's variable with the same absolute host root as its
@@ -147,16 +147,16 @@ no export, import, or re-key step exists.
 
 ## Do not delete the identity marker
 
-The project key is minted once inside the checkout's git common directory
+The clone identity is minted once inside the checkout's git common directory
 (`project-identity.json`) and recorded there with its mint-time basename. That
-marker is authoritative: deleting it mints a new key, and the moved state would
-no longer be found. Keep it, and keep it out of version control only if your
-tooling already ignores the git directory.
+marker is authoritative: deleting it mints a new clone identity, and the moved
+state would no longer be found. Keep it, and keep it out of version control
+only if your tooling already ignores the git directory.
 
 ## What `repos list` writes
 
 `repos list` is read-only with respect to delivery state: it never writes the
-host index, never prunes, never replaces a corrupt index, never creates a project
+host index, never prunes, never replaces a corrupt index, never creates a clone
 state root, and never changes a phase document, a queue record, or any other
 store content. The `projects list --flat` alias is the same read and carries the
 same bounds. Two side effects are permitted and bounded: on a checkout without
@@ -174,7 +174,7 @@ remove a leftover `*.tmp` sibling. Neither can create or change state.
   longer exists, so the row is not reported; the index entry stays until the next
   state-opening invocation prunes it. The state root it referenced is never
   deleted by pruning.
-- **Two checkouts show the same project key.** A marker was copied between
+- **Two checkouts show the same clone identity.** A marker was copied between
   checkouts. The host index keeps the first registration and the colliding
   checkout reports `projects.state-unavailable`; restore the correct marker from
   that checkout's own history or start it as a new checkout.

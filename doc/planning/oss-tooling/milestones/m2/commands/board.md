@@ -24,9 +24,9 @@ repository checkouts through the per-repository state scope and host index
 delivered by M2-S11, so one board can span several repositories without mixing
 their state.
 
-`--project <key>` takes a repository key and narrows the board to that
+`--project <key>` takes a clone identity and narrows the board to that
 checkout. `--all` spans managed repositories. The default is the current
-checkout. The board is a host view over repository keys; it is not
+checkout. The board is a host view over clone identities; it is not
 group-scoped, and no board surface enumerates groups.
 
 The production entrypoint composes `board` unconditionally and advertises it
@@ -44,13 +44,13 @@ the root delta and [../contracts.md](../contracts.md) for the contract.
 | `--help` | Print this page's help from the static inventory and exit 0 |
 | `--version` | Print the binary version and exit 0 |
 | `--all` | Span every managed repository on the host. |
-| `--project <key>` | Narrow to one repository key. |
+| `--project <key>` | Narrow to one clone identity. |
 | `--json` | Emit the machine envelope instead of the human board. |
 
 ## OUTPUT
 
 Text: five sections in fixed order - `LANES`, `GATES`, `ASKS`, `ACTIONS`, `PARKED` - each
-row naming its repository key, ref, and owner. A header states the audience,
+row naming its clone identity, ref, and owner. A header states the audience,
 scope, selection, repository count, and per-repository collector evidence. An
 empty board or the `unbound` scope renders `observed-empty`. Each section label
 carries a `+N more <section> omitted` marker when the human cap, the machine
@@ -64,7 +64,7 @@ Envelope `data` carries:
 | `audience` | The delivered audience dimension (`owner`) |
 | `scope` | `repository` or `unbound` |
 | `selection` | `current`, `project`, or `all` |
-| `repositories[]` | The included repository keys, ascending, unique, at most 128 |
+| `repositories[]` | The included clone identities, ascending, unique, at most 128 |
 | `lanes[]` | Active lanes with ref, phase, lease holder, and owner |
 | `gates[]` | Open gates with ref, condition, SLA state, drawn default, and owner |
 | `asks[]` | Owner asks with age, drawn default, and default state |
@@ -75,8 +75,8 @@ Envelope `data` carries:
 | `stateSource` | `delivery.status-facts.v1`, equal to the status and brief member |
 | `truncated`, `omitted`, `omittedBySection` | Drop markers and per-section counts |
 
-The repository-list field is `repositories[]`; the board names repository keys
-throughout and never enumerates groups.
+The repository-list field is `repositories[]`; the board names clone
+identities throughout and never enumerates groups.
 
 ## EXIT STATUS
 
@@ -112,7 +112,7 @@ $ <binary> board --project delivery-a-1a2b3c4d --json
 
 | Error | Meaning | Exit |
 |---|---|---|
-| `board.repository-unknown` | The requested key is not in the managed set | 1 |
+| `board.repository-unknown` | The requested clone identity is not in the managed set | 1 |
 | `board.state-unavailable` | A host index, repository state location, or required source cannot be read | 2 |
 | `status.collector.<id>.unavailable` | A required collector is unavailable | 2 |
 | `fallback.invocation` | A grammar violation: `--all` with `--project`, an unknown flag, a positional, or `--project` with no value | 1 |

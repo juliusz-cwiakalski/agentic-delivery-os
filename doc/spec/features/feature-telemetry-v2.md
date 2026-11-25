@@ -31,7 +31,7 @@ The capture path is non-gating: a decode failure is counted and an append failur
 
 Every stored step carries five attribution dimensions: `ticket`, `repository`, `lane`, `agentRole`, and `model`.
 
-- `ticket` is the work-item ref the capture runs for; `repository` resolves from the checkout identity.
+- `ticket` is the work-item ref the capture runs for; `repository` resolves from the clone identity.
 - `lane` and `agentRole` come from the command-audit claimed identity for the session: the delivered production composition joins the same substrates the ledger records, answering from a completed run's recorded claim and, failing that, from the invoking process's own claimed identity. An unreported `lane` stays unattributed and disclosed.
 - `model` comes from the decoded step frame.
 - `runId` and `sessionId` join the delivered session-economics identity; `treeRoot` records the checkout. The sink's run identity is the invoking command's audit run id, so every stored step record joins the command-audit ledger by that value; a composition that carries no invocation run id records the declared `run-unavailable` marker instead of inventing one.

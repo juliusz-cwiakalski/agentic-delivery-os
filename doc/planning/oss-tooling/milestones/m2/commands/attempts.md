@@ -49,14 +49,14 @@ creates or repairs the dispatch repository binding marker.
 The read is read-only with respect to evidence: zero attempt, divergence,
 handover, or authority appends and zero fence acquisitions. It opens a store, so
 it inherits the host-index maintenance write (zero when unchanged) and the
-create-once project checkout identity marker that any store-opening invocation
+create-once clone identity marker that any store-opening invocation
 performs.
 
 When `--ref` is omitted the active reference resolves from
 `.ai/local/pm-context.yaml` (`active_change.workItemRef`). When that context is
 absent, unparsable, or carries no active change, the command refuses at exit
 `1` with a bounded summary naming the context file and the `--ref` remedy. When
-the checkout identity cannot be resolved, it refuses at exit `1` naming the
+the clone identity cannot be resolved, it refuses at exit `1` naming the
 checkout; an invocation outside any checkout never reports the host-scoped
 `unbound` store as a repository's history.
 

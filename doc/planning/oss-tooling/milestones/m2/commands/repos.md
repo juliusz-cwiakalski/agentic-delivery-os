@@ -18,13 +18,13 @@ Delivered (M2-S18)
 ## DESCRIPTION
 
 Read-only host enumeration. Each managed checkout is identified by its
-checkout identity (the git common dir marker), and its state lives under a
-per-repository root, so two checkouts of different repositories never share
+clone identity (the git common dir marker), and its state lives under a
+per-clone root, so two checkouts of different repositories never share
 phase state, queue entries, or lane leases - even when both use the same ref.
 
-`repos list` reports one row per checkout: the repo key, the checkout root,
-the state location, the daemon reachability, the handover state, whether a flip
-is reversible, and the handover gate block evaluated at read time. No manual
+`repos list` reports one row per checkout: the clone identity, the checkout
+root, the state location, the daemon reachability, the handover state, whether a
+flip is reversible, and the handover gate block evaluated at read time. No manual
 registry is required; the host index is discovered from the checkouts.
 
 This is the flat record set contract, delivered by M2-S18. The rename rule
@@ -48,8 +48,9 @@ and [../contracts.md](../contracts.md) for `repos.v1`.
 
 ## OUTPUT
 
-Text: a deterministic table with one row per checkout and the columns `key`,
-`root`, `state`, `daemon`, `handover`, sorted by repo key. The five columns are
+Text: a deterministic table with one row per checkout and the columns `clone`,
+`root`, `state`, `daemon`, `handover`, sorted by the clone identity. The five
+columns are
 unchanged: the gate detail is a JSON read, and the human per-condition view is
 the summary text.
 
@@ -58,7 +59,7 @@ Envelope `data` carries:
 | Key | Contract |
 |---|---|
 | `repos[]` | One entry per managed checkout |
-| `repos[].repoKey` | Stable repo key derived from the checkout identity |
+| `repos[].repoKey` | The clone identity, delivered under this field name |
 | `repos[].root` | Absolute checkout root |
 | `repos[].stateLocation` | Per-repository state location |
 | `repos[].daemonReachable` | Daemon reachability, plus a degradation reason when false |
@@ -109,16 +110,18 @@ as a row and is never a failure.
 
 The repository vocabulary is permanent: the `project-identity.json` marker,
 the `<host root>/projects/<key>` container, the host index's `projects[]` and
-`projectKey` fields, and the `--project-root` flag each denote a repository checkout
-and keep that meaning unless a code change renames them.
+`projectKey` fields, and the `--project-root` flag keep their delivered names -
+the marker's and the index's key fields denote the clone identity - until a
+code change renames them.
 
 ## STATE
 
-The per-repository state location is `<host root>/projects/<key>`, where the
-key conforms to `PROJECT_KEY_PATTERN`
+The per-clone state location is `<host root>/projects/<key>`, where the key is
+the clone identity conforming to the clone-identity pattern, delivered as
+`PROJECT_KEY_PATTERN`
 (`^[a-z0-9][a-z0-9-]*-[0-9a-f]{8}$`), for example
 `<host root>/projects/delivery-a-1a2b3c4d`. A bare repository basename is not
-a valid key.
+a valid clone identity.
 
 ## EXIT STATUS
 
@@ -132,7 +135,7 @@ a valid key.
 
 ```
 $ <binary> repos list
-KEY                        ROOT                STATE                                  DAEMON       HANDOVER
+CLONE                       ROOT                STATE                                  DAEMON       HANDOVER
 delivery-a-1a2b3c4d        /work/delivery-a    <host root>/projects/delivery-a-1a2b3c4d reachable    engine
 delivery-b-5e6f7a8b        /work/delivery-b    <host root>/projects/delivery-b-5e6f7a8b unreachable  shell
 ```

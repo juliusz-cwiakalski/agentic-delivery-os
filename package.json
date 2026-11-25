@@ -17,7 +17,7 @@
     "check:forbidden-literals": "bun run scripts/checks/forbidden-literals.ts",
     "check:namespace-tree": "bun run scripts/checks/namespace-tree.ts",
     "check:privacy-literals": "bun run scripts/checks/privacy-literals.ts",
-    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/allowlist-tripwire.ts && pnpm check:memory && pnpm check:forbidden-literals && pnpm check:namespace-tree && bun run scripts/checks/prompt-conformance.ts && bun run scripts/checks/help-guide-coverage.ts && bun run scripts/checks/exports-parity.ts",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/allowlist-tripwire.ts && pnpm check:memory && pnpm check:forbidden-literals && bun run scripts/checks/new-code-naming.ts && pnpm check:namespace-tree && bun run scripts/checks/prompt-conformance.ts && bun run scripts/checks/help-guide-coverage.ts && bun run scripts/checks/exports-parity.ts",
     "prepare": "husky",
     "build": "pnpm -r build",
     "pretypecheck": "pnpm build",

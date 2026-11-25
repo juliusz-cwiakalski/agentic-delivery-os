@@ -150,7 +150,7 @@ describe("TC-GRPREN-001 repos list returns repos.v1 with exact renamed fields", 
       expect(first.exitCode, first.stderr).toBe(0);
       expect(first.stdout).toBe(second.stdout);
       const lines = first.stdout.trimEnd().split("\n");
-      expect(lines[0]).toBe("KEY  ROOT  STATE  DAEMON  HANDOVER");
+      expect(lines[0]).toBe("CLONE  ROOT  STATE  DAEMON  HANDOVER");
       const rows = lines.slice(1);
       expect(rows).toHaveLength(2);
       const keys = rows.map((row) => row.split(/\s{2,}/)[0] ?? "");
@@ -286,7 +286,7 @@ describe("TC-ENGINE-020 the row carries the two additive fields in the declared 
       // The text table keeps exactly five columns.
       const text = await readyHarness.run(["repos", "list"]);
       const lines = text.stdout.trimEnd().split("\n");
-      expect(lines[0]).toBe("KEY  ROOT  STATE  DAEMON  HANDOVER");
+      expect(lines[0]).toBe("CLONE  ROOT  STATE  DAEMON  HANDOVER");
     } finally {
       for (const harness of harnesses) harness.dispose();
       removeDirectory(base);

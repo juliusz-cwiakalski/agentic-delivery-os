@@ -16,7 +16,7 @@ const SEPARATOR = "  ";
 
 const HEADER = ["KEY", "ROOT", "STATE", "DAEMON", "HANDOVER"] as const;
 
-const GROUP_HEADER = ["GROUP", "MEMBER", "TRACKER", "STATE", "HEALTH", "DAEMON"] as const;
+const GROUP_HEADER = ["PRODUCT", "REPOSITORY", "TRACKER", "STATE", "HEALTH", "DAEMON"] as const;
 
 /** The daemon cell: the reason token when unreachable, never a bare negative. */
 export const daemonCell = (value: DaemonReachability): string =>
@@ -48,9 +48,11 @@ export const renderProjectsText = (data: ProjectsListData): string => {
 };
 
 /**
- * Render the deterministic group table (GH-309 F-4): one row per declared
- * member, member order preserved exactly as configured, `group` repeated on
- * every row. No clock, locale, width, or map-iteration order participates.
+ * Render the deterministic group table (GH-309 F-4; the owner amendment
+ * 7138707234 names the headers PRODUCT and REPOSITORY): one row per declared
+ * member, member order preserved exactly as configured, the product's own
+ * key repeated on every row. No clock, locale, width, or
+ * map-iteration order participates.
  */
 export const renderProjectGroupsText = (data: ProjectGroupsListData): string => {
   const rows: string[] = [];

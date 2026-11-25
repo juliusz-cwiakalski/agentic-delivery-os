@@ -20,7 +20,7 @@ repositories, health, and state.
 
 ## DESCRIPTION
 
-Read-only group view. A project is a named group of repositories that belong
+Read-only group view. A product is a named group of repositories that belong
 together, and its membership is declared in configuration rather than inferred
 from a directory. `projects list` renders every configured group with its
 member repositories, their health, and their state, under the
@@ -60,7 +60,7 @@ the project-scoped aggregation clause; all three are in
 ## OUTPUT
 
 Text: a group block per group with one member line per repository and the
-columns `group`, `member`, `tracker`, `state`, `health`, `daemon`.
+columns `product`, `repository`, `tracker`, `state`, `health`, `daemon`.
 
 Envelope `data.groups[]` carries exactly one entry per configured group, and
 each entry carries a `groupKey`. Each entry holds:
@@ -71,7 +71,7 @@ each entry carries a `groupKey`. Each entry holds:
 | `data.groups[].name` | Display name of the group |
 | `data.groups[].workspaceRoot` | Optional workspace root used for discovery, absent when none is configured |
 | `data.groups[].members[]` | One entry per declared member repository |
-| `data.groups[].members[].repoKey` | Repo key of that member |
+| `data.groups[].members[].repoKey` | The clone identity of that member, delivered under this field name |
 | `data.groups[].members[].root` | Absolute root of that member |
 | `data.groups[].members[].trackerKind` | Tracker kind declared for that member |
 | `data.groups[].members[].state` | Delivery state of that member |
@@ -103,7 +103,7 @@ invoking scope cannot be read.
 
 ```
 $ <binary> projects list
-GROUP       MEMBER                    TRACKER  STATE   HEALTH    DAEMON
+PRODUCT      REPOSITORY                TRACKER  STATE   HEALTH    DAEMON
 platform    delivery-a-1a2b3c4d       github   engine  healthy   reachable
 platform    delivery-b-5e6f7a8b       github   engine  degraded  unreachable
 ```
@@ -130,13 +130,14 @@ change, or prune an index entry, a phase document, a queue record, or any
 other store content.
 
 Outside the projects family itself, only queue and status are group-scoped.
-`board --project` stays a repository key and is never group-scoped, and this
+`board --project` stays a clone identity and is never group-scoped, and this
 page makes no group-scoped board claim.
 
 The repository vocabulary is permanent: the `project-identity.json` marker,
 the `<host root>/projects/<key>` container, the host index's `projects[]` and
-`projectKey` fields, and the `--project-root` flag each denote a repository checkout
-and keep that meaning unless a code change renames them.
+`projectKey` fields, and the `--project-root` flag keep their delivered names -
+the marker's and the index's key fields denote the clone identity - until a
+code change renames them.
 
 `projects list --flat` is only the deprecation alias defined by the rename
 rule: it returns the delivered flat payload and is not restated here.

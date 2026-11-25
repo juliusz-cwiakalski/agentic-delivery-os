@@ -3,12 +3,12 @@ ados_distribution: internal
 id: TOOLING-UBIQUITOUS-LANGUAGE
 status: Draft
 created: 2026-11-02
-last_updated: 2026-11-14
+last_updated: 2026-11-24
 owners: [engineering]
 area: domain
 document_classification: working-analysis
 links:
-  related_changes: [GH-200, GH-231, GH-225, GH-233, GH-232, GH-234, GH-240, GH-309]
+  related_changes: [GH-200, GH-231, GH-225, GH-233, GH-232, GH-234, GH-240, GH-309, GH-406]
 summary: "Thin tooling vocabulary relationship map and disambiguation draft for Gate 4."
 ---
 
@@ -45,6 +45,55 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
 | Memory and change capsule | The change folder is the episode capsule: append-only events plus candidates. Closeout is the consolidation ceremony that records promotion decisions, home-writes canonical lessons/tacit records, and records sanctioned handoffs; the curator owns cross-folder maintenance, and one repository invariant enforces the record schema, coverage, budgets, and privacy over the committed tree. | [Memory records and lint](../spec/features/feature-memory-lint.md), [change capsule](../spec/features/feature-capsule.md), [closeout](../spec/features/feature-closeout.md), [`.ai/memory/README.md`](../../.ai/memory/README.md) |
 | Harness execution and surfaces | A host runs sessions; a surface exposes capabilities. Typed cross-harness adapter parity is delivered at the port boundary; the dispatch engine is the first production consumer of the session port. | [Harness adapters](../spec/features/feature-harness-adapters.md), [dispatch engine](../spec/features/feature-dispatch-engine.md) |
 
+## The delivery vocabulary
+
+The owner's delivery vocabulary (GH-406) is the one language for the delivery
+units. Lifetimes are declared with the terms: durable means the tracker, the
+configuration, or the repository layer owns it; per clone and per worker mean
+the identity or checkout layer owns it.
+
+| Term | Meaning | Lifetime |
+|---|---|---|
+| Product | One or more repositories that together form a single deliverable, planned and delivered as one; declared in its manifest. | Durable |
+| Repository | One git repository belonging to exactly one product; the long form "product repository" is used only for contrast in prose and never as a header. | Durable |
+| Main checkout | The clone's primary working tree (the directory that holds `.git`); it stays on the base branch, whatever that branch is called. | Durable per worker |
+| Worktree | A linked git worktree of a main checkout, created for one work item; the word never includes the main checkout. | Temporary |
+| Lane | One work item's delivery in one repository: the queue lane keyed `<ref>@<cloneKey>`, resumable across dispatch attempts through the `dispatch.lane` record; an attempt is never a lane. | Temporary |
+| Work item | A ticket. | Durable in the tracker |
+| Clone identity | The identity minted once per clone into the git-directory marker, shared by the main checkout and every linked worktree of that clone. | Per clone |
+| Product key | The product's own key: `groupKey` in the local `groups.v1` layer, `product.key` in the portable manifest (GH-401); the contract names keep the *declared* qualifier while the legacy names exist. | Durable |
+
+The owner's vocabulary amendment (comment 7138707234) fixes the table's nouns:
+the delivery unit is the *product*, its member is the *repository*, and the
+product's own key is the *product key*. The noun *project* is retired from the
+model's own vocabulary: where the tracker's own word is meant, the
+documentation writes "Jira project", and existing names containing "project"
+(`repoKey`, `projectKey`, the `projects` command family, `--project-root`, the
+`<host root>/projects/` container, the `--flat` alias) are named legacy
+exceptions, not vocabulary. Two prose rules hold across this repository's
+documentation: where it says "the product" to mean the tool itself, it says
+"the tool"; and public examples are neutral only (`acme`, `example.com` — no
+real company, nothing private).
+
+The distinct *repository key* (`host/owner/name`) is a different contention
+domain and keeps its glossary meaning. The delivered names that denote the
+clone identity (`repoKey`, `projectKey`, the marker field, the host-index key)
+keep their identifiers until the mechanical rename (GH-408); the vocabulary
+names the concepts, not yet the identifiers.
+
+The vocabulary is standing enforcement, not prose convention. The conformance
+suite (`tests/structure/vocabulary-conformance.test.ts`) sweeps the CLI help
+summaries, the `projects list` and `repos list` text headers, the guides,
+tools-documentation, and overview trees, and every command reference page under
+`doc/planning/oss-tooling/milestones/*/commands/**`; four named exceptions stay
+frozen until the mechanical rename (GH-408): the `projects.*` error-code
+family, the `<host root>/projects/` container, `--project-root`, and the
+`--flat` alias. The new-code naming check (`scripts/checks/new-code-naming.ts`,
+a stage of the aggregate check) holds that a source file absent at the check's
+committed base may not contain the bare token `projectKey` unless a committed,
+reason-bearing baseline entry covers it; new code names the two concepts
+`cloneKey` and `declaredProductKey`.
+
 ## Disambiguation at boundaries
 
 - **Primitive / engine / command / surface:** a primitive is a stable composable
@@ -59,15 +108,18 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
   adapter boundary; resume/steer and liveness gaps are declared per adapter, and
   the dispatch engine selects the configured harness and drives sessions through
   the port. See the harness concept above.
-- **Repository / project group / workspace:** a repository is one checkout and
-  the delivery unit; a project group is a configured set of repositories whose
-  membership is declared in `<configDirectoryName>/projects.yaml`; a workspace is
-  an optional discovery root and is never required. A group owns no store, and a
-  scan locates declared members only. The flat record set enumerates checkouts
-  (`repos list`); the group surface enumerates groups (`projects list`); the
-  identifier `project key` keeps its repository meaning. See [Repositories and
-  the Host Overview](../spec/features/feature-projects.md) and [Project
-  Groups](../spec/features/feature-project-groups.md).
+- **Product / repository / workspace:** the product is the declared unit of
+  work and its key is the product key (`groupKey` in the local configuration
+  layer, whose membership is declared in `<configDirectoryName>/projects.yaml`);
+  a repository is a git repository included in the product through a member
+  declaration; a workspace is an optional discovery root and is never required.
+  A product owns no store, and a scan locates declared members only. The flat
+  record set enumerates checkouts by clone identity (`repos list`); the group
+  surface enumerates products (`projects list`); the clone identity names the
+  per-clone marker, never the product. See the
+  [delivery vocabulary](#the-delivery-vocabulary) above,
+  [Repositories and the Host Overview](../spec/features/feature-projects.md),
+  and [Project Groups](../spec/features/feature-project-groups.md).
 - **Model profile / profile class:** a profile is a named agent-to-model mapping;
   a class groups profiles by task difficulty. Class working names are not profiles
   or newly frozen names. Model policy is planned. Current provider v1 evaluates

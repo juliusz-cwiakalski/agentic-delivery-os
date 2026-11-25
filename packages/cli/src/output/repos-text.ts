@@ -1,8 +1,9 @@
 /**
  * The `repos list` human table (GH-309 F-7, AC-F7-2, NFR-3).
  *
- * Pure and byte-deterministic: the columns are `key`, `root`, `state`,
- * `daemon`, `handover` in that order, rows are sorted by repo key, and an
+ * Pure and byte-deterministic: the columns are `clone`, `root`, `state`,
+ * `daemon`, `handover` in that order, rows are sorted by the clone identity,
+ * and an
  * unreachable daemon renders its declared reason token rather than a bare
  * negative. The cells are the delivered flat table's cells with the key's
  * contract name moved from `projectKey` to `repoKey`; no clock, locale, width,
@@ -13,7 +14,7 @@ import { daemonCell } from "./projects-text.js";
 
 const SEPARATOR = "  ";
 
-const HEADER = ["KEY", "ROOT", "STATE", "DAEMON", "HANDOVER"] as const;
+const HEADER = ["CLONE", "ROOT", "STATE", "DAEMON", "HANDOVER"] as const;
 
 /** Whether a payload is the `repos.v1` flat listing (GH-309 F-7, DM-3). */
 export const isReposListData = (data: unknown): data is ReposListData =>

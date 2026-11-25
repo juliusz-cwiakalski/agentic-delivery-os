@@ -1,0 +1,326 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-406
+branch: feat/GH-406/delivery-vocabulary-declared-project-key
+status: PASS
+summary: >
+  Re-review after the owner's vocabulary amendment (comment 7138707234), which
+  reopened the lifecycle and directed a full re-run of review plus gates: PASS.
+  Amendment completeness is verified end to end on the amended tree. Code —
+  DECLARED_PRODUCT_KEY_PATTERN (exact grammar literal kept),
+  isDeclaredProductKey, declaredProductKey-named rule prose, and the supporting
+  DECLARED_PRODUCT_KEY_REGEX/REJECTIONS and DeclaredProductKeyRejection/Verdict
+  types all exist; a repo-wide grep finds ZERO occurrences of any pre-amendment
+  name (DECLARED_PROJECT_KEY_PATTERN, declaredProjectKeyVerdict, the old type
+  names) anywhere in packages/, tests/, scripts/, .changeset/ or any doc outside
+  the change folder, whose only surviving "declared-project-key" strings are the
+  §G-kept identifier file names; the renamed exports are asserted BY NAME in the
+  structure suite and re-exported through contracts/index.ts beside the
+  delivered PROJECT_KEY_PATTERN. Headers — projects-text.ts GROUP_HEADER reads
+  PRODUCT/REPOSITORY (line 19), repos-text.ts reads CLONE (line 17), and
+  projects-list-contract.test.ts:766-768 pins the exact header row while
+  asserting GROUP/MEMBER/PROJECT/PROJECT REPOSITORY all absent (not.toContain
+  loop); the m2 projects.md page's column sentence and header example are
+  re-pinned. Docs — the amended eight-term table with lifetimes is in both the
+  ubiquitous-language overview and the glossary, the retirement clause with the
+  "Jira project" rule is recorded in both, both prose rules ("the tool",
+  neutral acme/example.com examples) are recorded in both, the glossary gained
+  the Project-(retired) row and retains the distinct Repository-key concept,
+  the pre-amendment rows are asserted gone by delivery-vocabulary.test.ts
+  (test at line 112), and doc-syncer's reconciliation (f137715f) re-worded the
+  feature-spec contract-truth paragraphs to DECLARED_PRODUCT_KEY_PATTERN /
+  isDeclaredProductKey / declaredProductKey. ODR-0006 — the WHOLE record is
+  re-worded: front matter (summary, business_impact, customer_impact, service,
+  governance.driver citing the full body < brief 7122871259 < amendment
+  7138707234 chain) and body (amended table, retirement clause, mapping row
+  Product = a group with NAMED EXCEPTIONS, product-key section naming
+  DECLARED_PRODUCT_KEY_PATTERN and isDeclaredProductKey, the unchanged reading
+  of ODR-0003 DC-4 and ODR-0004 C-1..C-5); status Proposed and decision_date
+  null hold; the 00-index.md row keeps its mechanism with only the title text
+  re-worded. Fences all re-verified on the amended diff: zero rename (the only
+  removed lines in packages/** across the full branch are header literals,
+  option-description wording, doc comments and the two remediation sentences;
+  the projects.ts:91 GROUP/MEMBER work-projection columns are an untouched
+  pre-existing surface — zero diff on that file); --flat alias suite + golden
+  fixture zero-diff vs base 22b15d31 and passing live; groups.v1 gains no
+  grammar (the contracts are imported nowhere under app/ or adapters/);
+  phase-9 hardening preserved verbatim through the phase-6 re-execution
+  (buildNormalized + lineAt map + wrapped-violation/mislabel/exception arms
+  intact — phase 6's 37-line diff touches sense rules only); the four named
+  exceptions stay exact; the naming check is untouched at 2505/0/4 live with
+  the bare legacy projectKey token; no license headers added. Review-time
+  evidence re-verified: under doc/decisions/ the AMENDED range (e3cf6d34^..HEAD)
+  touches exactly 00-index.md and ODR-0006 — no earlier record; every amendment
+  suite diff is wording-only or a sanctioned rename/inventory row (28cacb44 is
+  strictly wording-only with identical values; 71f22a5b's contract-suite change
+  is pure insertion). Disclosed deviations all check out: the scanner's
+  live-header pin refresh rode phase 3's commit under the conditional-sweep
+  rule with the trip recorded in pm-notes (the rule's own mechanism), the
+  TC-DAEMON-121 load flake was disclosed twice and its file is untouched
+  (zero diff vs base), and the two biome format nits were fixed by the
+  formatter's own print. pm-notes amendment trail is coherent: amendment
+  decision entry, per-phase completion entries for 2-8 with commit hashes and
+  existing gate logs (211834/214213, 225502, 233829, 000006, 002216, 004343,
+  010511), the DoR iter-3/4 records, and the carried iter-2 dispositions. One
+  new non-blocking low finding: doc/00-index.md:40 still carries the
+  pre-amendment prose noun "declared-project-key" in its feature-projects row —
+  written by the iter-1-accepted A-extended ride 444093ac, outside the
+  conformance scope, the amendment's enumerated pages, and doc-syncer's
+  doc/spec/** mandate, so no declared clause is violated; a one-line wording
+  update suffices. F-5 (dead originalLineAt helper, now at line 82) and F-6
+  (exemption-window delta) are still present and carried forward unchanged;
+  a new wrap-tolerant sweep beyond the declared scope bounds RSK-5's residual
+  at 6 pre-existing hits in 4 milestone-root planning docs untouched by the
+  branch.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 2
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+amendment_compliance:
+  renamed_exports_present: PASS
+  old_names_absent: PASS
+  headers_product_repository_clone: PASS
+  legacy_headers_asserted_absent: PASS
+  vocabulary_docs_amended: PASS
+  retirement_and_jira_project_rule: PASS
+  prose_rules_recorded: PASS
+  neutral_examples: PASS
+  odr_whole_record_reword: PASS
+  odr_status_proposed_decision_date_null: PASS
+  earlier_records_untouched: PASS
+  changeset_reworded: PASS
+  feature_spec_reconciliation: PASS
+  evidence: >
+    Grep sweeps: zero old-name hits in tracked source; DECLARED_PRODUCT_KEY_PATTERN
+    at packages/core/src/contracts/projects.ts:70 with the exact string pin;
+    isDeclaredProductKey at :99 asserted by name in
+    tests/structure/declared-project-key.test.ts:22-24,84-130;
+    contracts/index.ts re-export diff is a 1:1 rename (10 lines);
+    v1-contract-inventory rows renamed 10-for-10, none dropped;
+    content-inventory 3 rows renamed. GROUP_HEADER at projects-text.ts:19;
+    CLONE at repos-text.ts:17; absent-header loop at
+    projects-list-contract.test.ts:767-769; scanner live pins at
+    vocabulary-conformance.test.ts:235-241,276-277. UL table + retirement +
+    both prose rules at doc/overview/ubiquitous-language.md:52-79; glossary
+    rows at doc/overview/glossary.md:24-32 (Project retired) and :479
+    (Repository key retained). ODR-0006 front matter at
+    doc/decisions/ODR-0006-*.md:1-40 (status Proposed, decision_date null,
+    governance.driver full chain), body :92-190 (mapping row named exceptions,
+    product key section, ODR-0003/0004 reading), index row at
+    doc/decisions/00-index.md:30. Changeset body names the renamed export,
+    predicate, headers and retirement.
+findings:
+  - id: F-5
+    severity: low
+    confidence: high
+    category: code-quality
+    location: tests/structure/vocabulary-conformance.test.ts:82
+    message: >
+      Carried forward from iter-2, still present (the phase-6 re-execution
+      shifted it from line 77 to line 82 without touching it): the helper
+      originalLineAt is dead code — defined, never called; the R3 sense
+      exemption uses originalLines[lineNumber - 1] instead. It remains the
+      repository's only new lint warning and the same latent trap (raw-offset
+      slicing of original text once offsets live in normalized space). The
+      iter-2 reviewer disposition (follow-up deletion, not remediated in this
+      change) stands; the amendment directed no touch here and none landed.
+    suggestion: >
+      Unchanged: delete lines 82-86 in a follow-up commit (may ride GH-408 or
+      the next touch of this suite). No behavior change; suite stays green and
+      repo lint warnings return to baseline.
+    suppressed: false
+  - id: F-6
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/structure/vocabulary-conformance.test.ts:110
+    message: >
+      Carried forward from iter-2, still present: the config-key
+      sense-exemption window (fixed slice on normalized text) admits the
+      wrapped/multi-space form, a deliberate-toward-R3 delta that leaves the
+      real tree unchanged and widens no named exception. The phase-6 re-word
+      did not alter the window mechanics (only the DECLARED_TERM sense and the
+      Jira-project exemption changed). Recorded so the delta stays known.
+    suggestion: >
+      No action required. At the next touch of this suite, optionally add one
+      synthetic arm pinning the multi-space config-key form's semantics.
+    suppressed: false
+  - id: F-7
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/00-index.md:40
+    message: >
+      The documentation landing page's feature-projects row still reads "the
+      additive declared-project-key and clone-key contracts" — the
+      pre-amendment prose noun, written by the A-extended ride 444093ac
+      (iter-1-accepted scope drift) and never refreshed by the amendment: the
+      page is outside the conformance scope (the scanner walks doc/guides,
+      doc/tools, doc/overview and the milestones/*/commands trees, not
+      doc/00-index.md), outside the amendment's enumerated "the tool" pages,
+      and outside doc-syncer's declared doc/spec/** reconciliation scope
+      (f137715f fixed the two feature specs and one glossary row). No declared
+      clause, AC, or fence is therefore violated — every mandated surface is
+      clean (independent sweep: zero "declared project key"/
+      "declared-project-key" prose hits across guides, tools, overview and all
+      commands pages) — but this row is now the only tracked-doc surface
+      outside the change folder still naming the contract by the retired term.
+    suggestion: >
+      One-line wording update in a follow-up commit or at GH-408's remainder
+      sweep: "the additive declared-product-key and clone-key contracts" (or
+      "product-key"), mirroring the f137715f reconciliation wording. No test,
+      pin, or fence touches this line, so the fix is safe anywhere.
+    suppressed: false
+  - id: F-8
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/planning/oss-tooling/milestones/m4/install-model.md
+    message: >
+      Advisory inventory of RSK-5's residual, bounded by this review's
+      wrap-tolerant sweep (tr newline-to-space) run beyond the declared scope:
+      six pre-existing banned-phrase hits in four milestone-ROOT planning docs
+      that the declared conformance scope (milestones/*/commands/** only) does
+      not walk and the amendment did not enumerate — m4/install-model.md
+      (1x "primary checkout"), m2/contracts.md (1x "checkout identity"),
+      m2/backlog.md (2x), m2/architecture.md (3x). All four files have ZERO
+      diff vs base 22b15d31: the residue is inherited, not introduced, and the
+      committed-tree clean claim (TC-DPKCONF-001) stays truthful for the
+      declared scope. Recorded so GH-408's "~45-line remainder" sweep has a
+      concrete starting inventory.
+    suggestion: >
+      No action in this change. Fold the four milestone-root planning docs
+      into GH-408's mechanical-rename sweep inventory alongside the "~45-line"
+      remainder already routed there.
+    suppressed: false
+review_time_evidence:
+  tc_dpkodr_001_step5_amended_range:
+    verdict: PASS
+    evidence: >
+      git diff --name-status e3cf6d34^..HEAD -- doc/decisions/ shows exactly
+      M doc/decisions/00-index.md and M
+      doc/decisions/ODR-0006-delivery-vocabulary-declared-project-key.md; the
+      whole-branch diff shows the same two files (00-index M, ODR-0006 A) and
+      nothing else — no earlier record edited, 00-register.md untouched, across
+      both the pre-amendment and amended deliveries.
+  tc_dpkpin_001_step3_amended_diff:
+    verdict: PASS
+    evidence: >
+      Per amendment commit: e3cf6d34 — export names renamed in the asserted
+      inventories (10-for-10, zero drops) and the structure suite's asserted
+      names follow the rename (sanctioned by the wording-only fence's
+      rename-consequence clause); 71f22a5b — projects-list-contract.test.ts is
+      a pure insertion (TC-DPKUI-001 arm, verified: only one removed re-worded
+      comment line), projects-groups-list.test.ts header block 4 lines
+      wording-only, scanner live-header literals 8 lines wording-only;
+      135f7909/d0c5c225/9b9918eb — suite diffs extend or re-word assertions
+      for the amended rows/senses; 28cacb44 — strictly wording-only
+      (declaredKey->productKey local identifier with identical
+      "platform-alpha" value, identical assertions and command invocations,
+      one formatter import reshuffle); f0a4c94d — changeset + pm-notes only.
+      No payload assertion, field name, or expectation value changed anywhere.
+  tc_dpkpin_002:
+    verdict: PASS
+    evidence: >
+      Full-branch removed-line inspection of packages/** re-run on the amended
+      tree: exactly five removed non-comment lines exist, all wording — the
+      two remediation sentences ("primary checkout" x2), the --project option
+      description, and the two header literals (GROUP/MEMBER row, KEY row).
+      Zero renamed command names, payload fields, envelope keys, or persisted
+      fields; packages/cli/src/commands/projects.ts (the pre-existing
+      work-projection GROUP/MEMBER columns) has zero diff on the branch.
+  disclosed_deviations:
+    verdict: VERIFIED
+    evidence: >
+      (1) Scanner live-header pin refresh rode phase 3's commit 71f22a5b —
+      inside the conditional-sweep rule's own mechanism (undeclared suite trips
+      on the header change; wording-only re-pin lands in the same phase; trip
+      and verdict recorded in the pm-notes phase-3 entry). (2) TC-DAEMON-121
+      foreground-stop-latency load flake disclosed in the phase-2 and phase-3
+      pm-notes entries (251.004ms and 252.06ms first samples vs the 250ms
+      budget, green standalone twice and in the green attempts);
+      tests/behaviour/daemon-foreground-stop-latency.test.ts has zero diff vs
+      base — never weakened. (3) Two biome format nits (GROUP_HEADER
+      single-line in phase 3, multi-line print in phase 4) fixed by the
+      formatter's own print and disclosed in the corresponding entries.
+plan_audit:
+  open_phases: none
+  evidence_missing: none
+  scope_deviations: >
+    None. The re-execution accounting fence holds: phases 2-8 landed as new
+    amendment commits (e3cf6d34, 71f22a5b, 135f7909, d0c5c225, 9b9918eb,
+    28cacb44, f0a4c94d) each touching exactly its declared paths (pm-notes
+    rides are the plan's own convention), with the lifecycle boundary commit
+    faad9b04 (phase records) and the doc-syncer reconciliation f137715f
+    landing the phase-8 declaration's residual scope. Phases 1 and 9 carry
+    their delivered commits (0b49e404, 5e57e3af) with zero amendment-era
+    changes to their surfaces (naming check file untouched since delivery;
+    the phase-9 normalization arms byte-intact through phase 6's vocabulary
+    edit). state-scope.ts was declared in phase 2's scope as the accessor
+    consumer and verifiably needed no amendment touch (pm-notes: cloneKey
+    accessor unchanged). The scanner pin refresh is the conditional-sweep
+    rule's declared mechanism, not a deviation.
+fences:
+  zero_rename: PASS
+  flat_alias_byte_identity: PASS
+  additive_contracts_same_value_alias: PASS
+  groups_v1_no_grammar: PASS
+  conformance_exceptions_and_synthetic_negatives: PASS
+  naming_check_surface_and_baseline: PASS
+  decision_record_fence: PASS
+  vocabulary_ac_coverage: PASS
+fence_notes: >
+  All eight fences re-verified on the amended tree (not inherited from
+  iter-2): the re-executed phases 2-8 re-touched every fence surface, so each
+  verdict above rests on fresh diff inspection plus a live run. Fence 5 keeps
+  its post-iter-2 PASS — the wrapped arms, the lineAt map, and the
+  original-line sense exemptions survived phase 6 verbatim while the sense
+  rules now speak the amendment (DECLARED_TERM reads "declared product key"
+  at line 42; Jira-project tracker exemption with synthetic arm at :383). The
+  amendment-directed exception (this change's own new-code export names) was
+  exercised exactly once, on exactly the declared identifiers, with their
+  inventory rows.
+independent_verification:
+  structure_ladder: >
+    bun test vocabulary-conformance + delivery-vocabulary +
+    declared-project-key — 53 pass / 0 fail (197 expect calls)
+  behaviour_ladder: >
+    bun test projects-list-contract + repos-list-contract +
+    projects-flat-alias — 25 pass / 0 fail; board-help + projects-help +
+    repos-help + board-selection-project + projects-groups-list +
+    install-admission — 27 pass / 0 fail; new-code-naming mutation suite —
+    14 pass / 0 fail
+  fixtures_determinism: >
+    clone-identity-fixtures run twice by this reviewer — 3 pass / 0 fail both
+    runs (NFR-7 spot check re-performed on the amended tree)
+  structure_and_inventory: >
+    bun test doc-conformance + naming-boundary + content-inventory +
+    port-contract-inventory — 102 pass / 0 fail
+  naming_check: >
+    bun run scripts/checks/new-code-naming.ts — OK, 2505 governed file(s)
+    scanned, 0 violations, 4 baseline entry(ies), exit 0
+  wrap_tolerant_sweeps: >
+    In declared scope: zero "primary checkout"/"checkout identity" hits beyond
+    the untouched out-of-scope files (F-8) and zero "declared project key"
+    prose hits. The m4 install page's F-1 fix survives source-wrapped
+    (lines 80-83) and is matched by the wrap-tolerant scanner live.
+  old_name_sweep: >
+    grep across packages/, tests/, scripts/, .changeset/, doc/ (excluding the
+    change folder and §G identifier file names): zero occurrences of
+    DECLARED_PROJECT_KEY_PATTERN, declaredProjectKeyVerdict,
+    DeclaredProjectKeyRejection, DeclaredProjectKeyVerdict,
+    DECLARED_PROJECT_KEY_REGEX, DECLARED_PROJECT_KEY_REJECTIONS,
+    isDeclaredProjectKey; dist/ (untracked) already carries the new names.
+  gate_logs: >
+    All amendment-phase evidence logs cited in pm-notes exist under
+    tmp/run-logs-runner/ (2026-11-24: 211834, 214213, 225502, 233829;
+    2026-11-25: 000006, 002216, 004343, 010511); the phase-8 log tail shows
+    the green chain stages (prompt-conformance clean, help-guide-coverage OK,
+    exports-parity OK).
+reviewed_at: 2026-11-25T00:35:41Z
+next_step: PROCEED

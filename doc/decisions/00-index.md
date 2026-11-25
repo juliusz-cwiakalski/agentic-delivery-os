@@ -27,6 +27,7 @@ All decision records for this repository, ordered by type and number.
 | ODR-0001 | ODR | Classify doc/templates/*.yaml register templates as redistributable | Accepted | 2026-06-25 | Juliusz Ćwiąkalski |
 | [ODR-0004](ODR-0004-flat-record-set-rename-projects-to-repos.md) | ODR | Flat Record Set Command Rename (`projects` → `repos`) — Scoped ODR-0003 Supersession | Proposed | 2026-11-14 | Juliusz Ćwiąkalski |
 | [ODR-0005](ODR-0005-closeout-milestone-synchronization.md) | ODR | Milestone Synchronization in `closeout --apply` — Attachment Verification and Exit-Review-Gated Closure | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [ODR-0006](ODR-0006-delivery-vocabulary.md) | ODR | Delivery Vocabulary — Product, Repository, Main Checkout, Worktree, Lane, Work Item, Clone Identity, Product Key | Proposed | 2026-11-24 | Juliusz Ćwiąkalski |
 | PDR-0001 | PDR | Tribal Knowledge Extraction Taxonomy | Accepted | 2026-06-27 | Juliusz Ćwiąkalski |
 | PDR-0002 | PDR | Mode-Aware Spec-Coverage Resolution for Autonomous Delivery | Proposed | 2026-07-02 | Juliusz Ćwiąkalski |
 | [PDR-0003](PDR-0003-owner-gate-sla-default-map.md) | PDR | Owner-Gate SLA Initial Default Map | Proposed | 2026-11-06 | Juliusz Ćwiąkalski |

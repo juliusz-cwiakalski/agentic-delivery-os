@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "new-code-naming.baseline.v1",
+  "baseCommit": "22b15d31bae27ce3d6b9295437936580fb9dc7e2",
+  "token": "projectKey",
+  "entries": [
+    {
+      "path": "scripts/checks/new-code-naming.ts",
+      "reason": "The check's own forbidden-token literal: the rule must spell the bare token it refuses, and the module is post-base by construction."
+    },
+    {
+      "path": "tests/checks/new-code-naming.test.ts",
+      "reason": "Mutation tests inject the forbidden token into synthetic post-base inputs to prove the rule fires and names its offender."
+    },
+    {
+      "path": "tests/structure/declared-product-key.test.ts",
+      "reason": "Pins the delivered persisted field name on the marker payload while asserting the served cloneKey equals the clone identity it carries (zero-rename fence, AC-F4-1)."
+    },
+    {
+      "path": "tests/behaviour/projects-clone-key.test.ts",
+      "reason": "TC-DPKACC-001 step 3's direct field-name assertion: pins the delivered marker and host-index persisted field names unchanged through the production path (zero-rename fence)."
+    }
+  ]
+}

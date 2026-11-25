@@ -1,7 +1,7 @@
 # `install` — the install lifecycle family
 
 Status: **delivered in GH-346** (M4-S1); the migration verb is delivered by GH-365 (M4-S2). Owner of the artifact class: the
-product binary. Owner of repository artifacts: `scripts/install.sh`.
+tool binary. Owner of repository artifacts: `scripts/install.sh`.
 
 ## Identity
 
@@ -10,7 +10,7 @@ executables for exact family parity and **owned by the primary identity only**:
 the compatibility alias advertises the family and refuses every entry point with
 one typed line (`install.identity.not-owning`, exit `1`) naming the invoked
 identity, stating that installation is owned by the primary identity, and giving
-the documented remedy — run the lifecycle through the installed product binary,
+the documented remedy — run the lifecycle through the installed tool binary,
 as this page and the local install guide document it. The alias writes nothing.
 
 `--version` answers `<binary-name> <version> (build <token>)` on one line at
@@ -78,10 +78,10 @@ to; the destination is derived from the brand install path and is **never an
 input** (an attempt is the delivered `fallback.invocation` grammar refusal).
 
 - A linked git worktree is refused with `install.target.worktree`, naming the
-  target directory and both git directories. Build and install from the primary
+  target directory and both git directories. Build and install from the main
   checkout or a prepared directory holding a released artifact; a lane worktree
-  is deleted after merge.
-- A primary checkout is recorded `verified`; a plain directory or a host without
+  is deleted after merge, so nothing is written from it.
+- A main checkout is recorded `verified`; a plain directory or a host without
   git metadata is recorded `unverified`.
 - A dirty tree is admitted; the token reports `<commit>-dirty`.
 - A run carrying no injected identity is a development run and is refused with

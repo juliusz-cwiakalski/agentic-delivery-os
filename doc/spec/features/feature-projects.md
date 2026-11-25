@@ -3,26 +3,32 @@ ados_distribution: internal
 id: SPEC-FEATURE-PROJECTS
 status: Current
 created: 2026-11-11
-last_updated: 2026-11-21
+last_updated: 2026-11-24
 owners: ["engineering"]
 service: delivery-os
-summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-repository project root), the checkout identity marker and its minted project key, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload; the board reads the host index once per `--all`/`--project` run, unions it with the invoking checkout, and never maintains it."
+summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-clone project root), the clone-identity marker and its minted key, the additive declared-product-key and clone-key contract exports beside the served `cloneKey` on the resolved project scope, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic `CLONE` table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload; the board reads the host index once per `--all`/`--project` run, unions it with the invoking checkout, and never maintains it."
 links:
-  related_changes: ["GH-288", "GH-289", "GH-309", "GH-320", "GH-297", "GH-293", "GH-365"]
-  related_decisions: ["TDR-0022", "ODR-0004", "TDR-0031"]
+  related_changes: ["GH-288", "GH-289", "GH-309", "GH-320", "GH-297", "GH-293", "GH-365", "GH-406"]
+  related_decisions: ["TDR-0022", "ODR-0004", "TDR-0031", "ODR-0006"]
 ---
 
 # Feature: Repositories and the Host Overview
 
 ## Overview
 
-Delivery state is scoped per repository. Two layers resolve it: the **host root**
+Delivery state is scoped per clone. Two layers resolve it: the **host root**
 — an absolute `<PREFIX>_STATE_DIR` environment override when set, otherwise the
 injected home plus `brand.stateDirectoryName` — and a **project state root**
-`<host root>/projects/<project key>` minted once from the checkout's identity
-marker. The host root keeps only host-wide documents: the derived host index
-`host-index.json` and the host-wide owner-hold marker; a pre-migration store left
-at the host root is detected there, never read from it.
+`<host root>/projects/<clone identity>` minted once from the checkout's
+clone-identity marker. The host root keeps only host-wide documents: the derived
+host index `host-index.json` and the host-wide owner-hold marker; a
+pre-migration store left at the host root is detected there, never read from it.
+
+The delivery vocabulary — product, repository, main checkout, worktree,
+lane, work item, clone identity, product key — is defined once in the
+[ubiquitous language](../../overview/ubiquitous-language.md#the-delivery-vocabulary)
+delivery vocabulary table; this page states the delivered behaviour and keeps
+the delivered field names (`repoKey`, `projectKey`) until the mechanical rename.
 
 `repos list [--json]` is the flat record set of managed checkouts on the host:
 it reads the host index, derives every state location from its key, and projects
@@ -43,7 +49,7 @@ the flat record set is recorded in
 | Layer | Path | Holds |
 |---|---|---|
 | Host root | an absolute `<PREFIX>_STATE_DIR` override, else the current default root when it exists, else the prior-identity default root when it exists, else the current default root (first use) | `host-index.json`, `owner-hold`, `projects/`, `unbound/` |
-| Project root | `<host root>/projects/<project key>` | The delivered store layout under workspace `default`: ledger, header, index, fence, `documents.<ws>/`, `quarantine.<ws>/`, the audit chain key, the retro sidecar and its lock, and the retro chain key |
+| Project root | `<host root>/projects/<clone identity>` | The delivered store layout under workspace `default`: ledger, header, index, fence, `documents.<ws>/`, `quarantine.<ws>/`, the audit chain key, the retro sidecar and its lock, and the retro chain key |
 
 The state-scope policy lives once, in the app tier
 (`packages/core/src/app/state-scope.ts`), is exported from the existing
@@ -86,24 +92,53 @@ root that same rule selects changes. The operator-facing description is the
 [Local Install and Prior-Identity Transition](../../../guides/local-install.md)
 guide.
 
-## Checkout identity and the project key
+## Clone identity and the delivered names
 
-The **checkout identity marker** is one JSON document inside the checkout's git
+The **clone identity marker** is one JSON document inside the checkout's git
 **common** directory (`project-identity.json`, schema
-`delivery.projects.identity.v1`). It records the project key, a random 128-bit
-project identifier, and the mint-time basename. It is created once through an
-atomic synced sibling plus link at mode `0600`, is never rewritten, is shared by
-every linked worktree of the clone, and travels with a renamed or moved
-checkout.
+`delivery.projects.identity.v1`). It records the clone identity — delivered
+under the field name `projectKey` — a random 128-bit project identifier, and
+the mint-time basename. It is created once through an atomic synced sibling
+plus link at mode `0600`, is never rewritten, is shared by every linked
+worktree of the clone, and travels with a renamed or moved checkout.
 
-The key is `<sanitised mint-time basename>-<first eight lowercase hex of the
-identifier>`: the basename is lowercased, every run outside `[a-z0-9]` collapses
-to one `-`, leading and trailing separators are stripped, the result is at most
-32 characters, a basename that sanitises to nothing falls back to `project`, and
-the literal `unbound` is refused as a basename. Because the discriminator derives
-from the once-minted identifier, two checkouts of different repositories that
-share a basename mint different keys. Because the mint-time basename travels in
-the marker, a rename or a move changes only the reported checkout root.
+The clone identity is `<sanitised mint-time basename>-<first eight lowercase
+hex of the identifier>`: the basename is lowercased, every run outside
+`[a-z0-9]` collapses to one `-`, leading and trailing separators are stripped,
+the result is at most 32 characters, a basename that sanitises to nothing falls
+back to `project`, and the literal `unbound` is refused as a basename. Because
+the discriminator derives from the once-minted identifier, two checkouts of
+different repositories that share a basename mint different clone identities.
+Because the mint-time basename travels in the marker, a rename or a move
+changes only the reported checkout root.
+
+The clone-identity pattern is exported under its vocabulary name
+`CLONE_KEY_PATTERN`; the delivered export `PROJECT_KEY_PATTERN` stays exported
+as the same-value alias, and both denote the clone identity until the
+mechanical rename (GH-408). The resolved project scope serves the clone
+identity as the read-only `cloneKey` member beside the delivered
+`projectKey` field — a served read that writes nothing: the marker field, the
+host-index field, and the `projects list --flat` alias payload keep their
+delivered names.
+
+The **declared product key** is a different contract in a disjoint namespace:
+`DECLARED_PRODUCT_KEY_PATTERN` is `^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$` (2–64
+characters, lowercase alphanumerics and hyphens, no leading or trailing
+hyphen, path-safe by construction), and its predicate
+(`isDeclaredProductKey`) additionally refuses the two reserved state
+segments `unbound` and `projects`, exact-match on the whole key —
+substring-containing keys are accepted — with every rejection naming its rule
+(`length`, `charset`, `hyphen-position`, `reserved-segment`). It names the
+product (see [Project Groups](feature-project-groups.md)), is never compared
+against the clone identity, and is enforced only where a key is used as a
+declared key — the credential, manifest, and workspace consumers own those
+enforcement points; nothing on this page enforces it. New code names the
+concept `declaredProductKey`, keeping the *declared* qualifier while the
+legacy names (`projectKey`, the `projects` family) exist; the mechanical
+rename (GH-408) may drop it. The noun *project* is retired from the model's
+own vocabulary — the delivered vocabulary table records the retirement and
+the legacy-name exceptions
+([ubiquitous language](../../overview/ubiquitous-language.md#the-delivery-vocabulary)).
 
 The identity outcome is a closed table:
 
@@ -116,7 +151,7 @@ The identity outcome is a closed table:
 | Marker write fails | The marker cannot be created | `repos.state-unavailable`, exit `2`, naming the checkout root and the failing marker path |
 
 The refusal is always about the **invoking** checkout and never names another
-project's root. The table gives the flat surface's identities: the composition's
+clone's state root. The table gives the flat surface's identities: the composition's
 scope refusal classifies the same identity and state conditions under `repos.*`
 for `repos list` and the `projects list --flat` alias, and under `projects.*` for
 every other command, including the group surface.
@@ -127,7 +162,8 @@ every other command, including the group surface.
 derived, revisioned cache: not a state record, never authoritative, rebuildable
 from checkouts. Each entry records `projectKey`, `projectIdentifier`, `root`, the
 derived `stateLocation`, and `lastWrittenAt`. The index holds at most 2 000
-entries and keeps them in project-key order; entries beyond the bound are dropped
+entries and keeps them in clone-identity order (the delivered `projectKey`
+field); entries beyond the bound are dropped
 from the document, never merged into another entry. The index is discovered from
 use, never by a filesystem crawl.
 
@@ -140,7 +176,7 @@ set, so a board run never maintains, prunes, or re-registers the index
 
 Maintenance runs at most once per store-opening invocation whose scope resolves
 inside a checkout: exactly one index read and at most one write. The fold upserts
-the current project, prunes only entries that are provably dead (the recorded
+the invoking checkout's entry, prunes only entries that are provably dead (the recorded
 root is absent, or that root's marker now resolves to a different identifier),
 leaves uncertain entries, always re-derives every state location from its key,
 and reports a disagreement as a warning that never redirects a read. Content that
@@ -165,9 +201,10 @@ and the conflicting identifier. It never adopts that state root.
   carries exactly `repoKey`, `root`, `stateLocation`, `daemonReachable`
   (`{ reachable }` or `{ reachable: false, reason }`), `handoverState`,
   `reversible`, and `handoverGate`. Entries are ordered by `repoKey`. No new
-  top-level envelope key exists. The payload's `repoKey` is the checkout's project
-  key: the host index keeps the field name `projectKey`, and the record's
-  contract name is `repoKey`.
+  top-level envelope key exists. The payload's `repoKey` is the checkout's clone
+  identity: the host index keeps the field name `projectKey`, and the record's
+  contract name is `repoKey` — both delivered names denote the clone identity
+  until the mechanical rename (GH-408).
 - **Gate block.** `reversible` is `true` exactly when the row's own repository's
   latest folded handover operation is `authoritative` (the same rule the authority
   document applies to `reversalAvailable`). `handoverGate` carries `verdict`
@@ -207,8 +244,8 @@ and the conflicting identifier. It never adopts that state root.
   derivation over an empty window — the same fold, evaluation, and status
   projection the ready rows, the summary, and the handover decision use — so a
   gate-rule change moves it exactly as it moves those surfaces.
-- **Text.** A deterministic table with the columns `key`, `root`, `state`,
-  `daemon`, `handover`, sorted by repo key. The five columns are unchanged: the
+- **Text.** A deterministic table with the columns `clone`, `root`, `state`,
+  `daemon`, `handover`, sorted by clone identity. The five columns are unchanged: the
   gate detail is a JSON read, and the human per-condition view is the summary
   text. The `daemon` cell carries the reason token when unreachable, never a bare
   negative. Two runs over unchanged state are byte-identical.
@@ -219,8 +256,8 @@ and the conflicting identifier. It never adopts that state root.
   prevents an honest answer. No other code is produced by the family.
 - **Read-only.** No maintenance, no prune, no corrupt-file replacement, no
   project-root creation, no migration, and no index or store-content write.
-  Exactly two side effects are permitted: the create-once identity marker minted
-  inside the invoking checkout's git common directory when it is absent (the same
+  Exactly two side effects are permitted: the create-once clone identity marker
+  minted inside the invoking checkout's git common directory when it is absent (the same
   write every composed command performs), and the removal of a leftover `*.tmp`
   store sibling by the store handle opened read-only to read handover evidence.
   Neither can create, change, or prune an index entry, a phase document, a queue
@@ -230,8 +267,8 @@ and the conflicting identifier. It never adopts that state root.
 The `dispatch attempts` read is also read-only with respect to delivery evidence:
 it appends no attempt, divergence, handover, or authority record and acquires no
 fence, and it inherits exactly the store-opening effects above — the host-index
-maintenance write (zero when unchanged) and the create-once project checkout
-identity marker. The dispatch repository binding marker
+maintenance write (zero when unchanged) and the create-once clone identity
+marker. The dispatch repository binding marker
 (`dispatch-identity.json` in the git common directory) is a different artefact
 and is never created, repaired, or re-persisted by a read.
 
@@ -288,8 +325,8 @@ payload and no command.
 |---|---|---|
 | First use | Project root absent, no delivered store artifact at the host root | Ordinary (exit `0`, no warning, `handoverState` `shell`) |
 | Legacy warning | Project root absent while the host root still holds a delivered store artifact | One bounded warning naming the migration guide; nothing moved, no exit change |
-| Unreadable root | Project root present but unreadable or not a directory | `repos.state-unavailable`, exit `2`, naming the project key and its state location |
-| Uncreatable marker | The identity marker cannot be created | `repos.state-unavailable`, exit `2`, naming the checkout root and the failing marker path |
+| Unreadable root | Project root present but unreadable or not a directory | `repos.state-unavailable`, exit `2`, naming the clone identity (delivered field `projectKey`) and its state location |
+| Uncreatable marker | The clone identity marker cannot be created | `repos.state-unavailable`, exit `2`, naming the checkout root and the failing marker path |
 
 The legacy predicate is closed over the delivered store artifact names and
 excludes the host index (and its corrupt siblings), the owner-hold marker, the
@@ -306,7 +343,7 @@ hold stops every project on the host.
 Migration is one-step and operator-run: move the populated store into one
 designated primary project's root, keeping every name and mode, and leave the
 owner-hold marker and the host index at the host root. Nothing is rewritten, so
-the inverse move restores the previous reads. The procedure, the primary-checkout
+the inverse move restores the previous reads. The procedure, the main-checkout
 choice, and the override caveat are documented in
 [Migrating to Per-Repository Delivery State](../../guides/migrating-to-per-repository-state.md).
 No automatic migration, migration command, or re-attribution exists.

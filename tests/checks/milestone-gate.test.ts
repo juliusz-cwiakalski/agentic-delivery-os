@@ -2,9 +2,10 @@
  * TC-GATE-001 — the aggregate gate stays offline and ordered.
  *
  * The check chain keeps its five named steps, the GH-394 allowlist tripwire,
- * three trailing scans, gains no milestone or network step, and no
- * chain-reachable module imports the GitHub adapter. The new suites ride the
- * existing `bun test` discovery only.
+ * the memory member, the three token-scan members, and the three trailing
+ * scans, gains no milestone or network step, and no chain-reachable module
+ * imports the GitHub adapter. The new suites ride the existing `bun test`
+ * discovery only.
  */
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
@@ -27,7 +28,7 @@ const modules = [
 ] as const;
 
 describe("TC-GATE-001 aggregate chain unchanged and ordered", () => {
-  test("the five named checks, the tripwire and memory members, the two scan members, and the three trailing scans stay ordered", () => {
+  test("the five named checks, the tripwire and memory members, the three scan members, and the three trailing scans stay ordered", () => {
     const check = manifest().scripts?.check ?? "";
     const parts = check.split("&&").map((part) => part.trim());
     expect(
@@ -41,7 +42,11 @@ describe("TC-GATE-001 aggregate chain unchanged and ordered", () => {
     const memoryIndex = parts.indexOf("pnpm check:memory");
     expect(memoryIndex).toBe(NAMED_CHECKS.length + 1);
     expect(parts[memoryIndex + 1]).toContain("pnpm check:forbidden-literals");
-    expect(parts[memoryIndex + 2]).toContain("pnpm check:namespace-tree");
+    // Re-pinned (GH-406 plan phase 1): the new-code naming rule joined the
+    // token-scan members between check:forbidden-literals and
+    // check:namespace-tree.
+    expect(parts[memoryIndex + 2]).toContain("scripts/checks/new-code-naming.ts");
+    expect(parts[memoryIndex + 3]).toContain("pnpm check:namespace-tree");
     for (const scan of [
       "scripts/checks/prompt-conformance.ts",
       "scripts/checks/help-guide-coverage.ts",
@@ -49,7 +54,7 @@ describe("TC-GATE-001 aggregate chain unchanged and ordered", () => {
     ]) {
       expect(parts.some((part) => part.includes(scan))).toBe(true);
     }
-    expect(parts.length).toBe(NAMED_CHECKS.length + 1 + 1 + 2 + 3);
+    expect(parts.length).toBe(NAMED_CHECKS.length + 1 + 1 + 3 + 3);
   });
 
   test("the chain contains no milestone token and no network command", () => {

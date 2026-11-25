@@ -24,10 +24,10 @@ import {
 
 const CI_PATH = ".github/workflows/ci.yml";
 const GUARD_COMMAND = "bun run scripts/checks/privacy-literals.ts";
-// Re-pinned (GH-394 review iter-2 F-7): the GH-394 allowlist tripwire is a
-// deliberate chain member between check:boundaries and check:memory.
+// Re-pinned (GH-406 plan phase 1): the new-code naming rule is a deliberate
+// chain member between check:forbidden-literals and check:namespace-tree.
 const AGGREGATE =
-  "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/allowlist-tripwire.ts && pnpm check:memory && pnpm check:forbidden-literals && pnpm check:namespace-tree && bun run scripts/checks/prompt-conformance.ts && bun run scripts/checks/help-guide-coverage.ts && bun run scripts/checks/exports-parity.ts";
+  "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/allowlist-tripwire.ts && pnpm check:memory && pnpm check:forbidden-literals && bun run scripts/checks/new-code-naming.ts && pnpm check:namespace-tree && bun run scripts/checks/prompt-conformance.ts && bun run scripts/checks/help-guide-coverage.ts && bun run scripts/checks/exports-parity.ts";
 const NEW_SUITES = [
   "tests/checks/privacy-literals.test.ts",
   "tests/checks/privacy-registry.test.ts",

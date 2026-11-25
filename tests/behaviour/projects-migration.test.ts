@@ -316,9 +316,12 @@ describe("TC-PROJ-028 the migration note is registered and distributed", () => {
     ) as { readonly registered: readonly string[]; readonly scopeClasses: readonly unknown[] };
     expect(registry.registered).toContain(STATE_MIGRATION_NOTE_PATH);
     expect(registry.scopeClasses).toHaveLength(7);
-    // The six required statements, quoted from the note.
+    // The six required statements, quoted from the note. Re-pinned
+    // (GH-406 plan phase 6): the vocabulary sweep renamed the guide's
+    // "primary project" wording to "main checkout"; the statement's intent
+    // is unchanged.
     for (const fragment of [
-      "Designate exactly **one** checkout as the primary project",
+      "Designate exactly **one** checkout as the main checkout",
       "Every other checkout starts fresh",
       "The owner-hold marker stays at the host root",
       "uses the declared `unbound`\nscope",

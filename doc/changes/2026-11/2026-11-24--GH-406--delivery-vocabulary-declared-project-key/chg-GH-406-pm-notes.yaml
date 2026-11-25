@@ -1,0 +1,1002 @@
+change_id: GH-406
+title: "M4-S39: Delivery vocabulary: product, repository, main checkout,
+  worktree, lane, clone identity; credentials bind to the product key (M4)"
+branch: feat/GH-406/delivery-vocabulary-declared-project-key
+milestone: "M4: Jaiship-native delivery"
+delivery_mode: interactive
+phases:
+  clarify_scope: { started: null, completed: 2026-11-24T10:06:27.973Z }
+  specification: { started: null, completed: 2026-11-25T01:13:02.257Z }
+  test_planning: { started: null, completed: 2026-11-25T01:16:43.388Z }
+  delivery_planning: { started: null, completed: 2026-11-25T01:20:08.444Z }
+  dor_check: { started: null, completed: 2026-11-24T20:14:24.288Z }
+  delivery: { started: null, completed: 2026-11-25T02:12:40.426Z }
+  system_spec_update: { started: null, completed: 2026-11-25T02:15:48.817Z }
+  review_fix: { started: null, completed: 2026-11-25T02:23:49.765Z }
+  quality_gates: { started: null, completed: 2026-11-25T02:44:10.393Z }
+  dod_check: { started: null, completed: 2026-11-25T02:45:08.080Z }
+  pr_creation: { started: null, completed: 2026-11-25T02:48:03.094Z }
+decisions: []
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection 2026-11-24: nothing existed for GH-406 (phase registry
+      verified-empty, no branch, no PR, no change folder, no lane record);
+      lifecycle started from scratch. Resume sync: local main-tools ==
+      origin/main-tools == HEAD at 22b15d31 (GH-394 squash merge, PR #409 merged
+      2026-11-24T06:55:55Z); change branch created from that tip. Worktree stray
+      .zed/ untracked, never staged."
+    type: info
+    date: "2026-11-24"
+  - text: "Authoritative requirement source order: ticket body, then owner comment
+      7122871259 ('Delivery brief 2026-11-24') which SUPERSEDES owner comment
+      7117829140 ('Two precisions') where they differ AND replaces the body's
+      acceptance-criteria list. Both comments owner-authored (trusted).
+      Spec/plan/tests must be authored from body + brief. Notably the brief
+      reverses the earlier rename proposal: NOTHING is renamed in this change
+      (rename is #408); comment 7117829140's rename shape is superseded."
+    type: decision
+    date: "2026-11-24"
+  - text: "Clarify-scope cross-check vs system spec: the contradictions the ticket
+      names are real and are the change's subject, all verified in current docs
+      — ubiquitous-language.md lines 62-68 state 'a repository is one checkout
+      and the delivery unit' and 'the identifier project key keeps its
+      repository meaning' (brief §A reverses both explicitly);
+      feature-projects.md §'Checkout identity and the project key' names the
+      clone identity 'the project key'; feature-project-groups.md lines 108-109
+      state group keys carry no public pattern (brief §C.3 keeps that delivered
+      contract for the local groups.v1 layer — nothing migrates). No undisclosed
+      contradiction found; no human question needed."
+    type: info
+    date: "2026-11-24"
+  - text: "Scope boundary (brief §I, §B, §C): additive only. In-change:
+      DECLARED_PROJECT_KEY_PATTERN + predicate refusing reserved segments
+      'unbound' and 'projects'; CLONE_KEY_PATTERN as the clone identity pattern
+      with PROJECT_KEY_PATTERN kept as same-value alias; cloneKey served
+      accessor on the resolved project scope; grammar enforced only where the
+      key is used as a declared key — credential audiences/bindings/store
+      scope/workspace base (#396, #397, #399) and manifest write/import (#401)
+      create their own enforcement as consumers; vocabulary table in
+      ubiquitous-language.md + glossary.md; header/help noun updates (PROJECT,
+      PROJECT REPOSITORY, CLONE); --flat alias payload and text byte-identical;
+      narrowed conformance test (§E scope) that fails on a planted violation;
+      new-code naming rule cloneKey/declaredProjectKey with committed baseline +
+      repository check; fixtures G-1..G-3; ODR-0006 Proposed. Moved out:
+      per-level progress (#404, #407), credentials guide creation (#396),
+      mechanical rename incl. repos family and --project dual meaning (#408)."
+    type: info
+    date: "2026-11-24"
+  - text: "Documentation impacts for phase 7 (system_spec_update):
+      doc/overview/ubiquitous-language.md (vocabulary table + reverse two
+      sentences), doc/overview/glossary.md (vocabulary entries; 'Repository key'
+      host/owner/name concept stays), doc/spec/features/feature-projects.md
+      (link table; stop calling the clone identity a project key; mapping of
+      locked names), doc/spec/features/feature-project-groups.md (link table;
+      declared-key mapping), reference pages
+      doc/planning/oss-tooling/milestones/m2/commands/repos.md, projects.md,
+      board.md (help text nouns), doc/guides/** and doc/tools/** sweep per
+      conformance scope §E. New: doc/decisions/ODR-0006 + decision index row
+      (ados_distribution marker rules apply; ODR records are project-specific,
+      no header)."
+    type: info
+    date: "2026-11-24"
+  - text: "ODR-0006 id is the next free decision id and is RESERVED by the brief;
+      record written in-change with status Proposed and decision_date null;
+      owner accepts/rejects at the pull request. Earlier decision records are
+      not edited; ODR-0006 states how ODR-0003 DC-4 and ODR-0004 C-2..C-5 read
+      under the new vocabulary without any rename (no amendment needed — no
+      locked command name or payload field changes)."
+    type: decision
+    date: "2026-11-24"
+  - text: "DoR iter-1 verdict NOT_READY (facets 8 PASS / 2 FAIL: spec_completeness,
+      cross_artifact_consistency); verdict artifact
+      readiness-review/readiness-iter-1.md in this folder. Two majors: (1) spec
+      silently narrowed the brief §E conformance scope — Appendix B/§16,
+      TC-DPKCONF-001/TC-DPKUI-002, and plan phases 3/6 cover only the three m2
+      command pages instead of the glob milestones/*/commands/** (42 pages: m1
+      28, m2 12, m4 2); material violation verified at base
+      (m4/commands/install.md:84 'A primary checkout is recorded verified' —
+      wording brief §D bans). (2) plan phase 1 dropped the brief's 'source file'
+      qualifier for the naming check — scan roots/extensions undeclared;
+      repo-wide scan would be Day-1 red on this change's own artifacts (they
+      contain the literal token), too-narrow scan under-governs
+      cli/tests/scripts. Minor: test plan §2 stale 'plan — pending'
+      self-reference. Nit: plan phase 2 pre-declares a content-inventory entry
+      for state-scope.ts whose export set need not change. No owner input
+      required — conformance-to-brief corrections only."
+    type: info
+    date: "2026-11-24"
+  - text: "Retro (DoR iter-1): the spec conflated brief §F (pin surfaces — three m2
+      pages named as suites/pages to protect) with §E (conformance scope — the
+      full commands glob). Improvement: when a brief names one list as pins and
+      another as scope, keep them distinct and verify glob-level scope claims by
+      counting target files (42 vs 3 was catchable in clarify_scope). Second
+      miss: plan paraphrased the brief's naming rule and dropped the 'source
+      file' qualifier — quote brief rule sentences verbatim into fences instead
+      of paraphrasing. Neither was a process-gate failure: the DoR gate caught
+      both, as designed."
+    type: retro
+    date: "2026-11-24"
+  - text: "Remediation state after DoR iter-1: reopening specification (finding 1),
+      test_planning (finding 1 propagation to TC-DPKCONF-001/TC-DPKUI-002 scope
+      + finding 3 stale self-reference), delivery_planning (finding 1
+      propagation to phase 6 sweep folders + finding 2 scan-surface declaration
+      in phase 1 + finding 4 nit). Re-delegation strictly sequential spec → test
+      plan → plan, then dor_check re-run (iteration 2). phase reopen lands no
+      commit; the reopen transitions ride the next phase completes."
+    type: info
+    date: "2026-11-24"
+  - text: "DoR iter-2 verdict READY (facets 10 PASS / 0 FAIL, 0 blocking, 2
+      non-blocking informational nits: m1 sense-dependent prose inside the
+      declared sweep — handled by the scanner's sense rules; AC-F7-1 shorthand
+      wording — no action required for the gate). All six remediations verified
+      landed as described; surface definition identical in spec F-6/Appendix B,
+      test plan §1.1/TC-DPKCONF-001, plan fence/phase 6; fresh plan validate
+      verdict=valid. Verdict artifact readiness-review/readiness-iter-2.md.
+      Delivery may begin."
+    type: decision
+    date: "2026-11-24"
+  - text: "Plan phase 1 complete (commit 0b49e404): the new-code naming rule landed
+      as scripts/checks/new-code-naming.ts with the committed reason-bearing
+      baseline (2 entries: the check's own forbidden-token literal, the mutation
+      suite's injected token), gate-chain registration in package.json between
+      check:forbidden-literals and check:namespace-tree, and wording-only
+      chain-literal re-pins in license-ci-binding (PINNED_CHECK), ci-checks, and
+      privacy-ci-wiring (AGGREGATE), plus the milestone-gate check-script
+      enumeration. Evidence: TMPDIR=$PWD/tmp/tmpdir pnpm check green at the
+      boundary - 13/13 stages, bun test 12794 pass / 4 skip / 0 fail; OK
+      new-code-naming: 2500 governed file(s) scanned, 0 violations, 2 baseline
+      entry(ies); gate log
+      tmp/run-logs-runner/2026-11-24/115614-pnpm-check-aggregate-gate.log."
+    type: info
+    date: "2026-11-24"
+  - text: "Plan phase 2 complete (commit 0a780df4): additive core contracts landed -
+      DECLARED_PROJECT_KEY_PATTERN (exact string pin, as const per the delivered
+      contracts idiom), the predicate refusing reserved segments unbound and
+      projects exact-match with the closed four-reason vocabulary,
+      CLONE_KEY_PATTERN as the same-value alias of the untouched
+      PROJECT_KEY_PATTERN declaration (TC-GRPBOUND-002 literal intact), and the
+      served cloneKey field on the resolved project scope constructed in
+      state-scope.ts (no new export there). Conditional-sweep disclosures:
+      tests/fixtures/ports/v1-contract-inventory.json gained the 6 additive
+      export entries (port-contract-inventory suite tripped on the new exports;
+      additive entries only, none removed) and the DECLARED_PROJECT_KEY_PATTERN
+      declaration aligned to the delivered contracts string-constant idiom
+      (branding-seam string-constant rule); baseline entry added for
+      tests/structure/declared-project-key.test.ts (pins the delivered marker
+      field name; naming-rule fence). Evidence: TMPDIR=$PWD/tmp/tmpdir pnpm
+      check green at the boundary - 13/13 stages, bun test 12805 pass / 4 skip /
+      0 fail; gate log
+      tmp/run-logs-runner/2026-11-24/130123-pnpm-check-quality-gate.log."
+    type: info
+    date: "2026-11-24"
+  - text: "Plan phase 3 boundary finding (ESCALATION, trigger-2 shape): the phase-3
+      gate (run
+      tmp/run-logs-runner/2026-11-24/133513-quality-gate-pnpm-check.log) is
+      green except ONE suite - tests/checks/privacy-release.test.ts
+      TC-RELEASE-001 (12804 pass / 4 skip / 1 fail; stages 5-13 short-circuited
+      by the && chain). The suite asserts a BRANCH-level release property: with
+      no changeset added on the branch vs origin/main-tools, the publishable
+      diff must be empty. Phases 2 (core) and 3 (cli) committed publishable
+      changes; the five-package minor changeset is plan phase 8's only artifact.
+      The suite cannot be greened wording-only (its expectation is the release
+      property itself) and weakening it is forbidden. The suite turns green at
+      the phase-8 boundary when the changeset lands. The phase-gate fence's
+      green-at-every-boundary letter and the phase-8 changeset sequencing are
+      mutually incompatible under TC-RELEASE-001; surfaced to the caller for the
+      boundary-discipline decision. No red commit was made; phase-3 work sits
+      uncommitted and green on every declared suite (59 pass across the nine
+      declared/conditional suites; flat-alias byte-identity 0-delta verified)."
+    type: info
+    date: "2026-11-24"
+  - text: "Plan phase 3 complete (commit b9354594): list headers GROUP/MEMBER to
+      PROJECT/PROJECT REPOSITORY (flat-alias HEADER untouched byte for byte),
+      repos header KEY to CLONE, board --project help says clone identity, the
+      three m2 reference pages carry the noun corrections (clone identity for
+      checkout identity/repository key prose; header examples updated), and the
+      delivered PROJECT_KEY_PATTERN reference on the repos page stays.
+      Conditional sweep: tests/behaviour/projects-groups-list.test.ts header pin
+      refreshed wording-only (GROUP/MEMBER to PROJECT/PROJECT REPOSITORY;
+      payload assertions untouched) - the trip and wording-only verdict recorded
+      here per the conditional-sweep rule. Boundary evidence: gate run
+      tmp/run-logs-runner/2026-11-24/133513-quality-gate-pnpm-check.log - stages
+      1-3 green, bun test 12804 pass / 4 skip / 1 known-deferred fail
+      (TC-RELEASE-001, see escalation note above; its changeset precondition is
+      plan phase 8's artifact), stages 5-13 verified green standalone (exit 0;
+      OK new-code-naming 2501/0/3). Flat-alias suite: zero diff, byte-identity
+      0-delta both modes."
+    type: info
+    date: "2026-11-24"
+  - text: "Plan phase 4 complete (commit bc6f64cc): the eight-term delivery
+      vocabulary table landed in doc/overview/ubiquitous-language.md (new 'The
+      delivery vocabulary' section with lifetimes; the two reversed sentences
+      corrected - the repository/project-group disambiguation entry now speaks
+      the table's nouns) and doc/overview/glossary.md (eight Delivery vocabulary
+      rows with lifetimes; the watchdog Lane row aligned; Repository key concept
+      untouched; the stale aggregate-chain enumeration refreshed to include the
+      new-code naming rule). Both feature specs link the table;
+      feature-projects.md's checkout-identity section is retitled 'Clone
+      identity and the delivered names' with clone-identity wording and the
+      delivered field names kept; feature-project-groups.md states the
+      declared-key mapping and drops the repository-is-one-checkout claim; group
+      keys carry no public pattern stays verbatim. New suite
+      tests/structure/delivery-vocabulary.test.ts (TC-DPKVOC-001/002: presence
+      plus lifetime in both docs, forbidden-claim substrings absent, links
+      present, Repository key retained). Boundary evidence: gate run
+      tmp/run-logs-runner/2026-11-24/141211-quality-gate-pnpm-check.log - stages
+      1-3 green, bun test 12819 pass / 4 skip / 1 known-deferred fail
+      (TC-RELEASE-001 only; no other failure), stage 9 green standalone (OK
+      new-code-naming 2502/0/3), stages 5-8 and 10-13 verified green standalone
+      (all OK, exit 0)."
+    type: info
+    date: "2026-11-24"
+  - text: "Plan phase 5 complete (commit 4ab411fd): ODR-0006 landed as
+      doc/decisions/ODR-0006-delivery-vocabulary-declared-project-key.md with
+      status Proposed and decision_date null (no ados_distribution header;
+      project-specific record), the decision-index row added, and
+      TC-DPKODR-001's structural arms extended into
+      tests/structure/delivery-vocabulary.test.ts (record exists; front matter
+      Proposed + null date; index row; body sections for the vocabulary, the
+      locked-name mapping, the grammar, and the reading of ODR-0003 DC-4 and
+      ODR-0004 C-2..C-5; frozen exceptions and GH-408 named). Only the three
+      declared paths changed under doc/decisions/. Boundary evidence: the
+      phase-5 gate run short-circuited at a formatting nit in the extended suite
+      (fixed immediately; the runner's follow-up test stage then ran the full
+      bun suite on the identical tree: 12824 pass / 4 skip / 1 known-deferred
+      TC-RELEASE-001, no other failure -
+      tmp/run-logs-runner/2026-11-24/144327-bun-test-suite.log); typecheck and
+      stages 5-13 verified green standalone after the fix (all OK, exit 0; OK
+      new-code-naming 2502/0/3); biome format . clean (no fixes)."
+    type: info
+    date: "2026-11-24"
+  - text: "Plan phase 6 complete (commit bb7aa6ce): the narrowed vocabulary
+      conformance suite landed as tests/structure/vocabulary-conformance.test.ts
+      - pure detection core (primary-checkout, checkout-identity,
+      project-key-as-clone-identity with declared-term/tracker/config-key sense
+      exemptions), tree walk over guides/tools/overview plus every milestone
+      commands tree (42 pages asserted), live header assertions (PROJECT/PROJECT
+      REPOSITORY, CLONE, flat alias KEY byte-identical), help-summary sweep,
+      synthetic negative proofs in memory and under the session temp root only,
+      and the four named exceptions individually exempt with near-misses
+      flagging. The sweep landed with its last docs: migration guide (primary
+      checkout and project key mislabels to main checkout and clone identity),
+      local-install guide, the m4 install page install.md:84 wording (primary to
+      main checkout), and the m2 attempts page's two checkout-identity phrases.
+      Conditional sweep: tests/behaviour/projects-migration.test.ts
+      TC-PROJ-028's required fragment refreshed wording-only (the guide's
+      'primary project' sentence now reads 'main checkout'; intent unchanged) -
+      the trip and wording-only verdict recorded here. Boundary evidence: gate
+      run tmp/run-logs-runner/2026-11-24/161022-pnpm-check-quality-gate.log -
+      stages 1-3 green, bun test 12838 pass / 4 skip / 1 known-deferred
+      TC-RELEASE-001 (only failure; verified no other), stages 5-8 and 10-13
+      green standalone (all OK, exit 0; OK new-code-naming 2503/0/3)."
+    type: info
+    date: "2026-11-24"
+  - text: "Plan phase 7 complete (commit 732a16ea): the behaviour proof landed -
+      tests/behaviour/projects-clone-key.test.ts (TC-DPKACC-001 behaviour half:
+      the production path serves cloneKey matching the marker and the host-index
+      entry; the direct field-name assertion pins the delivered
+      marker/host-index field names; resolving twice is stable and writes
+      nothing) and tests/behaviour/clone-identity-fixtures.test.ts (G-1 worktree
+      shares the main checkout's identity stable across reads; G-2 two clones
+      resolve the same declared key with different identities and state roots,
+      disjoint namespaces asserted; G-3 out-of-grammar group key Platform loads
+      unchanged exit 0 with byte-identical configuration and the grammar-valid
+      twin loads identically - no-public-pattern preserved). One
+      production-behaviour discovery recorded for the narrative: repos list is
+      read-only and registers nothing - registration rides a state-opening
+      command (status), used in the suite. Baseline extension in the same
+      commit: tests/behaviour/projects-clone-key.test.ts (direct field-name
+      assertion; naming-rule fence). NFR-7 spot check: the fixture suite ran
+      twice, 3/3 pass both runs. Boundary evidence: gate run
+      tmp/run-logs-runner/2026-11-24/164358-pnpm-check-quality-gate.log - stages
+      1-3 green, bun test 12844 pass / 4 skip / 1 known-deferred TC-RELEASE-001
+      (only failure), stages 5-13 green standalone (all OK, exit 0; OK
+      new-code-naming 2505/0/4)."
+    type: info
+    date: "2026-11-24"
+  - text: "Plan phase 8 complete (commit 24dfdd07): the release changeset
+      .changeset/gh-406-delivery-vocabulary-declared-project-key-minor.md landed
+      declaring the five fixed-group packages (core, adapters, cli, mcp,
+      opencode) at minor; the commit contains the changeset plus the pm-notes
+      evidence rides (the disclosed pattern every phase commit used; the
+      declared feature-spec entries are DECLARATION ONLY for the lifecycle
+      system_spec_update phase - no coder task edited them here). The changeset
+      cleared TC-RELEASE-001: the phase-8 boundary gate ran the FULL 13-stage
+      chain green for the first time - TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0,
+      bun test 12845 pass / 4 skip / 0 fail, all stages 5-13 executed in-chain
+      (boundaries, tripwire, memory, forbidden-literals, new-code-naming
+      2505/0/4, namespace-tree, prompt-conformance 5 clean, help-guide coverage,
+      exports-parity 5 publishables); gate log
+      tmp/run-logs-runner/2026-11-24/171247-pnpm-check-gh406-gate.log. All eight
+      plan phases are complete and independently evidenced."
+    type: decision
+    date: "2026-11-24"
+  - text: "system_spec_update iter-1 (doc-syncer): 11 files reconciled —
+      feature-projects.md and feature-project-groups.md (clone-identity
+      vocabulary, served cloneKey, declared-key contract + verdict, CLONE /
+      PROJECT / PROJECT REPOSITORY columns, board --project wording), sweep
+      corrections across feature-board/dispatch-engine/state-layer/mcp-surface/
+      telemetry-v2/install-lifecycle, enforcement current-truth home (UL
+      standing-enforcement paragraph, glossary rows for the two standing
+      checks), 00-index.md wording. Coverage verdict: no missing feature specs.
+      ONE RESIDUAL GAP: doc/spec/features/feature-result-contract.md:310 still
+      says 'primary checkout'; the doc fix breaks the GH-346 doc-conformance
+      required literal pinned at tests/checks/doc-conformance.test.ts:737 —
+      doc-syncer reverted its edit to keep the tree green (write-root boundary).
+      Remediation routed to @coder: re-pin the literal to '...from the main
+      checkout' + the one-word doc edit, then doc-syncer re-verifies before the
+      phase completes. Observation deliberately not taken:
+      repository-key/repo-key field-value prose in board/plan-schema/supervise
+      specs routes to GH-408 per spec RSK-5."
+    type: info
+    date: "2026-11-24"
+  - text: "PM-DECIDED (to unblock, owner sees the diff at PR review): Option A
+      three-artifact remediation for the residual gap. First coder attempt (doc
+      row + doc-conformance pin only) STOPPED correctly before commit: the
+      error-table-sync invariant (scripts/checks/error-table-sync.ts) enforces
+      doc row hint == code remediationHint byte-equal, so
+      packages/core/src/contracts/error-table.ts install.target.worktree
+      remediationHint carries the same 'primary checkout' wording — a third
+      lockstep artifact the two-line mandate missed; full gate failed 34 tests
+      across 5 files (all the same finding); tree reverted to green. Decision
+      drivers: (1) gap unresolvable doc-only — current-truth accuracy requires
+      the code string to move (the invariant's designed motion); (2)
+      wording-only rendered-remediation-text change — no
+      command/payload/persisted identifier touched, zero-rename fence holds; (3)
+      brief §D directive covers delivered user-facing text and an error hint is
+      user-facing; (4) RSK-5 opportunistic-correction clause; (5) GH-408 owns
+      identifier renames, not hint prose. Remediation scope is bounded and
+      invariant-driven: error-table.ts occurrences + the doc rows
+      error-table-sync names + the doc-conformance pins; hits outside that class
+      stop-and-report. The commit lands outside plan scope — advisory scopeDrift
+      accepted and recorded here (GH-381 precedent)."
+    type: decision
+    date: "2026-11-24"
+  - text: "PM-DECIDED extension: A-EXTENDED (four artifacts, one commit). The
+      coder's stop-fence fired correctly: the SAME failure code
+      (install.target.worktree) renders remediation text twice — the error-table
+      remediationHint (machine envelope) AND the CLI refusal body at
+      packages/cli/src/commands/install.ts:145 ('Install from the primary
+      checkout or a prepared directory...'), pinned independently by
+      tests/behaviour/install-admission.test.ts:100. The conformance scanner
+      does not scan packages source strings, so a three-artifact fix would leave
+      a same-code two-rendering divergence ('main checkout' in the envelope,
+      'primary checkout' in the refusal) invisible to every gate — strictly
+      worse than the status quo. Drivers: same code path, same text class as the
+      recorded Option A decision; wording-only; zero-rename intact; RSK-5
+      opportunistic correction on the same opportunity. Bounded set:
+      install.ts:145 + its install-admission.test.ts:100 pin join the three
+      planned artifacts; grep reported no further rendered-text hits outside
+      this set (install-admission:105 and install-replace:455 are test titles
+      only — left as-is)."
+    type: decision
+    date: "2026-11-24"
+  - text: "A-extended remediation (PM decision recorded): the primary-checkout
+      vocabulary residue cleared across ALL FOUR renderings of the
+      install.target.worktree remediation in one commit - error-table.ts:1934
+      remediationHint, feature-result-contract.md:310 doc row (error-table-sync
+      byte-equality holds, OK exit 0), doc-conformance.test.ts:737 required
+      literal re-pinned wording-only, install.ts:145 CLI refusal body,
+      install-admission.test.ts:100 summary pin re-pinned wording-only. Why:
+      brief section D bans 'primary checkout' wording in user-facing text; the
+      error-table-sync invariant binds doc row to code hint, and the same code
+      renders a second refusal string in the CLI - moving all four prevents a
+      same-code divergence no gate would catch. First STOP resolved by PM: the
+      install.ts hit was outside the original two-line mandate; PM chose
+      A-extended over deferring. Left as-is per PM:
+      install-admission.test.ts:105 and install-replace.test.ts:455 test titles,
+      vocabulary-conformance scanner rule constants and synthetic proofs, m4
+      install-model.md:45 (non-command page, outside the commands glob), and
+      doc/decisions/TDR-0046 (decision records, NG-5, never amended). Advisory
+      scopeDrift accepted: the files sit outside plan scope; RSK-5
+      opportunistic-correction clause. Evidence: narrow ladder 443 pass / 0 fail
+      across the ten named suites (after one stale-dist rebuild - resolution
+      tests read built contracts); full gate TMPDIR=$PWD/tmp/tmpdir pnpm check
+      green end-to-end, 13/13 in-chain, exit 0, bun test 12845 pass / 4 skip / 0
+      fail, OK new-code-naming 2505/0/4; gate log
+      tmp/run-logs-runner/2026-11-24/182704-pnpm-check-gh406-quality-gate.log."
+    type: decision
+    date: "2026-11-24"
+  - text: "system_spec_update completed (772ea023) after doc-syncer re-verification:
+      zero unresolved documentation gaps; gap item closed via the A-extended
+      commit; repository-key prose observation confirmed as recorded GH-408
+      deferral, not an open gap."
+    type: info
+    date: "2026-11-24"
+  - text: "Review iter-1 verdict FAIL (code-review/review-iter-1.yaml): 4 findings
+      (0 critical / 0 high / 1 medium / 1 low / 2 info). Blocking F-1 (medium):
+      m4/commands/install.md:81-83 still renders 'Build and install from the
+      primary checkout...' SPLIT ACROSS A MARKDOWN LINE WRAP — invisible to the
+      vocabulary-conformance scanner's single-line matching (reviewer verified
+      via newline-normalized sweep of the whole declared scope: exactly this one
+      residual); line 84 was corrected but the wrapped sentence above it was
+      not. All three deferred review-time evidence rows PASS (TC-DPKODR-001 step
+      5, TC-DPKPIN-001 step 3, TC-DPKPIN-002 — zero-rename verified over the
+      full diff, flat-alias suite zero-diff). All eight fences otherwise hold;
+      A-extended commit reviewed clean on its merits. Non-blocking: F-2 (low)
+      naming check fail-open arm on ls-files failure (practically unreachable —
+      DEFERRED with this reason, not remediated in phase 9); F-3/F-4
+      informational (pre-existing m2 repos.md simplified pattern; the deliberate
+      42-page tripwire pin). Remediation phase 9 ADDED to the plan by the
+      reviewer; plan still validates. PM accepted the companion hardening:
+      whitespace-normalize the scanner detection core + synthetic
+      wrapped-violation arm in TC-DPKCONF-002 — fixing only the instance leaves
+      the blind spot that let it through (NFR-4 intent). Retro: a line-based
+      text scanner's negative proofs must include wrapped and multi-line
+      violations, or its clean-tree pass is only as truthful as the matcher's
+      normalization — the wrapped phrasing sat directly beside a corrected line
+      and both author sweep and gate missed it."
+    type: retro
+    date: "2026-11-24"
+  - text: "Plan phase 9 complete (review remediation, review iter-1 F-1): the
+      wrapped primary-checkout residual on the m4 install page cleared - the
+      bullet now reads the canonical delivered sentence verbatim ('Build and
+      install from the main checkout or a prepared directory holding a released
+      artifact; a lane worktree is deleted after merge, so nothing is written
+      from it.' - the error-table.ts:1934 / feature-result-contract.md:310 form;
+      the page's other required literals preserved). Scanner hardening companion
+      (PM-accepted): the vocabulary-conformance detection core now matches
+      whitespace-normalized text with an original-line map (wrapped
+      'primary⏎checkout' found, findings keep real line numbers; R3 sense
+      exemptions read the original line at the match's start so normalization
+      never widens the four named exceptions). New synthetic arms:
+      wrapped-violation (primary-checkout across a markdown wrap, named with
+      line) + wrapped project-key mislabel arm + wrapped-exception arm
+      (container/error-code/flag forms stay exempt under normalization). All
+      existing arms byte-intact; the 42-page pin and live header assertions
+      unchanged. Sweep check: the real-tree pass is clean under normalization -
+      NO additional wrapped residuals surfaced anywhere in the declared scope
+      (the onboarding tracker-config exemption held; the m4 install page was the
+      only wrapped residual). Boundary evidence: narrow ladder
+      vocabulary-conformance 17 pass / 0 fail (incl. the new wrapped arms),
+      delivery-vocabulary + doc-conformance 81 pass / 0 fail; full gate
+      TMPDIR=$PWD/tmp/tmpdir pnpm check green end-to-end, 13/13 in-chain, exit
+      0, bun test 12848 pass / 4 skip / 0 fail, OK new-code-naming 2505/0/4;
+      gate log
+      tmp/run-logs-runner/2026-11-24/191658-pnpm-check-quality-gate-gh406.log."
+    type: decision
+    date: "2026-11-24"
+  - text: "Quality gates (lifecycle phase 9) ALL PASS on the committed tree at HEAD
+      f079c863. Gate 1 — full battery: TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0
+      (~17m35s), 13/13 stages in-chain (lint info-only, format, typecheck 6
+      packages, test, boundaries 524 modules clean, allowlist-tripwire,
+      memory-lint 0 errors, forbidden-literals 7/7 scopes 0 violations,
+      new-code-naming 2505/0/4, namespace-tree, prompt-conformance 5 clean,
+      help-guide-coverage, exports-parity 5 publishables); bun test 12848 pass /
+      4 skip / 0 fail across 1526 files (118027 expect calls). Gate 2 —
+      branch-range commit-message gate: VERDICT PASS — 22 commits in range
+      (merge-base 22b15d31 = origin/main-tools, head f079c863), 0 offending
+      commits, 0 rules hit, mode none; resolved commitlint binary
+      node_modules/.bin/commitlint, origin repository-local. Logs:
+      tmp/run-logs-runner/2026-11-24/194857-gh406-pnpm-check.log and
+      200656-gh406-lint-commit-range.log. Incidental git-fixture output inside
+      stage 4 (branch-switch + fixture SHA lines) confirmed as test behavior,
+      not failures; working tree remained on the change branch."
+    type: info
+    date: "2026-11-24"
+  - text: "DoD check PASS (lifecycle phase 10). Ledger: 9/9 prior lifecycle phases
+      completed with verified timestamps; plan completion: all 9 declared plan
+      phases carry pm-notes entries with plan-phase id, commit hash, and test
+      result (1 0b49e404, 2 0a780df4, 3 b9354594, 4 bc6f64cc, 5 4ab411fd, 6
+      bb7aa6ce, 7 732a16ea, 8 24dfdd07, 9 5e57e3af); all 12 spec ACs satisfied
+      per the delivery AC evidence map, re-verified by review iter-2 PASS (F-1
+      closed instance+class, standing evidence reaffirmed, three review-time
+      rows PASS); current-truth documentation complete — doc-syncer zero
+      unresolved gaps re-verified post-phase-9 (111/111 doc battery); gates
+      green (full battery 13/13 exit 0, range lint PASS 22 commits 0 offending).
+      Non-blocking residuals dispositioned, none block DoD: F-5 dead-helper lint
+      warning (reviewer follow-up disposition), F-6 exemption-window delta (pin
+      at next suite touch), GH-408 routed deferrals (install-model.md, TDR-0046,
+      repository-key prose), TC-RELEASE-001 boundary deferral resolved
+      full-green at plan phase 8."
+    type: decision
+    date: "2026-11-24"
+  - text: "Review iter-2 verdict PASS (code-review/review-iter-2.yaml; no
+      remediation phase appended). F-1 closed at both levels and independently
+      verified: reviewer's own newline-normalized sweep over all 83 in-scope
+      files returned zero primary-checkout and zero checkout-identity hits with
+      a positive control; scanner class-level closure verified (normalization
+      cannot widen the four named exceptions — the direction only narrows/flags
+      more; R3 offset fix correct via lineAt lookup, not raw-offset slicing).
+      Phase-9 blast radius exactly 50548c42 + 5e57e3af; standing evidence
+      reaffirmed (flat-alias suite + fixture zero-diff vs base; no
+      payload/persisted/pin/rename surface touched post-iter-1). Non-blocking
+      residuals recorded with reviewer disposition: F-5 (low) dead
+      originalLineAt helper at vocabulary-conformance.test.ts:77 — the repo's
+      only new lint warning (delta exactly this), fix is a follow-up deletion,
+      NOT remediated in this change per the PASS verdict; F-6 (info)
+      normalization widens the config-key sense-exemption window to the wrapped
+      form (moves toward R3 intent; real tree unaffected; pin the delta at the
+      next suite touch)."
+    type: decision
+    date: "2026-11-24"
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/411 — head
+      feat/GH-406/delivery-vocabulary-declared-project-key pushed first (24
+      commits, GH-386 lesson honored), base main-tools, range 22b15d31..73697b10
+      (59 files, +4873/−173). pr-manager re-verified range lint on the final
+      24-commit range: PASS, 0 offending. Ticket synced via gh CLI: labels
+      change/planning/review, assigned juliusz-cwiakalski, one ready-for-review
+      comment (issuecomment-7141736830). PR body carries evidence (DoR iter-1→2,
+      review iter-1 F-1 → iter-2 PASS, gates 13/13 + 12848/0/4, fixtures 3/3
+      double-run, range lint PASS), owner decisions (ODR-0006 Proposed, accept
+      or reject at review), dispositioned residuals (F-5, F-6, GH-408
+      deferrals), and the A-extended scopeDrift acceptance. Merge authority
+      stays with the owner; lifecycle stops at the open PR."
+    type: info
+    date: "2026-11-24"
+  - text: "OWNER VOCABULARY AMENDMENT (comment 7138707234, 2026-11-24T17:06Z,
+      directed correction in this same branch + change folder): the top-level
+      noun is PRODUCT, not project. Supersession order is now body < brief
+      (7122871259) < amendment (7138707234); together they supersede the body.
+      Amendment content: vocabulary rows — product (one or more repositories
+      that together form a single deliverable, planned and delivered as one;
+      durable) and repository (one git repository belonging to exactly one
+      product; 'product repository' long form only for contrast; durable);
+      product key = the product's own key (groupKey in the local layer today,
+      product.key in the portable manifest #401; grammar unchanged); 'project'
+      is RETIRED from the model's own vocabulary (tracker's word = 'Jira
+      project'); mapping row B: product = a group (groupKey, schema
+      delivery.projects.groups.v1, file projects.yaml are named exceptions
+      denoting a product; rename is #408); code names C:
+      DECLARED_PRODUCT_KEY_PATTERN with isDeclaredProductKey, and
+      declaredProductKey in new code — KEEP THE QUALIFIER while legacy
+      PROJECT_KEY_PATTERN/projectKey exist (PRODUCT vs PROJECT two letters
+      apart); #408 may drop it; CLONE_KEY_PATTERN and cloneKey accessor
+      UNCHANGED; headers D: projects list keeps its command name (ODR-0003) and
+      prints PRODUCT and REPOSITORY; repos list prints CLONE; ODR-0006 E records
+      the vocabulary with these nouns AND that 'project' is retired; prose rule
+      F recorded in the vocabulary notes: where this repository's docs say 'the
+      product' meaning the tool itself, say 'the tool' — apply to pages this
+      change already touches (~45-line remainder sweep belongs to #408); public
+      examples neutral only (acme, example.com — nothing real, nothing private);
+      slugs G unchanged (branch and change folder keep their names). Everything
+      else in the brief stands (sections C-I, fixtures, acceptance criteria)
+      read with the two rows replaced. Directed execution: PR #411 must NOT
+      merge as it stands; ten phases reopened via phase reopen (all but
+      clarify_scope, whose analysis is amended by this note rather than
+      re-authored); re-run review + full quality gates; push branch INCLUDING
+      the unpushed evidence commit e6490b82; update PR #411 title and body;
+      re-record PR in pm-notes; stop at pr_creation. State at reopen: HEAD
+      e6490b82 on the change branch, exactly one unpushed commit (e6490b82), PR
+      #411 OPEN base main-tools, labels change/planning (review removed at
+      reopen)."
+    type: decision
+    date: "2026-11-24"
+  - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 2 complete (commit
+      e3cf6d34): this change's own new-code contract exports renamed to the
+      amendment's names in packages/core/src/contracts/projects.ts and the
+      contracts index - DECLARED_PRODUCT_KEY_PATTERN (value pin unchanged
+      ^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$, string pin kept), the internal regex
+      const, DECLARED_PRODUCT_KEY_REJECTIONS, the
+      DeclaredProductKeyRejection/DeclaredProductKeyVerdict types, and the
+      delivered predicate declaredProjectKeyVerdict renamed isDeclaredProductKey
+      (asserted BY NAME per amended AC-F2-1; behaviour identical: length,
+      charset, hyphen-position, reserved-segment refusals exact-match on the
+      whole key). CLONE_KEY_PATTERN and cloneKey UNTOUCHED; the NFR-2 alias
+      assertion stays the same-value pair PROJECT_KEY_PATTERN =
+      CLONE_KEY_PATTERN with NO cross-value equality to the product-key pattern;
+      the served cloneKey accessor and state-scope.ts carry no amendment touch.
+      Export-name inventory rows followed the rename additively:
+      tests/fixtures/ports/v1-contract-inventory.json (10 rows renamed, none
+      removed) and tests/structure/content-inventory.test.ts (the four GH-406
+      allowance entries). Evidence: first boundary-gate run
+      211834-pnpm-check-gh406-amend-phase2.log short-circuited at the test stage
+      on ONE load-flaky failure (TC-DAEMON-121 foreground stop latency,
+      251.004ms vs the 250ms budget - daemon timing, no causal path to the
+      contract renames; green twice standalone), documented limited retry
+      214213-pnpm-check-gh406-amend-phase2-retry.log then ran the FULL chain
+      green: exit 0, 13/13 stages, bun test 12848 pass / 4 skip / 0 fail, OK
+      new-code-naming 2505 governed file(s) scanned, 0 violations, 4 baseline
+      entry(ies). Narrow ladder before the gate: declared-project-key +
+      content-inventory + naming-boundary 36/36, port-contract-inventory 16/16,
+      pnpm typecheck clean."
+    type: info
+    date: "2026-11-24"
+  - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 3 complete (commit
+      71f22a5b): `projects list` group-table headers now PRODUCT and REPOSITORY
+      (packages/cli/src/output/projects-text.ts GROUP_HEADER; the flat-alias
+      HEADER constant in the same file untouched byte for byte - it IS the
+      --flat text surface), repos header stays CLONE, board --project help keeps
+      its delivered clone-identity wording, and the m2 projects.md reference
+      page re-pinned its column sentence, description sentence, and header
+      example to the table's nouns (repos.md and board.md already carried them;
+      zero-diff on both is acceptable). Pins refreshed in the SAME commit:
+      tests/behaviour/projects-groups-list.test.ts header block wording-only
+      (payload assertions untouched - the delivered conditional-sweep surface
+      trips again under the amendment; trip and wording-only verdict recorded
+      here per the conditional-sweep rule),
+      tests/behaviour/projects-list-contract.test.ts gained the TC-DPKUI-001 arm
+      (text table header exactly PRODUCT/REPOSITORY with
+      GROUP/MEMBER/PROJECT/PROJECT REPOSITORY asserted ABSENT, PRODUCT column
+      carries the group key, REPOSITORY column the member locator,
+      project-groups.v1 envelope + exit 0 unchanged), and
+      tests/structure/vocabulary-conformance.test.ts live-header literals
+      refreshed wording-only (PRODUCT/REPOSITORY exact + the four legacy headers
+      not.toContain; normalization and wrapped arms untouched - they are phase
+      9's delivered output, preserved). Boundary evidence: gate run
+      225502-pnpm-check-gh406-amend-phase3-retry2.log green end-to-end - exit 0,
+      13/13 stages in-chain, bun test 12849 pass / 4 skip / 0 fail, OK
+      new-code-naming 2505/0/4. Two earlier attempts disclosed: attempt 1
+      short-circuited at format:check (GROUP_HEADER single-line nit - fixed by
+      the formatter's own print); attempt 2's only failure was the load-flaky
+      TC-DAEMON-121 stop-latency first sample (252.06ms vs the 250ms budget,
+      other four samples 232-236ms; green standalone twice and in this green
+      attempt - daemon timing, no causal path to the header renames). Flat-alias
+      byte-identity verified in this phase (constraint (d)):
+      projects-flat-alias.test.ts passed on its never-regenerated pinned
+      literals, 0 delta both modes."
+    type: info
+    date: "2026-11-24"
+  - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 4 complete (commit
+      135f7909): the amended eight-term vocabulary table landed in
+      doc/overview/ubiquitous-language.md and doc/overview/glossary.md - Product
+      (one or more repositories forming a single deliverable, planned and
+      delivered as one), Repository (one git repository belonging to exactly one
+      product; the long form product repository contrast-only in prose, never a
+      header), Main checkout, Worktree, Lane (delivery in one repository, keyed
+      <ref>@<cloneKey>), Work item, Clone identity, and Product key (groupKey
+      locally, product.key in the GH-401 manifest; the contract names keep the
+      declared qualifier while the legacy names exist). The retirement clause is
+      recorded in BOTH documents (project retired from the model's own
+      vocabulary; Jira project for the tracker's word; existing names containing
+      project named legacy exceptions) and both prose rules are recorded in BOTH
+      documents (the tool rule - where the docs say the product meaning the tool
+      itself they say the tool - and neutral public examples only: acme,
+      example.com). The UL disambiguation entry is re-worded Product /
+      repository / workspace and the standing-enforcement paragraph names the
+      amendment's new-code name declaredProductKey. Both feature specs link the
+      table and their term enumerations speak the amended nouns; their residual
+      contract-truth wording (renamed export mentions, header-column sentences)
+      stays doc-syncer's lifecycle scope per the documentation-split fence. The
+      glossary retains the distinct Repository key concept (NG-7) and gained a
+      Project (retired) row carrying the clauses.
+      tests/structure/delivery-vocabulary.test.ts proves it: eight amended terms
+      with lifetimes in both documents, retirement clause + both prose rules +
+      neutral examples asserted (wrap-tolerant), pre-amendment rows asserted
+      gone, product repository never a header row, links present, Repository key
+      retained. One format nit fixed before the boundary (formatter's own
+      multi-line print). Boundary evidence: gate run
+      233829-pnpm-check-gh406-amend-phase4-retry.log green end-to-end - exit 0,
+      13/13 stages in-chain, bun test 12853 pass / 4 skip / 0 fail, OK
+      new-code-naming 2505/0/4."
+    type: info
+    date: "2026-11-24"
+  - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 5 complete (commit
+      d0c5c225): ODR-0006 re-worded as the WHOLE RECORD per the DoR iter-4
+      clause - the body AND the front matter. Front matter: summary,
+      business_impact, customer_impact and service re-worded off the
+      pre-amendment nouns (the delivered front matter printed PROJECT and
+      PROJECT REPOSITORY); governance.driver now cites the FULL supersession
+      chain ticket body < delivery brief (comment 7122871259) < VOCABULARY
+      AMENDMENT (comment 7138707234). Body: the amendment's product nouns with
+      the retirement clause (project retired from the model's own vocabulary,
+      Jira project for the tracker's word, legacy names as named exceptions),
+      the section retitled The product key with the renamed contract names
+      DECLARED_PRODUCT_KEY_PATTERN and isDeclaredProductKey, the mapping row
+      Product = a group with NAMED EXCEPTIONS (groupKey, the
+      delivery.projects.groups.v1 schema, projects.yaml - renaming them is
+      GH-408), the context recording the amendment's direction, and both prose
+      rules recorded. Status stays Proposed, decision_date stays null, no
+      ados_distribution header, no earlier record touched, 00-register.md
+      untouched; the 00-index.md row keeps its mechanism with only the TITLE
+      TEXT re-worded to the product vocabulary. TC-DPKODR-001's automated arms
+      extended (renamed terms, product-key section, retirement clause,
+      supersession-chain comments, mapping-row named exceptions,
+      DECLARED_PRODUCT_KEY_PATTERN/isDeclaredProductKey by name) - the re-worded
+      front-matter prose and row title carry NO automated assertion per the
+      coverage posture; review-time diff inspection backstops (scanner excludes
+      doc/decisions/**). Boundary evidence: gate run
+      000006-pnpm-check-gh406-amend-phase5.log green end-to-end - exit 0, 13/13
+      stages in-chain, bun test 12854 pass / 4 skip / 0 fail, OK new-code-naming
+      2505/0/4. Exactly the three declared paths changed under git status."
+    type: info
+    date: "2026-11-25"
+  - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 6 complete (commit
+      9b9918eb): the conformance scanner's sense rules now speak the amendment's
+      vocabulary while every delivered mechanic is preserved byte-intact - the
+      whitespace-normalized detection core with the original-line map (phase 9's
+      hardening, PRESERVED not reverted: the wrapped-violation, wrapped
+      project-key mislabel, and wrapped-exception arms are untouched), the
+      42-page commands glob pin, the four named exceptions individually exempt
+      single-line and wrapped with near-misses still flagging, and the
+      synthetic-only negative proofs (in-memory and session temp root; the
+      committed tree stays clean). Sense-rule updates: DECLARED_TERM now reads
+      declared product keys (the declared-term sense is product key), the
+      tracker sense gains the Jira project line exemption with a synthetic arm,
+      the declared-term arm input speaks the product nouns, and the file header
+      records that a clone identity presented as the product or as a product key
+      flags with the reserved segment projects as state-layout. The live header
+      assertions were already refreshed wording-only in phase 3
+      (PRODUCT/REPOSITORY present, GROUP/MEMBER/PROJECT/PROJECT REPOSITORY
+      absent, CLONE, flat-alias KEY byte-identical). Sweep residue landed in the
+      SAME commit - the tool prose rule applied on the pages this change already
+      touches: doc/guides/local-install.md (5 instances), doc/guides/
+      migrating-to-per-repository-state.md (1), and the m4 install page (2: the
+      tool binary, the installed tool binary); the m2 attempts page and the
+      three m2 command pages carry no the-product instances (verified,
+      zero-diff); public examples on the touched pages are already neutral
+      synthetic keys (no real company, nothing private - no edit needed); the
+      ~45-line remainder sweep across pages this change does not touch stays
+      routed to GH-408. Pre-existing F-5 dead-helper lint warning
+      (originalLineAt) is the delivered reviewer-dispositioned residual,
+      untouched. Boundary evidence: gate run 002216-pnpm-check-gh406-amend-
+      phase6.log green end-to-end - exit 0, 13/13 stages in-chain, bun test
+      12854 pass / 4 skip / 0 fail, OK new-code-naming 2505/0/4."
+    type: info
+    date: "2026-11-25"
+  - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 7 complete (commit
+      28cacb44): the behaviour-proof mechanism kept exactly as delivered and its
+      vocabulary updated to the amendment - wording-only.
+      tests/behaviour/clone-identity-fixtures.test.ts: G-2's header, describe
+      and test titles, disjoint-namespace comment, and the test-local identifier
+      now speak the product key (one repository cloned twice resolves the SAME
+      product key with different clone identities and per-clone state roots; the
+      product key is never compared against the clone identity); G-3's header
+      reads declared product-key grammar; no persisted name touched, cloneKey
+      untouched, no renamed-export imports exist in either suite (verified -
+      projects-clone-key.test.ts needed no edit; its remaining 'declared field
+      set' wording is generic, not model vocabulary). tests/fixtures/projects/
+      helpers carry no amendment surface (their 'declared' usages are generic
+      mechanism wording). NFR-7 double-run spot check: the fixture suite ran
+      twice, 3/3 pass both runs. Boundary evidence: gate run 004343-pnpm-check-
+      gh406-amend-phase7.log green end-to-end - exit 0, 13/13 stages in-chain,
+      bun test 12854 pass / 4 skip / 0 fail, OK new-code-naming 2505/0/4."
+    type: info
+    date: "2026-11-25"
+  - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 8 complete (commit
+      f0a4c94d): the release changeset body re-worded to the amendment's
+      vocabulary - .changeset/gh-406-delivery-vocabulary-declared-project-key
+      -minor.md keeps its file name (an identifier per amendment section G) and
+      its five fixed-group minor front matter (core, adapters, cli, mcp,
+      opencode; version bumps unchanged), and its body now names
+      DECLARED_PRODUCT_KEY_PATTERN with predicate isDeclaredProductKey, the
+      headers PRODUCT and REPOSITORY with CLONE, the amended eight-term table,
+      the retired project with the Jira-project rule, and the two prose rules -
+      the delivered body verifiably named the pre-amendment export
+      DECLARED_PROJECT_KEY_PATTERN and the PROJECT/PROJECT REPOSITORY headers,
+      which ceased to be true the moment phases 2 and 3 landed; this wording
+      ride keeps the release artifact truthful. The two feature-spec entries are
+      DECLARATION ONLY for the lifecycle system_spec_update phase:
+      doc/spec/features/feature-projects.md and
+      doc/spec/features/feature-project-groups.md speak
+      product/repository/product key with the mapping row product = a group with
+      named exceptions (groupKey, the delivery.projects.groups.v1 schema, the
+      projects.yaml file), their pre-amendment export-name mentions state
+      DECLARED_PRODUCT_KEY_PATTERN after reconciliation, with the grammar, the
+      CLONE_KEY_PATTERN/PROJECT_KEY_PATTERN alias, and the served cloneKey
+      recorded as current truth under the zero-rename and no-migration posture -
+      doc-syncer executes them in the lifecycle; no coder task edited them in
+      this commit. TC-RELEASE-001 stays green: the changeset exists on the
+      branch, verified 7/7 standalone at this boundary plus in-chain. Boundary
+      evidence: gate run 010511-pnpm-check- gh406-amend-phase8.log green
+      end-to-end - exit 0, 13/13 stages in-chain, bun test 12854 pass / 4 skip /
+      0 fail, OK new-code-naming 2505/0/4. All seven re-executed phases (2-8)
+      are complete with new commits and fresh 13/13 gate evidence; phases 1 and
+      9 carry their delivered commits and evidence (0b49e404, 5e57e3af) per the
+      re-execution accounting fence."
+    type: decision
+    date: "2026-11-25"
+  - text: "DoR iter-4 verdict READY (focused closure gate, 10/10 facets PASS, 0
+      blocking): iter-3 finding 1 verified remediated — renamed tracker title
+      adopted byte-exact in spec front matter, test-plan H1, plan header; DEC-6
+      corrected with the rename timestamp (2026-11-24T17:06:57Z, one second
+      after amendment comment 7138707234); zero false provenance phrases. iter-3
+      finding 2 verified remediated — plan phase 5 scopes the ODR-0006 re-word
+      to the WHOLE record (body + front matter: summary, business_impact,
+      customer_impact, governance.driver with the body < brief 7122871259 <
+      amendment 7138707234 chain) + the 00-index.md row title text. Fresh plan
+      validate verdict=valid. Non-blocking carried forward: rev-4 note
+      over-narrows front-matter fields (service: also carries old wording;
+      whole-record clause subsumes it, review-time diff backstops); four
+      spec-v1.1 citations in the plan post-v1.2 (content-accurate, optional
+      refresh). PM bookkeeping done: pm-notes title: field refreshed to the
+      renamed title at iter-4 close. Verdict artifact
+      readiness-review/readiness-iter-4.md. Amended delivery may execute."
+    type: decision
+    date: "2026-11-24"
+  - text: "Review iter-3 verdict PASS over the AMENDED tree (code-review/
+      review-iter-3.yaml; no remediation phase): 4 findings, 0 blocking (2 low,
+      2 info). Amendment verified end to end in code + docs — renamed exports
+      present with old names at zero occurrences in tracked source; headers
+      PRODUCT/REPOSITORY (+CLONE) with the four legacy headers asserted absent;
+      amended 8-term table, retirement clause, Jira-project rule, both prose
+      rules and neutral examples in both vocabulary docs; ODR-0006 re-worded
+      whole-record (Proposed/decision_date null, no earlier record touched); all
+      eight fences re-verified live (zero-rename, --flat byte-identity,
+      groups.v1 no-grammar, phase-9 hardening preserved, four exceptions exact,
+      naming 2505/0/4, no headers added); amendment suite diffs wording-only;
+      disclosed deviations check out (scanner live-header pin refresh rode phase
+      3 per the binding wording-only fence; TC-DAEMON-121 load flake disclosed,
+      never weakened; two format nits). Review-time rows re-verified on the
+      amended diff. New non-blocking: F-7 (low) doc/00-index.md:40 pre-amendment
+      prose noun in the feature-projects row (written by the A-extended ride,
+      outside every declared scope; GH-408/follow-up); F-8 (info) concrete
+      inventory of RSK-5 remainder: 6 pre-existing banned-phrase hits in 4
+      milestone-root planning docs, zero-diff vs base. Carried: F-5 dead
+      originalLineAt helper (follow-up deletion disposition), F-6
+      exemption-window delta."
+    type: decision
+    date: "2026-11-25"
+  - text: "Quality gates RE-RUN post-amendment (lifecycle phase 9, owner-directed)
+      ALL PASS on the committed tree at HEAD f8a7a2f7. Gate 1 — full battery:
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (~17m55s), 13/13 stages in-chain
+      (lint info/warning-only incl. one pre-existing FIXABLE useIndexOf
+      diagnostic in packages/core/src/domain/memory-lint.ts — not a GH-406 file,
+      stage green; format; typecheck 6 packages; test; boundaries 524 modules
+      clean; allowlist-tripwire; memory-lint 0 errors; forbidden-literals 7/7
+      scopes 0 violations; new-code-naming 2505/0/4; namespace-tree;
+      prompt-conformance 5 clean; help-guide-coverage; exports-parity 5
+      publishables); bun test 12854 pass / 4 skip / 0 fail across 1526 files
+      (118071 expect calls). Gate 2 — branch-range commit-message gate: VERDICT
+      PASS — 42 commits in range (merge-base 22b15d31 = origin/main-tools, head
+      f8a7a2f7), 0 offending commits, 0 rules hit, no MODE line; resolved
+      commitlint binary node_modules/.bin/commitlint, origin repository-local.
+      Logs:
+      tmp/run-logs-runner/2026-11-25/013756-gh406-quality-gate-pnpm-check.log
+      and 015601-gh406-commit-range-lint.log."
+    type: info
+    date: "2026-11-25"
+  - text: "DoD check RE-RUN PASS post-amendment (lifecycle phase 10). Ledger: 9/9
+      prior lifecycle phases completed with verified timestamps; plan
+      completion: phases 2-8 re-executed with fresh commits and per-phase
+      pm-notes gate evidence (2 e3cf6d34, 3 71f22a5b, 4 135f7909, 5 d0c5c225, 6
+      9b9918eb, 7 28cacb44, 8 f0a4c94d), phases 1 and 9 carry their delivered
+      evidence (0b49e404, 5e57e3af) per the re-execution accounting fence with
+      amendment-independence declared and reviewer-verified; all 12 amended ACs
+      satisfied per the amended evidence map, re-verified by review iter-3 PASS
+      (amendment end to end in code + docs, fences live, review-time rows
+      re-verified); current-truth documentation complete — doc-syncer
+      post-amendment zero residual gaps (116/116 battery); gates green (13/13
+      exit 0, 12854/0/4; range lint 42 commits 0 offending). Non-blocking
+      residuals dispositioned, none block DoD: F-7 (00-index.md prose noun,
+      GH-408/follow-up), F-5 + F-6 (carried dispositions), F-8 (GH-408 remainder
+      inventory), GH-408 routed deferrals, TC-DAEMON-121 load flake (disclosed,
+      green standalone and in final runs)."
+    type: decision
+    date: "2026-11-25"
+  - text: "PR re-recorded post-amendment: https://github.com/juliusz-cwiakalski/
+      agentic-delivery-os/pull/411 UPDATED in place (mode=update; one OPEN PR
+      for the branch) — branch pushed 73697b10..18b9ac71 (20 commits landed
+      incl. the first-pass evidence commit e6490b82 and the full amendment
+      re-drive), remote tip verified 18b9ac71. Title now reads: feat(GH-406):
+      delivery vocabulary: product, repository, main checkout, worktree, lane,
+      clone identity; credentials bind to the product key (M4-S39). Body
+      replaced entirely with post-amendment product-vocabulary content (old noun
+      claims dropped, re-fetched to confirm). Ticket synced: label review
+      re-added (final set change/planning/review), assignee unchanged, no new
+      comment (the existing ready-for-review comment stands). PR OPEN, base
+      main-tools; merge authority stays with the owner; ODR-0006 Proposed awaits
+      the owner's accept/reject of the product vocabulary + declared key grammar
+      reading at the PR. Lifecycle stopped at pr_creation."
+    type: info
+    date: "2026-11-25"
+  - text: "Re-opened delivery phase executed: the CEO PR #411 review fixes (1 +
+      2-record + 6 + preferred changeset rename) landed as one commit 8a6a27637
+      through the commit primitive — directed identifier changes of this
+      change's own artifacts, distinct from amendment §G. Renames (git mv,
+      content-identical unless noted):
+      doc/decisions/ODR-0006-delivery-vocabulary-declared-project-key.md to
+      ODR-0006-delivery-vocabulary.md with the H1 aligned to the decision-index
+      row (Delivery Vocabulary — Product, Repository, Main Checkout, Worktree,
+      Lane, Work Item, Clone Identity, Product Key; the term is product key, no
+      declared in the title) and the 00-index.md link, the delivery-vocabulary
+      suite RECORD const, and the index-row literal updated (asserted row
+      otherwise byte-identical); tests/structure/declared-project-key.test.ts to
+      declared-product-key.test.ts with the naming-baseline path updated (reason
+      substance unchanged) and no other live references (grep-verified);
+      .changeset/gh-406-delivery-vocabulary-declared-project-key-minor.md to
+      gh-406-delivery-vocabulary-minor.md (content unchanged). Content edit: the
+      ODR-0006 Product mapping row now mirrors amended spec Appendix A (v1.3) —
+      the named exceptions denoting a product are ONLY groupKey, the
+      delivery.projects.groups.v1 schema, and the projects.yaml configuration
+      file; the portable manifest does not exist yet (GH-401 creates schema
+      delivery.products.manifest.v1, file <configDirectoryName>/products.yaml,
+      key product.key) and is NOT a named exception. Dead code: the
+      originalLineAt helper deleted from
+      tests/structure/vocabulary-conformance.test.ts after verifying zero
+      callers — residual F-5 retired; full pnpm lint shows zero diagnostics in
+      every GH-406 file (133 warnings + 50 infos all pre-existing in
+      base-delivered files). Historical records (pm-notes entries, review iters)
+      untouched; no vocabulary content edited beyond the H1 and the mapping row;
+      zero-rename fence intact; .zed/ never staged. Verification: narrow ladder
+      — bun test on declared-product-key + delivery-vocabulary +
+      vocabulary-conformance 53 pass / 0 fail (197 expect calls);
+      new-code-naming OK 2505/0/4. First gate attempt on the staged-rename tree
+      FAILED 3 TC-RELEASE-001 assertions (log
+      tmp/run-logs-runner/2026-11-25/022624-gh406-ceofix-quality-gate-pnpm-chec\
+      k.log): privacy-release.test.ts derives the branch's added changeset from
+      COMMITTED history, so it is red only in the intermediate state; a
+      merge-base-vs-index-tree diff simulation proved the committed shape
+      resolves to exactly one A line for the new path with zero M/D lines, so no
+      test was edited. FULL BOUNDARY GATE on the committed tree at HEAD
+      8a6a27637: TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0, 13/13 stages
+      in-chain, bun test 12854 pass / 4 skip / 0 fail across 1526 files (118071
+      expect calls), new-code-naming OK 2505 governed files / 0 violations / 4
+      baseline entries; log
+      tmp/run-logs-runner/2026-11-25/025041-gh406-ceofix-boundary-gate-pnpm-che\
+      ck.log."
+    type: decision
+    date: "2026-11-25"
+  - text: "Review iter-4 verdict PASS (code-review/review-iter-4.yaml; focused
+      verify pass over the CEO's six fixes, no remediation phase): all six
+      landed exactly and exactly scoped — ODR rename true git mv with H1
+      byte-identical to the index row title, every live reference follows, old
+      name survives only in append-only history; mapping row mirrors amended
+      spec Appendix A v1.3 with delivery.projects.manifest.v1 at zero tracked
+      hits; project-groups Overview + glossary watchdog Lane row + 00-index
+      product-key phrase in, zero current-truth prose hits for the retired
+      forms; suite rename 100% similarity with baseline updated; originalLineAt
+      deleted (lint delta zero — F-5 retired); changeset renamed
+      content-identical. Nothing else moved: af0d6da7..HEAD touches only the
+      declared files; zero-rename fence intact (packages/** exactly iter-3's
+      five wording lines); F-8's four docs still zero-diff vs base. Reviewer
+      live re-runs at final HEAD 706a781f: narrow ladder 53/0 under the new
+      suite path, privacy-release 7/0 (TC-RELEASE-001 resolves the renamed
+      changeset from committed history — closing the boundary-gate one-commit
+      gap), naming check exit 0, doc ladder 102/0. New advisory F-9 (info): the
+      doc-fix commit rode only the system_spec_update stamp with no dedicated
+      pm-notes entry — this review is the recorded verification evidence;
+      review-time backstop accepted. Carried: F-6 exemption-window delta, F-8
+      GH-408 remainder inventory. Retired: F-5, F-7."
+    type: decision
+    date: "2026-11-25"
+  - text: "Quality gates RE-RUN post-CEO-fixes (lifecycle phase 9, owner-directed)
+      ALL PASS on the committed tree at HEAD a9d57d3e. Gate 1 — full battery:
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (~17m56s), 13/13 stages in-chain
+      (lint 133 warnings + 50 infos all non-gating/pre-existing incl. the
+      useIndexOf diagnostic in packages/core/src/domain/memory-lint.ts — not a
+      GH-406 file; format; typecheck 6 packages; test; boundaries 524 modules
+      clean; allowlist-tripwire; memory-lint 0 errors; forbidden-literals 7/7
+      scopes 0 violations; new-code-naming 2505/0/4; namespace-tree;
+      prompt-conformance 5 clean; help-guide-coverage; exports-parity 5
+      publishables); bun test 12854 pass / 4 skip / 0 fail across 1526 files
+      (118071 expect calls). Gate 2 — branch-range commit-message gate: VERDICT
+      PASS — 53 commits in range (merge-base 22b15d31 = origin/main-tools, head
+      a9d57d3e), 0 offending commits, 0 rules hit, no MODE line; resolved
+      commitlint binary node_modules/.bin/commitlint, origin repository-local.
+      Logs: tmp/run-logs-runner/2026-11-25/032455-gh406-pnpm-check.log and
+      034325-gh406-lint-commit-range.log."
+    type: info
+    date: "2026-11-25"
+  - text: "DoD check RE-RUN PASS post-CEO-fixes (lifecycle phase 10). Ledger: 9/9
+      prior lifecycle phases completed with verified timestamps; plan completion
+      truthful: phases 2-8 evidenced from the amendment re-drive, the CEO-fix
+      delivery re-execution evidenced at 8a6a27637 (review iter-4 PASS 0
+      blocking verifying all six fixes exactly scoped: ODR rename +
+      H1/index/test references, mapping-row manifest correction, suite rename +
+      baseline, originalLineAt deletion retiring F-5, changeset rename; phases 1
+      and 9 carried per the accounting fence); all 12 amended ACs satisfied;
+      current-truth documentation complete — doc-syncer zero residual gaps
+      (116/116 battery; F-7 retired with the 00-index fix); gates green (13/13
+      exit 0, 12854/0/4; range lint 53 commits 0 offending). Non-blocking
+      residuals carried with dispositions, none block DoD: F-6 exemption-window
+      delta, F-8 GH-408 remainder inventory (6 hits enumerated), GH-408 routed
+      deferrals incl. the ~45-line tool-rule remainder, F-9 advisory (doc-fix
+      verification evidence supplied by review iter-4), TC-DAEMON-121 load flake
+      (disclosed, green standalone and in final runs)."
+    type: decision
+    date: "2026-11-25"
+  - text: "PR re-recorded post-CEO-fixes: https://github.com/juliusz-cwiakalski/
+      agentic-delivery-os/pull/411 UPDATED in place (mode=update) — branch
+      pushed af0d6da7..a402332d (10 commits landed incl. the CEO-fix commit
+      8a6a2763 and all evidence/phase-boundary commits), remote tip verified
+      a402332d. Body updated: F-5 and F-7 residuals REMOVED (fixed this pass);
+      F-6, F-8, the ~45-line GH-408 remainder sweep, GH-408 routed deferrals,
+      and the TC-DAEMON-121 flake disclosure KEPT; a 'CEO review fixes applied'
+      section added (ODR rename to ODR-0006-delivery-vocabulary.md with
+      index-aligned H1, mapping-row manifest correction — GH-401 creates
+      delivery.products.manifest.v1 / products.yaml / product.key directly, not
+      a named exception; suite rename to declared-product-key.test.ts; changeset
+      rename to gh-406-delivery-vocabulary-minor.md; feature-project-groups
+      Overview rewrite; glossary Lane row + 00-index phrase); evidence refreshed
+      (review iter-4 PASS 0 blocking, gates 13/13 exit 0 + 12854/0/4, range lint
+      53/0, fixtures 3/3 double-run); ODR path and changeset name corrected in
+      the artifacts list. Title unchanged (verified no drift). Ticket state
+      unchanged (labels change/planning/review, assignee juliusz-cwiakalski; no
+      new comment). PR OPEN, base main-tools; merge authority stays with the
+      owner; ODR-0006 Proposed awaits accept/reject at the PR. Lifecycle stopped
+      at pr_creation."
+    type: info
+    date: "2026-11-25"

@@ -734,7 +734,7 @@ const GH346_ROWS: readonly PageClaimRow[] = [
       "the nine concrete `merge` rows",
     ],
     required: [
-      "install | user | false | not_landed | Build and install from the primary checkout",
+      "install | user | false | not_landed | Build and install from the main checkout",
       "The table declares 172 machine identities",
       "allowlist of 71 declared identities",
       "the ten `install` rows",
