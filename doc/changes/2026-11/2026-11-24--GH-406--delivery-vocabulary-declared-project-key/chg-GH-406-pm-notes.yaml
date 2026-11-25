@@ -12,10 +12,10 @@ phases:
   dor_check: { started: null, completed: 2026-11-24T20:14:24.288Z }
   delivery: { started: null, completed: 2026-11-25T02:12:40.426Z }
   system_spec_update: { started: null, completed: 2026-11-25T02:15:48.817Z }
-  review_fix: { started: null, completed: 2026-11-25T00:36:59.047Z }
-  quality_gates: { started: null, completed: 2026-11-25T00:57:00.848Z }
-  dod_check: { started: null, completed: 2026-11-25T00:57:54.988Z }
-  pr_creation: { started: null, completed: 2026-11-25T01:01:00.092Z }
+  review_fix: { started: null, completed: 2026-11-25T02:23:49.765Z }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
 decisions: []
 open_questions: []
 blockers: []
@@ -917,5 +917,28 @@ notes:
       baseline entries; log
       tmp/run-logs-runner/2026-11-25/025041-gh406-ceofix-boundary-gate-pnpm-che\
       ck.log."
+    type: decision
+    date: "2026-11-25"
+  - text: "Review iter-4 verdict PASS (code-review/review-iter-4.yaml; focused
+      verify pass over the CEO's six fixes, no remediation phase): all six
+      landed exactly and exactly scoped — ODR rename true git mv with H1
+      byte-identical to the index row title, every live reference follows, old
+      name survives only in append-only history; mapping row mirrors amended
+      spec Appendix A v1.3 with delivery.projects.manifest.v1 at zero tracked
+      hits; project-groups Overview + glossary watchdog Lane row + 00-index
+      product-key phrase in, zero current-truth prose hits for the retired
+      forms; suite rename 100% similarity with baseline updated; originalLineAt
+      deleted (lint delta zero — F-5 retired); changeset renamed
+      content-identical. Nothing else moved: af0d6da7..HEAD touches only the
+      declared files; zero-rename fence intact (packages/** exactly iter-3's
+      five wording lines); F-8's four docs still zero-diff vs base. Reviewer
+      live re-runs at final HEAD 706a781f: narrow ladder 53/0 under the new
+      suite path, privacy-release 7/0 (TC-RELEASE-001 resolves the renamed
+      changeset from committed history — closing the boundary-gate one-commit
+      gap), naming check exit 0, doc ladder 102/0. New advisory F-9 (info): the
+      doc-fix commit rode only the system_spec_update stamp with no dedicated
+      pm-notes entry — this review is the recorded verification evidence;
+      review-time backstop accepted. Carried: F-6 exemption-window delta, F-8
+      GH-408 remainder inventory. Retired: F-5, F-7."
     type: decision
     date: "2026-11-25"
