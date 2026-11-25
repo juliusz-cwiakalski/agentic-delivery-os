@@ -52,6 +52,32 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Plan phase 11 (rev-8 remediation) applied (commit 2bb07ad4):
+      doc/spec/nonfunctional.md gained the worktree-lane NFR row in the
+      NFR-TOOL-003 budget-index table — a work item's lifecycle runs in its
+      own linked worktree (lease-first provisioning before the first phase;
+      resume reuses the recorded worktree with observed branch verification;
+      the lane.disable-worktrees exception restores in-checkout behaviour
+      byte-for-byte), pointing at feature-dispatch-engine.md#lane-worktrees,
+      plus the closeout sweep/removal-ordering sentence (lane logs swept to
+      the state-root destination before removal; removal only after merge
+      confirmation), pointing at feature-closeout.md#local-worktree-cleanup —
+      matching the page's row format and prose style, GH-406 vocabulary,
+      prose only, zero identifier renames. tests/checks/
+      operation-count-pages.test.ts line map updated in the SAME commit per
+      the green-boundary fence: the one-row prose addition shifted the
+      nonfunctional page by exactly one line — nonfunctional.parity 354->355,
+      the nonfunctional.clause-ids neighbour 357->358, and the page's
+      declared nine-lines set [357]->[358] (pin-map delta: 3 entries, 1-line
+      shift). Verification: tests/checks/operation-count-pages.test.ts 6/6
+      green; doc-conformance + namespace-doc-battery 66/66 green; the full
+      tests/checks battery 1661 pass / 0 fail; git diff --check clean. No
+      golden impact (prose-only spec page); exception-mode pins untouched.
+      The commit's staged set carried the two declared files plus the
+      pm-notes evidence ride (the orchestrator's rev-8 checkpoint note, this
+      entry)."
+    type: info
+    date: "2026-11-25"
   - text: "Rev-8 checkpoint observations (5e9aaba2, adjudicated by PM — no action
       taken on three, one accepted): (1) the 19 phase-7 doc edits swept into
       the delivery_planning completion commit as disclosed scopeDrift — the
