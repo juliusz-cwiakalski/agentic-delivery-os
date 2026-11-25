@@ -12,7 +12,7 @@ phases:
   delivery: { started: null, completed: 2026-11-25T13:57:22.115Z }
   system_spec_update: { started: null, completed: 2026-11-25T14:40:48.779Z }
   review_fix: { started: null, completed: 2026-11-25T19:47:14.257Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-25T20:07:02.614Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -52,6 +52,22 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Quality gates PASS (both gates, one battery run on the clean tree at
+      f1a028b3). Gate 1 — TMPDIR=$PWD/tmp/tmpdir pnpm check: exit 0, 18m00s,
+      12926 pass / 4 skip / 0 fail, 118561 expect calls across 1530+ files, all
+      13 stages PASS (lint warnings are pre-existing warning-level only; format,
+      typecheck, boundaries, allowlist-tripwire, memory, forbidden-literals,
+      new-code-naming, namespace-tree, prompt-conformance, help-guide-coverage,
+      exports-parity all green); log
+      tmp/run-logs-runner/2026-11-25/204755-gh404-pnpm-check.log. Gate 2 —
+      commit-range lint (./scripts/lint-commit-range.sh --base main-tools):
+      VERDICT: PASS — 40 commits in range; all satisfy the configuration; 0
+      offending commits; mode none (no MODE line on PASS); commitlint binary
+      node_modules/.bin/commitlint, origin repository-local; base resolved from
+      refs/remotes/origin/main-tools, merge-base e5ff0512, head f1a028b3; log
+      tmp/run-logs-runner/2026-11-25/210620-gh404-lint-commit-range.log."
+    type: info
+    date: "2026-11-25"
   - text: "Review cycle closed before merges: delta re-check PROCEED
       (review-delta-phase-15.yaml; F-47 fixed on the product runtime Bun 1.4.4,
       the 15d deviation judged acceptable as F-38's own newer-bytes contract,
