@@ -198,7 +198,7 @@ Flow 6: environment without worktree support
 ### 7.3 Deferred / Maybe-Later
 
 - Tuning the fresh-worktree provisioning (install/build cost) informed by the delivery measurement — informs GH-412 planning.
-- Making the linked-worktree enumeration position-independent if the pinned test proves brittle across git versions (F-10 allows either outcome; the alternative stays open).
+- The positional first-block pin: not deferred work. Position-independence is delivered by this change (plan-settled for F-10/AC-F10-1: a porcelain block is the main checkout iff its git dir is the common directory, proven by the shuffle-order guard suite `tests/behaviour/git-adapter-worktree-enumeration.test.ts` — TC-IDENT-002 in the test plan); the positional pin exists only as the documented fallback.
 
 ## 8. INTERFACES & INTEGRATION CONTRACTS
 
