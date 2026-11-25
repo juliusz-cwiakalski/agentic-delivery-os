@@ -1,0 +1,323 @@
+version: 1
+iteration: 3
+mode: local
+scope: delta
+delta_of: review-iter-3.yaml
+work_item_ref: GH-404
+branch: feat/GH-404/worktree-lane-foundation
+head: a34bbda4d7ca24ee52a03aba544c62eb8469dc05
+status: PASS
+summary: >-
+  Delta pass over the phase-14 commit a34bbda4 (the iteration-3 delta remediation), not a
+  new full iteration. VERDICT: APPROVE to proceed to quality gates. The four addressed
+  findings hold on the tree and by reproduction: the two shell-fallback literals are gone
+  from every source file while the no-shell invariant, its empty allowlist and its three
+  suites are untouched on the whole branch; the contract export is in both inventory lists;
+  the retired branch assertion is replaced by an absence assertion; a same-date re-sweep now
+  preserves the earlier sweep's files, at closure level and end to end through the CLI. The
+  five previously red tests are green on HEAD. The merge step that F-38 introduced is sound
+  for the layouts the product writes and adds four narrow behaviours that need an on-disk
+  shape nothing in the product creates: it follows symlinks (a write through a symlinked
+  directory kept from an earlier sweep, reproduced before and after), it refuses where the
+  replaced step succeeded (type conflict, a non-directory at a date entry, a read-only
+  earlier file), and it is no longer atomic per entry. None blocks the gate run. One
+  out-of-delta observation: the GH-404 changeset still describes the pre-review design and
+  should be corrected before the pull request.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 3
+  info: 5
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-47
+    severity: low
+    confidence: high
+    category: security
+    location: packages/cli/src/production.ts:1995
+    owner: coder, recommended before quality gates; otherwise a declared residual with owner visibility
+    message: >-
+      NEW in this delta. mergeTree classifies with statSync, which follows symlinks, so the
+      merge arm of the sweep reads and writes through them. Reproduced with the production
+      closure, same inputs against HEAD~1 and HEAD: (1) a directory symlink placed by an
+      earlier sweep and re-targeted before the re-sweep: the earlier target's same-named file
+      is overwritten (victim.log VICTIM-ORIGINAL before, ATTACKER-BYTES after); (2) the date
+      entry itself a symlink from the first sweep: the second sweep creates a file inside the
+      linked directory, outside the state root; (3) a directory symlink new in the re-sweep:
+      the link target's contents are copied into the destination as a real directory. Before
+      the delta the replace step removed the link itself and wrote nothing through it. The
+      verification passes in every case because placedFilesMatch also follows links.
+      Reachability: requires a symlink under the lane's tmp/run-logs-runner; no code in
+      packages/*/src creates one, and the tree is written by the runner agent as plain log
+      files. No privilege is gained by a same-user actor, so this is hardening, not a
+      vulnerability.
+    suggestion: >-
+      Recurse on lstat and copy a link as a link, or let the primitive do it: replace the
+      mergeTree body with cpSync(from, to, { recursive: true }). Verified in isolation under
+      Bun 1.4.4: it merges nested trees and keeps the earlier files, it refuses (EISDIR)
+      instead of writing through a symlinked destination directory, and it copies a staged
+      directory symlink as a link. Add the three shapes as scenarios. Fixing it now avoids a
+      second full gate run after quality_gates.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-48
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/production.ts:2090
+    owner: coder with F-47, or a declared residual
+    message: >-
+      NEW in this delta. Four shapes succeed at HEAD~1 and are refused at HEAD, each on every
+      retry: a same-named child that was a file in the earlier sweep and is a directory in
+      the re-sweep (EEXIST from mkdirSync), the reverse (ENOTDIR from cpSync), a
+      non-directory at destination/<date> where a new date entry lands (EEXIST), and a
+      read-only file from the earlier sweep with a same-named file in the re-sweep (EACCES).
+      Every refusal is safe: sources intact in the worktree, staging removed, code
+      closeout.lane-log-sweep-failed. The operator sees only F-37's transient retryable
+      closeout.write.failed, so a deterministic refusal invites retries. Runner logs are
+      date directories of flat log files, so no product path writes any of the four shapes.
+    suggestion: >-
+      With F-47: on a type mismatch unlink the destination child before copying, and
+      classify the remaining refusals with the path and the next action (F-37's fix).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-49
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/edge.ts:2422
+    owner: declared residual; closes with F-40 or F-37
+    message: >-
+      Consequence of F-34's removal, end to end through the CLI. tmp/deliver-ticket is
+      neither excluded nor removed now. In a repository that ignores tmp/ the directory goes
+      with the worktree and closeout succeeds. In a repository that does not ignore tmp/, an
+      untracked tmp/deliver-ticket/<ref>.log still plans would-apply, because git's
+      tmp/*.log pathspec matches at any depth, and closeout --apply then refuses AFTER the
+      sweep (exit 2, closeout.write.failed, retryable): the runner logs are preserved at
+      the destination and the worktree is retained on every retry. At HEAD~1 that shape
+      completed (read from the HEAD~1 source: the directory was excluded at plan time and
+      removed by removeEphemeral; not re-run end to end). The typed lane never writes the
+      directory (it is the shell fallback's output), so this is F-37's masked-dirt family,
+      now one member wider: the plan-time exclusion is deeper than the sweep's non-recursive
+      removal.
+    suggestion: >-
+      Make the removal match the exclusion (recursive *.log removal, F-40's fix) or the
+      exclusion match the removal; until then name the plan-versus-apply disagreement in
+      F-37's residual text.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-50
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/production.ts:2093
+    owner: note for the next touch
+    message: >-
+      NEW in this delta. The merge is not atomic per entry. A failure in the middle leaves a
+      half-merged date entry at the destination (reproduced: three of four files newer, the
+      read-only fourth older) until a retry completes it. No distinct log is lost at any
+      point: the sources stay in the worktree and the retry brings every file to the newer
+      bytes. The new-entry path keeps its atomic rename.
+    suggestion: >-
+      Optional: compose the merged tree in staging (earlier entry plus the staged files),
+      verify there, then swap it in.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-51
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:2073
+    owner: doc-sync re-run (F-45); no code change
+    message: >-
+      The cap bounds what ONE sweep places, not the merged entry. Reproduced: three same-date
+      sweeps of 31 MiB each place 65,011,712 and then 97,517,568 bytes under the
+      33,554,432-byte cap, each reporting truncated false and omittedBytes 0. The control
+      holds (two 20 MiB dates in one sweep: the second omitted, 20,971,520 bytes). A ref's
+      destination was already unbounded across sweeps for distinct dates; the merge extends
+      that to one date entry. Growth equals real distinct log bytes, so nothing is
+      duplicated. DEC-11's byte-capped is true per sweep and should say so.
+    suggestion: >-
+      State in DEC-11 and the feature spec that the cap applies per sweep, not to the
+      destination's total.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-52
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/production.ts:2001
+    owner: note for the next touch
+    message: >-
+      NEW in this delta. On the merge path a directory that does not exist yet at the
+      destination is created by mkdirSync with the default mode: a 0o700 source directory
+      lands 0o775 (umask 002). File modes are preserved on both paths, and the new-entry
+      rename preserves directory modes too.
+    suggestion: >-
+      Carry the source directory's mode after mkdirSync, or use the primitive (F-47).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-53
+    severity: info
+    confidence: high
+    category: documentation
+    location: packages/cli/src/production.ts:2007
+    owner: wording, next touch
+    message: >-
+      Per-placed-file verification compares SIZES (placed.size === stat.size), not content.
+      Equal bytes in the doc comment at :1953 and :2007, in the plan's phase-14 comment and
+      in the pm-notes note means equal byte count. The strength is unchanged from before the
+      delta (size equality), and per file is finer than the former per-tree total.
+    suggestion: >-
+      Say equal size; a content comparison is optional.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-54
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/behaviour/dispatch-production-worktree.test.ts:1093
+    owner: coder, with F-42's suite hardening
+    message: >-
+      The merge arm is proven at closure level only (scenarios 9 and 9b call the production
+      sweep closure directly); no committed scenario drives a same-date re-sweep through
+      closeout. The committed suite also has no negative control proving that dirt outside
+      the swept paths still refuses at plan time (scenario 7 proves only the masked set).
+      Both behave correctly: this review drove them through the real CLI (a refused closeout,
+      operator cleanup, new same-date logs, a second closeout preserving both files; and an
+      untracked notes/draft.md giving would-refuse and exit 1 with nothing moved).
+    suggestion: >-
+      Add the two end-to-end scenarios when F-42 is taken.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-55
+    severity: medium
+    confidence: high
+    category: documentation
+    location: .changeset/gh-404-worktree-lane-foundation-minor.md:15
+    owner: PM; one prose edit before the pull request
+    message: >-
+      OUTSIDE the delta (the file is untouched since d583b2ba) and not tracked by iterations
+      1 to 3. The release note describes the design before the review remediations: line 15
+      says the worktree is provisioned on a new lane/<ref> branch (Decision 1: detached, no
+      lane branch; the adapter runs git worktree add --detach); lines 28 to 29 say merge
+      lands the branch resolved from the worktree or the main checkout and closeout sweeps
+      the lane's gate evidence (Decision 2: provider-side landing with the branch deletion
+      deferred to closeout; Decision 3: bounded runner logs, gate scratch discarded); line 35
+      says a ref-keyed join (the join is repository plus ref). The changeset is the CHANGELOG
+      text of the minor bump. TC-RELEASE-001 checks count, packages and privacy patterns,
+      not prose, so nothing will catch it.
+    suggestion: >-
+      Rewrite the four statements to the delivered contract. No code, no test change; the
+      changeset stays the branch's single added changeset.
+    suppressed: false
+    published_url: null
+    published_at: null
+verification:
+  note: >-
+    Each addressed finding against the tree at a34bbda4. Probe labels refer to
+    tmp/tmpdir/opencode/gh404-delta-i3/ (probes/probe-sweep*.ts, probes/probe-before-after.ts,
+    probes/probe-primitive.ts, e2e/probe-e2e.test.ts and their .out files), all confined to
+    their own temporary roots under the approved scratch base.
+  F-34:
+    verdict: VERIFIED FIXED by removal
+    evidence: >-
+      grep for the literal, its case and separator variants and its camel case over
+      packages/*/src: nothing. `bun run scripts/checks/no-shell-dispatch.ts`: clean, 43
+      surface files. TC-SHELL-002 14 pass, TC-BATTLE-001 3 pass, TC-BATTLE-004 2 pass, all
+      exit 0. The invariant file, its test, the parity battery and the no-shell conformance
+      file have no commit on the branch (git log main-tools..HEAD empty);
+      NO_SHELL_ALLOWLIST is still [] at scripts/checks/no-shell-dispatch.ts:87 and its pin
+      at tests/checks/no-shell-dispatch.test.ts:179 is green. No constant was moved to
+      another file. Semantics after the removal, through the production closure and the CLI:
+      preserved = tmp/run-logs-runner/**; deleted = tmp/tmpdir recursively and the direct
+      tmp/*.log files; untouched = tmp/deliver-ticket (ignored repository: removed with the
+      worktree, apply exit 0; see F-49 for the other repository shape). Negative control:
+      an untracked notes/draft.md gives would-refuse and apply exit 1
+      closeout.branch.unsafe with the worktree retained, the sources intact and no
+      destination.
+    residual: F-49; DEC-11 does not name the ad-hoc tmp/*.log member (F-45).
+  F-35:
+    verdict: VERIFIED FIXED
+    evidence: >-
+      CloseoutLaneLogSweepData at tests/fixtures/ports/v1-contract-inventory.json:481 and
+      :2048; TC-PORT-001 7 pass, exit 0.
+  F-36:
+    verdict: VERIFIED FIXED
+    evidence: >-
+      tests/structure/state-scope.test.ts:382 asserts Object.hasOwn(placement, "branch") is
+      false; TC-IDENT-001 1 pass, exit 0. Strict enough: it fails on any own branch member,
+      enumerable or not, and the LaneWorktreePlacement type has none. A whole-shape pin
+      would be stricter but would conflict with DM-1's additive rule. No other test asserts
+      the retired scheme.
+  F-38:
+    verdict: VERIFIED FIXED at closure level and end to end
+    evidence: >-
+      Scenarios 9 and 9b green. Probes over the production closure: distinct, nested and
+      empty-directory entries preserved on a same-date re-sweep; a same-named file takes the
+      newer bytes; a new date entry lands by rename; the same inputs at HEAD~1 lose the
+      first sweep's file. End to end through the CLI: a closeout refused after the sweep
+      (exit 2), operator cleanup, new same-date logs, a second closeout exit 0 with the
+      destination holding both files byte for byte. The cap holds per sweep (control above).
+    residual: F-47 to F-51.
+  F-37:
+    verdict: DECLARED RESIDUAL, as adjudicated
+    evidence: >-
+      Reproduced three more times through the CLI in this pass (apply exit 2,
+      closeout.write.failed, category transient, retryable true, summary A closeout
+      provider write did not land.). The refusal stays safe: logs preserved or left in
+      place, nothing deleted.
+    residual: F-47, F-48 and F-49 all surface only through it.
+reviewer_notes:
+  gates_run: >-
+    Re-run on HEAD: the no-shell check; the five named tests (TC-SHELL-002, TC-BATTLE-001,
+    TC-BATTLE-004, TC-PORT-001, TC-IDENT-001); TC-RELEASE-001 (4 pass); the delta's own
+    file tests/behaviour/dispatch-production-worktree.test.ts (16 pass); the other six files
+    of the phase-14 verify list (54 pass across 6 files); tsc --noEmit for packages/cli
+    (exit 0); biome lint and biome format on the four changed code and test files (clean);
+    `jaiship plan validate GH-404` verdict=valid.
+  not_run: >-
+    tests/checks + tests/structure + tests/conformance as a whole (the reported 4265), the
+    reported 582-test behaviour set, tests/golden, typecheck of the other packages, and the
+    remaining pnpm check gates. Those counts are the coder's report and were not re-run
+    here, as instructed.
+  scope: >-
+    The commit touches six files: the pm-notes, edge.ts, production.ts, the production
+    suite, the contract inventory and state-scope.test.ts. Phase 14 declares seven; the
+    seventh (lane-worktree-plan.ts) carries no swept-set constant and is disclosed as
+    untouched. No file under .changeset/, tests/golden, scripts/checks, tests/checks or
+    tests/conformance changed in the commit. The commit subject is again typed docs(GH-404)
+    while carrying source and test files (F-31, info, recurs).
+  plan_tools: >-
+    `jaiship plan diff GH-404 --against main-tools` returned input.value.rejected (repository
+    diff for GH-404 could not be read), exit 1. Not investigated; outside this delta.
+  disclosures: >-
+    (1) The merge step was reviewed here for the first time; F-47 to F-52 are properties of
+    code this commit added, not regressions I missed earlier. (2) F-55 is outside the delta
+    and outside what was asked; it is reported because check 3 put the changeset in scope
+    and no iteration tracks it. (3) The e2e probe is a scratch copy of the committed suite
+    with imports rewritten and scenarios appended; it lives under tmp/ and is not repository
+    content. (4) HEAD, branch, `git status --porcelain`, the branch list (35), the worktree
+    list, the sha256 of the pm-notes (910848890923b2c2...) and of the plan (6719ec9bc59e473d...)
+    are identical before and after this pass; nothing was written outside tmp/tmpdir and this
+    artifact. No remediation phase was appended and no blocker was published: the delegating
+    session owns the plan and the blockers.
+reviewed_at: '2026-11-25T19:26:14Z'
+next_step: >-
+  APPROVE. Proceed to quality gates. Recommended before the gate run, because a fix after it
+  needs a second full battery: F-47 by the one-line primitive plus its three scenarios, with
+  F-48 in the same edit. If the PM prefers to keep the delta mechanical, carry F-47 to F-49
+  as declared residuals with owner visibility and name them in the pull request body beside
+  F-37 and F-39 to F-46. Correct F-55 (the changeset prose) before the pull request; it
+  needs no gate re-run beyond TC-RELEASE-001. The doc-sync re-run and its delta check
+  (F-33, F-23, F-16, F-45, now also F-51) remain pending.

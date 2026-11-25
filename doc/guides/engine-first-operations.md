@@ -30,11 +30,22 @@ verify gates <ref>             # evaluate the battery and persist its verificati
 merge <ref>                    # land one verified squash commit
 ```
 
+Each command runs where its evidence lives. `dispatch <ref>` starts the work item
+in its own worktree; `dispatch status <ref>` reports that worktree's path. `verify
+gates <ref>` evaluates the **invoking working tree** — the pm-notes and the
+checkout head it is given — so under a worktree lane it runs **inside the lane's
+worktree**; run from the main checkout it evaluates the main checkout, fails the
+lifecycle-finalization source, and records the base head. `merge <ref>` runs from
+either checkout, because the landing is provider-side. `closeout <ref>` runs from
+the **main checkout**: its checkout restore refuses an invocation made from the
+lane's worktree. A remedy that runs the battery in the lane's worktree for you is
+not part of this contract.
+
 `verify gates <ref>` followed by `merge <ref>` is the native merge sequence: a
-clean PR lands with no intermediate step, because the verification `verify
-gates` prints is the record `merge` consumes. `merge --dry-run` is an
-evaluation-only surface — it appends a verification record and lands nothing —
-and it is never a required pre-step.
+clean PR lands with no intermediate step, because the verification `verify gates`
+prints is the record `merge` consumes. `merge --dry-run` is an evaluation-only
+surface — it appends a verification record and lands nothing — and it is never a
+required pre-step.
 
 `dispatch <ref>` appends exactly one real `pilot` attempt record per delivery with
 its outcome and corroboration. The lifecycle merge and closeout run through those
@@ -43,19 +54,25 @@ not the primary path. Every command is daemon-free: no step needs a resident
 daemon, a scheduler tick, or a background watcher.
 
 Each dispatch runs the work item's whole lifecycle in its own linked worktree,
-created after the repository lease is claimed and before the first phase. By
-default the worktree is a sibling of the main checkout named
-`<checkout-basename>-<ref>`, on the branch `lane/<ref>`; `lane.worktree-root`
-declares another root. Dependencies and the workspace gate build are provisioned
-in the worktree before the first phase, so the lane's gates run there and the main
-checkout stays on the base branch and clean while you keep working. A resumed lane
-reuses its recorded worktree; `dispatch status <ref>` shows where it is. An
-environment that cannot create worktrees sets `lane.disable-worktrees: true` and
-runs every lane in the invoking checkout, byte-for-byte the behaviour of a
-composition without worktrees. Closeout sweeps the
-lane's gate evidence to `<state root>/closeout-lane-logs/<ref>` and removes the
-worktree only once the merge is confirmed, so a stalled lane keeps its worktree
-until it is resumed or closed out.
+provisioned detached at the base tip after the repository lease is claimed and
+before the first phase. By default the worktree is a sibling of the main checkout
+named `<checkout-basename>-<ref>`; `lane.worktree-root` declares another root. No
+lane branch is created: the lane's own intake creates the delivery branch
+`<type>/<ref>/<slug>` inside the worktree. Dependencies and the workspace gate
+build are provisioned in the worktree before the first phase, so the lane's gates
+run there and the main checkout stays on the base branch and clean while you keep
+working. An active lane resumes in the worktree it recorded — detached at the base
+branch's head or on its delivery branch — and never provisions a second one; `dispatch status
+<ref>` shows where it is. An environment that cannot create worktrees sets
+`lane.disable-worktrees: true` and runs every lane in the invoking checkout,
+byte-for-byte the behaviour of a composition without worktrees. Closeout preserves
+the lane's runner logs (`tmp/run-logs-runner/**`, newest-first under a declared
+byte cap with any truncation disclosed) at
+`<state root>/closeout-lane-logs/<ref>`, discards the `tmp/tmpdir` gate scratch,
+and removes the worktree and its branch only once the merge is confirmed — the
+merge step defers that branch deletion to closeout while the branch is checked out
+in the lane's worktree — so a stalled lane keeps its worktree until it is resumed
+or closed out.
 
 The bash entry points (`deliver-ticket.sh`, `batch-deliver.sh`, `ceo-loop.sh`,
 `pm-liveness.sh`) stay executable throughout. In `dual-run` they behave exactly as

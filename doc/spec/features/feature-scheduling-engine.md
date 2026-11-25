@@ -247,13 +247,15 @@ than discovering work by hand.
   exactly when a live lease exists and equal to that lease's recorded holder;
   it adds no field requirement to a delivered lane, and the payload identity
   and the human lane text are unchanged. It carries an additive optional
-  `worktreePath` — the lane's linked-worktree path — sourced by a ref-keyed join
-  over the newest `dispatch.lane` record for that reference, read in one bounded
-  retained-window pass. The join contributes a path to a lane the fold already
-  produced and never mints a lane, a lane whose newest dispatch record carries no
-  worktree path renders byte-identically to a lane with no worktree member, and a store
-  read failure contributes nothing rather than a fabricated path
-  ([Dispatch Engine](feature-dispatch-engine.md#lane-worktrees)). It carries an additive optional
+  `worktreePath` — the lane's linked-worktree path — sourced by a `(repository, ref)`-keyed
+  join over the newest `dispatch.lane` record for that lane, read in one bounded
+  retained-window pass. The newest record for the pair decides, so a newer record with
+  no worktree path removes the value instead of leaving a stale one. The join
+  contributes a path to a lane the fold already produced and never mints a lane, a lane
+  whose newest dispatch record carries no worktree path renders byte-identically to a
+  lane with no worktree member, and a store read failure contributes nothing rather
+  than a fabricated path ([Dispatch Engine](feature-dispatch-engine.md#lane-worktrees)).
+  It carries an additive optional
   `until` — the active expiry-carrying park's recorded re-entry instant —
   present exactly when such a park stands for the lane, equal to the park
   record's expiry, and absent otherwise, never inferred and never defaulted; an

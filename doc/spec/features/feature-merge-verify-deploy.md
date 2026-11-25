@@ -6,7 +6,7 @@ created: 2026-11-06
 last_updated: 2026-11-25
 owners: ["engineering"]
 service: delivery-os
-summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and the freshness envelope that accepts records from both producers — the verify-gates battery projection and the merge dry-run merge-applicable projection — under total equality of the full-declared-sequence gate-set identity, the post-verification tracker and CI probe extended to every not-green declared required job with its recorded-or-probe attribution, owner-gate classification as merge authority, recorded authorized waivers, the one composed provider-side squash landing with crafted metadata and an exact-head guard, the total mergeability refusal taxonomy and its closed sync-required reason pair, the retained local landing and refresh capabilities with no composed caller, the recorded landing identity's provider provenance and the truthful `shaOnBase` third state, the verify deploy trace verdict taxonomy, the recorded merge commit that anchors closeout's merged-diff sweep, the credential-condition refusal's name-shaped evidence (the declared reference, the resolved source identity, and the classified source/reason/remedy projection — never material), and the merge.* / verify.deploy.* error identities."
+summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and the freshness envelope that accepts records from both producers — the verify-gates battery projection and the merge dry-run merge-applicable projection — under total equality of the full-declared-sequence gate-set identity, the post-verification tracker and CI probe extended to every not-green declared required job with its recorded-or-probe attribution, owner-gate classification as merge authority, recorded authorized waivers, the one composed provider-side squash landing with crafted metadata and an exact-head guard, the total mergeability refusal taxonomy and its closed sync-required reason pair, the retained local landing and refresh capabilities with no composed caller, the post-landing branch-deletion deferral to closeout while a linked worktree holds the branch, the recorded landing identity's provider provenance and the truthful `shaOnBase` third state, the verify deploy trace verdict taxonomy, the recorded merge commit that anchors closeout's merged-diff sweep, the credential-condition refusal's name-shaped evidence (the declared reference, the resolved source identity, and the classified source/reason/remedy projection — never material), and the merge.* / verify.deploy.* error identities."
 links:
   related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300", "GH-293", "GH-338", "GH-349", "GH-366", "GH-388", "GH-394", "GH-404"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0014", "PDR-0003", "TDR-0031", "TDR-0033", "ADR-0012"]
@@ -102,15 +102,18 @@ seam-level-tested git capabilities with no composed caller: nothing in the
 coordinator, daemon, dispatch, closeout, or merge path invokes them, and a
 production-source scan with a mandatory failing control proves the absence.
 
-The local squash landing resolves its landing directory structurally, so a change
-whose branch is checked out in a lane worktree still lands: a checkout is the main
-checkout exactly when its top level is the git common directory's parent, an
-invocation from a linked worktree performs its base checkout, squash, commit, and
-head read with `git -C <main checkout>`, and a main-checkout invocation keeps the
-delivered argv byte-for-byte. The base branch lives in the main checkout, so the
-squash reaches base exactly as a main-checkout invocation does while the invoking
-worktree is left untouched. The landing never detaches the base branch: a squash
-recorded on a detached head would never advance base.
+The landing is provider-side, so the local checkout plays no part in it and a
+change whose branch is checked out in a lane worktree lands normally. The one
+local consequence is the post-landing `branch-deletion` step: git will not delete
+a branch a linked worktree holds, so while the resolved change branch is checked
+out in a linked worktree the step is recorded satisfied (`ok`) without deleting,
+and closeout's delivered order — remove the lane's worktree, then delete the
+branch — completes it. The step's check reads the worktree listing structurally (a
+block is the main checkout exactly when its own git directory is the common
+directory), skips a prunable registration whose directory is gone, and matches the
+exact `refs/heads/<branch>` line, so a similarly named branch never defers a
+deletion. A main-checkout invocation whose branch no worktree holds keeps the
+delivered deletion: return the checkout to the base, then delete.
 
 ## Command surfaces
 
@@ -382,7 +385,7 @@ recorded authorized waiver) the request lands through the one composed landing
 call and the outcome is recorded (`delivery.merge.transaction.v1`, kind
 `merge.transaction`) with the landing evidence, the refresh evidence,
 waiver references, and post-landing step statuses (branch deletion,
-closeout-ready). The record's `squashSha` is the provider-asserted merge commit.
+closeout-ready). The record's `squashSha` is the provider-asserted merge commit. When the post-landing `branch-deletion` step is satisfied by the worktree deferral, the step records `ok` and the branch is retained; closeout removes the lane's worktree and then deletes it.
 
 `landing.shaOnBase` is retained with a narrowed, truthful meaning: it reports
 whether the provider-asserted merge commit is contained on the base **only when a
@@ -501,7 +504,7 @@ identity.
 
 ## Quality evidence
 
-The enduring coverage map is the [merge and verify-deploy test specification](../../quality/test-specs/test-spec-merge-verify-deploy.md). The enduring coverage spans the production composition's reachability and classification (`merge-production-composition`, `merge-dry-run`, `merge-classification`, `merge-classification-conformance`), the landing mechanism and its crafted metadata (`merge-landing`, `merge-landing-metadata`, `merge-head-guard`, `merge-landing-retirement`), the refusal taxonomy (`merge-refusal-taxonomy`, `merge-refusal-surface`, `merge-refusal-rows`), the required-check contract and attribution (`merge-required-job-probe`, `merge-probe`, `merge-check-path-scan`), the retained git-seam capabilities (`merge-git-seam-capabilities`), the worktree-invoked local landing over a real linked worktree (`closeout-worktree`), idempotent replay (`merge-convergence`), and the named-defect regressions `defect-f1-merge-refusal-containment` and `defect-f8-serial-merge-churn`. The shipped verify-gates composition's record persistence and its counting and narrowed-refusal no-append posture (`verify-gates-persistence`), the native `verify gates` → `merge` landing sequence, the absence fail-closed cell, the byte-exact remediation pin, the shipped-record identity fixture, and the recorded-verdict consumption cells extend that map. The determinism, budget, bounds, state-write, privacy, and verify-gates rows of that specification are unchanged.
+The enduring coverage map is the [merge and verify-deploy test specification](../../quality/test-specs/test-spec-merge-verify-deploy.md). The enduring coverage spans the production composition's reachability and classification (`merge-production-composition`, `merge-dry-run`, `merge-classification`, `merge-classification-conformance`), the landing mechanism and its crafted metadata (`merge-landing`, `merge-landing-metadata`, `merge-head-guard`, `merge-landing-retirement`), the refusal taxonomy (`merge-refusal-taxonomy`, `merge-refusal-surface`, `merge-refusal-rows`), the required-check contract and attribution (`merge-required-job-probe`, `merge-probe`, `merge-check-path-scan`), the retained git-seam capabilities (`merge-git-seam-capabilities`), the post-landing deferral for a branch held by a linked worktree over real repositories (`merge-production-composition`, `dispatch-production-worktree`), idempotent replay (`merge-convergence`), and the named-defect regressions `defect-f1-merge-refusal-containment` and `defect-f8-serial-merge-churn`. The shipped verify-gates composition's record persistence and its counting and narrowed-refusal no-append posture (`verify-gates-persistence`), the native `verify gates` → `merge` landing sequence, the absence fail-closed cell, the byte-exact remediation pin, the shipped-record identity fixture, and the recorded-verdict consumption cells extend that map. The determinism, budget, bounds, state-write, privacy, and verify-gates rows of that specification are unchanged.
 
 ## Related
 

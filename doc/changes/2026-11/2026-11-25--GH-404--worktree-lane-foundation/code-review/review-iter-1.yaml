@@ -1,0 +1,227 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-404
+branch: feat/GH-404/worktree-lane-foundation
+status: FAIL
+summary: 'The adapter seam, lease-first ordering, host-index pin, position-independent enumeration, exception mode and scope discipline are sound, and I verified each of those in the production composition or against the merge base. The default-on worktree lane does not complete its lifecycle in production, and the committed suites cannot see it because none of them composes the default-mode production path: an operator resume is refused as soon as the lane creates its delivery branch, the closeout sweep preserves the temp scratch and loses the lane''s real logs, a failed install orphans the worktree and wedges the ref, the merge half was implemented in a seam production never calls, and the session never receives the worktree-led PATH the acceptance criterion names. Blocking findings F-1 and F-2 and majors F-3..F-6 were each reproduced through the real production composition (real temp git repositories, real git, default config) with controls; the governing comment states the next dispatched
+  lane runs in a worktree, so these land on the first real lane after merge. Remediation needs PM decisions on the lane branch model, the merge post-landing behaviour and the sweep scope before a remediation phase is authored.'
+severity_breakdown:
+  critical: 2
+  high: 4
+  medium: 4
+  low: 6
+  info: 1
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+- id: F-1
+  severity: critical
+  confidence: high
+  category: spec-compliance
+  location: packages/cli/src/production.ts:4323
+  message: 'BLOCKING (ticket AC2, AC-F4-1, G-4, F-4). Operator resume of a worktree lane is refused once the lane has created its delivery branch. The reuse arm verifies the recorded worktree is on the provisioning branch lane/<REF> (packages/core/src/domain/lane-worktree-plan.ts:79), but the lane''s own lifecycle necessarily moves the worktree to <type>/<REF>/<slug> (this repository''s AGENTS.md convention and the only branch form the merge transaction resolves). Proven in the real production composition (dispatch -> worktree provisioned on lane/GH-901 -> lane creates feat/GH-901/some-slug -> operator resume): dispatch.session.spawn-failed ''lane-worktree-branch-mismatch ... is on feat/GH-901/some-slug, not the lane branch lane/GH-901'', exit 1, zero session calls; the control with the worktree still on lane/<REF> resumes. Nothing tells the lane which branch to stay on (lifecycle prompt and AGENTS.md are silent). TC-RESUME-001/002/003 test planLaneWorktreeResume, which has zero production
+    consumers (the port re-implements the check inline). Owner: plan phases 4-5, after a PM decision on the lane branch model.'
+  suggestion: 'Decide and record the branch model: either provision detached (no lane/<REF>) or record the lane''s actual delivery branch on the lane record, and verify resume against the convention branch <type>/<REF>/... (never base, never detached); tell the lane in the lifecycle prompt / AGENTS.md. Add a production-composition suite that drives dispatch -> branch creation -> resume.'
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-2
+  severity: critical
+  confidence: high
+  category: correctness
+  location: packages/cli/src/production.ts:3313
+  message: 'BLOCKING (NFR-5 ''0 log loss'', AC-F6-1 / ticket AC5 ''the lane''s logs are swept first''). The closeout sweep moves the wrong tree: its source is exactly <worktree>/tmp/tmpdir, which the product''s own runner contract defines as ad-hoc SCRATCH (.opencode/agent/runner.md:21,26: logs go to ./tmp/run-logs-runner/<date>/). A lane''s gate logs, tmp/*.log build logs and tmp/deliver-ticket are siblings of tmp/tmpdir and are destroyed by worktree removal (proven: git worktree remove deletes ignored files without --force). Meanwhile the scratch is copied synchronously and permanently into <state root>/closeout-lane-logs/<ref> with no bound and no pruning; this checkout''s tmp/tmpdir measures 2.9 GB across 74,022 entries after this change''s own delivery, against 20 MB of real logs. The ''verify at the destination'' check (production.ts:3326) only tests that the directory the same function just created exists. The production closure is exercised by no suite (TC-CLOSEOUT-002 injects a
+    fake sweep). Owner: plan phase 6; plan rev 6 conflated ''lane logs'' with the gate temporary directory.'
+  suggestion: Sweep the declared log set (tmp/run-logs-runner, tmp/*.log, tmp/deliver-ticket) with a size/entry bound and a real verification (compare file count/bytes); let tmp/tmpdir and node_modules be deleted with the worktree. Pin the production closure with a real-file test and correct F-6 / NFR-5 wording and feature-closeout.md:188 ('bounded directory artifact').
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-3
+  severity: high
+  confidence: high
+  category: spec-compliance
+  location: packages/adapters/src/git/merge.ts:230
+  message: 'MAJOR (AC-F6-1 / ticket AC5 merge half). The -C <main checkout> landing was added to the retired local squashLand seam, which has zero composed callers in production (tests/checks/merge-landing-retirement.test.ts:69-72 pins the absence; production.ts:3175-3196 lands through the provider API). TC-CLOSEOUT-001 (tests/behaviour/merge-production-composition.test.ts:1283) therefore proves a seam production never runs. In production the post-landing port (packages/cli/src/edge.ts:1639-1646) still runs git checkout <base> and git branch -D in the invoking directory: proven over the production wiring with a real linked worktree, ports.deleteBranch returns ''failed'' from both the worktree and the main checkout (git: cannot delete branch ... used by worktree), so every worktree lane merge records post-landing=branch-deletion:failed, and from the worktree the ignored checkout <base> exits 128. The PM-adjudicated ''recorded deviation'' and doc/spec/features/feature-merge-verify-deploy.md:105-114
+    present the -C landing as the delivered mechanism, contradicting the same section''s statement that the local landing has no composed caller. Owner: plan phase 6.'
+  suggestion: Re-open the adjudication with the retirement fact. Either make the merge port worktree-aware (defer local branch deletion when the resolved branch is checked out in a lane worktree, declared, since closeout removes the worktree before branch cleanup) with a production-composition test, or record the provider-landing behaviour as the contract and revert the dead squashLand change and the spec paragraph.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-4
+  severity: high
+  confidence: high
+  category: correctness
+  location: packages/cli/src/production.ts:4383
+  message: 'MAJOR. The worktree, its lane/<REF> branch and the lane record have no failure or terminal ownership. (a) When addWorktree succeeds and a later step fails (gate temp dir, install, build) nothing is rolled back and no record carries the path: proven in the production composition, a failed install leaves the worktree registered on lane/GH-902 and both later dispatches of that ref are refused with worktree-add-refused even after the environment recovered. (b) After closeout removes the worktree the newest lane record still carries worktreePath, so the next dispatch of the ref is refused with lane-worktree-missing (''restore it or close the lane out'') - proven. (c) lane/<REF> matches neither closeout''s branch convention (packages/core/src/domain/closeout.ts:336 needs three segments) nor any other cleanup, so one branch leaks per work item. Owner: plan phases 4-6.'
+  suggestion: On a post-creation provisioning failure remove the worktree this attempt created (and its branch) before refusing, or record the orphan so the next attempt names the recovery. Retire the worktree context when closeout removes the worktree (context-less terminal lane record, or treat a merged-and-removed lane as fresh). Drop lane/<REF> (provision detached) or delete it in closeout worktree cleanup.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-5
+  severity: high
+  confidence: high
+  category: spec-compliance
+  location: packages/core/src/domain/lane-launch-plan.ts:28
+  message: 'MAJOR (AC-F3-1 / F-3 / ticket deliverable 3). ''The worktree''s dependency binaries lead PATH'' holds only for the two provisioning children, not for the lane''s phases and gates. The phase-2 worktree-scoped consumption point (LaneLaunchPlanFacts.worktreeEnvironment: PATH lead + TMPDIR anchor) has no supplier in production and no test: the only references in the whole workspace are inside lane-launch-plan.ts. The dispatch descriptor (packages/cli/src/production.ts:4456-4460) still builds the session environment from the harness settings and the parent environment, and the engine overrides only workDirectory. The plan phase-4 contract and the pm-notes phase-2 and phase-4 entries present it as delivered. Owner: plan phases 2 and 4.'
+  suggestion: Either wire it (the dispatch composition derives PATH/TMPDIR for a worktree lane and the environment builder accepts them) with a test asserting the spawned session's environment, or amend AC-F3-1 and the system spec to state what is delivered (PATH precedence for the provisioning children; the session receives the worktree as its working directory) and delete the dead branch.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-6
+  severity: high
+  confidence: high
+  category: testing
+  location: tests/behaviour/dispatch-worktree-lifecycle.test.ts:86
+  message: 'MAJOR (.ai/rules/typescript.md section 9; GH-170 lesson in .ai/agent/code-review-instructions.md). The default-mode production path has no committed coverage, which is how F-1..F-5 pass a 13/13 green gate: (1) no suite composes provisionLaneWorktree; both production-composition fixtures set lane.disable-worktrees: true (tests/fixtures/queue/production/harness.ts:93-94, tests/fixtures/dispatch/parity/harness.ts:373-374) although the fixture comment says the default composition is pinned by the lifecycle suites; (2) the governing fixture re-implements provisioning in the test (makeProvisioner, :86-130); (3) TC-RESUME tests planLaneWorktreeResume, which production does not call; (4) TC-CLOSEOUT-001 drives the retired squashLand; (5) TC-HOSTIDX-001 re-implements the pin (registrationRootFrom) and its ''three lane commands'' loop is ''for (const command of [...]) { void command; ... }''. I verified the host-index pin, the provisioning children and the exception-mode bytes myself;
+    the suites cannot distinguish those outcomes from regressions. Owner: plan phase 8 (test scope) with phases 4-6.'
+  suggestion: 'Add production-composition suites for the default mode: first dispatch (real worktree, stubbed harness session), operator resume after branch creation, a failed provisioning child and its retry, closeout sweep over real files, and the host-index pin invoked from a linked worktree. Replace the re-implementations with compositions or delete the dead pure rules they test.'
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-7
+  severity: medium
+  confidence: high
+  category: correctness
+  location: packages/core/src/app/dispatch-lane-view.ts:48
+  message: 'MINOR. The ref-keyed join deviates from the PM''s binding decision (''newest dispatch.lane record per (repository, ref)''). The map is keyed by ref alone and read from the invoking store only, while the board renders every repository''s lane rows: on a two-repository board, repository B''s lane row for a shared ref shows repository A''s worktree path (proven on the pure projection). It is also not newest-record-wins: a newer context-less record does not supersede an older path (proven), contrary to the pm-notes claim. Owner: plan phase 7.'
+  suggestion: Key the join by (repository, ref) and read each repository's own store in the board runtime (it already opens one per repository); let the newest record decide, including a context-less newest record.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-8
+  severity: medium
+  confidence: high
+  category: correctness
+  location: packages/core/src/domain/closeout.ts:1838
+  message: 'MINOR. The ordering gate evaluates the safety predicate on the plan-time snapshot (ordering.safety, including the pre-sweep cleanliness observation, packages/cli/src/edge.ts:2490) before the sweep runs. The stated rationale - the sweep is the mechanical precondition for the cleanliness predicate to pass on a lane worktree (plan rev 6, code comments) - is therefore inverted: in a repository that does not ignore tmp/ the worktree is refused as dirty before anything is swept and its logs are never swept. This repository ignores tmp/, so the predicate passes pre-sweep and the sweep is not a precondition here. The apply-time ''re-evaluation as defense in depth'' re-runs a pure function over the same captured input; the real re-observation is the adapter''s own pre-removal check.'
+  suggestion: Observe cleanliness after the sweep (or exclude the gate temporary directory from the clean arm) and correct the comments and feature-closeout.md to describe what is actually enforced.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-9
+  severity: medium
+  confidence: high
+  category: error-contract
+  location: packages/core/src/app/dispatch.ts:836
+  message: 'MINOR (.ai/rules/typescript.md section 7). The reused dispatch.session.spawn-failed row tells the operator ''no session was created and the attempt stays recorded'', but a provisioning refusal records 0 attempts (proven) and the hint ''inspect the harness selection ... then retry'' is misleading for a resume-verification refusal that will fail on every retry; the row also says retryable:false. The provisioning detail (packages/cli/src/production.ts:4418) discards the child''s stderr and timeout fact, so a timed-out install reports ''exit 1''. closeout.lane-log-sweep-failed is an identity-shaped token recorded in the ledger that the spec never declares. Owner: phases 4-6.'
+  suggestion: Compose a provisioning-specific summary and next action from the typed refusal code (the engine already receives code and detail), surface timedOut and a bounded stderr tail in the detail, and either declare the sweep reason token in the spec or phrase it as prose.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-10
+  severity: medium
+  confidence: medium
+  category: validation
+  location: packages/core/src/config/catalog.ts:701
+  message: 'MINOR. A relative or ''~'' lane.worktree-root passes config validation (any non-blank string) and is then always refused at provisioning with ''plan-restriction: unsafe worktree path'', which names neither the setting nor the fix; the value is also used untrimmed. isDispatchLaneRecord (packages/core/src/app/dispatch-ledger.ts:437-465) does not validate the type of the new optional worktreePath, so a non-string value flows into existsSync and the surfaces. Owner: plan phases 1 and 4.'
+  suggestion: Reject non-absolute lane.worktree-root at config resolution with config.value.invalid naming the key, trim the value, and validate worktreePath as a non-empty string when present in the record guard.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-11
+  severity: low
+  confidence: medium
+  category: reliability
+  location: packages/cli/src/production.ts:4528
+  message: MINOR. The provisioning children run under a fixed 30 s bound (CLOSEOUT_OPERATION_TIMEOUT_MS, a git-operation timeout reused for a network-dependent install) that is neither injectable nor configurable, with no retry; a timeout wedges the ref via F-4(a). Through the real host runner and the two-variable environment {PATH, TMPDIR} both children succeeded on this host; four of five fresh-worktree installs took about 0.8 s (matching the recorded NFR-9 807 ms) and the build 13.4 s, but one install took 27.2 s for a cause I could not determine. The NFR-9 measurement was taken by a shell command with a full environment, not through the delivered path.
+  suggestion: Give the install/build bounds their own (configurable or at least injectable) timeouts, name a timeout in the refusal, and re-record NFR-9 through the production path.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-12
+  severity: low
+  confidence: medium
+  category: correctness
+  location: packages/adapters/src/git/index.ts:291
+  message: MINOR. The position-independent rule matches '<worktree path>/.git' against the common directory, which encodes the standard layout. A main checkout whose git directory is not <worktree>/.git (--separate-git-dir, a submodule) is classified as a linked worktree and enters the linked inventory; the positional reading handled those. Verified correct for the symlink-alias case on this host's git 2.53.0 (both values are physical paths).
+  suggestion: Decide membership by comparing each block's own git directory with the common directory (one bounded rev-parse --absolute-git-dir per block), or state the standard-layout assumption in the spec.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-13
+  severity: low
+  confidence: high
+  category: maintainability
+  location: packages/core/src/domain/lane-worktree-plan.ts:16
+  message: 'MINOR. LANE_PROVISIONING_STEPS (''executed in this order'': install, build, gate temp dir) and LANE_WORKTREE_INSTALL_COMMAND are exported but consumed by no production code; production.ts:4402-4421 hardcodes the steps inline in a different, necessary order (gate temp dir first). planLaneWorktreeResume is likewise unconsumed while production.ts duplicates its verification and messages. The dispatch.ts test asserts the stub''s own step bookkeeping.'
+  suggestion: Have production consume the declared step data (in the real order) and the resume rule, or remove the unused exports and their inventory rows.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-14
+  severity: low
+  confidence: high
+  category: testing
+  location: tests/checks/worktree-seam-house-style.test.ts:29
+  message: MINOR. Several proofs are weaker than their titles. The 'planted canaries fail the scan' control never runs the scan (it asserts on a string it just concatenated). TC-WT-005 passes realpathSync(alias) into a pure function, so the test itself performs the resolution production is responsible for. TC-ENV-001 observes main-checkout cleanliness once, after a scripted harness that touches no disk. The 'preserved pre-change golden' status-context-less.txt was generated by the post-change renderer and is compared against that same renderer; I verified independently that it is byte-identical to the merge-base renderer's output, so the bytes hold but the test is circular. TC-CLOSEOUT-001's title promises argv assertions it does not make and discards its merge-base result.
+  suggestion: Factor the scan into a function and assert it rejects the planted text; drive TC-WT-005 through the production port invoked via an alias; have the scripted harness write into its workDirectory; generate or cross-check the preserved golden from the base renderer.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-15
+  severity: low
+  confidence: high
+  category: convention
+  location: tests/behaviour/dispatch-worktree-lifecycle.test.ts:46
+  message: 'NIT (.ai/rules/typescript.md section 0: no require, no ! non-null assertion, no cast used to silence a type error). New test code uses require(''node:child_process'') three times (tests/behaviour/dispatch-worktree-lifecycle.test.ts:46,64,76), non-null assertions in the shuffle helper (tests/behaviour/git-adapter-worktree-enumeration.test.ts:28) and ''policy: {} as never'' twice (tests/behaviour/board-lanes.test.ts). Each file already imports node:fs at the top.'
+  suggestion: Use a static import of node:child_process, a typed tuple for the shuffle helper, and a real policy value.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-16
+  severity: low
+  confidence: high
+  category: documentation
+  location: packages/cli/src/production.ts:4504
+  message: 'NIT. Two stacked comment blocks contradict each other: the first says that with the exception set ''the port is ABSENT'' (it is present and answers in-checkout), and both say provisioning ''is measured once per lane as delivery evidence'', but the port contains no measurement. The reconciled docs also carry the claims disproved by F-1, F-3 and F-2 (engine-first-operations.md:51-52 ''A resumed lane reuses its recorded worktree''; feature-dispatch-engine.md:62,190).'
+  suggestion: Keep one accurate comment; correct the guide and spec sentences together with the code fixes.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+- id: F-17
+  severity: info
+  confidence: medium
+  category: observation
+  location: packages/cli/src/production.ts:4318
+  message: INFO. (a) DEC-8 keys on the newest lane record for the ref, so a ref with any pre-change record stays in-checkout for every later lane, although the spec calls that population transitional. (b) The daemon/coordinator lane path (daemon-compose.ts:572) is not worktree-scoped; default-on means dispatch <ref>. (c) Provisioning is hardcoded to pnpm install --frozen-lockfile and pnpm run build for every repository the product is installed into (spec-settled OQ-1; an adopter hazard). (d) Commit subjects are the primitive's template and understate several payloads. (e) The last full 13-stage gate ran at f31212b1; phase 11 and the golden relocation landed after it. On HEAD 99c8dc74 I ran lint, format:check, typecheck, check:boundaries (all exit 0), the GH-404 suites plus the suites touched after that gate (143 pass / 0 fail across 17 files) and tests/golden (348 pass). (f) 'plan diff' is a stub in production (no diff reader composed; pre-existing, not this change).
+  suggestion: No action for this change beyond awareness; route (a)-(c) to GH-412 planning and the follow-ups the pm-notes already list.
+  suppressed: false
+  published_url: null
+  published_at: null
+  published_comment_id: null
+  published_thread_id: null
+reviewed_at: '2026-11-25T15:12:05Z'
+next_step: 'FAIL: PM adjudicates F-1 (lane branch model), F-3 (merge post-landing for a worktree-parked branch) and F-2 (sweep scope), then the plan-writer appends a Code Review Remediation phase (rev 9) covering F-1..F-6 with production-composition suites; CALL_CODER after that phase exists; re-review as iteration 2 with the production-shape probes. No remediation phase was appended to the plan and no typed blocker was published by this review: the delegating session asked for owning phase per finding, and the fixes depend on the decisions above.'

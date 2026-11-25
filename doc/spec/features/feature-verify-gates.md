@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-VERIFY-GATES
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-23
+last_updated: 2026-11-25
 owners: ["engineering"]
 service: delivery-os
 summary: "The verify gates surface: the config-declared merge battery (default five built-ins in shipped order), cited pass/fail/unknown verdicts, structured VerifyLedgerEvaluation consumption, deterministic open-PR resolution, read-specific 404 absence, shared status vocabulary, bounded deterministic output, the shipped run's fenced, post-append-verified persistence of the EVT-1 gate-verification record with byte-identical verdicts and the full-declared-sequence gate-set identity that binds its consumption, the delivered-shape projection of that record's member gates (`member` dropped, order and count preserved) so the ledger reads back non-`torn`, the non-gating capsule `gate.outcome` append with a bounded disclosure, the three verify gates rows (`verify.gates.failed`, `verify.gates.unavailable`, and the narrowed-scope refusal with its `detail.suiteBreadth` evidence member), the additive `data.suiteBreadth`/`data.mirrorsJob` suite-breadth fields on both report types, the suite-map declaration's fail-closed document posture, its four-outcome breadth resolution, and its two map-side refusals with their one bounded `cause:` line, and the additive cross-repository report type: one shared definition of done over the declared member set with per-(member, gate) records, per-member CI corroboration and member verdicts, landing-ordered evidence, an untruncated blocking-member list, one review flow with a stable run identity, and the data-bearing negative report at exit 1 while the delivered member-less report keeps its literal overall and exits."
 links:
-  related_changes: ["GH-178", "GH-225", "GH-240", "GH-310", "GH-300", "GH-338", "GH-388", "GH-386"]
+  related_changes: ["GH-178", "GH-225", "GH-240", "GH-310", "GH-300", "GH-338", "GH-388", "GH-386", "GH-404"]
   related_decisions: ["ADR-0003", "ADR-0006", "TDR-0005", "TDR-0032"]
   contracts:
     - "packages/core/src/contracts/verify-gates.ts"
@@ -29,7 +29,10 @@ declared battery — by default the five built-in gates in shipped order:
 cited exactly like a built-in, and a `merge`-only entry never appears on the
 battery. The overall result is `pass` only when every evaluated gate passes;
 any `fail` is definitive; `unknown` is never a pass. The battery is evaluated
-without short-circuit, so every report is complete.
+without short-circuit, so every report is complete. Its local reads are the
+invoking working tree's — the change's pm-notes and that checkout's HEAD — so
+under a worktree lane the battery is run from the lane's worktree, not from the
+main checkout ([Dispatch Engine](feature-dispatch-engine.md#lane-worktrees)).
 
 The command performs no merge, auto-merge, or provider mutation. It performs bounded local reads (ledger, repository HEAD/branch, CI workflow,
 and the project-committed configuration document) and at most one bounded page

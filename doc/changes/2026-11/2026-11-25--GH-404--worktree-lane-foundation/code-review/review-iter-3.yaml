@@ -1,0 +1,549 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-404
+branch: feat/GH-404/worktree-lane-foundation
+status: FAIL
+summary: >-
+  Iteration-2's three blocking highs are fixed on the production path and I reproduced each fix:
+  a second sweep of one ref and a worktree swept twice both succeed (scenarios 8 and 9, and end to
+  end through the real CLI), a repository that does not ignore `tmp/` plans and applies the cleanup
+  while real dirt outside the swept paths is still refused before anything moves (scenario 7 plus a
+  control), and the board renders each lane's worktree path from that repository's own store
+  (scenario 12 plus a two-repository board over real stores). FAIL rests on the tree itself. The
+  phase-13 commit leaves `pnpm test` red: its two `deliver-ticket` literals trip the committed
+  no-shell invariant (three tests) and the new contract export is missing from the v1 contract
+  inventory (one test); a phase-12 assertion that Decision 1 retired is red as well (one test).
+  None of these suites was in the phase's targeted set, and the inventory and structure suites were
+  not in mine for iteration 2. Two further mediums are new or newly load-bearing: every refused
+  sweep reaches the operator as a transient, retryable "provider write did not land" with its
+  detail dropped, and the per-entry replace silently deletes an earlier sweep's same-date logs.
+  Iteration 3 is exhausted; the change requires human adjudication of one narrow question (how
+  `tmp/deliver-ticket` is treated against the no-shell invariant) before a small remediation commit.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 4
+  low: 5
+  info: 3
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-34
+    severity: high
+    confidence: high
+    category: plan-compliance
+    location: packages/cli/src/edge.ts:2425
+    owner: human or PM decision, then one coder commit
+    message: >-
+      BLOCKING. Phase 13 breaks the committed no-shell invariant (dispatch-engine API-7, NFR-5:
+      "no script path appears in the flow"). Rule R1 of scripts/checks/no-shell-dispatch.ts flags
+      every string literal whose value contains `deliver-ticket` inside the declared dispatch-flow
+      surface, which includes packages/cli/src/edge.ts and packages/cli/src/production.ts; phase 13
+      added `"tmp/deliver-ticket"` (edge.ts:2425) and `"deliver-ticket"` (production.ts:2008). Red at
+      96f6228a: tests/checks/no-shell-dispatch.test.ts TC-SHELL-002 and
+      tests/conformance/loop/loop-parity-battery.test.ts TC-BATTLE-001 and TC-BATTLE-004;
+      `bun run scripts/checks/no-shell-dispatch.ts` exits 1. `bun test` discovers these files, so
+      `pnpm test`, `pnpm check` and CI are red at HEAD. The literals name a log directory, not a
+      script route, so this is a false positive by intent; the invariant suite is nevertheless the
+      authority and it fails. The phase-13 gate list and its pm-notes verification do not include
+      this check, and the reported 746 pass cover 84 other files.
+    suggestion: >-
+      Decide; do not route around the checker (.ai/rules/typescript.md section 0). Recommended:
+      drop `tmp/deliver-ticket` from LANE_SWEPT_PATHSPECS and from removeEphemeral. It is the shell
+      fallback's output directory, not produced by a worktree lane's lifecycle, and spec DEC-11
+      names only the runner logs and `tmp/tmpdir`; align the plan, the pm-notes and the code
+      comments with the narrowed set. Narrowing rule R1 or allowlisting the two lines (the suite
+      also pins NO_SHELL_ALLOWLIST empty) changes a security invariant and needs a decision record.
+      Moving the literal into a constant outside the scanned surface only hides it and is not
+      acceptable. Then re-run the three suites and `check:no-shell`.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-35
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: tests/fixtures/ports/v1-contract-inventory.json:480
+    owner: coder, same remediation commit
+    message: >-
+      Phase 13's new contract export is missing from the committed v1 contract surface inventory.
+      tests/structure/port-contract-inventory.test.ts TC-PORT-001 fails at 96f6228a with
+      "closeout.ts: unexpected export CloseoutLaneLogSweepData" and "index.ts: unexpected export
+      CloseoutLaneLogSweepData". packages/core/src/contracts/index.ts was one of the four undeclared
+      files the commit touched (disclosed as drift); this mirror of the export did not move with it.
+      Red under `pnpm test`; it blocks the quality gate until synced.
+    suggestion: >-
+      Add the export to both module lists in the fixture (after CloseoutLabelArguments at lines 480
+      and 2046); the change is additive (DM-1).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-36
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: tests/structure/state-scope.test.ts:381
+    owner: coder, same remediation commit
+    message: >-
+      TC-IDENT-001's placement test has been red since the phase-12 commit 3d8faceb, not from phase
+      13. It asserts `placement.branch` equals `lane/GH-404`, but Decision 1 removed `branch` from
+      LaneWorktreePlacement (packages/core/src/app/state-scope.ts:417-442 returns worktreeRoot and
+      worktreePath only). The file was outside my iteration-2 targeted set, so that review reported
+      a green tree without it.
+    suggestion: >-
+      Delete the assertion and assert the absence instead (the placement has no `branch` member),
+      rewording the comment to the detached contract of AC-F2-1.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-37
+    severity: medium
+    confidence: high
+    category: error-contract
+    location: packages/core/src/domain/closeout.ts:3191
+    owner: coder, recommended in the same remediation; must precede the first worktree lane
+    message: >-
+      (.ai/rules/typescript.md section 7.) Every refused sweep and every post-sweep ordering refusal
+      reaches the operator as `closeout.write.failed`: category transient, retryable true,
+      consequence unknown, summary "A closeout provider write did not land.", written to stderr
+      only. The detail composed in gateWorktreeRemoval is dropped (runCloseout records only
+      gate.code at closeout.ts:3076, and :3191 projects any failed step to that identity), and plan
+      mode keeps rendering `would-apply`. Reproduced through the production CLI three ways: the
+      over-cap refusal that is F-21's safe path, a sweep that fails while removing the ephemeral
+      artifacts, and dirt the plan-time exclusion masks but the sweep does not remove (a nested
+      `tmp/sub/nested.log`: swept, then refused). Nothing names the cap, the path or the next
+      action, and an operator or wrapper is invited to retry a deterministic refusal. The
+      projection dates from the phase-12 ordering gate and I did not flag it in iterations 1 and 2;
+      phase 13 makes it load-bearing because it is the only surface of the new refusal and the
+      designated authority for masked dirt. No committed suite drives a refused sweep through the
+      transaction (scenario 10b is closure-level).
+    suggestion: >-
+      Project the gate refusal as its own classified failure with the gate's code and a bounded
+      summary carrying its detail (a user class, not retryable; the plan-time refusal already does
+      this for `closeout.branch.unsafe`), and add one transaction-level scenario that asserts the
+      envelope of a refused sweep.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-38
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:2057
+    owner: coder, recommended in the same remediation; otherwise a declared residual with owner visibility
+    message: >-
+      (NFR-5 "0 silent log loss".) The per-entry replace deletes an earlier sweep's preserved logs
+      whenever one ref is swept twice for the same date, silently. A runner-log entry is a date
+      directory; the second sweep's same-named entry holds only what was written after the first
+      sweep removed its sources, and `rmSync(destination/<entry>)` discards everything the first
+      sweep preserved while the step reports `swept: true, truncated: false, omittedBytes: 0`.
+      Reproduced through the production composition in both shapes iteration-2 F-18 named: one lane
+      swept, refused, then re-swept (090001-phase-gates.log and 090002-commit-range-lint.log gone,
+      only 100003-after-cleanup.log left) and two lanes of one ref closed out on one date (lane 1's
+      two files gone). The single-sweep path is unaffected. Reachability is narrow: a retried
+      closeout after a refused removal with new same-date logs, or a second landing of one ref
+      outside `merge`, which refuses a second landing by design. The replace step is what my
+      iteration-2 suggestion for F-18 asked for; it was under-specified for date-named entries.
+    suggestion: >-
+      Merge the staged entry into the destination entry (a recursive copy keeps the existing files)
+      and verify per placed file (each staged file exists at the destination with equal bytes),
+      keeping the staging sibling and the atomic rename for new entries; or place each sweep under
+      a unique name. Add a same-date scenario with distinct file names; scenario 9 pins the
+      replacement using one same-named file.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-39
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/edge.ts:2536
+    owner: coder, same remediation; otherwise a declared residual
+    message: >-
+      The plan-time exclusion (edge.ts:2529-2539) and the sweep (bound for every closeout at
+      production.ts:3508) apply to every worktree holding the delivery branch, not only to a
+      lane-provisioned one. In a repository that does not ignore `tmp/`, `closeout` of a
+      hand-created delivery worktree with untracked files under the four paths now plans
+      `would-apply` and removes it, deleting `tmp/tmpdir` and `tmp/*.log` (reproduced: a manual
+      worktree's draft and notes were deleted and the worktree removed). Before phase 13 the
+      unexcluded observation refused that state as dirty. Spec section 8.5 says the delivered
+      safety predicate is reused, not redefined. The exclusion does not mask a genuinely dirty lane
+      worktree: dirt outside the four paths is refused before anything moves (control reproduced).
+    suggestion: >-
+      Apply the exclusion and the sweep only when the delivery worktree's path equals the newest
+      dispatch.lane record's `worktreePath` for the ref; keep the unexcluded observation for every
+      other worktree.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-40
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/production.ts:2094
+    owner: coder, same remediation; otherwise a declared residual
+    message: >-
+      In the logs arm removeEphemeral runs after the source entries were removed, and its
+      `tmp/*.log` deletion is non-recursive (production.ts:2011). A directory named
+      `tmp/<name>.log` makes the sweep throw EISDIR after the runner logs have already been moved
+      out, and every retry fails the same way (reproduced with the production closure: a permanent
+      refusal). A broken symlink as a runner-log entry refuses the same way, in the sort's statSync.
+      A repository that does not ignore `tmp/` refuses at plan time first, so the wedge needs an
+      ignoring repository. The operator surface is F-37's.
+    suggestion: >-
+      Delete recursively, and remove the ephemeral artifacts before the source entries (their
+      removal cannot make the worktree dirtier), so a failure leaves the logs in place.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-41
+    severity: low
+    confidence: high
+    category: error-contract
+    location: packages/cli/src/production.ts:2074
+    owner: coder, same remediation; otherwise a declared residual
+    message: >-
+      The nothing-preservable refusal says "no runner-log entry fits the cap" even when an older
+      small entry fits and is never tried: once the newest entry is over the cap, the
+      `truncated ||` short circuit at production.ts:2039 omits every remaining entry (reproduced
+      with the closure: a 17-byte entry omitted beside a cap-plus-one one). The detail names
+      neither the oversized entry nor the action. The applied disclosure reports only the omitted
+      byte count, not which dates were dropped, and "newest-first" is the directory's modification
+      time, not the date in its name.
+    suggestion: >-
+      Name the first oversized entry and the action (move or delete it, then retry) in the detail;
+      continue filling after an oversized entry if the intent is to preserve what fits; list the
+      omitted entry names, bounded, in the step disclosure.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-42
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/behaviour/dispatch-resume-economics.test.ts:22
+    owner: coder, same remediation
+    message: >-
+      F-22 residual. (a) The reworded comment says scenario 6 covers "the missing-worktree half of
+      TC-RESUME-002"; scenario 6 asserts the opposite branch (a TERMINAL record whose worktree is
+      gone provisions fresh). The ACTIVE-lane refusal `lane-worktree-missing` (spec F-4) is driven
+      by no committed suite on any path; I verified the behaviour through the production CLI (exit
+      1, the worktree named, no session spawned, nothing provisioned). (b) Seven assertions accept
+      `[0, 2]` where the stubbed provider truth is deterministic (lines 332, 373, 513, 920, 1026,
+      1163, 1210); phase 13 replaced `toBe(2)` with that form in scenarios 1, 2 and 5 and wrote the
+      other four the same way. (c) No scenario drives a refused sweep or the post-sweep refusal
+      through the transaction (F-37).
+    suggestion: >-
+      Add the active-lane-missing scenario, pin the exit codes to the value the stub produces, add
+      the refused-sweep scenario, and reword the comment to what is asserted.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-43
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/edge.ts:4051
+    owner: coder, same remediation; otherwise a declared residual
+    message: >-
+      boardDispatchWorktreePaths is never cleared. On a reused runtime a newer context-less record
+      leaves the previous render's path in the map (reproduced over the real board runtime with
+      real stores: the second render still shows the path; a fresh runtime over the same records
+      shows none). Not reachable through the binary launcher, which composes one program per
+      process; the committed board fixtures reuse one runtime across runs, as any embedder would.
+    suggestion: >-
+      Rebuild the map per render: clear it when the board handler starts, or build it in the
+      handler from the repositories it loaded.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-44
+    severity: info
+    confidence: high
+    category: observation
+    location: packages/adapters/src/git/merge.ts:235
+    owner: no action; note for the next touch
+    message: >-
+      F-29 notes. Skipping a stale (prunable) block makes the port report the branch as not held,
+      but git still refuses the deletion while the registration exists, so a merge whose worktree
+      directory was removed by hand records post-landing `branch-deletion: failed` instead of the
+      earlier `deferred` (reproduced: exit 0, result merged, branch retained; closeout then still
+      needs `git worktree prune`). `block.split("\n").includes("prunable")` never matches on git
+      2.53, whose line always carries a reason; the existsSync check does the work. Separately,
+      closeout of a stale registration still reports `worktree-cleanup refused ... condition=dirty`
+      with no remedy: the plan-time observation refuses before the new removeWorktree text is
+      reached.
+    suggestion: >-
+      No action required. If touched, classify a refused deletion of a stale registration
+      explicitly and drop the dead check.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-45
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/spec/features/feature-dispatch-engine.md:965
+    owner: doc-sync re-run
+    message: >-
+      For the doc-sync re-run, besides the F-33, F-23 and F-16 sentences (all still in the tree at
+      96f6228a): feature-dispatch-engine.md:965 still carries the retired summary prose of
+      `dispatch.session.spawn-failed`, the one unenforced mirror the F-9 closure left;
+      packages/cli/src/commands/board.ts:50-51 and :129 and packages/core/src/app/dispatch-lane-view.ts:39
+      still say "ref-keyed" and "per ref"; spec v1.1 DEC-9 to DEC-11 cite "Review-iteration-1
+      remediation (finding F-24)" although F-24 is the iteration-2 finding; DEC-11 names only the
+      runner logs and `tmp/tmpdir` while phase 13 also discards `tmp/deliver-ticket` and `tmp/*.log`.
+    suggestion: >-
+      Reconcile in the doc-sync re-run together with F-33 and F-23, and have that delta checked
+      before the pull request.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-46
+    severity: info
+    confidence: high
+    category: observation
+    location: packages/adapters/src/git/index.ts:537
+    owner: no action; note for the next touch
+    message: >-
+      The two stderr tails (install and build since phase 12, the git refusal since phase 13) keep
+      their newlines, so the human `summary:` line of a provisioning refusal spans several
+      unprefixed lines (reproduced for both). The JSON summary is unaffected.
+    suggestion: >-
+      Collapse whitespace in the tail before composing the detail.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+
+reviewed_at: '2026-11-25T18:59:05Z'
+next_step: >-
+  FAIL. Iteration 3 is exhausted and the change requires human adjudication. The adjudication is
+  narrow because the three iteration-2 blockers are verified fixed: (1) decide F-34, recommended
+  to drop `tmp/deliver-ticket` from the swept set, which needs no change to the invariant; (2)
+  decide whether F-37 and F-38 are fixed in the same edit (recommended: both touch the same closure
+  and are small) or carried as declared residuals with owner visibility. Minimal remediation for
+  the FAIL is one coder commit: apply the F-34 decision in packages/cli/src/edge.ts and
+  production.ts and align the plan, pm-notes and comments; add CloseoutLaneLogSweepData to
+  tests/fixtures/ports/v1-contract-inventory.json (F-35); retire the `placement.branch` assertion
+  in tests/structure/state-scope.test.ts (F-36); commit the pending pm-notes edit together with
+  it. Gate for that commit: `bun run scripts/checks/no-shell-dispatch.ts`,
+  `bun test tests/checks tests/structure tests/conformance` (5 red tests at 96f6228a, all named
+  above) and the phase-13 targeted set. Recommended in the same edit: F-37, F-38, F-39, F-40,
+  F-42, F-43. Because the commit changes production code, the delta needs a review pass before
+  quality_gates; a doc-focused check must also cover the doc-sync re-run (F-33, F-23, F-16, F-45),
+  which is still pending and was not reviewed here. No remediation phase was appended to the plan
+  and no typed blocker was published by this review, as in iterations 1 and 2: the delegating
+  session asked for owner and minimal remediation per finding and owns the plan and the blockers.
+verification:
+  note: >-
+    Additive informational key, as in iteration 2: each iteration-2 finding (and iteration-1 F-9)
+    against the tree at 96f6228a. Probe labels refer to tmp/tmpdir/opencode/gh404-review-i3/*.ts,
+    all confined to their own temporary roots under the approved scratch base.
+  F-18:
+    verdict: VERIFIED FIXED
+    evidence: >-
+      Scenarios 8 and 9 green. P1: lane 1 and lane 2 of one ref closed out through the real CLI
+      (second closeout exit 0); a worktree swept, refused for post-sweep dirt and swept again
+      completes. Whole-directory counts are gone.
+    residual: F-38 (the replace deletes the earlier sweep's same-date files).
+  F-19:
+    verdict: VERIFIED FIXED
+    evidence: >-
+      Scenario 7 green (tmp not ignored: plan would-apply, apply applied, sweep disclosed). P2
+      control: an untracked file outside the swept paths still gives plan would-refuse and apply
+      exit 1 `worktree-cleanup refused: retained=1 ... condition=dirty`, with sources intact and
+      no destination. The apply-time observation (production.ts:2098) and the adapter's pre-removal
+      status (index.ts:576) pass no exclusion.
+    residual: F-37, F-39, F-40.
+  F-20:
+    verdict: VERIFIED FIXED
+    evidence: >-
+      Scenario 12 green (derived key differs from the record identity; the row carries the path).
+      P7: a two-repository board with the same ref renders each repository's own path; one store
+      opened per repository.
+    residual: F-43; the "ref-keyed" comments listed in F-45.
+  F-21:
+    verdict: VERIFIED FIXED at the closure and in the payload
+    evidence: >-
+      Scenario 10 green; the digest renders `lane logs: swept, truncated (33554433 bytes omitted by
+      the cap)` (P5). A sweep that can preserve nothing refuses at the closure with the sources
+      intact and the destination empty (P5, P6).
+    residual: F-37 (the refusal's operator surface), F-41.
+  F-22:
+    verdict: PARTIAL
+    evidence: >-
+      Scenario 7 runs verify gates and merge in the lane worktree and `closeout --apply` from the
+      main checkout, one composed program per invocation; scenarios 4 and 5 are labelled as
+      seam-level and closure-level proofs; the file header and the pm-notes wording match the
+      code.
+    residual: F-42.
+  F-23:
+    verdict: AS DECLARED, not yet tracked
+    evidence: Unchanged since iteration 2.
+    residual: >-
+      The guide wording rides the doc-sync re-run. The code half is described as a follow-up work
+      item, but I found none: a search of the open GitHub issues for a worktree-aware verify gates
+      (two queries) returns only GH-404. It must be minted, or named as an open follow-up in the
+      pull request body.
+  F-24:
+    verdict: DONE
+    evidence: >-
+      Spec v1.1 at 31f8226a: DEC-9, DEC-10 and DEC-11 recorded; G-2, G-4, G-6, F-2, F-4, F-6,
+      NFR-5, RSK-3, section 7.1, section 16, section 21 and AC-F2-1, AC-F4-1, AC-F6-1 reworded to
+      the delivered contract.
+    residual: The DEC-9 to DEC-11 wording cited in F-45.
+  F-25:
+    verdict: VERIFIED FIXED for both named dispatch paths
+    evidence: >-
+      Scenarios 11a and 11b green. P4 and P9: the stale-registration refusal names the path, exit
+      128 and `git worktree prune`, and the remedy survives for short and long roots because the
+      envelope summary is emitted unclipped (577 and 761 characters).
+    residual: F-44 (the closeout-side stale registration), F-46.
+  F-26:
+    verdict: DECLARED RESIDUAL, acceptable to carry with owner visibility
+    evidence: Unchanged; the refusal compares HEAD with the current base tip.
+    residual: >-
+      The message misdescribes the state and names no recovery. Rare while one lane runs per
+      repository; it can be expected to become common under GH-412's parallel lanes, where the
+      base moves while a lane is paused, so it belongs in that plan explicitly.
+  F-27:
+    verdict: DECLARED RESIDUAL, acceptable to carry
+    evidence: Unchanged.
+    residual: Cosmetic misattribution; defense in depth.
+  F-28:
+    verdict: DECLARED RESIDUAL, acceptable to carry
+    evidence: Unchanged.
+    residual: Two convention matchers until the GH-408 rename.
+  F-29:
+    verdict: VERIFIED FIXED
+    evidence: Scenario 13 green; P3 confirms the exact `branch refs/heads/<branch>` line.
+    residual: F-44.
+  F-30:
+    verdict: VERIFIED FIXED
+    evidence: >-
+      Scenario 5 (a read-only `tmp/` returns the declared refusal inside the try) and scenario 2
+      (the TMPDIR anchor is recreated on reuse) are green.
+    residual: None.
+  F-31:
+    verdict: INFO, recurs
+    evidence: 96f6228a is again typed `docs(GH-404)` while carrying 15 source, test and doc files.
+    residual: The commit-primitive follow-up.
+  F-32:
+    verdict: DECLARED RESIDUAL, acceptable to carry
+    evidence: Unchanged.
+    residual: Placement derives from the invoking directory.
+  F-33:
+    verdict: DECLARED RESIDUAL, pending
+    evidence: >-
+      The listed sentences are still in the tree at 96f6228a (feature-closeout.md:188-190,
+      feature-state-layer.md:99 and :126, feature-merge-verify-deploy.md:105-114,
+      feature-dispatch-engine.md:62 and :190, engine-first-operations.md:46-58).
+    residual: The doc-sync re-run has not run; its delta was not reviewed.
+  F-9:
+    verdict: CLOSED for every enforced mirror
+    evidence: >-
+      The row, Appendix D, the events baseline, the supervise baseline and the two structure
+      mirrors agree; error-table-sync, tests/structure/error-table.test.ts and
+      tests/structure/dispatch-error-identity.test.ts are green in my run. The row's statements
+      hold on the refusal paths I exercised (11a, 11b and the active-lane-missing refusal).
+    residual: feature-dispatch-engine.md:965, an unenforced prose mirror (F-45).
+reviewer_notes:
+  gates_run: >-
+    pnpm typecheck exit 0 (six packages plus tests/types); pnpm lint and pnpm format:check exit 0;
+    check:boundaries, new-code-naming, forbidden-literals, exit-code-literals, tsconfig-strictness,
+    exports-parity and allowlist-tripwire OK; `bun run scripts/checks/no-shell-dispatch.ts` exit 1
+    (F-34). tests/golden 348 pass with no byte change. tests/checks + tests/structure +
+    tests/conformance: 4260 pass, 5 fail across 445 files (the five tests named in F-34, F-35 and
+    F-36). The phase-13 verify set plus the enumeration, lifecycle and house-style suites: 360 pass
+    across 14 files. Behaviour areas touched by the change (boundaries, board, closeout, merge,
+    lanes, status, queue, config, git-adapter, host-index): 1440 pass across 157 files;
+    worktree, error, envelope, result, owner-gate and supervise suites: 927 pass across 135 files.
+    `plan validate GH-404` valid. `verify change GH-404` reports only the expected
+    `verify.ledger.incomplete` (review_fix, quality_gates, dod_check, pr_creation open). The full
+    battery was not run (quality_gates owns it); about 660 of the 1001 behaviour files were run by
+    neither the phase's reported set nor this review.
+  gate_observation: >-
+    `biome check` (which includes the organizeImports assist) flags import order in
+    tests/behaviour/dispatch-production-worktree.test.ts and
+    tests/structure/dispatch-error-identity.test.ts. The repository gates run `biome lint` and
+    `biome format` only, so the assist is unguarded. A note on the gate, not a finding.
+  scope_discipline: >-
+    Phase 13 declared 11 files; the commit touched 15 besides the pm-notes. The four undeclared
+    files (packages/core/src/contracts/index.ts, tests/fixtures/supervise/error-table-baseline.json,
+    tests/structure/dispatch-error-identity.test.ts, tests/structure/error-table.test.ts) are each
+    required by a declared fix and are disclosed in the pm-notes as drift. One more mirror was
+    required and not touched: the v1 contract inventory (F-35). No golden bytes changed and no
+    exception pin was regenerated. The phase's completion note names phase 13, the commit hash and
+    its test results; the hash parenthetical is still an uncommitted edit to the pm-notes at review
+    time.
+  plan_gaps: EVIDENCE_MISSING (the phase gate's evidence omits the repository invariant suites, which are red); SCOPE_DEVIATION (four undeclared files, disclosed)
+  test_coverage_gaps: >-
+    TC-SHELL-002, TC-BATTLE-001, TC-BATTLE-004, TC-PORT-001 and TC-IDENT-001 red at HEAD;
+    TC-RESUME-002's missing-worktree half has no committed proof on any path; no transaction-level
+    scenario for a refused sweep.
+  residuals_carry: >-
+    Acceptable to carry with owner visibility: F-26, F-27, F-28, F-31, F-32 (declared in phase 13),
+    F-33, F-16 and the F-23 guide wording once the doc-sync re-run has run and its delta has been
+    checked, and F-44 to F-46. Conditional: F-23's code half needs a tracked work item. If the
+    adjudication carries F-37 and F-38 instead of fixing them, both belong in the pull request body
+    in plain words: a refused sweep reports a transient provider-write failure and names no cause,
+    and a same-date second sweep of one ref replaces the logs preserved by the first.
+  phase_13_delta_assessment: >-
+    The six areas the delegating session named, each answered from the probes. (1) Replace,
+    atomicity and partial failure: adequate for the lane being swept. The staging sibling is on
+    the destination's filesystem, each entry is measured before and after the rename, and the
+    sources are removed only after every entry is placed and re-verified; a failure between
+    entries leaves the sources intact and a retry completes. The loss falls on an earlier sweep's
+    same-date entry (F-38), and a failure inside removeEphemeral happens after the sources are
+    gone (F-40). (2) The exclusion's blast radius: it masks exactly the four pathspecs. Dirt
+    outside them is refused before any side effect (control). Masked dirt the sweep does not
+    remove is swept and then refused, with the logs preserved at the destination (F-37's surface).
+    A modified tracked file under the four paths is masked too and the sweep deletes its worktree
+    copy before the authoritative verdict; reproduced at the git level only, in a scratch
+    repository. The exclusion also reaches worktrees the product did not provision (F-39).
+    (3) The board map: one bounded dispatch.lane ledger read per repository per render, beside
+    the reads the board already makes; no filtering defect, each repository's records land under
+    its own key; stale across renders on a reused runtime (F-43). (4) The truncation field: a
+    fixed shape, one boolean and one count; the count walks every omitted entry, so the work is
+    unbounded while the output is bounded; the cap counts copied bytes only, and after it is hit
+    every remaining entry is dropped even if it fits (F-41). (5) The exact-match deferral: a
+    stale registration is skipped, the deletion is then attempted and refused by git, and the
+    outcome is `failed` instead of `deferred` (F-44). (6) The F-9 mirrors: every enforced mirror
+    moved with the row; one unenforced prose mirror remains (F-45).
+  reviewer_disclosures: >-
+    (1) F-36 has been red since 3d8faceb; tests/structure/state-scope.test.ts was outside my
+    iteration-2 targeted set, and the no-shell check I ran then was green only because the two
+    literals arrived with phase 13. (2) F-37's
+    projection has existed since the phase-12 ordering gate and I did not flag it in iterations 1
+    and 2. (3) F-38 follows from the replace step my iteration-2 F-18 suggestion asked for. (4) No
+    incident this iteration: every probe confined its git and CLI calls to its own temporary root;
+    HEAD, branch, `git status --porcelain`, the branch list (35), the worktree list and the sha256
+    of the pm-notes (7f6373c034e19b78...) are identical before and after the review, and no file
+    was written outside tmp/tmpdir and this artifact.
