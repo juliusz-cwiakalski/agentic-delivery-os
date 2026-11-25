@@ -52,10 +52,74 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Review iter-2 verdict FAIL (code-review/review-iter-2.yaml; swept at the
+      review_fix completion): the six iteration-1 blockers/majors are VERIFIED
+      FIXED through the production composer (F-1 resume accepted detached AND on
+      the delivery branch, foreign branch refused; F-2 runner logs copied bound,
+      scratch deleted, blocked destination moves nothing; F-3 squashLand
+      byte-identical to main-tools + end-to-end merge deferral + closeout branch
+      deletion; F-4 install-failure rollback + re-dispatch after closeout; F-5
+      PATH/TMPDIR/DELIVERY_WORK_PATH are the worktree's on spawn AND resume with
+      controls; F-6 scenarios 1/2/3/6 are production-path). THREE NEW HIGHS in
+      the remediated code, invisible to the committed suites: F-18 the sweep
+      verifies the whole destination directory against this copy and never
+      clears it — a second sweep of the same ref fails forever with
+      closeout.lane-log-sweep-failed and closeout refuses removal permanently;
+      F-19 the F-8 fix is unreachable where it matters — plan-time cleanliness
+      still judges the PRE-sweep worktree, so closeout --apply exits 1 with
+      condition=dirty and the sweep never runs in repos that do not ignore
+      tmp/ (no effect in this repo; hits adopters — the installer adds no tmp/
+      ignore); F-20 the board keys its worktree-path join by the derived
+      repository key (repo-<hex>) while the lane record carries
+      github.com/owner/repo, so the board shows no path (the committed test
+      passes only because its fixture uses one string for both). Mediums: F-21
+      the truncation fact is dropped and un-copied logs are deleted (decision 3
+      requires disclosure); F-22 scenarios 4/5 are not production-path and no
+      suite runs merge or closeout through the composer; F-23 verify gates from
+      the main checkout does not converge for a worktree lane (doc-owned);
+      F-24 the change spec is unamended (AC-F2-1/AC-F4-1 read unmet); F-25 a
+      stale registration or refused rollback wedges the ref with a bare (128).
+      Lows F-26..F-30; info F-31..F-33 (incl. eight pre-existing lane/* local
+      branches — workspace hygiene, not repository content). DECLARED
+      RESIDUALS: F-9 — PM chose to CLOSE it in this cycle via the phase-13 trio
+      (contracts/error-table.ts + tests/fixtures/events/error-table-baseline.json
+      + doc/spec/features/feature-result-contract.md moved together so
+      error-table-sync stays green); F-17 out-of-scope as declared; F-14
+      narrowed and verified at HEAD. REMEDIATION ORDER (review iteration 3 is
+      the LAST before human escalation — quality over speed): spec amendment
+      F-24 (spec-writer) + plan rev 10 phase 13 (F-18/F-19/F-20 blockers +
+      F-21/F-22/F-25/F-29/F-30 + the F-9 closure, each with a
+      production-composition scenario seeded from
+      tmp/tmpdir/opencode/gh404-review-i2/probe-e2e.ts) + new coder + review
+      iter-3 + doc-sync re-run (merge spec, F-16 doc sentences, F-23 guide
+      wording, F-33) + review_fix complete + quality_gates + DoD + PR.
+      REVIEWER INCIDENT (self-reported, independently verified by @runner):
+      its first probe run created four branches and one commit in this
+      checkout; it restored by hand and the verification confirms HEAD
+      3d8faceb on the change branch, status identical to the pre-review state,
+      the four branches deleted, work.txt/notes.md absent, pm-notes sha256
+      6d16bfd9… intact, single worktree registered; five reflog entries and
+      one unreachable commit remain (harmless); its probe library now confines
+      git operations to its own temporary root."
+    type: info
+    date: "2026-11-25"
+  - text: "Retro (iteration-2 lesson, the complement of iteration 1's):
+      production-composition coverage must extend to EVERY seam a remediation
+      pass touches. The new default-mode suite covered provisioning and resume
+      — so F-1/F-2/F-4/F-5/F-6 were caught and fixed — but it ran no merge,
+      no closeout and no board render through the composer, which is exactly
+      where F-18/F-19/F-20 lived. Rule for remediation phases: enumerate the
+      seams the fixes touch, and extend the production suite to each in the
+      same commit; a scenario count is not coverage. The reviewer's own probe
+      misfire also reinforces the harness rule: every probe library confines
+      git to its own temporary root (it does now)."
+    type: retro
+    date: "2026-11-25"
   - text: "Plan phase 12 (rev-9 review-iter-1 remediation) applied in ONE commit
-      through the commit primitive (its hash is recorded in this change
-      capsule's commit event — this note is committed in that same commit, so
-      it cannot name its own hash; no amend, no history rewrite). FINAL STATUS
+      through the commit primitive (3d8faceb32416449aef976653899319becc2af96;
+      this hash was unknowable when the note was committed IN that commit, so
+      this parenthetical carries the follow-up evidence edit — no amend, no
+      history rewrite, no capsule file was written for this change). FINAL STATUS
       PER FINDING: F-1 ADDRESSED — worktree provisioned DETACHED at the base
       tip, no lane/<REF> branch; reuse verifies detached-at-base OR a
       delivery-convention branch ^[a-z]+/<REF>/, a genuinely foreign branch
@@ -81,7 +145,13 @@ notes:
       worktree environment (worktree node_modules/.bin leading PATH, TMPDIR
       anchored inside the worktree) for the fresh spawn AND the resumed lane;
       the suite asserts the SESSION spawn environment, not only the
-      provisioning children. F-6 ADDRESSED — new first-class suite
+      provisioning children. Residual, declared: the older
+      LaneLaunchPlanFacts.worktreeEnvironment branch in
+      packages/core/src/domain/lane-launch-plan.ts still has no supplier — its
+      only consumer is the daemon lane planner (daemon-compose.ts), which is
+      F-17(b) out of scope here; the dispatch SESSION environment is delivered
+      by the descriptor builder, which is the authoritative spawn source.
+      F-6 ADDRESSED — new first-class suite
       tests/behaviour/dispatch-production-worktree.test.ts (6 scenarios,
       createProductionComposer -> real CLI -> dispatch/merge runtime over real
       temp git repositories, only harness/provider/children stubbed); the

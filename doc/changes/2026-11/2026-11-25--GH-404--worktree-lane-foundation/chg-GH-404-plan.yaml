@@ -844,6 +844,154 @@ phases:
         - tests/fixtures/dispatch/parity/harness.ts
         - tests/golden/status-context-less.txt
         - tests/golden/dispatch-status-worktree.test.ts
+  - id: 13
+    title: Code Review Remediation (Iteration 2) — sweep destination per-entry replace-and-verify, plan-time cleanliness excludes swept paths, board map from each repository's own store; F-9 closure trio (F-18..F-30)
+    kind: delivery
+    summary: "review-iter-2 remediation (FAIL: 3 new highs F-18/F-19/F-20, mediums F-21..F-25, lows F-26..F-30, info F-31..F-33; the six iteration-1 blockers/majors are VERIFIED FIXED per the artifact's verification key — each new high reproduced through the production composition). BLOCKER FIXES, each with a production-composition scenario seeded from /tmp/tmpdir/opencode/gh404-review-i2/probe-e2e.ts: F-18 packages/cli/src/production.ts createLaneLogSweep — replace and verify PER ENTRY instead of comparing whole-directory counts (copy to a staging sibling and replace destination/<entry> atomically; verify placed bytes equal the measured source bytes; older differently named entries may stay), and clear/replace the destination so a SECOND sweep of the same ref — or a re-sweep with new logs — succeeds instead of failing forever with closeout.lane-log-sweep-failed; scenarios: a second lane of the same ref after removal + fresh dispatch, and one lane swept twice with new logs in between. F-19 packages/cli/src/edge.ts planFacts — exclude the swept paths (tmp/run-logs-runner, tmp/*.log, tmp/deliver-ticket, tmp/tmpdir) from the PLAN-TIME cleanliness check so a repository not ignoring tmp/ plans and applies correctly (the apply-mode post-sweep observation remains authoritative); scenario: closeout end to end with tmp/ NOT ignored. F-20 packages/cli/src/edge.ts loadRepositoryFacts — build the board's worktree-path map from EACH repository's own store, keyed consistently with the dispatch.lane records' own repository string (github.com/owner/repo), so the board renders the path when the derived key differs from the record's string; test: a board whose derived key differs from the record identity. CHEAP FIXES in the same phase: F-21 disclose the sweep truncation — the port's truncated/omitted-bytes fact carried into the closeout applied payload's sweep evidence (declare the minimal contract field if needed in packages/core/src/contracts/closeout.ts; bounded, identifier-only), with the sparse-file shape tested; F-22 extend tests/behaviour/dispatch-production-worktree.test.ts so scenarios 4 and 5 run the production path (or are explicitly justified) AND add merge + closeout through the composer end-to-end (the review-iteration-1 lesson: newly touched seams must be production-covered), plus the F-18 and F-19 shapes, with the over-asserting comments reworded to what is asserted (including tests/behaviour/dispatch-resume-economics.test.ts :14-20); F-25 a stale worktree registration or a refused rollback names the worktree path/registration and the recovery step in the refusal detail — never a bare (128) (packages/cli/src/production.ts; packages/adapters/src/git/index.ts addWorktree refusal carries a bounded stderr tail + path + named remedy: prune, or remove the named path); F-29 the deferral check's substring match becomes a prefix/exact delivery-convention match comparing the exact refs/heads/<branch> line and skipping prunable worktree blocks (packages/adapters/src/git/merge.ts); F-30 the scratch deletion sits inside the try so a failure still returns the declared refusal shape, and the reuse arm creates the TMPDIR anchor (packages/cli/src/production.ts); F-9 CLOSURE (reviewer: acceptable to carry, but closeable by ONE commit moving three files together so error-table-sync stays green): packages/core/src/contracts/error-table.ts row prose + tests/fixtures/events/error-table-baseline.json + doc/spec/features/feature-result-contract.md — the row states the provisioning refusal records no attempt. DECLARED OUT-OF-SCOPE RESIDUALS (one line each in the phase comment): F-26, F-27, F-28, F-31/F-32/F-33 (F-33's doc sentences and F-23's guide wording ride the doc-sync re-run after code lands); the eight leftover lane/* local branches are workspace hygiene noted for local cleanup, not repository content."
+    # Review context: iteration 2 FAIL (code-review/review-iter-2.yaml, 2026-11-25T17:55:00Z):
+    # 0 critical, 3 high, 5 medium, 5 low, 3 info. The six iteration-1
+    # blockers/majors are VERIFIED FIXED (artifact verification key, each with
+    # its probe): F-1 detached-at-tip + convention-branch resume (residual
+    # F-26/F-27/F-28), F-2 runner-log sweep declared scope (residual F-18/F-21
+    # are regressions in the remediated closure + F-30), F-3 squashLand
+    # byte-identical revert + working deferral (residual F-29, proof not
+    # production-path = F-22), F-4 rollback + re-dispatch (residual F-25),
+    # F-5 session PATH/TMPDIR bound (residual: the launch-plan supplier field
+    # acceptable to carry as declared), F-6 partial (scenarios 1/2/3/6
+    # production-path; 4/5 not — F-22). No new PM decision needed (the review:
+    # each blocker follows from Decisions 1-3 and AC-F7-1).
+    # BLOCKER FIXES (each with a production-composition scenario; seed:
+    # /tmp/tmpdir/opencode/gh404-review-i2/probe-e2e.ts — a working seed per
+    # the review's next_step):
+    # - F-18 (high, production.ts:2014) createLaneLogSweep: per-entry
+    #   replace-and-verify — copy to a staging sibling, replace
+    #   destination/<entry> atomically, verify placed bytes equal the
+    #   measured source bytes; never whole-directory counts; older
+    #   differently named entries may stay. The destination never wedges a
+    #   ref: a second sweep of the same ref (the re-dispatch the remediation
+    #   itself supports) and a re-sweep with new logs both succeed instead of
+    #   failing forever with closeout.lane-log-sweep-failed. Scenarios: (i) a
+    #   second lane of the same ref after git worktree remove + fresh
+    #   dispatch; (ii) one lane swept twice with new logs in between. The
+    #   false not-retrievable detail disappears with the whole-directory
+    #   comparison.
+    # - F-19 (high, edge.ts:2514) planFacts: the PLAN-TIME cleanliness check
+    #   of a lane worktree EXCLUDES the swept paths (git status --porcelain
+    #   with :(exclude)tmp/run-logs-runner, :(exclude)tmp/tmpdir and the
+    #   declared log set tmp/*.log, tmp/deliver-ticket); the apply-time
+    #   post-sweep observation stays authoritative. Without it a repository
+    #   that does not ignore tmp/ refuses at plan (worktree-cleanup refused:
+    #   condition=dirty) before the sweep ever runs — the iteration-1 F-8
+    #   rationale still inverted at plan time. Scenario: closeout end to end
+    #   with tmp/ NOT ignored (plan passes, apply sweeps, worktree removed,
+    #   branch deleted, logs at the destination).
+    # - F-20 (high, owner-gate-sla.ts:508 via edge loadRepositoryFacts) the
+    #   board's worktree-path map is built from EACH repository's own store
+    #   inside loadRepositoryFacts (it already opens one) and keyed
+    #   consistently with the dispatch.lane records' own repository string
+    #   (github.com/owner/repo) — the derived repo key (repo-dbd86596) and
+    #   the record's origin identity never meet today, so no board row
+    #   carries a path. Test: a board whose derived key DIFFERS from the
+    #   record identity renders the path; the stale ref-keyed/per-ref
+    #   comments inside the declared edge.ts parts corrected with the fix.
+    # CHEAP FIXES (same phase, same fences):
+    # - F-21 (medium, production.ts:1996): the truncation fact is DISCLOSED —
+    #   the port's truncated/omitted-bytes fact carried into the closeout
+    #   applied payload's sweep evidence; declare the minimal contract field
+    #   if needed in packages/core/src/contracts/closeout.ts (bounded,
+    #   identifier-only); sparse-file shape tested (an entry over the cap
+    #   yields copied-nothing + truncated-disclosed, never a false ok).
+    # - F-22 (medium, dispatch-production-worktree.test.ts:432): scenarios 4
+    #   and 5 run the production path (merge invoked in the lane worktree
+    #   with the post-landing deferral and branch retained; closeout --apply
+    #   from the main checkout with sweep, removal, branch deletion) or are
+    #   explicitly justified; merge + closeout run through the composer
+    #   end-to-end (the iteration-1 lesson: newly touched seams must be
+    #   production-covered — that is exactly why F-18/F-19/F-20 were
+    #   invisible to a green targeted run); the F-18 and F-19 shapes added;
+    #   over-asserting comments reworded to what is asserted, including
+    #   tests/behaviour/dispatch-resume-economics.test.ts :14-20 (scenario 2
+    #   covers the branch-mismatch half of TC-RESUME-002, not 002/003
+    #   wholesale); the file header and pm-notes wording claim aligned.
+    # - F-25 (medium, git/index.ts:522): a stale worktree registration or a
+    #   refused rollback names the worktree path/registration and the
+    #   recovery step in the refusal detail — never a bare (128); the
+    #   addWorktree refusal carries a bounded git stderr tail + the path and
+    #   names the remedy (git worktree prune, or remove the named path)
+    #   (packages/adapters/src/git/index.ts + production.ts).
+    # - F-29 (low, merge.ts:241): the deferral check matches the exact
+    #   refs/heads/<branch> line (prefix/exact delivery-convention match, no
+    #   substring) and skips blocks whose worktree path no longer exists
+    #   (prunable) — packages/adapters/src/git/merge.ts.
+    # - F-30 (low, production.ts:1984): the scratch deletion sits inside the
+    #   try so a failure returns the declared { ok: false, code, detail }
+    #   instead of rejecting out of the port, and the reuse arm creates the
+    #   TMPDIR anchor it binds — packages/cli/src/production.ts.
+    # - F-9 CLOSURE (reviewer: acceptable to carry, but closeable by ONE
+    #   commit moving three files together; error-table-sync enforces they
+    #   agree): packages/core/src/contracts/error-table.ts row prose (the
+    #   dispatch.session.spawn-failed row states the provisioning refusal
+    #   records NO attempt and the hint does not promise retry success) +
+    #   tests/fixtures/events/error-table-baseline.json +
+    #   doc/spec/features/feature-result-contract.md (Appendix D) — all
+    #   three in one commit. This trio is the phase's ONLY doc edit.
+    # DECLARED OUT-OF-SCOPE RESIDUALS (one line each, with reason):
+    # - F-26 (low, stale-base resume refusal): GH-412 adjacency — the
+    #   detached-ancestor/recorded-SHA refinement rides the parallel-lane
+    #   planning.
+    # - F-27 (low, no common-directory check on an existing recorded path):
+    #   defense-in-depth follow-up — the refusal already surfaces, the
+    #   misattribution is cosmetic.
+    # - F-28 (low, two branch-convention matchers): fold at the GH-408
+    #   rename — one matcher then, not two edits now.
+    # - F-31 (info, mistyped remediation commit subject): commit-primitive
+    #   follow-up, already listed; no action for this change.
+    # - F-32 (info, placement derived from the invoking directory):
+    #   follow-up — derivation from the main checkout or a stated invocation
+    #   assumption; the host-index root was never affected.
+    # - F-33 (info, contradicted doc sentences) and F-23's guide wording:
+    #   ride the orchestrator's doc-sync re-run AFTER code lands, together
+    #   with the feature-merge-verify-deploy.md re-reconciliation; F-23's
+    #   code half (worktree-aware verify gates + a remedy naming the
+    #   worktree) is a follow-up work item per the review artifact.
+    # - F-24 (spec amendment for Decisions 1-3) — owner: PM and spec-writer
+    #   BEFORE dod_check per the review artifact; not a coder fix in this
+    #   phase.
+    # - The eight leftover lane/* local branches in the live checkout
+    #   (GH-239, GH-347, GH-348, GH-354, GH-356, PDEV-12, GH-901, GH-902) are
+    #   workspace hygiene noted for LOCAL cleanup — not repository content,
+    #   not code.
+    # Fences (unchanged): exception-mode pins never regenerated; default
+    # goldens re-pin only with the surfaces they pin; no GH-412 scope; naming
+    # rules (new code says cloneKey/declaredProductKey, never the bare legacy
+    # token); hermetic tests; TS rules section 0 (no require(), no non-null
+    # assertions, no as-never casts); every seam production-reachable through
+    # composed callers; each fix lands with its suite in the same commit;
+    # this phase's own doc edits are ONLY doc/spec/features/
+    # feature-result-contract.md (the F-9 trio) — the rest of the doc
+    # re-reconciliation (merge spec, F-16 sentences, F-23 guide wording,
+    # F-33) is the orchestrator's doc-sync re-run.
+    # Verification requirement (this phase's own gate): the
+    # production-composition scenarios green — the new F-18 (second sweep)
+    # and F-19 (tmp not ignored) shapes included; targeted suites (dispatch /
+    # closeout / merge / enumeration / host-index / resume / board-lanes)
+    # green; error-table-sync green (the F-9 trio); pnpm typecheck + biome
+    # clean; tests/golden stays green with no byte changes. The full battery
+    # is run at the phase boundary by the orchestrator's quality-gates phase.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-production-worktree.test.ts tests/behaviour/dispatch-resume-economics.test.ts tests/behaviour/closeout-worktree.test.ts tests/behaviour/closeout-worktree-refusal.test.ts tests/behaviour/merge-production-composition.test.ts tests/behaviour/board-lanes.test.ts tests/behaviour/host-index-worktree-pin.test.ts; bun test tests/checks/error-table-sync.test.ts (or the error-table-sync target in pnpm check); pnpm typecheck; biome check; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary (orchestrator quality-gates runs the full battery); git status confirms only the declared paths changed.
+    scope:
+      files:
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - packages/adapters/src/git/index.ts
+        - packages/adapters/src/git/merge.ts
+        - packages/core/src/contracts/closeout.ts
+        - packages/core/src/domain/closeout.ts
+        - packages/core/src/contracts/error-table.ts
+        - tests/fixtures/events/error-table-baseline.json
+        - doc/spec/features/feature-result-contract.md
+        - tests/behaviour/dispatch-production-worktree.test.ts
+        - tests/behaviour/dispatch-resume-economics.test.ts
 # Plan revision log:
 #   rev 1 — 2026-11-25: initial ten-phase plan from spec v1.0 (0cb77658) +
 #           test plan v1.0 (a50a1503). OQ-1 settled in-plan: the fresh-worktree
@@ -1159,3 +1307,68 @@ phases:
 #           F-16 doc sentences ride the doc-sync re-run AFTER code lands
 #           (orchestrator-owned; the phase's own doc edits are none).
 #           Phases 1-11 byte-identical; no tasks key; no progress records.
+#   rev 10 — 2026-11-25: Code Review Remediation Iteration 2 declared
+#           (delivery_planning reopened; review verdict FAIL —
+#           code-review/review-iter-2.yaml, 2026-11-25T17:55:00Z: 0 critical,
+#           3 high, 5 medium, 5 low, 3 info; the six iteration-1
+#           blockers/majors VERIFIED FIXED per the artifact's verification
+#           key, each with its probe; no new PM decision needed — each new
+#           blocker follows from Decisions 1-3 and AC-F7-1). Remediation
+#           phase 13 appended (kind delivery, 11 declared files). BLOCKER
+#           FIXES, each with a production-composition scenario seeded from
+#           tmp/tmpdir/opencode/gh404-review-i2/probe-e2e.ts: F-18
+#           createLaneLogSweep per-entry replace-and-verify (staging sibling,
+#           atomic destination/<entry> replace, placed-bytes == measured-
+#           source-bytes; older entries stay) with the destination
+#           cleared/replaced so a second sweep of the same ref or a re-sweep
+#           with new logs succeeds instead of failing forever with
+#           closeout.lane-log-sweep-failed (scenarios: second lane of the
+#           same ref; one lane swept twice); F-19 edge.ts planFacts excludes
+#           the swept paths (tmp/run-logs-runner, tmp/*.log,
+#           tmp/deliver-ticket, tmp/tmpdir) from PLAN-TIME cleanliness so a
+#           repository not ignoring tmp/ plans and applies correctly, with
+#           the apply-mode post-sweep observation staying authoritative
+#           (scenario: closeout end to end with tmp/ not ignored); F-20
+#           loadRepositoryFacts builds the board's worktree-path map from
+#           EACH repository's own store keyed consistently with the
+#           dispatch.lane records' own repository string
+#           (github.com/owner/repo) so the board renders when the derived
+#           key differs from the record identity (test: differing keys).
+#           CHEAP FIXES in the same phase: F-21 truncation disclosed into
+#           the closeout applied payload's sweep evidence (minimal contract
+#           field if needed in contracts/closeout.ts; bounded,
+#           identifier-only; sparse-file shape tested); F-22
+#           production-composition suite extended — scenarios 4 and 5 run
+#           the production path or are explicitly justified, merge +
+#           closeout through the composer end-to-end, F-18/F-19 shapes
+#           added, over-asserting comments reworded
+#           (dispatch-resume-economics.test.ts :14-20 included); F-25
+#           stale-registration/rollback refusals name the path,
+#           registration and recovery (prune or remove the named path),
+#           never a bare (128); F-29 deferral check exact
+#           refs/heads/<branch> match, prunable blocks skipped; F-30
+#           scratch deletion inside the try, TMPDIR anchor created on
+#           reuse. F-9 CLOSURE (reviewer: acceptable to carry, closeable by
+#           one commit moving three files together so error-table-sync stays
+#           green): contracts/error-table.ts row prose (provisioning refusal
+#           records NO attempt) + tests/fixtures/events/
+#           error-table-baseline.json + doc/spec/features/
+#           feature-result-contract.md — the phase's ONLY doc edit.
+#           DECLARED OUT-OF-SCOPE RESIDUALS (one line each): F-26 (GH-412
+#           adjacency), F-27 (defense-in-depth follow-up), F-28 (fold at
+#           the GH-408 rename), F-31/F-32 (follow-ups), F-33 + F-23 guide
+#           wording (doc-sync re-run after code lands; F-23's code half is
+#           a follow-up work item), F-24 (spec amendment for Decisions 1-3
+#           — owner: PM and spec-writer BEFORE dod_check per the review
+#           artifact, not a coder fix), and the eight leftover lane/* local
+#           branches in the live checkout (workspace hygiene, local
+#           cleanup, not repository content). Fences unchanged: exception
+#           pins never regenerated; default goldens re-pin only with their
+#           surfaces; no GH-412 scope; naming rules; hermetic tests; TS
+#           rules section 0; every seam production-reachable; each fix
+#           lands with its suite same-commit. Phase gate: the
+#           production-composition scenarios (new F-18/F-19 shapes
+#           included) + targeted suites + error-table-sync + typecheck +
+#           biome green; tests/golden green with no byte changes; the full
+#           battery belongs to the orchestrator's quality-gates phase.
+#           Phases 1-12 byte-identical; no tasks key; no progress records.
