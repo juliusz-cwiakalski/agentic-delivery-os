@@ -52,6 +52,46 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Plan phase 9 complete (commit f31212b1): behaviour proof II landed —
+      (1) TC-CLOSEOUT-002/003/004 run-level ordering (closeout-worktree.test.ts
+      additions): the apply transaction's worktree-removal gate proven over
+      injected runtimes — sweep strictly before removal (order
+      [sweep, remove]); a sweep failure refuses the removal with the worktree
+      AND the logs intact; the merge arm refuses before any side effect with
+      the stalled lane keeping its worktree (the killing case is SAFE verdict
+      + UNCONFIRMED merge — defense in depth, so the merge arm is
+      load-bearing independently of the predicate's mergedObserved arm); a
+      composition without the sweep port keeps the delivered removal (the
+      logs arm neutralized). (2) TC-CLOSEOUT-005: the two ordering mutants
+      MUT-GH404-01 (gate skipped) and MUT-GH404-02 (merge arm hardcoded true)
+      registered in the mutant registry with the guarding suite
+      closeout-worktree.test.ts — the mutant machinery verified both killed
+      with the declared signals carried by message-bearing assertions (bun's
+      expect(actual, message) names the signal in the failure output; the
+      signal-bearing assertion is placed FIRST so an earlier assertion cannot
+      mask it). Fence-authorized re-pins: capsule-mutants.test.ts count pins
+      44->46 with the two new ids. (3) TC-CLOSEOUT-001: the worktree-invoked
+      merge landing proven over a REAL temp repository with a real linked
+      worktree — invoked from the worktree, the squash lands ON BASE in the
+      main checkout (base advances to squashSha, containedOnBase true, the
+      invoking worktree untouched); invoked from the main checkout, the
+      delivered argv and result hold. (4) TC-SURFACES-001: the dispatch-status
+      worktree golden pair (status-worktree.txt with the worktreePath line;
+      status-context-less.txt the PRESERVED pre-change pin, never
+      regenerated, byte-identical rendering, and the delta between the two
+      goldens proven to be exactly the worktree line). (5) TC-SURFACES-002:
+      the board lanes join pins (the row carries the joined path; a
+      context-less lane renders exactly as today, no rows minted).
+      TC-REG-001: the exception-mode pins are the preserved goldens +
+      context-less assertions (0-byte delta). Boundary evidence: first gate
+      run flagged ONE lint error (a duplicate type import in
+      board-lanes.test.ts — fixed by merging the import); bun test was green
+      except TC-RELEASE-001 in both runs. Post-fix rerun
+      (phase9-gate2.log): stages 1-3, 5-13 green; bun test 12904 pass / 4
+      skip / 1 known-deferred fail. Fence-authorized re-pins: capsule-mutants
+      count pins (noted above)."
+    type: info
+    date: "2026-11-25"
   - text: "Plan phase 8 complete (commit ae9837de): the governing fixtures and
       guards landed — NEW suites: tests/behaviour/git-adapter-worktree-seam.test.ts
       (TC-WT-001 over a REAL temp git repository: linked worktree on the new
