@@ -2019,6 +2019,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         return false;
       }
     };
+    const checkoutIdentity = readCheckoutIdentity({ cwd, io: nodeRepositoryIo() });
     const scope = resolveProjectScope({
       environment,
       environmentPrefix: brand.environmentPrefix,
@@ -2028,7 +2029,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         ? {}
         : { priorStateDirectoryName: priorNames.stateDirectoryName }),
       probeDefaultRoot: existsSafe,
-      checkout: readCheckoutIdentity({ cwd, io: nodeRepositoryIo() }),
+      checkout: checkoutIdentity,
       ports: {
         readMarker: (commonDir) => readProjectIdentityMarker(commonDir),
         writeMarker: (commonDir, text) => ensureProjectIdentityMarkerText(commonDir, text),
@@ -2159,6 +2160,21 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     if (legacyWarning !== undefined) maintenanceWarnings.push(legacyWarning);
     if (maintainsIndex && scope.value.scope.kind === "project") {
       const current = scope.value.scope;
+      // The registration pin (GH-404 F-5, DM-2, NFR-6): the entry's root is
+      // the MAIN checkout's PHYSICAL path for every lane command, whatever
+      // checkout invoked it. A linked worktree shares the clone's common
+      // directory, and the main checkout is its parent directory — resolved
+      // from real paths, never through a symlinked alias (NFR-7). A worktree
+      // path never flips the entry, so a later worktree removal can never
+      // prune a live clone's registration.
+      const physicalMainCheckout = (() => {
+        if (checkoutIdentity.kind !== "resolved") return current.checkoutRoot;
+        try {
+          return dirname(realpathSync(checkoutIdentity.commonDir));
+        } catch {
+          return current.checkoutRoot;
+        }
+      })();
       hostIndexAccess.countRead();
       const read = readHostIndexFile(hostRoot);
       if (read.state !== "unreadable") {
@@ -2171,7 +2187,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           registration: {
             projectKey: current.projectKey,
             projectIdentifier: current.projectIdentifier,
-            root: current.checkoutRoot,
+            root: physicalMainCheckout,
             stateLocation: current.stateLocation,
             recordedAt: nowIso(),
           },
@@ -4256,11 +4272,41 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       if (lanes.ok) {
         const latest = latestDispatchLaneFor(lanes.records, input.ref);
         if (latest !== undefined && latest.worktreePath !== undefined) {
+          // The reuse verification (GH-404 F-4, NFR-3; TC-RESUME-001/002):
+          // the recorded worktree is THE lane's worktree — its existence and
+          // its branch are OBSERVED through the injected child runner, never
+          // assumed, and never re-provisioned. A missing or branch-mismatched
+          // worktree is a lane error naming the problem; the inventory is
+          // untouched either way (zero second worktrees across attempts).
+          const expected = laneWorktreeBranch({ ref: input.ref });
+          if (!existsSync(latest.worktreePath)) {
+            return {
+              ok: false,
+              code: "lane-worktree-missing",
+              detail:
+                `the lane worktree ${latest.worktreePath} recorded for ${input.ref} is missing ` +
+                `(expected branch ${expected}); restore it or close the lane out — resume never re-provisions`,
+            };
+          }
+          const observed = await createGitBranchSeam({
+            cwd: latest.worktreePath,
+            ...(facts.gitChildRunner === undefined ? {} : { childRunner: facts.gitChildRunner }),
+          }).readCheckout({ deliveryBranch: expected, baseRef: input.baseRef });
+          if (observed.state !== "delivery-branch") {
+            return {
+              ok: false,
+              code: "lane-worktree-branch-mismatch",
+              detail:
+                `the lane worktree ${latest.worktreePath} recorded for ${input.ref} is on ` +
+                `${observed.branch ?? "no branch (detached)"}, not the lane branch ${expected}; ` +
+                "resume never moves or re-provisions a worktree",
+            };
+          }
           return {
             ok: true,
             mode: "worktree",
             worktreePath: latest.worktreePath,
-            branch: laneWorktreeBranch({ ref: input.ref }),
+            branch: expected,
           };
         }
         // A recorded lane without the worktree context is the pre-change shape

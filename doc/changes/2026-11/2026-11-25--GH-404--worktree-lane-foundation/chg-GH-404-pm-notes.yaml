@@ -52,6 +52,55 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Plan phase 4 complete (commit b2fff27d): the provision-after-lease
+      binding-chain landed — (1) engine (app/dispatch.ts): the optional
+      provisionWorktree port on DispatchPorts invoked exactly once after the
+      lease claim and before any phase, spawn, or session (the lease-first
+      order is the engine's own sequence, NG-2); a provisioning refusal
+      releases the lease and surfaces as dispatch.session.spawn-failed naming
+      the step (zero retries, NFR-1); the worktree-scoped descriptor
+      (working directory = the worktree) applies to the fresh spawn AND every
+      restart resume; and BOTH lane-record appends (terminal :842-850, active
+      :1070-1084) record the additive worktreePath (DM-1, absent = the
+      DEC-8 context-less shape). (2) The provisioning outcome is a three-mode
+      union: worktree / in-checkout / refused — in-checkout answers the
+      disable-worktrees exception AND the pre-change context-less record
+      (never retroactive provisioning, DEC-8) at the same seam (TC-REG-002).
+      (3) edge.ts: DispatchComposition gains the optional provisionWorktree
+      member and the sole runDispatch assembly gains the one conditional
+      forwarding line (the rev-5 two-line binding chain). (4) production.ts:
+      provisionLaneWorktree reuses the recorded worktree (F-4; branch
+      verification lands in phase 5) or creates via the phase-3 seam through
+      the composer's ONE injected git child runner (hermetic end to end —
+      no second, un-injected runner), at the resolved placement
+      (state-scope's new resolveLaneWorktreePlacement over the PHYSICAL
+      checkout root, NFR-7), then the gate temporary directory inside the
+      worktree (DEC-6) and the ordered steps — install --frozen-lockfile,
+      gate build — fixed argv, no shell, zero retries, with the worktree bin
+      leading PATH and TMPDIR anchored inside (the phase-2 derived
+      environment). Conditional re-pins (recorded per the fence): the
+      production-composition fixture sandboxes (queue/production harness
+      config.yaml + the dispatch parity harness config.yaml) set
+      lane.disable-worktrees so the suites pinning today's in-checkout shape
+      stay hermetic and byte-identical in subject; the default-mode worktree
+      composition is pinned by phase 8's dedicated lifecycle suites
+      (TC-ENV-001/002, TC-WT-003, install/build stubbed per RSK-T5).
+      content-inventory gains the state-scope export row. Engine-sequence
+      probe verified hermetically: lease -> provision ordering, spawn cwd =
+      worktree, worktreePath on the lane record. Boundary evidence: full
+      13-stage battery (tmp/run-logs-runner/2026-11-25/phase4-gate3.log) —
+      stages 1-3 and 5-13 green; bun test initially 12862/2/4 (TC-RELEASE-001
+      known-deferred + TC-SPEND-032: the spend-readonly source-scan tripped
+      on the literal word 'spawn' inside my doc comment in edge.ts; fixed by
+      rewording MY comment, never the guard), then the post-fix stage-4 rerun
+      (tmp/run-logs-runner/2026-11-25/phase4-stage4.log): 12863 pass / 1
+      known-deferred fail (TC-RELEASE-001 only) / 4 skip. Two intermediate
+      gate runs were discarded: run 1 raced live edits (invalid), run 2's
+      56 conformance failures were root-caused to the parity fixture
+      sandboxes lacking the exception config (fixed as recorded above; the
+      production provisioning seam now uses the injected runner)."
+    type: info
+    date: "2026-11-25"
   - text: "PM adjudication of the phase-4 second blocker (q-5f1d0808,
       spec-ambiguity): ACCEPTED — plan rev 5 ordered, exactly per the coder's
       compile-level remedy: packages/cli/src/edge.ts joins phase 4's declared
