@@ -6,7 +6,7 @@ created: 2026-11-14
 last_updated: 2026-11-24
 owners: ["engineering"]
 service: delivery-os
-summary: "Project groups: the configuration-only membership document (`<configDirectoryName>/projects.yaml`, schema `delivery.projects.groups.v1`) as an operator-local, git-ignored overlay with load-time validation and its three classified identities, the optional workspace discovery root that locates declared member clones only, the group key as the project's declared key under the additive declared-project-key contract that consumer changes enforce while the local layer keeps no public pattern, the `projects list` group surface under `project-groups.v1` with its `PROJECT` / `PROJECT REPOSITORY` table, the closed five-value member health vocabulary and the closed daemon-reachability reasons, the one aggregation clause with its four per-member outcomes and the `data.partial`/`data.degradedMembers[]` projection, and the additive group-scoped `queue list --project` and `status --project` reads; the group is never a change's member set, which a cross-repository change declares in its plan."
+summary: "Project groups: the configuration-only membership document (`<configDirectoryName>/projects.yaml`, schema `delivery.projects.groups.v1`) as an operator-local, git-ignored overlay with load-time validation and its three classified identities, the optional workspace discovery root that locates declared member clones only, the group key as the product key under the additive declared-product-key contract that consumer changes enforce while the local layer keeps no public pattern, the `projects list` group surface under `project-groups.v1` with its `PRODUCT` / `REPOSITORY` table, the closed five-value member health vocabulary and the closed daemon-reachability reasons, the one aggregation clause with its four per-member outcomes and the `data.partial`/`data.degradedMembers[]` projection, and the additive group-scoped `queue list --project` and `status --project` reads; the group is never a change's member set, which a cross-repository change declares in its plan."
 links:
   related_changes: ["GH-309", "GH-310", "GH-365", "GH-406"]
   related_decisions: ["ODR-0004", "TDR-0022", "TDR-0074"]
@@ -119,17 +119,20 @@ group. The validation rules are closed:
 non-empty strings, unique per document, and no regex constrains them. The three
 group identities are declared in the [Result Contract](feature-result-contract.md).
 
-The declared-project-key contract exists beside this local layer and does not
-amend it: `DECLARED_PROJECT_KEY_PATTERN`
+The declared-product-key contract exists beside this local layer and does not
+amend it: `DECLARED_PRODUCT_KEY_PATTERN`
 (`^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$` — 2–64 characters, lowercase
 alphanumerics and hyphens, no leading or trailing hyphen) with its predicate
-refusing the reserved state segments `unbound` and `projects` exact-match is
-exported from the core contracts, and it binds only the consumer changes that
-use a key as a declared key — the credential, workspace, and manifest
-write/import surfaces. The local `groups.v1` layer enforces no pattern and
+(`isDeclaredProductKey`) refusing the reserved state segments `unbound` and
+`projects` exact-match is exported from the core contracts, and it binds only
+the consumer changes that use a key as a declared key — the credential,
+workspace, and manifest write/import surfaces. New code names the concept
+`declaredProductKey`, keeping the *declared* qualifier while the legacy names
+exist. The local `groups.v1` layer enforces no pattern and
 nothing migrates: a group key outside the grammar loads unchanged
 ([Repositories and the Host Overview](feature-projects.md) states the
-contracts; ODR-0006 records the vocabulary and the mapping).
+contracts; ODR-0006 records the vocabulary, its retirement clause, and the
+mapping).
 
 A group-scoped read outside any git work tree has no scope to resolve the
 document from and is refused with `projects.scope-unavailable` at exit `2`; the
@@ -217,9 +220,9 @@ grammar classification — the alias takes no group scoping and is never silentl
 coerced to either synopsis form. Any verb other than `list` is refused through
 the shared invocation classification before the document is read.
 
-Text output is a deterministic table with the columns `project`, `project repository`,
+Text output is a deterministic table with the columns `product`, `repository`,
 `tracker`, `state`, `health`, `daemon`: one row per declared member in declared
-order, with the project key repeated. Two runs over unchanged state are
+order, with the product key repeated. Two runs over unchanged state are
 byte-identical.
 
 ## The aggregation clause

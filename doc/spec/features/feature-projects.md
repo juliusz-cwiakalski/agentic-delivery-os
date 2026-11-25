@@ -6,7 +6,7 @@ created: 2026-11-11
 last_updated: 2026-11-24
 owners: ["engineering"]
 service: delivery-os
-summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-clone project root), the clone-identity marker and its minted key, the additive declared-project-key and clone-key contract exports beside the served `cloneKey` on the resolved project scope, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic `CLONE` table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload; the board reads the host index once per `--all`/`--project` run, unions it with the invoking checkout, and never maintains it."
+summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-clone project root), the clone-identity marker and its minted key, the additive declared-product-key and clone-key contract exports beside the served `cloneKey` on the resolved project scope, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic `CLONE` table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload; the board reads the host index once per `--all`/`--project` run, unions it with the invoking checkout, and never maintains it."
 links:
   related_changes: ["GH-288", "GH-289", "GH-309", "GH-320", "GH-297", "GH-293", "GH-365", "GH-406"]
   related_decisions: ["TDR-0022", "ODR-0004", "TDR-0031", "ODR-0006"]
@@ -121,18 +121,24 @@ identity as the read-only `cloneKey` member beside the delivered
 host-index field, and the `projects list --flat` alias payload keep their
 delivered names.
 
-The **declared project key** is a different contract in a disjoint namespace:
-`DECLARED_PROJECT_KEY_PATTERN` is `^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$` (2–64
+The **declared product key** is a different contract in a disjoint namespace:
+`DECLARED_PRODUCT_KEY_PATTERN` is `^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$` (2–64
 characters, lowercase alphanumerics and hyphens, no leading or trailing
 hyphen, path-safe by construction), and its predicate
-(`declaredProjectKeyVerdict`) additionally refuses the two reserved state
+(`isDeclaredProductKey`) additionally refuses the two reserved state
 segments `unbound` and `projects`, exact-match on the whole key —
 substring-containing keys are accepted — with every rejection naming its rule
 (`length`, `charset`, `hyphen-position`, `reserved-segment`). It names the
-project (see [Project Groups](feature-project-groups.md)), is never compared
+product (see [Project Groups](feature-project-groups.md)), is never compared
 against the clone identity, and is enforced only where a key is used as a
 declared key — the credential, manifest, and workspace consumers own those
-enforcement points; nothing on this page enforces it.
+enforcement points; nothing on this page enforces it. New code names the
+concept `declaredProductKey`, keeping the *declared* qualifier while the
+legacy names (`projectKey`, the `projects` family) exist; the mechanical
+rename (GH-408) may drop it. The noun *project* is retired from the model's
+own vocabulary — the delivered vocabulary table records the retirement and
+the legacy-name exceptions
+([ubiquitous language](../../overview/ubiquitous-language.md#the-delivery-vocabulary)).
 
 The identity outcome is a closed table:
 
