@@ -52,6 +52,25 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Rev-8 checkpoint observations (5e9aaba2, adjudicated by PM — no action
+      taken on three, one accepted): (1) the 19 phase-7 doc edits swept into
+      the delivery_planning completion commit as disclosed scopeDrift — the
+      documented engine behavior for tracked drift-flagged files; content is
+      verified and complete, landing early is harmless, no amend (no history
+      rewrite mid-lifecycle). (2) The template-derived commit subject
+      ('update doc/00-index.md') understates the payload (plan rev 8 +
+      pm-notes + 19 docs) — cosmetic; this note is the durable truth.
+      (3) phase list shows only the five planning-class phases by view
+      shape; the durable ledger holds delivery completed 13:57:22Z (the
+      reopen batch cross-checked the ledger read-only) — state intact, no
+      divergence. (4) OBSERVATION for the owner: the change folder carries
+      no events.jsonl capsule file across the whole lifecycle; the capsule
+      is command-owned (phase/commit/verify/closeout write it) so it was
+      never hand-created — if closeout's capsule validation requires it,
+      closeout will surface the gap; an engine-behavior question, not
+      something the PM improvises. No ticket filed autonomously."
+    type: info
+    date: "2026-11-25"
   - text: "Phase-7 (system_spec_update) reconciliation result: 19 current-truth
       files reconciled (dispatch-engine lane-worktrees section; closeout
       removal-ordering gate + closeout-lane-logs destination; projects realpath

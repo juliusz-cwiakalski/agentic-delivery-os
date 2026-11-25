@@ -89,7 +89,7 @@ const TEN_STATEMENTS: readonly TenStatement[] = [
   {
     id: "nonfunctional.parity",
     file: NONFUNCTIONAL,
-    line: 354,
+    line: 355,
     carries: ["a declared matrix over the ten closed operations"],
   },
   {
@@ -117,7 +117,7 @@ const NEIGHBOURS: readonly Neighbour[] = [
   {
     id: "nonfunctional.clause-ids",
     file: NONFUNCTIONAL,
-    line: 357,
+    line: 358,
     carries: ["one of nine closed clause ids"],
     overreach: "one of ten closed clause ids",
   },
@@ -147,7 +147,7 @@ const nineLinesOf = (text: string): readonly number[] =>
 /** The declared remaining `nine` lines per page (the two neighbours only). */
 const DECLARED_NINE_LINES: Readonly<Record<string, readonly number[]>> = {
   [SEEDS]: [],
-  [NONFUNCTIONAL]: [357],
+  [NONFUNCTIONAL]: [358],
   [ARCHITECTURE]: [127],
 };
 
