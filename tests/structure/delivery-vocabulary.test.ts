@@ -161,7 +161,7 @@ describe("TC-DPKVOC-002 the reversed sentences are corrected and the specs link 
 });
 
 describe("TC-DPKODR-001 the decision record's structural arms (automated half)", () => {
-  const RECORD = "doc/decisions/ODR-0006-delivery-vocabulary-declared-project-key.md";
+  const RECORD = "doc/decisions/ODR-0006-delivery-vocabulary.md";
   const INDEX = "doc/decisions/00-index.md";
   const record = read(RECORD);
   const index = read(INDEX);
@@ -174,9 +174,7 @@ describe("TC-DPKODR-001 the decision record's structural arms (automated half)",
   });
 
   test("the decision index lists ODR-0006", () => {
-    expect(index).toContain(
-      "| [ODR-0006](ODR-0006-delivery-vocabulary-declared-project-key.md) | ODR |",
-    );
+    expect(index).toContain("| [ODR-0006](ODR-0006-delivery-vocabulary.md) | ODR |");
   });
 
   test("the body carries the vocabulary, the locked-name mapping, and the grammar", () => {

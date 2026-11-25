@@ -79,12 +79,6 @@ const buildNormalized = (
   return { normalized, lineAt };
 };
 
-const originalLineAt = (text: string, offset: number): string => {
-  const start = text.lastIndexOf("\n", offset) + 1;
-  const end = text.indexOf("\n", offset);
-  return text.slice(start, end === -1 ? undefined : end);
-};
-
 /**
  * R3's declared sense exemptions, each review-visible, speaking the owner
  * amendment's vocabulary (comment 7138707234): the owner's own declared term

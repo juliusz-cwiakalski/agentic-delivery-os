@@ -59,7 +59,7 @@ links:
   related_decisions: ["ODR-0003", "ODR-0004"]
 ---
 
-# ODR-0006: Delivery Vocabulary — Declared Product Key
+# ODR-0006: Delivery Vocabulary — Product, Repository, Main Checkout, Worktree, Lane, Work Item, Clone Identity, Product Key
 
 ## Context
 
@@ -118,7 +118,7 @@ itself, it says "the tool"; and public examples are neutral only (`acme`,
 
 | Vocabulary term | Existing code and document names (unchanged by this record) |
 |---|---|
-| Product | A group: `groupKey`; the `delivery.projects.groups.v1` schema (local) and `delivery.projects.manifest.v1` (portable, GH-401); the `projects.yaml` configuration file — these are **named exceptions** denoting a product, and renaming them is GH-408 |
+| Product | A group: `groupKey`; the `delivery.projects.groups.v1` schema (local layer); the `projects.yaml` configuration file (`<configDirectoryName>/projects.yaml`). These existing names are **named exceptions that denote a product**; renaming them is GH-408. The portable manifest does not exist yet — GH-401 creates it with the new names directly: schema `delivery.products.manifest.v1`, file `<configDirectoryName>/products.yaml`, key `product.key` — so it is **not** a named exception. |
 | Repository | A `members[]` declaration (repository selector plus tracker kind); `root` and `repoKey` on a member are **clone locators**; a member without a locator is declared, not located; `member` names the declaration entry, never the repository |
 | Clone identity | `repoKey` and `projectKey` (same value): the marker field, the host-index key, the public `repos.v1` field, plan/closeout member refs, queue lane and lease keys, verify-gate rows, `board --project`, group member locators, per-clone state root |
 | Main checkout | The flat record set (`repos list`) is keyed by clone identity; its `root` is the last invoking checkout, not necessarily the main checkout (GH-404 pins it) |
