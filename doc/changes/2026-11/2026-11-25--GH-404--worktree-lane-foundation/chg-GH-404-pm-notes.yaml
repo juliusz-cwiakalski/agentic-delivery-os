@@ -52,6 +52,88 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Plan phase 6 boundary finding (BLOCKED, spec-ambiguity shape; rev-6
+      request; third instance of the call-site class): phase 6's declared
+      scope (commands/merge.ts, commands/closeout.ts, domain/
+      closeout-worktree.ts, adapters/src/git/merge.ts) cannot deliver the
+      phase's contract, because the closeout behavior lives elsewhere —
+      (1) the sweep-before-removal binding: the closeout runtime that builds
+      the worktree facts and evaluates the delivered safety predicate is
+      packages/cli/src/edge.ts (createCloseoutCommandRuntime :2738; the
+      worktree facts + mergedObserved gate at :2440-2530), and the closeout
+      step planning/execution — worktreeStep :1322-1373, the declared step
+      order :117-129 (worktree-cleanup before branch-cleanup), runCloseout
+      :2472, and the remove-worktree executor :1820-1836 — is packages/core/
+      src/domain/closeout.ts. NEITHER file is declared in phase 6 (edge.ts is
+      phase 4's; domain/closeout.ts is in no phase). The lane-log sweep
+      (the worktree's tmp/tmpdir gate evidence moved to its destination in
+      the state root BEFORE the worktree is removed — also the mechanical
+      precondition for the delivered cleanliness predicate to ever pass on a
+      worktree lane, since untracked gate artifacts make the worktree dirty)
+      has no consumption point inside the declared files, and
+      domain/closeout-worktree.ts's ordering rules (phase 2) are consumed by
+      nothing in the real flow — evaluateWorktreeSafety is called directly by
+      edge.ts. (2) The merge half CAN bind in scope: verified empirically in
+      a hermetic sandbox — from a worktree whose base branch is parked in the
+      main checkout, `git checkout <base>` refuses ('already used by
+      worktree', exit 128 — the delivered git/merge.ts squashLand's first
+      argv at :215), while `git checkout --detach <base>` succeeds, so
+      adapters/src/git/merge.ts (declared) carries the worktree-invocation
+      landing mechanics. commands/merge.ts and commands/closeout.ts are thin
+      grammar delegators with no behavior to change. NO phase-6 code was
+      written: a partial phase (merge seam without the sweep) would strand
+      the phase, which the plan explicitly forbids (merge and closeout in
+      ONE phase). Remedy (rev 6): packages/cli/src/edge.ts (the closeout
+      runtime: the sweep binding + the removal-after-merge-confirmation
+      ordering it already gates) and packages/core/src/domain/closeout.ts
+      (a lane-log sweep step ordered before worktree-cleanup) join phase 6's
+      scope; git/merge.ts's landing mechanics stay in scope as declared.
+      Phases 1-5 stand (e25deabe, 4c281841, 816d23e2, def013bb, b2fff27d,
+      7a5b0fe4, fd8831ae); the phase-5 evidence note is in this commit;
+      typed blocker q-fa489f9a-22a7-4a27-ad0c-8d400b9ea1ec published with
+      this finding. Delivery stops at phase 6; phases 7-10 (surfaces,
+      proofs, changeset) depend on the lifecycle completing and are stopped
+      with it."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 5 complete (commit 7a5b0fe4): resume reuse and the
+      registration pin landed — (1) production.ts's provisioning port reuse
+      arm now VERIFIES the recorded worktree before reuse (F-4, NFR-3,
+      TC-RESUME-001/002): existence observed (a missing worktree is the
+      lane-worktree-missing lane error naming the path and the expected
+      branch) and the branch observed through the composer's injected git
+      child runner via a cwd-targeted readCheckout (a branch mismatch is the
+      lane-worktree-branch-mismatch lane error naming observed vs expected);
+      neither re-provisions, moves, or touches the inventory — zero second
+      worktrees across attempts; the DEC-8 context-less arm (a recorded lane
+      without worktree context answers in-checkout) is unchanged from phase
+      4. (2) The registration pin (F-5, DM-2, NFR-6): the sole host-index
+      write site (production.ts, the maintainHostIndex registration) now
+      registers dirname(realpath(commonDir)) — the MAIN checkout's PHYSICAL
+      path for every lane command, whatever checkout invoked it, zero
+      resolutions through an alias (NFR-7) — so a worktree path never flips
+      the entry and a later worktree removal can never prune a live clone's
+      registration; host-index.ts keeps its maintenance logic and projects.ts
+      keeps reading/resolving, both unchanged. Declared-but-unchanged files
+      (the scope is an upper bound): dispatch-lane.ts (the resolver's handle
+      treeRoot is opencode session-id metadata, adapter :653, and the resume
+      working directory flows through the engine's worktree-scoped
+      descriptor — no resolver change needed), dispatch-resume.ts (the
+      phase-2 rules already express the reuse/verify/DEC-8 decision; the
+      binding consumed them via the port), host-index.ts and projects.ts
+      (the pin is at the call site). Boundary evidence:
+      tmp/run-logs-runner/2026-11-25/phase5-gate.log — stages 1-3 and 5-13
+      green; bun test 12863 pass / 4 skip / 1 known-deferred fail
+      (TC-RELEASE-001 only). Environment incident, recorded for the ledger:
+      the first commit attempt failed commit.commitlint-failed because the
+      server restart dropped node_modules/.bin from PATH — the commitlint
+      probe's ENOENT surfaced as the 'rejected' fallback (empty output,
+      non-zero exit); repaired by restoring the repository's own bin
+      directory to PATH for the invocation, after which the message was
+      linted by the repository's commitlint config for real. No check was
+      bypassed or weakened."
+    type: info
+    date: "2026-11-25"
   - text: "Plan phase 4 complete (commit b2fff27d): the provision-after-lease
       binding-chain landed — (1) engine (app/dispatch.ts): the optional
       provisionWorktree port on DispatchPorts invoked exactly once after the
