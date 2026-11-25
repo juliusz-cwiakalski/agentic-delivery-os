@@ -992,6 +992,129 @@ phases:
         - doc/spec/features/feature-result-contract.md
         - tests/behaviour/dispatch-production-worktree.test.ts
         - tests/behaviour/dispatch-resume-economics.test.ts
+  - id: 14
+    title: Code Review Remediation (Iteration 3, delta) — deliver-ticket dropped from the swept set (DEC-11 compliance; the no-shell invariant untouched), contract inventory synced, placement.branch assertion retired, same-date re-sweeps preserve earlier entries (F-34..F-38)
+    kind: delivery
+    summary: "review-iter-3 delta remediation (FAIL: 1 high F-34, mediums F-35/F-36/F-37/F-38, lows F-39..F-43, info F-44..F-46; iteration 3 EXHAUSTED -> human adjudication; the iteration-2 blockers VERIFIED FIXED — scenarios 8, 9, 7, 12 and the controls). PM ADJUDICATIONS: F-34 FIX (the reviewer's recommended option), F-37 CARRY as a declared residual with owner visibility, F-38 FIX. F-34 (high, edge.ts:2425 + production.ts:2008): DROP tmp/deliver-ticket / deliver-ticket from the swept set and from the plan-time exclusion EVERYWHERE it appears — packages/cli/src/production.ts (the sweep + removeEphemeral), packages/cli/src/edge.ts (the plan-time exclusion pathspecs), and the swept-set constant in packages/core/src/domain/lane-worktree-plan.ts — because the spec's DEC-11 names ONLY the runner logs and tmp/tmpdir: this is compliance restoration, not a workaround. The committed no-shell invariant is NOT narrowed or allowlisted (rule R1 flags every deliver-ticket literal in the declared dispatch-flow surface; narrowing R1 or allowlisting would change a security invariant and need a decision record; moving the literal outside the scanned surface only hides it and is not acceptable — the reviewer's own framing, adopted). The rev-10 wording listed tmp/deliver-ticket in the swept set and the F-19 exclusion set: THIS phase supersedes that wording (phases 1-13 stay byte-identical; the alignment of the plan-prose echoes and the spec DEC-11 wording rides the doc-sync re-run per F-45), and the phase comments/plan text are aligned here. The three red suites (no-shell TC-SHELL-002, conformance TC-BATTLE-001/004) go green by the removal, never by routing around the checker. F-35 (medium): add CloseoutLaneLogSweepData to tests/fixtures/ports/v1-contract-inventory.json — BOTH module lists (closeout.ts after CloseoutLabelArguments, and index.ts), the additive mirror of the phase-13 export (TC-PORT-001 green). F-36 (medium): retire the stale placement.branch assertion at tests/structure/state-scope.test.ts:381 (Decision 1 removed branch from LaneWorktreePlacement — red since 3d8faceb) — assert the ABSENCE instead and reword the comment to AC-F2-1's detached contract. F-38 (medium, PM chose FIX, production.ts:2057): the per-entry replace must NOT silently delete an earlier sweep's same-date logs on a twice-swept ref — same-date re-sweeps PRESERVE the earlier entries (both land at the destination; the newest-first byte cap still governs): merge the staged entry into the destination entry (recursive copy keeps existing files) with per-placed-file verification (each staged file exists at the destination with equal bytes), keeping the staging sibling + atomic rename for new entries, or place each sweep under a unique name; scenario in tests/behaviour/dispatch-production-worktree.test.ts: a same-date re-sweep with DISTINCT file names preserves the first sweep's files (complementing scenario 9's same-named pin). F-37 (medium, PM chose CARRY): DECLARED RESIDUAL with owner visibility — every refused sweep reaches the operator as the transient retryable closeout.write.failed with its detail dropped (closeout.ts:3191 projects failed steps to that identity; runCloseout records only gate.code); the sweep refuses SAFELY with no data loss (sources intact, destination empty — P5/P6 verified), so the carry is safe; the classified-projection fix (own code, non-retryable, bounded summary carrying the detail, plus one transaction-level refused-sweep scenario) is a follow-up. The pending pm-notes edit (the adjudications) is COMMITTED with this phase's commit. DECLARED RESIDUALS, one line each below: F-39..F-43 (lows), F-44..F-46 (info); F-23's code half is named as a PR-BODY follow-up (no ticket minted — the reviewer's search found none)."
+    # Review context: iteration 3 FAIL (code-review/review-iter-3.yaml,
+    # 2026-11-25T18:59:05Z): 0 critical, 1 high, 4 medium, 5 low, 3 info.
+    # Iteration-2 blockers VERIFIED FIXED: F-18 (scenarios 8/9 + end to end),
+    # F-19 (scenario 7 + the dirty control), F-20 (scenario 12 + the
+    # two-repository board). Iteration 3 exhausted -> human adjudication of
+    # the narrow question (how tmp/deliver-ticket is treated against the
+    # no-shell invariant); the PM adjudications above are that decision.
+    # F-34 (high — FIX, compliance restoration): the swept set and the
+    # plan-time exclusion drop tmp/deliver-ticket / deliver-ticket everywhere
+    # — packages/cli/src/production.ts, packages/cli/src/edge.ts, and the
+    # swept-set constant in packages/core/src/domain/lane-worktree-plan.ts.
+    # Rationale: the literals trip rule R1 of the committed no-shell
+    # invariant (three red tests: TC-SHELL-002, TC-BATTLE-001, TC-BATTLE-004
+    # — pnpm test / pnpm check / CI red at HEAD); the literal names a log
+    # directory, not a script route (false positive by intent), but the
+    # invariant suite is the authority; spec DEC-11 names ONLY the runner
+    # logs and tmp/tmpdir, so dropping the literal is compliance restoration.
+    # The committed no-shell invariant is NOT narrowed or allowlisted (its
+    # NO_SHELL_ALLOWLIST stays empty); no routing around the checker (.ai/
+    # rules/typescript.md section 0); no hiding the literal outside the
+    # scanned surface. Alignment duty: this phase's comment supersedes the
+    # rev-10 swept-set wording (which listed tmp/deliver-ticket); the
+    # plan-prose echoes and the spec DEC-11 wording ride the doc-sync re-run
+    # (F-45 already lists them); the phase comments are aligned here.
+    # F-35 (medium): tests/fixtures/ports/v1-contract-inventory.json gains
+    # CloseoutLaneLogSweepData in BOTH module lists (after
+    # CloseoutLabelArguments, closeout.ts and index.ts lists) — the additive
+    # (DM-1) mirror of the phase-13 contract export; TC-PORT-001 green.
+    # F-36 (medium): tests/structure/state-scope.test.ts:381 — the
+    # placement.branch assertion (lane/GH-404) retired; assert the ABSENCE
+    # of a branch member instead; comment reworded to AC-F2-1's detached
+    # contract. Red since 3d8faceb (outside iteration-2's targeted set).
+    # F-38 (medium — PM chose FIX): same-date re-sweeps PRESERVE the earlier
+    # entries — both land at the destination; the newest-first byte cap
+    # still governs. Mechanics: merge the staged entry into the destination
+    # entry (recursive copy keeps existing files), verify per placed file
+    # (each staged file exists at the destination with equal bytes); keep
+    # the staging sibling + atomic rename for NEW entries — or place each
+    # sweep under a unique name. Scenario: a same-date re-sweep with
+    # DISTINCT file names preserves the first sweep's files (scenario 9's
+    # same-named pin stays as the complement). NFR-5's 0-silent-log-loss
+    # holds for the twice-swept ref.
+    # F-37 (medium — PM chose CARRY): DECLARED RESIDUAL with owner
+    # visibility: every refused sweep and post-sweep ordering refusal
+    # reaches the operator as transient retryable closeout.write.failed with
+    # the detail dropped (the projection at closeout.ts:3191 dates from the
+    # phase-12 ordering gate); the sweep refuses SAFELY with no data loss
+    # (sources intact, destination empty — probe-verified), so the carry is
+    # safe; the classified-projection fix (own code, non-retryable, bounded
+    # summary carrying the detail) plus one transaction-level refused-sweep
+    # scenario is a follow-up; the PR body carries it in plain words per the
+    # artifact's residuals_carry guidance.
+    # Remaining residuals, one line each (with reason):
+    # - F-39 (low): the plan-time exclusion and the sweep reach hand-created
+    #   delivery worktrees, not only lane-provisioned ones (spec section 8.5
+    #   predicate-reuse tension; reproduced: a manual worktree's draft and
+    #   notes deleted) — follow-up: gate the exclusion on the newest
+    #   dispatch.lane record's worktreePath; declared residual with owner
+    #   visibility.
+    # - F-40 (low): removeEphemeral non-recursive tmp/*.log deletion + after
+    #   the sources move (EISDIR permanent wedge in an ignoring repository;
+    #   broken-symlink statSync) — follow-up: recursive, ephemeral removal
+    #   before the source entries.
+    # - F-41 (low): the over-cap refusal names neither the first oversized
+    #   entry nor the action, the truncated short-circuit omits entries that
+    #   fit, and newest-first is mtime not the date in the name — follow-up
+    #   detail/discard-list improvements.
+    # - F-42 (low): F-22 residual — the active-lane lane-worktree-missing
+    #   half of TC-RESUME-002 has no committed proof, seven assertions accept
+    #   [0, 2] where the stub is deterministic, and the reworded comment
+    #   still misdescribes scenario 6 — follow-up suite hardening.
+    # - F-43 (low): boardDispatchWorktreePaths never cleared on a reused
+    #   runtime (embedder-reachable, not binary-reachable) — follow-up:
+    #   rebuild per render.
+    # - F-44 (info): stale-registration closeout wording and the dead
+    #   prunable check — no action; note for the next touch.
+    # - F-45 (info): the doc-sync re-run list grows —
+    #   feature-dispatch-engine.md:965 (the retired spawn-failed prose
+    #   mirror), the ref-keyed/per-ref comments (board.ts:50-51/:129,
+    #   dispatch-lane-view.ts:39), the spec DEC-9..DEC-11 citation wording,
+    #   and the DEC-11 vs phase-13 discard-set delta — reconciled in the
+    #   doc-sync re-run with F-33/F-23/F-16, delta checked before the PR.
+    # - F-46 (info): stderr tails keep newlines so the human summary spans
+    #   unprefixed lines (JSON unaffected) — collapse whitespace on the next
+    #   touch.
+    # - F-23's code half (worktree-aware verify gates + a remedy naming the
+    #   worktree; the wrapper invocation check): named as a PR-BODY follow-up
+    #   — NO ticket minted (the reviewer's search of open issues found none);
+    #   the guide wording rides the doc-sync re-run.
+    # Scope rider: the pending pm-notes edit (the adjudications) is committed
+    # WITH this phase's commit — the change folder's pm-notes file is
+    # declared in this phase's scope (the GH-406 phase-9 pm-notes-ride
+    # precedent).
+    # Fences (unchanged): exception-mode pins never regenerated; default
+    # goldens re-pin only with the surfaces they pin; no GH-412 scope; naming
+    # rules; hermetic tests; TS rules section 0; every seam
+    # production-reachable through composed callers; each fix lands with its
+    # suite in the same commit; the no-shell invariant is neither narrowed
+    # nor allowlisted (F-34's explicit boundary).
+    # Phase gate (this phase's own): bun run scripts/checks/
+    # no-shell-dispatch.ts green; bun test tests/checks tests/structure
+    # tests/conformance green (the five red tests at 96f6228a — TC-SHELL-002,
+    # TC-BATTLE-001, TC-BATTLE-004, TC-PORT-001, TC-IDENT-001's placement
+    # assertion — all named above); the phase-13 behaviour set green;
+    # typecheck; biome. The full battery is run at the phase boundary by the
+    # orchestrator's quality_gates phase. Because the delta changes
+    # production code, the review pass before quality_gates covers this
+    # phase (the artifact's next_step); a doc-focused check covers the
+    # doc-sync re-run delta (F-33, F-23, F-16, F-45) before the pull request.
+    # Verify: bun run scripts/checks/no-shell-dispatch.ts; TMPDIR=$PWD/tmp/tmpdir bun test tests/checks tests/structure tests/conformance; TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-production-worktree.test.ts tests/behaviour/dispatch-resume-economics.test.ts tests/behaviour/closeout-worktree.test.ts tests/behaviour/merge-production-composition.test.ts tests/behaviour/host-index-worktree-pin.test.ts tests/behaviour/board-lanes.test.ts tests/behaviour/git-adapter-worktree-enumeration.test.ts; pnpm typecheck; biome lint; biome format:check; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary (orchestrator quality_gates runs the full battery); tests/golden green with no byte changes; git status confirms only the declared paths changed.
+    scope:
+      files:
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - packages/core/src/domain/lane-worktree-plan.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/structure/state-scope.test.ts
+        - tests/behaviour/dispatch-production-worktree.test.ts
+        - doc/changes/2026-11/2026-11-25--GH-404--worktree-lane-foundation/chg-GH-404-pm-notes.yaml
 # Plan revision log:
 #   rev 1 — 2026-11-25: initial ten-phase plan from spec v1.0 (0cb77658) +
 #           test plan v1.0 (a50a1503). OQ-1 settled in-plan: the fresh-worktree
@@ -1372,3 +1495,65 @@ phases:
 #           biome green; tests/golden green with no byte changes; the full
 #           battery belongs to the orchestrator's quality-gates phase.
 #           Phases 1-12 byte-identical; no tasks key; no progress records.
+#   rev 11 — 2026-11-25: Code Review Remediation Iteration 3 (delta)
+#           declared (delivery_planning reopened; review verdict FAIL —
+#           code-review/review-iter-3.yaml, 2026-11-25T18:59:05Z: 0
+#           critical, 1 high, 4 medium, 5 low, 3 info; the iteration-2
+#           blockers VERIFIED FIXED — scenarios 8/9, 7, 12 and the controls;
+#           ITERATION 3 EXHAUSTED -> the change required human adjudication
+#           of one narrow question: how tmp/deliver-ticket is treated
+#           against the committed no-shell invariant, which rule R1 flags
+#           wherever its literal appears in the declared dispatch-flow
+#           surface). PM ADJUDICATIONS (recorded in phase 14's comment):
+#           F-34 FIX (the reviewer's recommended option) — drop
+#           tmp/deliver-ticket / deliver-ticket from the swept set and the
+#           plan-time exclusion everywhere it appears (production.ts,
+#           edge.ts, the swept-set constant in lane-worktree-plan.ts); the
+#           spec's DEC-11 names only the runner logs and tmp/tmpdir, so the
+#           drop is compliance restoration; the committed no-shell invariant
+#           is NOT narrowed or allowlisted (that would be a security-invariant
+#           change needing a decision record; hiding the literal outside the
+#           scanned surface is not acceptable) — the three red suites
+#           (TC-SHELL-002, TC-BATTLE-001/004) go green by the removal; the
+#           rev-10 wording that listed tmp/deliver-ticket is superseded by
+#           phase 14's comment (phases 1-13 byte-identical; the plan-prose
+#           echoes and the spec DEC-11 wording ride the doc-sync re-run per
+#           F-45); F-37 CARRY as a declared residual with owner visibility
+#           (the refused sweep reports the transient retryable
+#           closeout.write.failed with the detail dropped; the sweep refuses
+#           SAFELY with no data loss — sources intact, destination empty;
+#           the classified-projection fix and a transaction-level
+#           refused-sweep scenario are a follow-up; the PR body carries it
+#           in plain words); F-38 FIX — same-date re-sweeps PRESERVE the
+#           earlier entries (merge the staged entry into the destination
+#           entry with per-placed-file verification, staging sibling +
+#           atomic rename for new entries; newest-first byte cap still
+#           governs) with a distinct-file-names scenario in the
+#           production-composition suite. Phase 14 appended (kind delivery,
+#           7 declared files, including the change folder's pm-notes — the
+#           pending adjudication edit is committed with the phase's commit,
+#           the GH-406 phase-9 ride precedent): F-35
+#           CloseoutLaneLogSweepData added to BOTH module lists of
+#           tests/fixtures/ports/v1-contract-inventory.json (TC-PORT-001);
+#           F-36 the stale placement.branch assertion retired at
+#           tests/structure/state-scope.test.ts:381 (red since 3d8faceb) —
+#           absence asserted, comment reworded to AC-F2-1's detached
+#           contract. DECLARED RESIDUALS (one line each in the phase
+#           comment): F-37 (carried, above), F-39 (the exclusion reaches
+#           hand-created delivery worktrees — owner-visible follow-up), F-40
+#           (removeEphemeral recursion/ordering wedge), F-41 (over-cap
+#           detail/discard-list), F-42 (TC-RESUME-002 missing-worktree half
+#           unproven, lax assertions, comment accuracy), F-43 (board map
+#           stale across renders on a reused runtime), F-44/F-46 (info,
+#           no action / next-touch notes), F-45 (the doc-sync list grows:
+#           feature-dispatch-engine.md:965, the ref-keyed comments, the
+#           DEC-9..11 citation wording, the DEC-11 discard-set delta),
+#           F-23's code half named as a PR-BODY follow-up (no ticket minted
+#           — the reviewer's search found none). Fences unchanged. Phase
+#           gate: no-shell-dispatch green; bun test tests/checks
+#           tests/structure tests/conformance green (the five red tests
+#           named); the phase-13 behaviour set green; typecheck; biome;
+#           tests/golden green with no byte changes; the full battery
+#           belongs to the orchestrator's quality_gates phase, and the
+#           delta's review pass covers this phase before it. Phases 1-13
+#           byte-identical; no tasks key; no progress records.

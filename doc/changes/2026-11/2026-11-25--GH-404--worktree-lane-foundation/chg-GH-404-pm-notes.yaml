@@ -52,8 +52,59 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Review iter-3 verdict FAIL (code-review/review-iter-3.yaml): the three
+      iteration-2 blockers ARE FIXED and production-reproduced (F-18 second
+      sweep end-to-end; F-19 non-tmp-ignoring repo plans+applies; F-20
+      two-repository board). The FAIL is on the TREE: pnpm test red with 5
+      failing tests in 3 root causes, none in the phase's reported set — F-34
+      (high): the literals 'tmp/deliver-ticket'/'deliver-ticket' trip the
+      committed no-shell invariant (TC-SHELL-002, TC-BATTLE-001/004); F-35
+      (medium): CloseoutLaneLogSweepData missing from the v1 contract
+      inventory fixture (TC-PORT-001); F-36 (medium): state-scope.test.ts:381
+      still asserts placement.branch, removed by Decision 1 (TC-IDENT-001, red
+      since 3d8faceb). Two mediums in the same closure: F-37 every refused
+      sweep reaches the operator as the generic retryable
+      closeout.write.failed with detail dropped (the sweep safely refuses — no
+      data loss); F-38 the per-entry replace silently deletes an earlier
+      sweep's same-date logs on a twice-swept ref (violates NFR-5 0 silent log
+      loss). Lows F-39..F-43 (exclusion reaches hand-created worktrees; a
+      directory named tmp/<name>.log wedges; cap-refusal wording; testing
+      gaps; board map not cleared on a reused runtime); info F-44..F-46. PM
+      ADJUDICATIONS: F-34 — adopt the reviewer's recommendation, DROP
+      tmp/deliver-ticket from the swept set (spec DEC-11 names only the runner
+      logs and tmp/tmpdir, so this is compliance restoration, not a new
+      decision; the invariant is the authority and is not narrowed or
+      allowlisted); F-38 — FIX (silent loss is a spec violation; same-date
+      re-sweeps preserve the earlier entries); F-37 — CARRY with owner
+      visibility (projection wording; the sweep refuses safely); F-35/F-36 —
+      mechanical fixes; F-39..F-46 — declared residuals; F-23's code half
+      (worktree-aware verify gates) — named in the PR body as a follow-up (no
+      ticket minted autonomously). The three full review iterations are
+      exhausted; the remaining work is the reviewer-PRESCRIBED delta
+      remediation + delta verification, then quality_gates. Remediation: plan
+      rev 11 phase 14 (F-34 sweep-set narrowing, F-35 inventory export, F-36
+      assertion retirement, F-38 same-date preservation scenario, pending
+      pm-notes edit committed with it); gate: no-shell-dispatch check + bun
+      test tests/checks tests/structure tests/conformance + the phase-13 set."
+    type: info
+    date: "2026-11-25"
+  - text: "Retro (iteration-3 lesson, process-honest): the phase-13 coder ran
+      typecheck + its targeted suite but not the invariant trio
+      (tests/checks, tests/structure, tests/conformance) — the exact suites
+      that tripped. Every remediation phase's gate must include the
+      invariant/conformance battery portions that the change's literals and
+      exports touch, not just behaviour suites; and the review's own 'not run'
+      set (about 660 of 1001 behaviour files) is why quality_gates runs the
+      whole battery exactly once. Also: F-36 was red from 3d8faceb and the
+      iteration-2 reviewer's set missed it — review sets must include the
+      stale-assertion sweep for every constant a decision retires."
+    type: retro
+    date: "2026-11-25"
   - text: "Plan phase 13 (rev-10 review-iter-2 remediation) applied in ONE commit
-      through the commit primitive. FINAL STATUS PER FINDING. F-18 ADDRESSED —
+      through the commit primitive (96f6228a371ee879288646e60c22ddb8c25a844e;
+      the hash was unknowable when this note was committed IN that commit, so
+      this parenthetical is the follow-up evidence edit — no amend, no history
+      rewrite). FINAL STATUS PER FINDING. F-18 ADDRESSED —
       createLaneLogSweep replaces and verifies PER ENTRY (staging sibling,
       atomic destination/<entry> replace, placed bytes == measured source
       bytes; destination verification covers only the entries this sweep
