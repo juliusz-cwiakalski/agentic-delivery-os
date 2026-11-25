@@ -9,7 +9,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-25T03:43:23.337Z }
   delivery_planning: { started: null, completed: 2026-11-25T10:15:46.345Z }
   dor_check: { started: null, completed: 2026-11-25T04:08:42.685Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-25T13:57:22.115Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -52,128 +52,149 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
-  - text: "Plan phase 9 complete (commit f31212b1): behaviour proof II landed —
-      (1) TC-CLOSEOUT-002/003/004 run-level ordering (closeout-worktree.test.ts
+  - text: "Plan phase 10 complete (commit d583b2ba): the release changeset
+      .changeset/gh-404-worktree-lane-foundation-minor.md landed — the branch's
+      ONLY new .changeset/*.md vs the merge base, declaring the five fixed-group
+      packages (@delivery-os/core, adapters, cli, mcp, opencode) at minor per
+      the lockstep configuration and the spec front matter's version_impact
+      minor, its body stating the worktree-lane foundation in the delivered
+      GH-406 vocabulary (default-on worktree lanes with the disable-worktrees
+      exception, provisioning before the first phase, resume reuse, registration
+      pinned to the main checkout, merge/closeout ordering, worktree-path
+      visibility, the addWorktree seam house style, the position-independent
+      enumeration; parallel lanes and sync-before-PR explicitly GH-412). The six
+      feature-spec entries are DECLARATION ONLY per the plan — doc-syncer
+      executes the contract-truth reconciliation in the lifecycle
+      system_spec_update phase per the pm-notes doc-impacts list; no coder task
+      edited them in this commit. Boundary evidence — THE FULL GATE IS GREEN FOR
+      THE FIRST TIME: tmp/run-logs-runner/2026-11-25/phase10-gate.log — 13/13
+      stages exit 0; bun test 12905 pass / 4 skip / 0 FAIL; TC-RELEASE-001
+      PASSED as a normal stage-4 result (7/7 focused — the known-deferred
+      verdict clears exactly at the phase-10 boundary when the changeset lands,
+      per the GH-406 precedent); exports-parity green; the changeset verified to
+      parse as YAML front matter declaring exactly the five fixed-group packages
+      at minor. No timing assertions exist anywhere in the test corpus
+      (TC-ENV-004 remains the recorded pm-notes measurement)."
+    type: info
+    date: "2026-11-25"
+  - text: "Plan phase 9 complete (commit f31212b1): behaviour proof II landed — (1)
+      TC-CLOSEOUT-002/003/004 run-level ordering (closeout-worktree.test.ts
       additions): the apply transaction's worktree-removal gate proven over
-      injected runtimes — sweep strictly before removal (order
-      [sweep, remove]); a sweep failure refuses the removal with the worktree
-      AND the logs intact; the merge arm refuses before any side effect with
-      the stalled lane keeping its worktree (the killing case is SAFE verdict
-      + UNCONFIRMED merge — defense in depth, so the merge arm is
-      load-bearing independently of the predicate's mergedObserved arm); a
-      composition without the sweep port keeps the delivered removal (the
-      logs arm neutralized). (2) TC-CLOSEOUT-005: the two ordering mutants
-      MUT-GH404-01 (gate skipped) and MUT-GH404-02 (merge arm hardcoded true)
-      registered in the mutant registry with the guarding suite
-      closeout-worktree.test.ts — the mutant machinery verified both killed
-      with the declared signals carried by message-bearing assertions (bun's
-      expect(actual, message) names the signal in the failure output; the
-      signal-bearing assertion is placed FIRST so an earlier assertion cannot
-      mask it). Fence-authorized re-pins: capsule-mutants.test.ts count pins
-      44->46 with the two new ids. (3) TC-CLOSEOUT-001: the worktree-invoked
-      merge landing proven over a REAL temp repository with a real linked
-      worktree — invoked from the worktree, the squash lands ON BASE in the
-      main checkout (base advances to squashSha, containedOnBase true, the
-      invoking worktree untouched); invoked from the main checkout, the
-      delivered argv and result hold. (4) TC-SURFACES-001: the dispatch-status
-      worktree golden pair (status-worktree.txt with the worktreePath line;
-      status-context-less.txt the PRESERVED pre-change pin, never
-      regenerated, byte-identical rendering, and the delta between the two
-      goldens proven to be exactly the worktree line). (5) TC-SURFACES-002:
-      the board lanes join pins (the row carries the joined path; a
-      context-less lane renders exactly as today, no rows minted).
-      TC-REG-001: the exception-mode pins are the preserved goldens +
-      context-less assertions (0-byte delta). Boundary evidence: first gate
-      run flagged ONE lint error (a duplicate type import in
-      board-lanes.test.ts — fixed by merging the import); bun test was green
-      except TC-RELEASE-001 in both runs. Post-fix rerun
-      (phase9-gate2.log): stages 1-3, 5-13 green; bun test 12904 pass / 4
+      injected runtimes — sweep strictly before removal (order [sweep, remove]);
+      a sweep failure refuses the removal with the worktree AND the logs intact;
+      the merge arm refuses before any side effect with the stalled lane keeping
+      its worktree (the killing case is SAFE verdict + UNCONFIRMED merge —
+      defense in depth, so the merge arm is load-bearing independently of the
+      predicate's mergedObserved arm); a composition without the sweep port
+      keeps the delivered removal (the logs arm neutralized). (2)
+      TC-CLOSEOUT-005: the two ordering mutants MUT-GH404-01 (gate skipped) and
+      MUT-GH404-02 (merge arm hardcoded true) registered in the mutant registry
+      with the guarding suite closeout-worktree.test.ts — the mutant machinery
+      verified both killed with the declared signals carried by message-bearing
+      assertions (bun's expect(actual, message) names the signal in the failure
+      output; the signal-bearing assertion is placed FIRST so an earlier
+      assertion cannot mask it). Fence-authorized re-pins:
+      capsule-mutants.test.ts count pins 44->46 with the two new ids. (3)
+      TC-CLOSEOUT-001: the worktree-invoked merge landing proven over a REAL
+      temp repository with a real linked worktree — invoked from the worktree,
+      the squash lands ON BASE in the main checkout (base advances to squashSha,
+      containedOnBase true, the invoking worktree untouched); invoked from the
+      main checkout, the delivered argv and result hold. (4) TC-SURFACES-001:
+      the dispatch-status worktree golden pair (status-worktree.txt with the
+      worktreePath line; status-context-less.txt the PRESERVED pre-change pin,
+      never regenerated, byte-identical rendering, and the delta between the two
+      goldens proven to be exactly the worktree line). (5) TC-SURFACES-002: the
+      board lanes join pins (the row carries the joined path; a context-less
+      lane renders exactly as today, no rows minted). TC-REG-001: the
+      exception-mode pins are the preserved goldens + context-less assertions
+      (0-byte delta). Boundary evidence: first gate run flagged ONE lint error
+      (a duplicate type import in board-lanes.test.ts — fixed by merging the
+      import); bun test was green except TC-RELEASE-001 in both runs. Post-fix
+      rerun (phase9-gate2.log): stages 1-3, 5-13 green; bun test 12904 pass / 4
       skip / 1 known-deferred fail. Fence-authorized re-pins: capsule-mutants
       count pins (noted above)."
     type: info
     date: "2026-11-25"
   - text: "Plan phase 8 complete (commit ae9837de): the governing fixtures and
-      guards landed — NEW suites: tests/behaviour/git-adapter-worktree-seam.test.ts
-      (TC-WT-001 over a REAL temp git repository: linked worktree on the new
-      branch at the base tip, linked-only enumeration, branch-elsewhere both
-      ways; the typed refusal matrix with zero inventory residue), tests/
+      guards landed — NEW suites:
+      tests/behaviour/git-adapter-worktree-seam.test.ts (TC-WT-001 over a REAL
+      temp git repository: linked worktree on the new branch at the base tip,
+      linked-only enumeration, branch-elsewhere both ways; the typed refusal
+      matrix with zero inventory residue), tests/
       checks/worktree-seam-house-style.test.ts (TC-WT-002: no shell, no force
       token, no network in the create path; the fixed argv form asserted
-      whitespace-tolerantly; planted canaries fail the scan and stay
-      contained; the refusal matrix through a counting child runner proves
-      ONE git call per refusal and zero git calls behind the seam-side
-      validations), tests/behaviour/git-adapter-worktree-enumeration.test.ts
-      (TC-IDENT-002: the common-dir rule asserted directly, order-insensitivity
-      proven by shuffled/reversed permutations, locked/bare attributes
+      whitespace-tolerantly; planted canaries fail the scan and stay contained;
+      the refusal matrix through a counting child runner proves ONE git call per
+      refusal and zero git calls behind the seam-side validations),
+      tests/behaviour/git-adapter-worktree-enumeration.test.ts (TC-IDENT-002:
+      the common-dir rule asserted directly, order-insensitivity proven by
+      shuffled/reversed permutations, locked/bare attributes
       position-independent, the main checkout's branch never leaking into the
       linked inventory), tests/behaviour/dispatch-worktree-lifecycle.test.ts
       (TC-WT-003 lease-first order with a REAL worktree: lease -> provision ->
       spawn, spawn cwd = the worktree, the sibling placement at the base tip,
-      main checkout on base and clean throughout, DM-1 worktreePath on the
-      lane record, the join source mapping it; the provisioning refusal
-      releasing the lease with zero retries and zero spawns; TC-WT-004
-      sibling default vs explicit root; TC-WT-005 the symlink alias never
-      participating in the placement; TC-ENV-002 the derived environment
-      contract; TC-REG-002 the exception at the same seam — in-checkout, no
-      worktree created or referenced), tests/behaviour/host-index-worktree-pin.test.ts
-      (TC-HOSTIDX-001/002/003 over real git: the registration root derived
-      from the worktree equals the physical main checkout across three lane
-      commands — zero flips; the entry survives worktree removal plus
-      maintenance — zero prunes, repos list keeps its row; worktrees never
-      rows of the flat record set). UPDATED suites: dispatch-resume-economics
-      (TC-RESUME-001/002/003 the reuse/verify/DEC-8 rules), dispatch-gate-evidence
-      (TC-ENV-003 the literal $PWD/tmp/tmpdir anchored per worktree),
-      projects-identity (TC-IDENT-001 the worktree's own root differs while
-      identity and state root match), state-scope (the placement rule over
-      the physical root + the explicit setting). install/build STUBBED
-      everywhere (RSK-T5); zero timing assertions (TC-ENV-004 is the recorded
-      pm-notes evidence). Fence-authorized re-pins: content-inventory gains
-      the dispatch-lane-view export row; the new-code-naming baseline gains a
-      reason-bearing entry for the host-index pin suite's delivered
-      HostIndexRegistration field-name keys (projectKey — the zero-rename
-      fence forbids renaming the delivered field; the GH-406 baseline
-      pattern). Boundary evidence: full 13-stage battery (phase8-gate.log) —
-      stages 1-3, 5-8, 10-13 green; bun test 12891/2 fail (TC-RELEASE-001
-      known-deferred + the naming unit test on the unbaselined fixture keys);
-      post-baseline stage-4 rerun (phase8-stage4.log): 12892 pass / 1
-      known-deferred fail / 4 skip."
+      main checkout on base and clean throughout, DM-1 worktreePath on the lane
+      record, the join source mapping it; the provisioning refusal releasing the
+      lease with zero retries and zero spawns; TC-WT-004 sibling default vs
+      explicit root; TC-WT-005 the symlink alias never participating in the
+      placement; TC-ENV-002 the derived environment contract; TC-REG-002 the
+      exception at the same seam — in-checkout, no worktree created or
+      referenced), tests/behaviour/host-index-worktree-pin.test.ts
+      (TC-HOSTIDX-001/002/003 over real git: the registration root derived from
+      the worktree equals the physical main checkout across three lane commands
+      — zero flips; the entry survives worktree removal plus maintenance — zero
+      prunes, repos list keeps its row; worktrees never rows of the flat record
+      set). UPDATED suites: dispatch-resume-economics (TC-RESUME-001/002/003 the
+      reuse/verify/DEC-8 rules), dispatch-gate-evidence (TC-ENV-003 the literal
+      $PWD/tmp/tmpdir anchored per worktree), projects-identity (TC-IDENT-001
+      the worktree's own root differs while identity and state root match),
+      state-scope (the placement rule over the physical root + the explicit
+      setting). install/build STUBBED everywhere (RSK-T5); zero timing
+      assertions (TC-ENV-004 is the recorded pm-notes evidence).
+      Fence-authorized re-pins: content-inventory gains the dispatch-lane-view
+      export row; the new-code-naming baseline gains a reason-bearing entry for
+      the host-index pin suite's delivered HostIndexRegistration field-name keys
+      (projectKey — the zero-rename fence forbids renaming the delivered field;
+      the GH-406 baseline pattern). Boundary evidence: full 13-stage battery
+      (phase8-gate.log) — stages 1-3, 5-8, 10-13 green; bun test 12891/2 fail
+      (TC-RELEASE-001 known-deferred + the naming unit test on the unbaselined
+      fixture keys); post-baseline stage-4 rerun (phase8-stage4.log): 12892 pass
+      / 1 known-deferred fail / 4 skip."
     type: info
     date: "2026-11-25"
   - text: "Plan phase 7 complete (commit 5a9c58dd): the worktree-path visibility
       landed on all three surfaces via the PM's binding design (option a,
       REF-KEYED JOIN, JOIN-ONLY) — (1) dispatch status:
       DispatchStatusData/contracts gains the additive optional worktreePath,
-      buildStatusData maps the lane record's own field (absent on a
-      context-less record — DEC-8), renderDispatchStatusText emits
-      worktreePath=<path> only when carried (TC-SURFACES-001). RECORDED
-      DEVIATION (file attribution): the blocker map named
-      contracts/dispatch.ts as the type's home, but DispatchStatusData lives
-      in contracts/dispatch-operator.ts — the map's error, the PM's binding
-      design unchanged, the type edited in its real home (disclosed as
-      scopeDrift). (2) lanes: QueueLane gains worktreePath; foldLanes accepts
-      dispatchWorktreePaths (ref -> path) and CONTRIBUTES to existing rows
-      only; edge readLanes injects the join source from the bounded
-      retained-window read via the new app/dispatch-lane-view.ts helper
-      newestDispatchLaneWorktreePaths (newest record per (repository, ref) —
-      the store is project-scoped, so the repository dimension is the store's
-      own; a context-less record contributes nothing; a store read failure
-      contributes an empty map — the classified absence). (3) board:
-      BoardLaneRow gains worktreePath; BoardProjectionInput accepts
-      dispatchWorktreePaths; laneRow contributes to existing rows verbatim;
-      BoardCommandRuntime gains the join source and commands/board.ts passes
-      it into projectBoard. The path value carries the SAME bound as the
-      record's own field (one bound, reused — verbatim). Join-only: rows are
-      never minted; absence renders exactly as today on every surface (the
-      DEC-8 byte-for-byte basis). Golden discipline: NO existing golden
-      changed — existing fixtures seed no worktree context, so rendered
-      output is byte-identical; the worktree lines are pinned by phase 9's
-      new fixtures. Boundary evidence:
+      buildStatusData maps the lane record's own field (absent on a context-less
+      record — DEC-8), renderDispatchStatusText emits worktreePath=<path> only
+      when carried (TC-SURFACES-001). RECORDED DEVIATION (file attribution): the
+      blocker map named contracts/dispatch.ts as the type's home, but
+      DispatchStatusData lives in contracts/dispatch-operator.ts — the map's
+      error, the PM's binding design unchanged, the type edited in its real home
+      (disclosed as scopeDrift). (2) lanes: QueueLane gains worktreePath;
+      foldLanes accepts dispatchWorktreePaths (ref -> path) and CONTRIBUTES to
+      existing rows only; edge readLanes injects the join source from the
+      bounded retained-window read via the new app/dispatch-lane-view.ts helper
+      newestDispatchLaneWorktreePaths (newest record per (repository, ref) — the
+      store is project-scoped, so the repository dimension is the store's own; a
+      context-less record contributes nothing; a store read failure contributes
+      an empty map — the classified absence). (3) board: BoardLaneRow gains
+      worktreePath; BoardProjectionInput accepts dispatchWorktreePaths; laneRow
+      contributes to existing rows verbatim; BoardCommandRuntime gains the join
+      source and commands/board.ts passes it into projectBoard. The path value
+      carries the SAME bound as the record's own field (one bound, reused —
+      verbatim). Join-only: rows are never minted; absence renders exactly as
+      today on every surface (the DEC-8 byte-for-byte basis). Golden discipline:
+      NO existing golden changed — existing fixtures seed no worktree context,
+      so rendered output is byte-identical; the worktree lines are pinned by
+      phase 9's new fixtures. Boundary evidence:
       tmp/run-logs-runner/2026-11-25/112857-phase7-gate.log — stages 1-3 and
       5-13 green; bun test 12863 pass / 4 skip / 1 known-deferred fail
-      (TC-RELEASE-001 only). Hermetic surface probe verified: status renders
-      the path; context-less status renders as today; the join is
-      newest-wins; lanes/board rows carry the path; unjoined renders as
-      today. content-inventory gains the dispatch-lane-view export row
+      (TC-RELEASE-001 only). Hermetic surface probe verified: status renders the
+      path; context-less status renders as today; the join is newest-wins;
+      lanes/board rows carry the path; unjoined renders as today.
+      content-inventory gains the dispatch-lane-view export row
       (fence-authorized re-pin)."
     type: info
     date: "2026-11-25"
