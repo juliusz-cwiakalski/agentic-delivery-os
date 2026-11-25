@@ -695,6 +695,40 @@ notes:
       paths changed under git status."
     type: info
     date: "2026-11-25"
+  - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 6 complete (commit
+      9b9918eb): the conformance scanner's sense rules now speak the
+      amendment's vocabulary while every delivered mechanic is preserved
+      byte-intact - the whitespace-normalized detection core with the
+      original-line map (phase 9's hardening, PRESERVED not reverted: the
+      wrapped-violation, wrapped project-key mislabel, and wrapped-exception
+      arms are untouched), the 42-page commands glob pin, the four named
+      exceptions individually exempt single-line and wrapped with near-misses
+      still flagging, and the synthetic-only negative proofs (in-memory and
+      session temp root; the committed tree stays clean). Sense-rule updates:
+      DECLARED_TERM now reads declared product keys (the declared-term sense
+      is product key), the tracker sense gains the Jira project line
+      exemption with a synthetic arm, the declared-term arm input speaks the
+      product nouns, and the file header records that a clone identity
+      presented as the product or as a product key flags with the reserved
+      segment projects as state-layout. The live header assertions were
+      already refreshed wording-only in phase 3 (PRODUCT/REPOSITORY present,
+      GROUP/MEMBER/PROJECT/PROJECT REPOSITORY absent, CLONE, flat-alias KEY
+      byte-identical). Sweep residue landed in the SAME commit - the tool
+      prose rule applied on the pages this change already touches:
+      doc/guides/local-install.md (5 instances), doc/guides/
+      migrating-to-per-repository-state.md (1), and the m4 install page (2:
+      the tool binary, the installed tool binary); the m2 attempts page and
+      the three m2 command pages carry no the-product instances (verified,
+      zero-diff); public examples on the touched pages are already neutral
+      synthetic keys (no real company, nothing private - no edit needed);
+      the ~45-line remainder sweep across pages this change does not touch
+      stays routed to GH-408. Pre-existing F-5 dead-helper lint warning
+      (originalLineAt) is the delivered reviewer-dispositioned residual,
+      untouched. Boundary evidence: gate run 002216-pnpm-check-gh406-amend-
+      phase6.log green end-to-end - exit 0, 13/13 stages in-chain, bun test
+      12854 pass / 4 skip / 0 fail, OK new-code-naming 2505/0/4."
+    type: info
+    date: "2026-11-25"
   - text: "DoR iter-4 verdict READY (focused closure gate, 10/10 facets PASS, 0
       blocking): iter-3 finding 1 verified remediated — renamed tracker title
       adopted byte-exact in spec front matter, test-plan H1, plan header; DEC-6

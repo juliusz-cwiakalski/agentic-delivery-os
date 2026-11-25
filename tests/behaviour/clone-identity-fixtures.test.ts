@@ -10,12 +10,12 @@
  *
  * G-1 a linked worktree resolves the SAME clone identity as its main checkout
  *     through the production path, stable across repeated reads.
- * G-2 one project repository cloned twice resolves the SAME declared project
- *     key from the groups.v1 declaration while the two clone identities and
- *     the two per-clone state roots differ; the declared key is never compared
- *     against the clone identity.
+ * G-2 one repository cloned twice resolves the SAME product key from the
+ *     groups.v1 declaration while the two clone identities and the two
+ *     per-clone state roots differ; the product key is never compared against
+ *     the clone identity (the owner amendment's nouns, comment 7138707234).
  * G-3 an existing-shape groups.v1 configuration whose group key is OUTSIDE the
- *     declared-key grammar loads unchanged through the production path — exit
+ *     declared product-key grammar loads unchanged through the production path — exit
  *     0, no classified validation error, the configuration bytes on disk
  *     unchanged — and a grammar-valid twin loads identically, proving the
  *     local layer enforces no pattern (no-public-pattern contract, DEC-4).
@@ -25,9 +25,9 @@ import { readFileSync } from "node:fs";
 import { projectStateRoot } from "../../packages/core/src/app/state-scope";
 import {
   createMemberCheckout,
+  type MemberCheckout,
   projectGroupsDocument,
   writeProjectGroupsConfig,
-  type MemberCheckout,
 } from "../fixtures/projects/groups";
 import {
   createProductionProjectsHarness,
@@ -36,8 +36,8 @@ import {
 } from "../fixtures/projects/production";
 import {
   createHostFixture,
-  projectScopeFor,
   type HostFixture,
+  projectScopeFor,
 } from "../fixtures/projects/state-scope";
 import {
   addWorktree,
@@ -103,8 +103,8 @@ describe("TC-DPKFIX-001 fixture G-1 a linked worktree shares the main checkout's
   });
 });
 
-describe("TC-DPKFIX-002 fixture G-2 two clones, one declared key, distinct state roots", () => {
-  test("both clones resolve the same declared key with different identities and roots", async () => {
+describe("TC-DPKFIX-002 fixture G-2 two clones, one product key, distinct state roots", () => {
+  test("both clones resolve the same product key with different identities and roots", async () => {
     const host = createHostFixture("g2");
     const originParent = `${host.hostRoot}-origin`;
     const seedParent = `${host.hostRoot}-seed`;
@@ -118,9 +118,9 @@ describe("TC-DPKFIX-002 fixture G-2 two clones, one declared key, distinct state
       const cloneA = cloneRepository(origin, clonesParent, "clone-a");
       const cloneB = cloneRepository(origin, clonesParent, "clone-b");
 
-      const declaredKey = "platform-alpha";
+      const productKey = "platform-alpha";
       const document = projectGroupsDocument({
-        groupKey: declaredKey,
+        groupKey: productKey,
         members: [{ selector: "root", value: seed }],
       });
       harnessA = createProductionProjectsHarness({ label: "g2-a", host, workingDirectory: cloneA });
@@ -128,12 +128,12 @@ describe("TC-DPKFIX-002 fixture G-2 two clones, one declared key, distinct state
       writeProjectGroupsConfig(harnessA, document);
       writeProjectGroupsConfig(harnessB, document);
 
-      const runA = await harnessA.run(["projects", "list", "--project", declaredKey, "--json"]);
-      const runB = await harnessB.run(["projects", "list", "--project", declaredKey, "--json"]);
+      const runA = await harnessA.run(["projects", "list", "--project", productKey, "--json"]);
+      const runB = await harnessB.run(["projects", "list", "--project", productKey, "--json"]);
       expect(runA.exitCode).toBe(0);
       expect(runB.exitCode).toBe(0);
-      expect(groupsOf(runA)[0]?.groupKey).toBe(declaredKey);
-      expect(groupsOf(runB)[0]?.groupKey).toBe(declaredKey);
+      expect(groupsOf(runA)[0]?.groupKey).toBe(productKey);
+      expect(groupsOf(runB)[0]?.groupKey).toBe(productKey);
 
       const identityA = identityOf(host, cloneA);
       const identityB = identityOf(host, cloneB);
@@ -142,11 +142,11 @@ describe("TC-DPKFIX-002 fixture G-2 two clones, one declared key, distinct state
       expect(identityA.stateLocation).toBe(projectStateRoot(host.hostRoot, identityA.cloneKey));
       expect(identityB.stateLocation).toBe(projectStateRoot(host.hostRoot, identityB.cloneKey));
 
-      // The disjoint namespaces: the declared key resolves from the
+      // The disjoint namespaces: the product key resolves from the
       // configuration document while each state root keys on the clone
       // identity — the two are never compared.
-      expect(declaredKey).not.toBe(identityA.cloneKey);
-      expect(identityA.stateLocation).not.toBe(projectStateRoot(host.hostRoot, declaredKey));
+      expect(productKey).not.toBe(identityA.cloneKey);
+      expect(identityA.stateLocation).not.toBe(projectStateRoot(host.hostRoot, productKey));
     } finally {
       harnessA?.dispose();
       harnessB?.dispose();
