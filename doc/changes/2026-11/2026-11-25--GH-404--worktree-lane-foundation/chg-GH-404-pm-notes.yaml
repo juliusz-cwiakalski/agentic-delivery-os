@@ -52,6 +52,76 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Review iter-1 verdict FAIL (code-review/review-iter-1.yaml, swept with
+      the next phase complete): 17 findings — 2 blocking, 4 major, 4 minor, 6
+      nits, 1 info — reproduced through the real production composer over real
+      temp git repositories. THE CORE DEFECT: no committed suite runs the
+      DEFAULT (worktree) mode through the production composer (both production
+      fixtures pin lane.disable-worktrees: true), so the 13/13 gate was blind
+      to the default mode. Blocking: F-1 operator resume refused once the lane
+      moves to its delivery branch (reuse arm demands lane/<REF>; AC2 broken);
+      F-2 the sweep copies <worktree>/tmp/tmpdir scratch (2.9 GB / 74k entries,
+      no bound, no prune) into the state root while the REAL runner logs
+      (tmp/run-logs-runner/, 20 MB, per the runner contract) are siblings that
+      git worktree remove deletes — the zero-log-loss claim inverts. Majors:
+      F-3 the -C landing sits in the RETIRED squashLand seam (zero composed
+      callers, pinned by merge-landing-retirement) while production lands via
+      the provider API and post-landing branch deletion fails for a
+      worktree-parked branch (my phase-6 deviation adjudication REOPENED — the
+      coder's sandbox tested the dead seam); F-4 no failure-path ownership
+      (failed install leaves the worktree registered; later dispatches refuse
+      worktree-add-refused; post-closeout lane record still carries
+      worktreePath and refuses lane-worktree-missing; lane/<REF> leaks one
+      branch per work item); F-5 AC-F3-1 PATH precedence holds only for the
+      provisioning children, not the lane session (lane-launch-plan
+      consumption point unsupplied); F-6 no default-mode production-composition
+      suite; governing fixtures re-implement logic instead of composing
+      production. Verified sound: addWorktree seam, lease-first order,
+      host-index pin (composer-verified), exception mode byte-identical to
+      merge base, position-independent enumeration, NG fences clean, scope
+      disclosure clean. PM DECISIONS (binding, recorded for rev 9): (1) LANE
+      BRANCH MODEL — provision DETACHED at the base tip; no lane/<REF> branch
+      is ever created; the lane's own intake ensures its delivery branch
+      <type>/<REF>/<slug> per the repo convention; resume verifies the
+      worktree exists with HEAD detached-at-base OR on a delivery-convention
+      branch matching the work item ref; foreign branches still refused.
+      (2) MERGE POST-LANDING — accept the provider-landing contract: revert
+      the dead squashLand change (its zero-callers pin stays green); the merge
+      transaction's post-landing branch deletion DEFERS to closeout when the
+      branch is parked in the lane's worktree (closeout's delivered order:
+      worktree removal, then branch deletion, completes it); the merge spec
+      section is re-reconciled (doc-sync re-run after code changes). (3) SWEEP
+      SCOPE — the lane's logs are the runner-log directories
+      (tmp/run-logs-runner/**): copied bounded (newest-first, byte-capped,
+      truncation disclosed) to <state root>/closeout-lane-logs/<ref>;
+      tmp/tmpdir scratch is DELETED, not preserved; the destination verify
+      checks the copied entries, not the directory it created; the
+      cleanliness predicate evaluates the POST-sweep state (fixing the
+      inverted rationale, F-8). Remediation: plan rev 9 (remediation phase
+      covering F-1..F-16 with the decisions above + the default-mode
+      production-composition suite as the first-class deliverable), coder
+      applies, doc-sync re-runs (merge spec section), reviewer iter-2.
+      Iteration 1 of max 3."
+    type: info
+    date: "2026-11-25"
+  - text: "Retro (review catch — the two lessons that made 17 findings possible):
+      (1) THE DEFAULT-FLIP BLIND SPOT — the phase-4 fence-authorized re-pins
+      pinned both production-composition fixtures to the exception mode
+      (correctly preserving today's behaviour) but NO complementary suite
+      covered the NEW default through the production composer, so a 13/13
+      green gate proved nothing about the mode the change ships. Rule for
+      every default-flip change: the default-mode production-composition
+      suite lands in the SAME change as the flip, as a first-class
+      deliverable, not a follow-up. (2) DEVIATION ADJUDICATION MUST CHECK
+      PRODUCTION REACHABILITY — I accepted the phase-6 merge deviation on the
+      coder's sandbox evidence without asking whether the seam it modified
+      (squashLand) is production-composed; a retired zero-caller seam can be
+      empirically 'verified' and still be dead code. Rule: every deviation
+      adjudication names the composed call path it affects (the plan-writer's
+      binding-chain discipline, applied to adjudication). Both lessons clear
+      the memory capture bar at closeout."
+    type: retro
+    date: "2026-11-25"
   - text: "Plan phase 11 (rev-8 remediation) applied (commit 2bb07ad4):
       doc/spec/nonfunctional.md gained the worktree-lane NFR row in the
       NFR-TOOL-003 budget-index table — a work item's lifecycle runs in its own
