@@ -15,7 +15,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-25T00:36:59.047Z }
   quality_gates: { started: null, completed: 2026-11-25T00:57:00.848Z }
   dod_check: { started: null, completed: 2026-11-25T00:57:54.988Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-25T01:01:00.092Z }
 decisions: []
 open_questions: []
 blockers: []
@@ -855,4 +855,20 @@ notes:
       inventory), GH-408 routed deferrals, TC-DAEMON-121 load flake (disclosed,
       green standalone and in final runs)."
     type: decision
+    date: "2026-11-25"
+  - text: "PR re-recorded post-amendment: https://github.com/juliusz-cwiakalski/
+      agentic-delivery-os/pull/411 UPDATED in place (mode=update; one OPEN PR
+      for the branch) — branch pushed 73697b10..18b9ac71 (20 commits landed
+      incl. the first-pass evidence commit e6490b82 and the full amendment
+      re-drive), remote tip verified 18b9ac71. Title now reads: feat(GH-406):
+      delivery vocabulary: product, repository, main checkout, worktree, lane,
+      clone identity; credentials bind to the product key (M4-S39). Body
+      replaced entirely with post-amendment product-vocabulary content (old noun
+      claims dropped, re-fetched to confirm). Ticket synced: label review
+      re-added (final set change/planning/review), assignee unchanged, no new
+      comment (the existing ready-for-review comment stands). PR OPEN, base
+      main-tools; merge authority stays with the owner; ODR-0006 Proposed awaits
+      the owner's accept/reject of the product vocabulary + declared key grammar
+      reading at the PR. Lifecycle stopped at pr_creation."
+    type: info
     date: "2026-11-25"
