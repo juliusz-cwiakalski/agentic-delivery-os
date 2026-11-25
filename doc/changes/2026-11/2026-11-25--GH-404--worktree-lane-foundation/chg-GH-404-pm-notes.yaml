@@ -14,7 +14,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-25T19:47:14.257Z }
   quality_gates: { started: null, completed: 2026-11-25T20:07:02.614Z }
   dod_check: { started: null, completed: 2026-11-25T20:11:08.125Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-25T20:13:41.508Z }
 decisions:
   - text: "Scope split per CEO comment on GH-404 (2026-11-25): this ticket delivers
       the worktree foundation only — one lane at a time, the repository lease
@@ -52,6 +52,22 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "PR CREATED:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/425 — base
+      main-tools, head feat/GH-404/worktree-lane-foundation at 71a953e4, 98
+      files (+12354/-256 over e5ff0512..71a953e4, 42 commits), not draft,
+      mergeable MERGEABLE, NOT merged. Title (shortened to commitlint's 100-char
+      header bound): 'feat(GH-404): M4-S36 a work item's lifecycle runs in its
+      own worktree (default on)'. Body: summary + what-changed + delivery
+      quality (12,926 pass 13/13 stages, range gate PASS 40/0) + carried
+      residuals (F-37, F-39..F-43, F-49, F-42/F-54/F-56, F-44..F-46/F-48
+      remainder/F-50/F-51/F-53/F-57..F-60, F-26/27/28/31/32, source-comment
+      cleanup) + named follow-ups (worktree-aware verify gates — no ticket
+      minted; refused-sweep projection; per-sweep cap policy; suite hardening;
+      pre-existing doc items; the split state-root environment finding). Merge
+      authority stays with the owner; the lane stops here."
+    type: info
+    date: "2026-11-25"
   - text: "DoD check (phase 10) evidence: (1) ALL previous lifecycle phases
       completed — clarify_scope, specification, test_planning,
       delivery_planning, dor_check, system_spec_update, review_fix,
