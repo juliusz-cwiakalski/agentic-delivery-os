@@ -230,8 +230,9 @@ verification:
       addWorktree seam, position-independent enumeration. None of the
       pre-review phrases remains (lane/<ref> branch, merge resolved from the
       worktree, gate-evidence sweep, ref-keyed join). Frontmatter identical to
-      a34bbda4; the branch's only changed changeset; no private-part or legacy
-      product name. TC-RELEASE-001 4 pass; the release file 7 pass.
+      a34bbda4; the branch's only changed changeset; public examples are
+      neutral and no legacy product name remains. TC-RELEASE-001 4 pass; the
+      release file 7 pass.
     residual: >-
       Optional wording: "today's in-checkout behaviour" is time-relative for a
       changelog; "a delivery-convention branch" could add "matching the work
