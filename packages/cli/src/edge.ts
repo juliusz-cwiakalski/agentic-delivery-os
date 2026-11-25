@@ -156,6 +156,7 @@ import {
   type DispatchRepositoryScope,
   type DispatchTranscriptRead,
   type DispatchTruthReads,
+  type DispatchWorktreeProvisioning,
   declareQueueEntry,
   decodeTelemetryStepFrame,
   defaultParkRecheckMs,
@@ -7794,6 +7795,18 @@ export type DispatchComposition = {
     repository: string,
   ) => DispatchLeaseClaim | Promise<DispatchLeaseClaim>;
   readonly releaseLease: (ref: string, cause: "completed" | "aborted") => boolean;
+  /**
+   * The provision-after-lease binding (GH-404 F-2, F-8; TC-WT-003,
+   * TC-REG-002): forwarded to the engine, which invokes it exactly once after
+   * the lease claim and before any phase, session start, or child process.
+   * Absent keeps the
+   * delivered in-checkout behaviour byte-for-byte — the disable-worktrees
+   * exception shape; the composition decides by the same setting at this one
+   * seam.
+   */
+  readonly provisionWorktree?: (
+    ref: string,
+  ) => DispatchWorktreeProvisioning | Promise<DispatchWorktreeProvisioning>;
   readonly phaseLedger: (ref: string) => DispatchPhaseLedger;
   /**
    * The one injected delay fact (GH-347 AC-F9-2): the composition owns the
@@ -8197,6 +8210,7 @@ export const createDispatchCommandRuntime = (
         }
       }
       const preflight = composition.preflight;
+      const provisionWorktree = composition.provisionWorktree;
       const harnessAgent = composition.harnessAgent?.(input.ref);
       const harnessBinding = composition.harnessBinding?.(input.ref);
       return runDispatch({
@@ -8254,6 +8268,9 @@ export const createDispatchCommandRuntime = (
           : { appendRestart: composition.appendRestart }),
         claimLease: () => composition.claimLease(input.ref, repository),
         releaseLease: (cause) => composition.releaseLease(input.ref, cause),
+        ...(provisionWorktree === undefined
+          ? {}
+          : { provisionWorktree: () => provisionWorktree(input.ref) }),
         phaseLedger: composition.phaseLedger(input.ref),
         ...(composition.delay === undefined ? {} : { delay: composition.delay }),
         ...(composition.pushParity === undefined ? {} : { pushParity: composition.pushParity }),

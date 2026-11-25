@@ -86,6 +86,7 @@ export {
   type DispatchPreflightResult,
   type DispatchRunResult,
   type DispatchTruthReads,
+  type DispatchWorktreeProvisioning,
   runDispatch,
 } from "./app/dispatch.js";
 export {
@@ -342,6 +343,7 @@ export {
   checkoutDirectoryName,
   type HostStateRootInput,
   hostIndexPath,
+  type LaneWorktreePlacement,
   type LegacyStoreFacts,
   legacyStoreWarning,
   type ProjectIdentityPorts,
@@ -354,6 +356,7 @@ export {
   projectStateRoot,
   projectsContainerPath,
   resolveHostStateRoot,
+  resolveLaneWorktreePlacement,
   resolveProjectScope,
   type StateScopeRoots,
   sanitizeProjectBasename,

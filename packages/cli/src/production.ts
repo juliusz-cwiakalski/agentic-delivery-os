@@ -13,6 +13,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   statSync,
   writeFileSync,
@@ -109,6 +110,7 @@ import {
 import { createIntlZonePort } from "@delivery-os/adapters/time-zone";
 import type {
   DispatchTranscriptRead,
+  DispatchWorktreeProvisioning,
   HarnessAdapterRegistration,
   HarnessBindingResolution,
   HarnessProfileView,
@@ -142,6 +144,7 @@ import {
   type DispatchRead,
   type DispatchTrackerFacts,
   type DispatchTruthReads,
+  deriveLaneWorktreeEnvironment,
   detectPriorNamespace,
   dispatchLogsFamilyRoot,
   EvaluateVerifyChange,
@@ -159,6 +162,8 @@ import {
   type LoopDelay,
   type LoopLogSink,
   type LoopSessionFacts,
+  laneWorktreeBranch,
+  latestDispatchLaneFor,
   legacyStoreWarning,
   logByteLength,
   type MergeCredentialFacts,
@@ -208,6 +213,7 @@ import {
   resolveHarnessInstance,
   resolveHarnessSettings,
   resolveLaneSettings,
+  resolveLaneWorktreePlacement,
   resolveOwnerHoldFact,
   resolveProjectGroupMember,
   resolveProjectScope,
@@ -236,6 +242,7 @@ import {
   type BrandIdentity,
   CLOSEOUT_INTEGRATION_BASE,
   CLOSEOUT_MILESTONE_PAGE_SIZE,
+  CLOSEOUT_OPERATION_TIMEOUT_MS,
   type CloseoutMilestoneFacts,
   type CommandFailureHarnessDetail,
   type ConfigErrorCode,
@@ -4214,6 +4221,124 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       return { ok: true as const, facts: admitted.facts };
     };
 
+    /**
+     * The provision-after-lease implementation (GH-404 F-2, F-3, F-8, DEC-8;
+     * TC-WT-003, TC-ENV-001/002; TC-REG-002): the engine invokes it exactly
+     * once after the repository lease is claimed and before any phase, spawn,
+     * or session. The lane runs in the invoking checkout exactly as today —
+     * `mode: "in-checkout"`, nothing created or referenced — when the
+     * disable-worktrees exception is set, or when the newest lane record
+     * carries NO worktree context (a pre-change lane resumes under today's
+     * shape and never provisions retroactively, DEC-8). The lane's worktree is
+     * REUSED when the record already carries the context (F-4's reuse — never
+     * a second worktree, NFR-3; the branch verification binds in phase 5's
+     * re-entry) and created-and-provisioned otherwise: the derived sibling
+     * path (or the explicit `lane.worktree-root`), a new branch at the base
+     * tip through the phase-3 seam (fixed argv, no shell, no force; a git
+     * refusal is a refusal, NFR-1), the gate temporary directory created
+     * inside the worktree (DEC-6), and the ordered provisioning steps from the
+     * pinned lockfile — install, then the gate build — each fixed argv, no
+     * shell, zero retries, run with the worktree's dependency binaries leading
+     * PATH and TMPDIR anchored inside the worktree (the phase-2 derived lane
+     * environment; the evidence literal `$PWD/tmp/tmpdir` anchors to the
+     * lane's working directory). The clone's PHYSICAL location is resolved
+     * once here and never through a symlinked alias (NFR-7).
+     */
+    const provisionLaneWorktree = async (input: {
+      readonly ref: string;
+      readonly disableWorktrees: boolean;
+      readonly configuredWorktreeRoot?: string;
+      readonly baseRef: string;
+      readonly timeoutMs: number;
+    }): Promise<DispatchWorktreeProvisioning> => {
+      if (input.disableWorktrees) return { ok: true, mode: "in-checkout" };
+      const lanes = readDispatchLanes(store);
+      if (lanes.ok) {
+        const latest = latestDispatchLaneFor(lanes.records, input.ref);
+        if (latest !== undefined && latest.worktreePath !== undefined) {
+          return {
+            ok: true,
+            mode: "worktree",
+            worktreePath: latest.worktreePath,
+            branch: laneWorktreeBranch({ ref: input.ref }),
+          };
+        }
+        // A recorded lane without the worktree context is the pre-change shape
+        // (DM-1's additive absence): it resumes exactly as today in the
+        // invoking checkout and never provisions retroactively (DEC-8).
+        if (latest !== undefined) return { ok: true, mode: "in-checkout" };
+      }
+      let physicalCheckoutRoot: string;
+      try {
+        physicalCheckoutRoot = realpathSync(cwd);
+      } catch {
+        return {
+          ok: false,
+          code: "worktree-provision-refused",
+          detail: `the checkout root ${cwd} cannot be resolved to its physical location`,
+        };
+      }
+      const placement = resolveLaneWorktreePlacement({
+        physicalCheckoutRoot,
+        ...(input.configuredWorktreeRoot === undefined
+          ? {}
+          : { configuredWorktreeRoot: input.configuredWorktreeRoot }),
+        ref: input.ref,
+      });
+      const laneEnvironment = deriveLaneWorktreeEnvironment({
+        worktreePath: placement.worktreePath,
+      });
+      // The composer's ONE injected seam instance (the same child runner every
+      // other git seam in this composition uses): provisioning never spawns a
+      // second, un-injected runner, so a composition that injects a runner
+      // stays hermetic end to end.
+      const created = await gitBranches.addWorktree({
+        path: placement.worktreePath,
+        newBranch: placement.branch,
+        baseRef: input.baseRef,
+      });
+      if (!created.ok) {
+        return { ok: false, code: created.code, detail: created.detail };
+      }
+      try {
+        mkdirSync(laneEnvironment.gateTemporaryDirectory, { recursive: true });
+      } catch {
+        return {
+          ok: false,
+          code: "worktree-provision-refused",
+          detail: `the gate temporary directory ${laneEnvironment.gateTemporaryDirectory} could not be created`,
+        };
+      }
+      const parentPath = environment.PATH ?? "";
+      const stepEnvironment: Readonly<Record<string, string>> = {
+        PATH: `${laneEnvironment.pathLeadingBin}:${parentPath}`,
+        TMPDIR: laneEnvironment.gateTemporaryDirectory,
+      };
+      for (const step of [
+        { file: "pnpm", args: ["install", "--frozen-lockfile"], label: "dependency install" },
+        { file: "pnpm", args: ["run", "build"], label: "gate build" },
+      ] as const) {
+        const ran = await harnessSpawnRunner(step.file, [...step.args], {
+          cwd: laneEnvironment.workingDirectory,
+          env: stepEnvironment,
+          timeout: input.timeoutMs,
+        });
+        if (ran.status !== 0) {
+          return {
+            ok: false,
+            code: "worktree-provision-refused",
+            detail: `the ${step.label} failed in ${laneEnvironment.workingDirectory} (exit ${ran.status})`,
+          };
+        }
+      }
+      return {
+        ok: true,
+        mode: "worktree",
+        worktreePath: placement.worktreePath,
+        branch: placement.branch,
+      };
+    };
+
     const dispatchComposition = (
       settings: HarnessSettings,
       lane: LaneSettings,
@@ -4287,6 +4412,33 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           fenceToken: newFenceToken(),
         });
         return released.ok;
+      },
+      // The provision-after-lease binding (GH-404 F-2/F-8, TC-WT-003,
+      // TC-REG-002): the engine claims the repository lease BEFORE this port
+      // runs — the lease-first order is unchanged (NG-2). With the
+      // disable-worktrees exception set the port is ABSENT, so the lane runs
+      // in the invoking checkout byte-for-byte as today; the escape hatch and
+      // the default bind at this one seam. The provisioning is measured once
+      // per lane as delivery evidence (NFR-9, TC-ENV-004), never asserted by
+      // a suite.
+      // The provision-after-lease binding (GH-404 F-2/F-8, DEC-8, TC-WT-003,
+      // TC-REG-002): the engine claims the repository lease BEFORE this port
+      // runs — the lease-first order is unchanged (NG-2). The port honours the
+      // exception and the pre-change context-less shape at this one seam: with
+      // disable-worktrees set, or for a recorded lane without worktree
+      // context, it answers in-checkout and nothing is created or referenced;
+      // otherwise the lane's worktree is reused or created-and-provisioned.
+      // The provisioning is measured once per lane as delivery evidence
+      // (NFR-9, TC-ENV-004), never asserted by a suite.
+      provisionWorktree: (ref: string) => {
+        const configuredWorktreeRoot = lane.worktreeRoot;
+        return provisionLaneWorktree({
+          ref,
+          disableWorktrees: lane.disableWorktrees === true,
+          ...(configuredWorktreeRoot === undefined ? {} : { configuredWorktreeRoot }),
+          baseRef: dispatchBaseBranch,
+          timeoutMs: CLOSEOUT_OPERATION_TIMEOUT_MS,
+        });
       },
       phaseLedger: phaseSummary,
       killGraceMs,

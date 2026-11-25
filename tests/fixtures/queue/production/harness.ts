@@ -48,6 +48,14 @@ const BASE = join(process.cwd(), "tmp", "tmpdir");
  * `provider.profile.absent` before the behavior it exercises runs. This
  * minimal branch nominates `base` over the one clear provider, letting each
  * suite reach the credential, preflight, and truth paths it actually pins.
+ *
+ * GH-404 (conditional re-pin, phase 4): the fixture sandboxes pin today's
+ * in-checkout delivery shape, so the document also sets the disable-worktrees
+ * exception — with worktree lanes default-on, the fixture's dispatch suites
+ * run the first-class exception mode (F-8) and stay hermetic; the DEFAULT
+ * worktree composition is pinned by the dedicated lifecycle suites
+ * (TC-ENV-001/002, TC-WT-003), which stub install/build per the testing
+ * strategy and do not use this fixture.
  */
 export const PROVIDER_PROFILES_CONFIG_FILE = "config.yaml";
 
@@ -82,6 +90,8 @@ export const PROVIDER_PROFILES_CONFIG = `provider:
     preferenceChain:
       base: base
       fallbacks: []
+lane:
+  disable-worktrees: true
 `;
 
 /** Install the declared profiles configuration into a checkout (idempotent). */

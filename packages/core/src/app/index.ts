@@ -90,6 +90,7 @@ export {
   type DispatchPorts,
   type DispatchRunResult,
   type DispatchTruthReads,
+  type DispatchWorktreeProvisioning,
   runDispatch,
 } from "./dispatch.js";
 export {
@@ -98,30 +99,6 @@ export {
   type DispatchAttemptsReadResult,
   readDispatchAttemptHistory,
 } from "./dispatch-attempts.js";
-export {
-  type OperatorDeliveringRead,
-  type OperatorLaneReadFailure,
-  type OperatorStatusRead,
-  readOperatorDelivering,
-  readOperatorStatus,
-} from "./dispatch-lane-view.js";
-export {
-  type DispatchLogReadInput,
-  readDispatchLog,
-} from "./dispatch-log-tail.js";
-export {
-  type DispatchLastMessageRead,
-  type DispatchTranscriptRead,
-  type DispatchTranscriptResult,
-  readDispatchLastMessage,
-} from "./dispatch-last-message.js";
-export {
-  createDispatchLogSink,
-  type DispatchLogSinkInput,
-  dispatchLogsDirectoryName,
-  dispatchLogsFamilyRoot,
-  dispatchLogsRefDirectory,
-} from "./dispatch-log-sink.js";
 export {
   type DispatchGateRead,
   type DispatchHandoverResult,
@@ -137,6 +114,19 @@ export {
   type DispatchLaneResolutionInput,
   resolveDispatchLane,
 } from "./dispatch-lane.js";
+export {
+  type OperatorDeliveringRead,
+  type OperatorLaneReadFailure,
+  type OperatorStatusRead,
+  readOperatorDelivering,
+  readOperatorStatus,
+} from "./dispatch-lane-view.js";
+export {
+  type DispatchLastMessageRead,
+  type DispatchTranscriptRead,
+  type DispatchTranscriptResult,
+  readDispatchLastMessage,
+} from "./dispatch-last-message.js";
 export {
   appendDispatchAttempt,
   appendDispatchDivergence,
@@ -155,6 +145,17 @@ export {
   resolveDispatchDivergence,
   writeDispatchAuthority,
 } from "./dispatch-ledger.js";
+export {
+  createDispatchLogSink,
+  type DispatchLogSinkInput,
+  dispatchLogsDirectoryName,
+  dispatchLogsFamilyRoot,
+  dispatchLogsRefDirectory,
+} from "./dispatch-log-sink.js";
+export {
+  type DispatchLogReadInput,
+  readDispatchLog,
+} from "./dispatch-log-tail.js";
 export {
   appendCommandReceipt,
   appendOutboxEffect,
@@ -337,6 +338,7 @@ export {
   checkoutDirectoryName,
   type HostStateRootInput,
   hostIndexPath,
+  type LaneWorktreePlacement,
   type LegacyStoreFacts,
   legacyStoreWarning,
   type ProjectIdentityPorts,
@@ -349,6 +351,7 @@ export {
   projectStateRoot,
   projectsContainerPath,
   resolveHostStateRoot,
+  resolveLaneWorktreePlacement,
   resolveProjectScope,
   type StateScopeRoots,
   sanitizeProjectBasename,

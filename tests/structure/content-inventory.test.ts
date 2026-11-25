@@ -3138,6 +3138,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "projectStateRoot",
     "projectsContainerPath",
     "resolveHostStateRoot",
+    "resolveLaneWorktreePlacement",
     "resolveProjectScope",
     "selectHostStateRoot",
     "sanitizeProjectBasename",
