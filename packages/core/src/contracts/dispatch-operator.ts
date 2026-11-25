@@ -149,6 +149,13 @@ export type DispatchStatusData = {
   readonly pid: number | null;
   readonly sessionId: string | null;
   readonly lane: DispatchOperatorLaneFacts | null;
+  /**
+   * The lane's worktree path (GH-404 F-7, DM-1), carried additively from the
+   * lane record's own field. Absent renders exactly as today — the
+   * classified absence for pre-change records and disable-worktrees lanes
+   * (DEC-8); no member is minted for a context-less lane.
+   */
+  readonly worktreePath?: string;
 };
 
 /** `dispatch log <ref> [--tail <n>]` (API-2). */

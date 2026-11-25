@@ -112,6 +112,7 @@ export {
   resolveDispatchLane,
 } from "./app/dispatch-lane.js";
 export {
+  newestDispatchLaneWorktreePaths,
   type OperatorDeliveringRead,
   type OperatorLaneReadFailure,
   type OperatorStatusRead,

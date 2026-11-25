@@ -42,6 +42,15 @@ export type QueueLaneFoldInput = {
   /** Daemon execution evidence folded beside the queue truth (F-9, DM-13). */
   readonly daemonLanes?: readonly DaemonLaneRecord[];
   /**
+   * The ref-keyed worktree-path join source (GH-404 F-7, DM-1): the newest
+   * dispatch.lane record's worktree path per ref, from the bounded
+   * retained-window read. The join CONTRIBUTES paths to existing rows only —
+   * it never mints rows — and a context-less record contributes nothing
+   * (DEC-8): absence renders exactly as today. The path value is the record's
+   * own field, carried verbatim (one bound, reused).
+   */
+  readonly dispatchWorktreePaths?: Readonly<Record<string, string>>;
+  /**
    * The declared peak-enforcement state (GH-294 F-8, OQ-TP-6). Absent means
    * the delivered daemon-absent default: `iteration-start-gating` with
    * `parkClaimed: false` — the fold never claims a park that did not happen.
@@ -149,6 +158,14 @@ export const foldLanes = (input: QueueLaneFoldInput): QueueLanesData => {
       ...(lease === undefined ? {} : { leaseScope: lease.scope }),
       ...(lease === undefined ? {} : { leaseHolder: lease.holder }),
       ...(activePark?.expiresAt === undefined ? {} : { until: activePark.expiresAt }),
+      // The ref-keyed join (GH-404 F-7): contributes the path to the existing
+      // row only; a ref without a dispatch-lane worktree context renders
+      // exactly as today (DEC-8).
+      ...(input.dispatchWorktreePaths === undefined
+        ? {}
+        : input.dispatchWorktreePaths[entry.ref] === undefined
+          ? {}
+          : { worktreePath: input.dispatchWorktreePaths[entry.ref] }),
       restarts: economics?.restarts ?? null,
       amplification: economics?.amplification ?? null,
       ...(amplificationWarning === undefined ? {} : { amplificationWarning }),

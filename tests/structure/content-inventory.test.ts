@@ -250,7 +250,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "toSummaryData",
   ],
   "core/src/app/dispatch-lane.ts": ["DISPATCH_RESUMABLE_DAEMON_STATES", "resolveDispatchLane"],
-  "core/src/app/dispatch-lane-view.ts": ["readOperatorDelivering", "readOperatorStatus"],
+  "core/src/app/dispatch-lane-view.ts": [
+    "newestDispatchLaneWorktreePaths",
+    "readOperatorDelivering",
+    "readOperatorStatus",
+  ],
   "core/src/app/dispatch-log-sink.ts": [
     "createDispatchLogSink",
     "dispatchLogsDirectoryName",

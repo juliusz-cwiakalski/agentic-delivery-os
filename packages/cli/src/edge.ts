@@ -180,6 +180,7 @@ import {
   listRetroActions,
   type MergeTransactionPorts,
   memberRefFor,
+  newestDispatchLaneWorktreePaths,
   normalizeStagedPaths,
   PRODUCTION_CATALOG,
   PRODUCTION_DEFAULTS,
@@ -213,6 +214,7 @@ import {
   readDaemonLanes,
   readDispatchAttemptHistory,
   readDispatchAttempts,
+  readDispatchLanes,
   readDispatchLastMessage,
   readDispatchLog,
   readOperatorDelivering,
@@ -4281,6 +4283,15 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
     policy: OWNER_GATE_SLA_POLICY,
     nowIso: composition.nowIso,
     nowMs: composition.nowMs,
+    // The ref-keyed worktree-path join source (GH-404 F-7, TC-SURFACES-002):
+    // the newest dispatch.lane record per ref, from the bounded
+    // retained-window read. The join contributes paths to existing lane rows
+    // only; a store read failure contributes an empty map (the join's
+    // classified absence — the board renders exactly as today).
+    dispatchWorktreePaths: () => {
+      const lanes = readDispatchLanes(composition.store);
+      return lanes.ok ? newestDispatchLaneWorktreePaths(lanes.records) : {};
+    },
   };
 };
 
@@ -7740,6 +7751,17 @@ export const createLanesCommandRuntime = (
         economics: composition.economics ?? {},
         degraded,
         ...(daemon.ok ? { daemonLanes: daemon.records } : {}),
+        // The ref-keyed worktree-path join source (GH-404 F-7,
+        // TC-SURFACES-002): the newest dispatch.lane record per ref, from the
+        // bounded retained-window read. The join contributes paths to
+        // existing rows only; a store read failure contributes nothing (the
+        // classified absence — the lanes surface renders exactly as today).
+        ...(() => {
+          const dispatchLanes = readDispatchLanes(composition.store);
+          return dispatchLanes.ok
+            ? { dispatchWorktreePaths: newestDispatchLaneWorktreePaths(dispatchLanes.records) }
+            : {};
+        })(),
         peakEnforcement: {
           mode: watchComposed ? "window-watch" : "iteration-start-gating",
           parkClaimed,
