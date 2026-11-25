@@ -3,7 +3,7 @@ ados_distribution: internal
 id: GLOSSARY
 status: Current
 created: 2026-10-29
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 owners: ["engineering"]
 area: domain
 document_classification: current-truth
@@ -422,7 +422,7 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Applied posture | The explicit `applied` field on an answer: `false` while the recorded intent has no applying actor; the recorded-versus-applied boundary. | Typed blockers | [feature-blockers.md](../spec/features/feature-blockers.md) |
 | Structured ledger evaluation | `EvaluateVerifyChange` → `VerifyLedgerEvaluation`, the pure evaluation that returns variant, outcome, required/completed/missing phases, declaration counts, and registry evidence on every outcome. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
 | Open-PR resolution | The one deterministic rule that selects the target delivery request from one bounded open-PR page. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
-| Lane | The delivery-vocabulary lane: one work item's delivery in one project repository, keyed `<ref>@<cloneKey>` and temporary; the watchdog contracts judge and restore lanes through their probes. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
+| Lane | The delivery-vocabulary lane: one work item's delivery in one repository, keyed `<ref>@<cloneKey>` and temporary; the watchdog contracts judge and restore lanes through their probes. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
 | Watchdog | The check-only `preflight`, `teardown`, and `liveness` command family over local lane facts; it checks and restores, and never dispatches, spawns a session, kills, or supervises. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
 | Preflight | The admission probe: a clean on-base checkout is admitted with verdict `ok`, a dirty checkout refuses `watchdog.checkout-dirty`, an off-base or detached checkout refuses `watchdog.checkout-non-base`, and unevaluable facts fail closed. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
 | Teardown restoration | The caller-invoked restoration probe that preserves a stranded commit, restores the declared base, removes lane-workspace residue, preserves unattributable content, and reports every action with evidence. | Watchdog | [feature-watchdog-lane-contracts.md](../spec/features/feature-watchdog-lane-contracts.md) |
