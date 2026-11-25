@@ -14,7 +14,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-25T02:15:48.817Z }
   review_fix: { started: null, completed: 2026-11-25T02:23:49.765Z }
   quality_gates: { started: null, completed: 2026-11-25T02:44:10.393Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-25T02:45:08.080Z }
   pr_creation: { started: null, completed: null }
 decisions: []
 open_questions: []
@@ -959,4 +959,22 @@ notes:
       Logs: tmp/run-logs-runner/2026-11-25/032455-gh406-pnpm-check.log and
       034325-gh406-lint-commit-range.log."
     type: info
+    date: "2026-11-25"
+  - text: "DoD check RE-RUN PASS post-CEO-fixes (lifecycle phase 10). Ledger: 9/9
+      prior lifecycle phases completed with verified timestamps; plan completion
+      truthful: phases 2-8 evidenced from the amendment re-drive, the CEO-fix
+      delivery re-execution evidenced at 8a6a27637 (review iter-4 PASS 0
+      blocking verifying all six fixes exactly scoped: ODR rename +
+      H1/index/test references, mapping-row manifest correction, suite rename +
+      baseline, originalLineAt deletion retiring F-5, changeset rename; phases 1
+      and 9 carried per the accounting fence); all 12 amended ACs satisfied;
+      current-truth documentation complete — doc-syncer zero residual gaps
+      (116/116 battery; F-7 retired with the 00-index fix); gates green (13/13
+      exit 0, 12854/0/4; range lint 53 commits 0 offending). Non-blocking
+      residuals carried with dispositions, none block DoD: F-6 exemption-window
+      delta, F-8 GH-408 remainder inventory (6 hits enumerated), GH-408 routed
+      deferrals incl. the ~45-line tool-rule remainder, F-9 advisory (doc-fix
+      verification evidence supplied by review iter-4), TC-DAEMON-121 load flake
+      (disclosed, green standalone and in final runs)."
+    type: decision
     date: "2026-11-25"
