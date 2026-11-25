@@ -52,6 +52,27 @@ open_questions:
     date: "2026-11-25"
 blockers: []
 notes:
+  - text: "Delivery-boundary defect FOUND AND FIXED immediately after the boundary
+      act: the phase-10 exclusion disclosure revealed the dispatch-status
+      worktree golden's two FIXTURE files (status-worktree.txt,
+      status-context-less.txt) were untracked strays — I had placed them
+      under tests/fixtures/dispatch/golden/, outside the plan's declared
+      tests/golden folder, so the commit primitive excluded them and the
+      committed golden suite (tests/golden/dispatch-status-worktree.test.ts,
+      landed in phase 9) would have failed in a clean checkout at its
+      readFileSync. Fix: the fixtures MOVED into tests/golden/ (the declared
+      folder — goldens live with their suite), the suite's GOAL path updated,
+      the suite re-run green (3/3), and the fixtures committed through the
+      primitive (commit 9934afbb, exactly three staged files, zero drift;
+      full tests/golden battery re-run green, 348 tests). The branch is now
+      self-contained. LESSON (capture bar): when a plan declares a FOLDER
+      scope for new test fixtures, place the fixtures inside that folder — a
+      fixture beside its suite in an undeclared directory is a stray the
+      commit primitive will silently exclude, and the boundary commit
+      completes with a broken clean-checkout suite. The exclusion disclosure
+      is what surfaced it — read it on every landed commit."
+    type: retro
+    date: "2026-11-25"
   - text: "Plan phase 10 complete (commit d583b2ba): the release changeset
       .changeset/gh-404-worktree-lane-foundation-minor.md landed — the branch's
       ONLY new .changeset/*.md vs the merge base, declaring the five fixed-group
