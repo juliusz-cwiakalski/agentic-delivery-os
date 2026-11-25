@@ -110,6 +110,7 @@ import {
   projectCloseoutMembers,
 } from "./closeout-members.js";
 import { evaluateThreadPolicy } from "./closeout-thread-policy.js";
+import { planCloseoutWorktreeRemoval, type WorktreeSafetyInput } from "./closeout-worktree.js";
 import { sha256Hex } from "./sha256.js";
 
 /** The thirteen step definitions in binding order (PIN-2; GH-349 adds step 12). */
@@ -189,6 +190,20 @@ export type CloseoutPlanFacts = {
    * single-request closeout path byte-identical.
    */
   readonly members?: readonly CrossRepositoryCloseoutObservation[];
+  /**
+   * The worktree-removal ordering facts (GH-404 F-6, NFR-5; TC-CLOSEOUT-002):
+   * the merge confirmation and the delivered safety predicate's input, as
+   * observed by the composition that built the worktree facts, plus whether
+   * the worktree holds unswept lane logs. The runtime forwards them to the
+   * apply transaction, which consumes `planCloseoutWorktreeRemoval` — the
+   * phase-2 ordering rules, load-bearing in the real flow — before the
+   * remove-worktree operation. Absent keeps the delivered behaviour.
+   */
+  readonly worktreeOrdering?: {
+    readonly mergeConfirmed: boolean;
+    readonly laneLogsPresent: boolean;
+    readonly safety: WorktreeSafetyInput;
+  };
 };
 
 /** The branch-selection outcome. */
@@ -1759,6 +1774,117 @@ export type CloseoutRunInput = {
     readonly mergedObserved: boolean;
     readonly handle?: StateFenceHandle;
   }) => CloseoutQueueRemovalData | undefined;
+  /**
+   * The lane-log sweep port (GH-404 F-6, NFR-5; TC-CLOSEOUT-002): moves the
+   * worktree's `tmp/tmpdir` gate evidence to its state-root destination
+   * BEFORE the worktree is removed — zero log loss, swept logs retrievable at
+   * their destination; a swept (or empty) worktree is the mechanical
+   * precondition for the delivered cleanliness predicate to pass on a
+   * worktree lane. The apply transaction invokes it exactly once, strictly
+   * before the remove-worktree operation, and refuses the removal when it
+   * fails. Absent keeps the delivered behaviour (no sweep, removal exactly as
+   * delivered).
+   */
+  readonly sweepLaneLogs?: (input: {
+    readonly workItemRef: string;
+    readonly worktreePath: string;
+  }) => Promise<
+    | { readonly ok: true; readonly swept: boolean; readonly destination?: string }
+    | { readonly ok: false; readonly code: string; readonly detail: string }
+  >;
+  /**
+   * The worktree-removal ordering facts (GH-404 F-6, NFR-5; TC-CLOSEOUT-002):
+   * the merge confirmation and the delivered safety predicate's input, as
+   * observed by the composition that built the worktree facts. Present, the
+   * apply transaction consumes `planCloseoutWorktreeRemoval` — the phase-2
+   * ordering rules, load-bearing in the real flow — before the remove-worktree
+   * operation: a refusal (merge unconfirmed, safety unsatisfied, or the lane's
+   * logs not swept) keeps the worktree and the logs intact. Absent keeps the
+   * delivered behaviour.
+   */
+  readonly worktreeOrdering?: {
+    readonly mergeConfirmed: boolean;
+    readonly laneLogsPresent: boolean;
+    readonly safety: WorktreeSafetyInput;
+  };
+};
+
+/**
+ * The worktree-removal gate (GH-404 F-6, NFR-5; TC-CLOSEOUT-002/003):
+ * strictly before the remove-worktree operation — (a) the merge + safety arms
+ * of the phase-2 ordering rules, consumed with no side effects (a refusal
+ * leaves the worktree AND the logs intact); (b) the lane-log sweep, moving the
+ * worktree's tmp/tmpdir gate evidence to its state-root destination (zero log
+ * loss, retrievable at the destination, and the mechanical precondition for
+ * the cleanliness predicate to pass on a worktree lane); (c) the full ordering
+ * rules re-consumed with the runtime sweep fact — the load-bearing
+ * consumption: any reordering mutant meets a refusal here and the suite turns
+ * red.
+ */
+const gateWorktreeRemoval = async (
+  input: CloseoutRunInput,
+  operation: CloseoutOperation,
+): Promise<
+  { readonly ok: true } | { readonly ok: false; readonly code: string; readonly detail: string }
+> => {
+  const ordering = input.worktreeOrdering;
+  const worktreePath =
+    "worktreePath" in operation.arguments && typeof operation.arguments.worktreePath === "string"
+      ? operation.arguments.worktreePath
+      : undefined;
+  if (ordering !== undefined) {
+    // (a) The merge + safety arms with `logsSwept: true` isolating them: a
+    // refusal is merge-unconfirmed or safety-refused, and nothing has moved.
+    const pre = planCloseoutWorktreeRemoval({
+      mergeConfirmed: ordering.mergeConfirmed,
+      logsSwept: true,
+      safety: ordering.safety,
+    });
+    if (!pre.remove && pre.reason !== "logs-not-swept") {
+      return {
+        ok: false,
+        code: "closeout.branch.unsafe",
+        detail: `the worktree removal is refused before any side effect (${pre.reason}); the worktree and the lane's logs stay intact`,
+      };
+    }
+  }
+  // (b) The lane-log sweep, strictly before removal. A failed sweep moved
+  // nothing (the port's contract): the logs stay intact in the worktree and
+  // the removal is refused.
+  let logsSwept = false;
+  if (input.sweepLaneLogs !== undefined && worktreePath !== undefined) {
+    const swept = await input.sweepLaneLogs({
+      workItemRef: input.plan.workItemRef,
+      worktreePath,
+    });
+    if (!swept.ok) {
+      return {
+        ok: false,
+        code: swept.code,
+        detail: `the lane-log sweep failed before the worktree removal (${swept.detail}); the logs stay intact in the worktree`,
+      };
+    }
+    logsSwept = true;
+  }
+  // (c) The full ordering rules with the runtime sweep fact. A composition
+  // that binds no sweep port keeps the delivered removal behaviour: the logs
+  // arm is neutralized (there is no sweeper to fail), so the merge + safety
+  // arms stay enforced exactly as delivered.
+  if (ordering !== undefined) {
+    const verdict = planCloseoutWorktreeRemoval({
+      mergeConfirmed: ordering.mergeConfirmed,
+      logsSwept: logsSwept || input.sweepLaneLogs === undefined,
+      safety: ordering.safety,
+    });
+    if (!verdict.remove) {
+      return {
+        ok: false,
+        code: "closeout.branch.unsafe",
+        detail: `the worktree removal is refused by the ordering rules (${verdict.reason ?? "unspecified"}); the worktree stays`,
+      };
+    }
+  }
+  return { ok: true };
 };
 
 /** The apply-orchestrator result: bounded data or a classified identity. */
@@ -2890,6 +3016,33 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
         if (existing !== undefined && TERMINAL_OUTCOMES.has(existing.outcome)) {
           if (memberStep) memberOutcomes[operation.operationId] = "satisfied";
           continue;
+        }
+        // The worktree-removal gate (GH-404 F-6, NFR-5; TC-CLOSEOUT-002/003):
+        // strictly before the remove-worktree operation — (a) the merge +
+        // safety arms of the phase-2 ordering rules, consumed with no side
+        // effects (a refusal here leaves the worktree AND the logs intact);
+        // (b) the lane-log sweep, moving the worktree's tmp/tmpdir gate
+        // evidence to its state-root destination (zero log loss, retrievable
+        // at the destination, and the mechanical precondition for the
+        // cleanliness predicate to pass on a worktree lane); (c) the full
+        // ordering rules re-consumed with the runtime sweep fact — the
+        // load-bearing consumption: any reordering mutant (remove before the
+        // sweep, remove before merge confirmation) meets a refusal here and
+        // the suite turns red.
+        if (step.stepId === "worktree-cleanup" && operation.name === "remove-worktree") {
+          const gate = await gateWorktreeRemoval(input, operation);
+          if (!gate.ok) {
+            failed += 1;
+            earlierFailure = true;
+            if (
+              !append(
+                recordFor(operation, input.plan.workItemRef, "failed", input.timestamp, gate.code),
+              )
+            ) {
+              break;
+            }
+            break;
+          }
         }
         const result = await executeOperation(operation, input.provider, input.git, mergedHeadSha);
         if (!result.ok) {

@@ -1343,6 +1343,7 @@ export {
   type WatchdogPreflightBuildInput,
   type WatchdogPreflightEvaluation,
   type WatchdogRestorationPlan,
+  type WorktreeSafetyInput,
   wakeKeyFor,
   watchdogPreservedRefName,
   weightLoads,

@@ -118,6 +118,7 @@ import {
   type CeremonyTierInput,
   type CloseoutDependentFact,
   type CloseoutPlanFacts,
+  type CloseoutRunInput,
   type CloseoutTelemetryRuntime,
   type CommitActOutcome,
   type CommitActRequest,
@@ -264,6 +265,7 @@ import {
   type VerifyGatesWorkItem,
   validateCeremonyNoteForDeclaration,
   type WatchRead,
+  type WorktreeSafetyInput,
   watchLines,
   windowDisclosures,
   windowSpendEvidence,
@@ -1882,6 +1884,16 @@ export type CloseoutComposition = {
   readonly retroFor?: (workItemRef: string) => CloseoutRetroFacts | undefined;
   /** Per-work-item merged-diff read (F-5). */
   readonly diffReadFor?: (workItemRef: string) => CloseoutDiffRead | undefined;
+  /**
+   * The lane-log sweep port (GH-404 F-6, NFR-5; TC-CLOSEOUT-002): moves the
+   * worktree's `tmp/tmpdir` gate evidence to its state-root destination
+   * BEFORE the worktree is removed — zero log loss, swept logs retrievable at
+   * their destination. The apply transaction invokes it exactly once, strictly
+   * before the remove-worktree operation, and refuses the removal when it
+   * fails. Absent keeps the delivered behaviour (no sweep, removal exactly as
+   * delivered).
+   */
+  readonly sweepLaneLogs?: CloseoutRunInput["sweepLaneLogs"];
   /** The non-gating harness telemetry capture capability (GH-240 F-10). */
   readonly telemetry?: CloseoutTelemetryRuntime;
   /**
@@ -1954,6 +1966,16 @@ export type CloseoutCompositionOptions = {
   readonly retroFor?: (workItemRef: string) => CloseoutRetroFacts | undefined;
   /** Per-work-item merged-diff read (F-5). */
   readonly diffReadFor?: (workItemRef: string) => CloseoutDiffRead | undefined;
+  /**
+   * The lane-log sweep port (GH-404 F-6, NFR-5; TC-CLOSEOUT-002): moves the
+   * worktree's `tmp/tmpdir` gate evidence to its state-root destination
+   * BEFORE the worktree is removed — zero log loss, swept logs retrievable at
+   * their destination. The apply transaction invokes it exactly once, strictly
+   * before the remove-worktree operation, and refuses the removal when it
+   * fails. Absent keeps the delivered behaviour (no sweep, removal exactly as
+   * delivered).
+   */
+  readonly sweepLaneLogs?: CloseoutRunInput["sweepLaneLogs"];
   /** The non-gating harness telemetry capture capability (GH-240 F-10). */
   readonly telemetry?: CloseoutTelemetryRuntime;
   /** The resolved harness configuration used to construct the capture capability. */
@@ -2459,6 +2481,7 @@ export const createCloseoutComposition = (
         ? undefined
         : worktrees.find((entry) => entry.branch === deliveryBranch);
     let worktree: CloseoutWorktreeFacts;
+    let worktreeOrderingFacts: CloseoutPlanFacts["worktreeOrdering"] | undefined;
     if (deliveryWorktree === undefined) {
       worktree = { present: false, safe: false, reason: "no-worktree" };
     } else {
@@ -2466,10 +2489,11 @@ export const createCloseoutComposition = (
         git.isWorktreeClean === undefined
           ? cleanWorktree
           : await git.isWorktreeClean({ path: deliveryWorktree.path });
-      const verdict = evaluateWorktreeSafety({
+      const mergedObserved =
+        mergedRequest.observation === "observed" && mergedRequest.value.reviewState === "merged";
+      const safety: WorktreeSafetyInput = {
         present: true,
-        mergedObserved:
-          mergedRequest.observation === "observed" && mergedRequest.value.reviewState === "merged",
+        mergedObserved,
         conventionMatch: deliveryWorktree.branch === deliveryBranch,
         ...(deliveryWorktree.head === undefined ? {} : { localHead: deliveryWorktree.head }),
         ...(mergedHeadSha === undefined ? {} : { mergedHeadSha }),
@@ -2480,7 +2504,18 @@ export const createCloseoutComposition = (
           deliveryWorktree.branch === undefined || deliveryWorktree.branch !== deliveryBranch,
         restoreSucceeded: baseRefExists,
         earlierFailure: false,
-      });
+      };
+      // The worktree-removal ordering facts (GH-404 F-6, NFR-5): the merge
+      // confirmation and the delivered predicate's input, observed here once
+      // and consumed by the apply transaction's ordering gate, plus whether
+      // the worktree holds unswept lane logs (the gate temporary directory the
+      // lane environment anchored inside it, DEC-6).
+      worktreeOrderingFacts = {
+        mergeConfirmed: mergedObserved,
+        laneLogsPresent: existsSync(`${deliveryWorktree.path}/tmp/tmpdir`),
+        safety,
+      };
+      const verdict = evaluateWorktreeSafety(safety);
       worktree = {
         present: true,
         safe: verdict.safe,
@@ -2613,6 +2648,7 @@ export const createCloseoutComposition = (
             })),
           }
         : {}),
+      ...(worktreeOrderingFacts === undefined ? {} : { worktreeOrdering: worktreeOrderingFacts }),
       ...(diff === undefined ? {} : { diff }),
       ...(retro === undefined ? {} : { retro }),
       ...(sessions === undefined ? {} : { sessions }),
@@ -2775,6 +2811,14 @@ export const createCloseoutCommandRuntime = (
       })(),
       ...(composition.telemetry === undefined ? {} : { telemetry: composition.telemetry }),
       ...(composition.queueRemoval === undefined ? {} : { queueRemoval: composition.queueRemoval }),
+      // The worktree-removal gate facts and the lane-log sweep port (GH-404
+      // F-6, NFR-5): the apply transaction consumes the phase-2 ordering rules
+      // and sweeps the lane's logs strictly before the removal. Absent on
+      // either keeps the delivered behaviour byte-for-byte.
+      ...(facts.worktreeOrdering === undefined ? {} : { worktreeOrdering: facts.worktreeOrdering }),
+      ...(composition.sweepLaneLogs === undefined
+        ? {}
+        : { sweepLaneLogs: composition.sweepLaneLogs }),
     });
   };
   return {

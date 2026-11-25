@@ -9,12 +9,14 @@
  */
 import {
   appendFileSync,
+  cpSync,
   existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   realpathSync,
   renameSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -3301,6 +3303,46 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
      */
     const closeout = {
       ...closeoutBase,
+      // The lane-log sweep (GH-404 F-6, NFR-5; TC-CLOSEOUT-002): move the
+      // worktree's tmp/tmpdir gate evidence to its state-root destination
+      // BEFORE the worktree is removed — copy to the destination first, delete
+      // the source only after the copy exists, so a failure moves nothing (the
+      // logs stay intact in the worktree and the removal is refused). Zero log
+      // loss; swept logs retrievable at
+      // <state root>/closeout-lane-logs/<work item ref>.
+      sweepLaneLogs: ({
+        workItemRef,
+        worktreePath,
+      }: {
+        readonly workItemRef: string;
+        readonly worktreePath: string;
+      }) => {
+        const source = `${worktreePath}/tmp/tmpdir`;
+        if (!existsSync(source)) return Promise.resolve({ ok: true as const, swept: false });
+        const destination = join(stateDirectory, "closeout-lane-logs", workItemRef);
+        try {
+          mkdirSync(destination, { recursive: true });
+          cpSync(source, destination, { recursive: true });
+          if (!existsSync(destination)) {
+            return Promise.resolve({
+              ok: false as const,
+              code: "closeout.lane-log-sweep-failed",
+              detail: `the swept logs are not retrievable at ${destination}`,
+            });
+          }
+          rmSync(source, { recursive: true, force: true });
+          return Promise.resolve({ ok: true as const, swept: true, destination });
+        } catch (error) {
+          return Promise.resolve({
+            ok: false as const,
+            code: "closeout.lane-log-sweep-failed",
+            detail:
+              error instanceof Error
+                ? `the lane-log sweep failed: ${error.message}`
+                : "the lane-log sweep failed",
+          });
+        }
+      },
       planFacts: async (workItemRef: string) => {
         const facts = await closeoutBase.planFacts(workItemRef);
         const declaration = milestoneDeclarationFor(workItemRef);

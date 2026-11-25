@@ -106,6 +106,7 @@ export {
   projectCloseoutMemberIssueClosure,
   projectCloseoutMembers,
 } from "./closeout-members.js";
+export type { WorktreeSafetyInput } from "./closeout-worktree.js";
 export { evaluateWorktreeSafety, planCloseoutWorktreeRemoval } from "./closeout-worktree.js";
 export {
   type CommitActFailure,
