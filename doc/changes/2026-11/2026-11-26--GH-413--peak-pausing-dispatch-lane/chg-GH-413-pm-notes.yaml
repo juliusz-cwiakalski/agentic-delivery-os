@@ -172,6 +172,38 @@ decisions:
       the park. Both are recorded in the spec and must appear in the plan and
       test arms."
     date: "2026-11-26"
+  - text: "RESUMED under the owner's delegated authority. Source: the newest comment
+      on https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/413
+      (2026-11-26, CEO authorization), Decision 1: the outcome of an un-expired
+      standing park is a PRE-SESSION REFUSAL. A resume or re-dispatch of a lane
+      whose standing park has not expired is refused before any session starts,
+      at the admission of the resume beside the other admission refusals, using
+      the delivered window-refusal identity (queue.precondition.unmet at its
+      delivered user-validation exit 1) with the park's cause and `until` in the
+      bounded summary; it writes nothing, no event claims a resume, and lanes and
+      board keep showing the lane parked. The operator-override outcome is not
+      chosen. Consequence: the recovery pass only ever meets an expired park or
+      none. This decision supersedes the operator-resume-during-open-window
+      reading in F-3/F-4/Flow 3/AC-F3-4/RSK-14 and the plan/test plan passages."
+    date: "2026-11-26"
+  - text: "RESUMED under the owner's delegated authority. Source: the newest comment
+      on #413 (2026-11-26, CEO authorization), Decision 2: up to two more
+      readiness passes are authorized (iterations 5 and 6) for the iteration-4
+      findings; if iteration 5 is NOT_READY only on wording the reviewer's
+      suggested fix covers, apply it literally and run iteration 6; after
+      iteration 6, if still NOT_READY, park and hand back again. When READY,
+      continue through delivery, system_spec_update, review_fix, quality_gates,
+      dod_check and pr_creation on this branch and stop at pr_creation. The
+      decision records stay Proposed; the three delivery notes and scope are
+      unchanged."
+    date: "2026-11-26"
+  - text: "Decision 15 is superseded on its lease-key rationale: the ownership key
+      is the live lease's latest heartbeat being the invocation's own last write,
+      not the lease id, because the delivered `renewed` arm preserves the lease
+      id across a same-holder re-dispatch. The claim stays untouched. This
+      correction was already in spec v1.3 and TDR-0078; it is recorded here so
+      the pm-notes no longer carry the earlier lease-id rationale."
+    date: "2026-11-26"
 open_questions: []
 blockers: []
 notes:

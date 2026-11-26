@@ -2,11 +2,11 @@
 # GH-413: M4-S42: Peak pausing for a lane started by dispatch: it stops at the
 # window's start and resumes at the window's end
 #
-# Plan revision v1.3.
+# Plan revision v1.4.
 #
 # Sources, read in full before this plan was authored (the single source of
 # truth for every phase, test case, and path below):
-#   chg-GH-413-spec.md (v1.3) and chg-GH-413-test-plan.md (v1.4), this folder;
+#   chg-GH-413-spec.md (v1.4) and chg-GH-413-test-plan.md (v1.5), this folder;
 #   chg-GH-413-pm-notes.yaml, whose DoR remediation decisions bind the plan;
 #   readiness-review/readiness-iter-1.md, readiness-iter-2.md,
 #   readiness-iter-3.md and readiness-iter-4.md, whose plan-routed findings
@@ -50,18 +50,34 @@
 #     are outside every scope. The park end is the delivered first open
 #     window's effective end; overlapping windows produce consecutive episodes
 #     and no union is computed (DEC-20).
-#   - One park per reference (F-3, NFR-2, AC-F3-4, RSK-14): the already-parked
-#     rule is occupancy, so any standing `peak-window` park for the reference,
-#     whatever its `until`, suppresses a new stop. The run path closes a
-#     standing park through the delivered mutating park pass
-#     (`recoverQueueParks`: the clear-observed marker, the recovered record,
-#     and the `park-auto-recovery` incident) before its first stop decision
-#     and at the first observation of a resuming invocation, and an
-#     unrecoverable standing park refuses the run with no new episode. A
-#     second active park for one reference, or a standing park not recovered
-#     before a new stop decision, is a change defect: two active parks
-#     permanently fail every park-reading surface, and the append-only history
-#     cannot repair it.
+#   - One park per reference (F-3, NFR-2, AC-F3-4, DEC-22, DEC-23, RSK-14):
+#     the already-parked rule is occupancy, so any standing `peak-window`
+#     park for the reference, whatever its `until`, suppresses a new stop.
+#     The run path closes an expired standing park through the delivered
+#     mutating park pass (`recoverQueueParks`: the clear-observed marker, the
+#     recovered record, and the `park-auto-recovery` incident) before its
+#     first stop decision and at the first observation of a resuming
+#     invocation, and an expired park the pass cannot recover refuses the run
+#     with no new episode and no park written; when that failure is observed
+#     after the resume's session has already started, the invocation issues
+#     one terminate through the delivered path for the session it started and
+#     then returns the classified refusal, never abandoning a live session.
+#     An un-expired standing park is a pre-session
+#     refusal, not an operator override: a resume or re-dispatch of such a
+#     lane is refused at resume admission before any session starts, with the
+#     delivered `queue.precondition.unmet` at exit 1 naming the park's cause
+#     and `until`, and it writes nothing. The pass therefore only ever meets
+#     an expired park or none. Three consequences of reusing the delivered
+#     pass are declared, and none is a defect: a `preserved` standing park
+#     closed by the pass projects a `resumed` frame with an empty
+#     `sessionRef` and `branch` under the original episode id; the pass is
+#     repository-wide; and a refused second append leaves a `clear-observed`
+#     marker the pass reports as stuck and never retries, with the delivered
+#     park surfaces and operator resume path as the operator route. A second
+#     active park for one reference, or an expired standing park not
+#     recovered before a new stop decision, is a change defect: two active
+#     parks permanently fail every park-reading surface, and the
+#     append-only history cannot repair it.
 #   - Lease liveness (DEC-11, DEC-13, NFR-7, NFR-10, DM-9, TDR-0078): the lane
 #     keeps its lease live through the run and the park by the delivered
 #     renewal path and the existing lease record, at the renewal cadence
@@ -72,9 +88,14 @@
 #     or displaces a lease, it does not pass the owner-hold gate (a parked
 #     lane under an owner hold keeps renewing), and it rides bounded waits (a
 #     bounded tracker or claim wait is not renewed). An invocation that has
-#     lost the lease returns one classified result instead of resuming or
-#     continuing as owner, and neither renews nor releases the successor's
-#     lease. A park longer than the TTL with no renewal is a change defect,
+#     lost the lease performs no owner act on the lane while its own session
+#     is live: no stop, park, restart, resume, renew, or release. It observes
+#     until that session ends and then returns with `lease:not-owned`; the
+#     return path still appends its own result records, and it never abandons
+#     the live session. For a parked lane it returns one classified result
+#     with the park standing instead of resuming as owner. In both cases it
+#     neither renews nor releases the successor's lease. A park longer than
+#     the TTL with no renewal is a change defect,
 #     never a documented exposure. The admission claim keeps its delivered
 #     refusal of a live same-ref lease, and no queue record kind, lease
 #     operation, or claim result is added. The wait's wake bound is
@@ -143,7 +164,8 @@ tier:
     - "A pre-session park, a pre-session representation, or a session-less park frame is reintroduced, or a lane record without a stored nomination is paused, re-nominated, or given a fabricated profile, or an `active` record the invocation appends lacks the nomination (NG-10, DEC-16, AC-F2-3, RSK-TP-12): stop and report."
     - "A non-terminal recovery refusal leaves the invocation waiting or holding the lease instead of returning one classified result and releasing the lease (DEC-18, NFR-4, AC-F4-3): stop and report."
     - "Delivery searches the file system outside the checkout and the change folder (owner delivery note 4, spec section 12): stop and report; every fact, fixture, and command is reachable from those two roots."
-    - "A second active park is appended for one reference, a standing `peak-window` park is not recovered before a new stop decision or at the first observation of a resuming invocation, the already-parked rule is read as expiry rather than occupancy, or an unrecoverable standing park starts a new episode instead of refusing the run (F-3, NFR-2, AC-F3-4, RSK-14, TC-PEAK-038): stop and report; two active parks permanently fail every park-reading surface and the append-only history cannot repair it."
+    - "A second active park is appended for one reference, an expired standing `peak-window` park is not recovered before a new stop decision or at the first observation of a resuming invocation, a resume or re-dispatch of a lane whose standing park has not expired starts a session, recovers or overrides that park, or is answered with any identity other than `queue.precondition.unmet` at exit 1 before any session, the already-parked rule is read as expiry rather than occupancy, or an expired park the pass cannot recover starts a new episode instead of refusing the run, or, when that failure is observed after the resume's session has already started, the invocation abandons the live session, writes a park, or returns without the one terminate through the delivered path for the session it started (F-3, NFR-2, AC-F3-4, DEC-22, DEC-23, RSK-14, TC-PEAK-038): stop and report; two active parks permanently fail every park-reading surface and the append-only history cannot repair it."
+    - "A `preserved` standing park closed by the pass stops projecting its `resumed` frame with an empty `sessionRef` and `branch` under the original episode id, the pass is narrowed, widened, or replaced instead of staying the delivered repository-wide one, or a stuck `clear-observed` marker is hidden, cleared by hand, or retried by the pass instead of being reported (F-3, AC-F3-4, RSK-14, TC-PEAK-038): stop and report; each is a declared consequence of reusing the delivered pass, and its absence or suppression is the same defect as a second active park."
 defaultLeases:
   - "repo:main-tools"
 defaultWeightClass: standard
@@ -224,7 +246,7 @@ phases:
   - id: 2
     title: "Lease liveness: the lane keeps its repository lease live through the run and the park"
     kind: delivery
-    summary: "keep the lane's repository lease live for the whole run and the whole park: the holding invocation renews it at most once per renewal cadence of `min(lane.liveness-interval, queue.lease-ttl / 2)` through the delivered renewal path and the existing lease record, as a no-op unless the live lease's latest heartbeat is this invocation's own last write and without passing the owner-hold gate, so a second dispatch of the work item is refused `queue.single-flight` with the live holder before, at, and after each lease TTL boundary even when the liveness interval is at or above the TTL and a parked lane under an owner hold keeps renewing; a re-dispatch's newer heartbeat makes the earlier invocation's renewal `lease:not-owned`, an invocation that has lost the lease returns one classified result instead of resuming as owner, and a renewal failure is retried at the next cadence and surfaced as lease evidence; the amendment to the delivered no-renewal rule is TDR-0078."
+    summary: "keep the lane's repository lease live for the whole run and the whole park: the holding invocation renews it at most once per renewal cadence of `min(lane.liveness-interval, queue.lease-ttl / 2)` through the delivered renewal path and the existing lease record, as a no-op unless the live lease's latest heartbeat is this invocation's own last write and without passing the owner-hold gate, so a second dispatch of the work item is refused `queue.single-flight` with the live holder before, at, and after each lease TTL boundary even when the liveness interval is at or above the TTL and a parked lane under an owner hold keeps renewing; a re-dispatch's newer heartbeat makes the earlier invocation's renewal `lease:not-owned`, an invocation that has lost the lease performs no owner act on the lane while its own session is live, observes until that session ends and then returns with `lease:not-owned` without abandoning it, and a parked lane's invocation returns one classified result with the park standing instead of resuming as owner, and a renewal failure is retried at the next cadence and surfaced as lease evidence; the amendment to the delivered no-renewal rule is TDR-0078."
     # Scope: spec F-5, DEC-11, DEC-13, DM-9, NFR-7, NFR-10, Appendix D; flows 1
     # and 5; DoR iteration-1 finding 2, iteration-2 finding 3, and iteration-3
     # findings 2 and 4.
@@ -246,10 +268,12 @@ phases:
     #     lease through the delivered `renewed` arm, which preserves the lease
     #     id and the acquisition instant while appending a newer heartbeat;
     #     the first invocation's next renewal is therefore `lease:not-owned`,
-    #     appends and extends nothing, leaves the successor's lease untouched
-    #     (neither released nor renewed), and that invocation returns one
-    #     classified result with the park standing instead of resuming as
-    #     owner;
+    #     appends and extends nothing, and leaves the successor's lease
+    #     untouched (neither released nor renewed); that invocation then
+    #     returns one classified result with the park standing instead of
+    #     resuming as owner, or, while its own session is live, performs no
+    #     owner act, observes until that session ends, and returns with
+    #     `lease:not-owned` without abandoning it;
     #   - owner hold: with an active hold the lane keeps renewing and the hold
     #     still parks nothing, because the renewal does not pass the
     #     owner-hold gate;
@@ -269,11 +293,18 @@ phases:
     # `renewed` arm preserves the lease id across a re-dispatch. The invocation
     # remembers the heartbeat instant it last wrote and compares it with the
     # live lease's latest heartbeat; the delivered `renewed` arm is unchanged.
+    # The ownership check and the `renewed` append are one fenced step, so no
+    # other writer (a re-dispatch's claim) can slip between the check and the
+    # write.
     # An invocation that no longer holds the lease must not resume or continue
-    # as owner: it returns one classified result with the park standing, and
-    # it neither renews nor releases the successor's lease (the delivered
-    # release matches on holder, and both invocations share the dispatch
-    # holder).
+    # as owner. For a parked lane it returns one classified result with the
+    # park standing. While its own session is live it performs no owner act on
+    # the lane (no stop, park, restart, resume, renew, or release), observes
+    # until that session ends, and then returns with `lease:not-owned`; the
+    # return path still appends its own result records, and it never abandons
+    # the live session. In both cases it neither renews nor releases the
+    # successor's lease (the delivered release matches on holder, and both
+    # invocations share the dispatch holder).
     # Renewals ride bounded waits (DEC-11, NFR-7): the lane renews at each
     # wake, at most once per renewal cadence, and a bounded tracker or claim
     # wait is not renewed.
@@ -359,11 +390,12 @@ phases:
   - id: 3
     title: "Dispatch-owned window watch, exactly-once park episode, in-invocation wait, and classification-routed resume"
     kind: delivery
-    summary: "give the one-shot dispatch run path its own life-long profile-window watch: after any standing `peak-window` park for the reference has been closed through the delivered mutating park pass, and with any remaining standing park treated as occupancy, the nominated profile's declared `peakWindows` rules, read from the nomination stored on every `active` lane record the invocation appends, decide through the delivered decision functions and the injected clock at every observation; an open window issues one terminate call whose `graceMs` is the smallest of the profile grace, the delivered kill grace, and the time to the first open window's effective end, parks the lane exactly once with the complete episode frame, and the same invocation waits on the delivered liveness cadence and resumes at that end by the preservation classification; a non-terminal recovery refusal or a lost lease returns one classified result instead of waiting or resuming as owner; the watch is bound in the production composition unless the setting disables pausing."
+    summary: "give the one-shot dispatch run path its own life-long profile-window watch: after an expired standing `peak-window` park for the reference has been closed through the delivered mutating park pass, a lane whose standing park has not expired being refused before any session starts and any remaining standing park treated as occupancy, the nominated profile's declared `peakWindows` rules, read from the nomination stored on every `active` lane record the invocation appends, decide through the delivered decision functions and the injected clock at every observation; an open window issues one terminate call whose `graceMs` is the smallest of the profile grace, the delivered kill grace, and the time to the first open window's effective end, parks the lane exactly once with the complete episode frame, and the same invocation waits on the delivered liveness cadence and resumes at that end by the preservation classification; a non-terminal recovery refusal or a lost lease returns one classified result instead of waiting or resuming as owner; the watch is bound in the production composition unless the setting disables pausing."
     # Scope: spec F-1 to F-5, F-8, F-11, DEC-2 to DEC-5, DEC-10, DEC-11,
-    # DEC-13, DEC-16 to DEC-18, DEC-20, DM-1, DM-2, NFR-1, NFR-2, NFR-4,
-    # NFR-6, NFR-7; flows 1, 2, and 5; DoR iteration-1 findings 5, 7, and 8,
-    # iteration-2 findings 4, 5, 7, and 8, and iteration-3 findings 1 and 4.
+    # DEC-13, DEC-16 to DEC-18, DEC-20, DEC-22, DEC-23, DM-1, DM-2, NFR-1,
+    # NFR-2, NFR-4, NFR-6, NFR-7; flows 1, 2, and 5; DoR iteration-1
+    # findings 5, 7, and 8, iteration-2 findings 4, 5, 7, and 8,
+    # iteration-3 findings 1 and 4, and iteration-4 findings 1 and 4.
     # TC ownership: TC-PEAK-001, TC-PEAK-002, TC-PEAK-004, TC-PEAK-005,
     # TC-PEAK-006, TC-PEAK-007, TC-PEAK-008, TC-PEAK-009, TC-PEAK-015,
     # TC-PEAK-021, TC-PEAK-022, TC-PEAK-025, TC-PEAK-031, TC-PEAK-032,
@@ -381,28 +413,50 @@ phases:
     # path, the park append, and the park-recovery call bound over the queue
     # composition's park context; the resolved `lane.disable-peak-pausing` of
     # true composes no watch).
-    # Standing-park recovery (F-3, AC-F3-4, RSK-14, TC-PEAK-038): before its
-    # first stop decision for a reference, and at the first observation of an
-    # invocation that resumes a lane carrying a standing park, the run path
-    # closes that park through the delivered mutating park pass
-    # (`packages/core/src/app/queue.ts`, `recoverQueueParks`: the
-    # clear-observed marker, the recovered record, and the `park-auto-recovery`
-    # incident), so an expired, orphaned, refused, or budget-exhausted park is
-    # closed before a new episode. The pass is composed unchanged and is in
-    # scope ONLY IF the run path needs a ref-scoped entry or a result
-    # classification; it keeps its delivered owner-hold behaviour (under an
-    # active hold it mutates nothing). The already-parked rule is occupancy:
-    # any remaining standing `peak-window` park for the reference, whatever
-    # its `until`, suppresses a new stop, so no second `stop` or `parked` is
-    # appended and the reference never carries two active parks. An
-    # unrecoverable standing park (the delivered pass refuses, for example
+    # Standing-park recovery (F-3, AC-F3-4, DEC-22, DEC-23, RSK-14,
+    # TC-PEAK-038): before its first stop decision for a reference, and at
+    # the first observation of an invocation that resumes a lane carrying a
+    # standing park, the run path closes that park through the delivered
+    # mutating park pass (`packages/core/src/app/queue.ts`,
+    # `recoverQueueParks`: the clear-observed marker, the recovered record,
+    # and the `park-auto-recovery` incident), so an expired, orphaned,
+    # refused, or budget-exhausted park is closed before a new episode. The
+    # pass is composed unchanged and is in scope ONLY IF the run path needs a
+    # result classification; it keeps its delivered owner-hold behaviour
+    # (under an active hold it mutates nothing) and its delivered
+    # repository-wide reach. The already-parked rule is occupancy: any
+    # remaining standing `peak-window` park for the reference, whatever its
+    # `until`, suppresses a new stop, so no second `stop` or `parked` is
+    # appended and the reference never carries two active parks.
+    # An un-expired standing park is a pre-session refusal, not an operator
+    # override (DEC-22): a resume or re-dispatch of a lane whose standing park
+    # has not expired is refused at resume admission, beside the other
+    # admission refusals and before any session starts, with the delivered
+    # `queue.precondition.unmet` at exit 1 and a bounded summary naming the
+    # park's cause and `until`. It writes nothing (no session, no park, no
+    # event), and `lanes` and `board` keep showing the lane parked. An expired
+    # park is recovered through the delivered pass and the resume proceeds.
+    # The pass therefore only ever meets an expired park or none. An expired
+    # park the pass cannot recover (the delivered pass refuses, for example
     # `queue.park-condition-stuck`, or the park fold fails closed) refuses the
-    # run as a classified failure through the delivered identity and starts no
-    # new episode. An operator resume during an open window recovers the
-    # standing park first and then parks again as a new exactly-once episode,
-    # with the recovery's evidence preceding the new stop. No recovery is
-    # attempted for a killed waiting process while it stays dead: the standing
-    # park is recovered when the lane next runs (spec section 7.2).
+    # run as a classified failure through the delivered identity, writes no
+    # park, and starts no new episode. When that failure is observed after
+    # the resume's session has already started, the invocation issues one
+    # terminate through the delivered path for the session it started, then
+    # returns the classified refusal; it never abandons a live session. No
+    # recovery is attempted for a killed waiting process while it stays dead:
+    # the standing park is recovered when the lane next runs (spec section
+    # 7.2).
+    # Declared consequences of reusing the delivered pass (RSK-14; asserted in
+    # TC-PEAK-038, and none is a defect): a `preserved` standing park closed
+    # by the pass projects a `dispatch.attempt/resumed` frame with an empty
+    # `sessionRef` and `branch` under the original episode id, whether or not
+    # a session resumed, and the suite asserts that frame; the pass is
+    # repository-wide, so a dispatch lane also closes every other reference's
+    # resumable latest park, as a queue mutation does; and a recovery whose
+    # second append is refused leaves a `clear-observed` marker that the pass
+    # reports as stuck and never retries, with the delivered park surfaces
+    # and the operator resume path as the operator route.
     # Already open at start (NG-10, RSK-12): the pre-session park is out of
     # scope. A dispatch admitted while its nominated profile's window is
     # already open spawns and is parked at its first observation, so one
@@ -455,7 +509,11 @@ phases:
     # Lease at resume (DEC-13): the window-end resume honours phase 2's
     # heartbeat ownership key; an invocation that no longer holds the lease
     # does not resume as owner and returns one classified result with the park
-    # standing.
+    # standing. If the lease is lost while the invocation's own session is
+    # live instead, it performs no owner act on the lane (no stop, park,
+    # restart, resume, renew, or release), observes until that session ends,
+    # and then returns with `lease:not-owned`; the return path still appends
+    # its own result records, and it never abandons the live session.
     # Timing seams (DEC-11): the wait observes at most once per delivered
     # liveness cadence over the cancellable DispatchCadenceWait seam, renews
     # the lease at most once per renewal cadence
@@ -876,10 +934,15 @@ phases:
     # pr-manager in lifecycle phase 11. Delivery authors none of these files.
     # The eighteen pages spec section 16 names, one reason each:
     #   - feature-peak-pausing.md: the daemon-absent statement, the
-    #     composition-fact mode rule, and the episode's producer set.
+    #     composition-fact mode rule, the episode's producer set, the
+    #     standing-park recovery before a new episode (DEC-23), and the
+    #     pre-session refusal of an un-expired park at resume admission
+    #     (DEC-22).
     #   - feature-dispatch-engine.md: the lane record's nomination, the run
-    #     order's post-collection park re-read, the lease renewal, and the
-    #     operator surface (`dispatch stop`, the `status` park fact).
+    #     order's post-collection park re-read, the lease renewal, the
+    #     resume-admission recovery of an expired standing park and the
+    #     pre-session refusal of an un-expired one, and the operator surface
+    #     (`dispatch stop`, the `status` park fact).
     #   - feature-resident-daemon.md: the shared composition-fact sentence it
     #     restates for the watch it composes.
     #   - feature-provider-profiles.md: profile `peakWindows` now drive the
@@ -902,7 +965,9 @@ phases:
     #   - feature-autonomous-delivery.md (added, finding 11): the dispatch
     #     family grammar gains `dispatch stop`.
     #   - feature-event-taxonomy.md: which producer emits the episode frames,
-    #     and the operator-shaped-park sentence.
+    #     the operator-shaped-park sentence, and the `resumed` frame with an
+    #     empty `sessionRef` and `branch` that a standing `preserved` park
+    #     closed by the recovery pass projects.
     #   - doc/overview/glossary.md (added, finding 11): the mode rule and the
     #     bounded-grace definition.
     #   - doc/overview/architecture-overview.md (added, finding 11): the

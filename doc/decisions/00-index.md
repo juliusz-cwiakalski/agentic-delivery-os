@@ -189,11 +189,15 @@ lane record; provider-entry `peak` windows stay admission-only; only a profile
 declaring `peakWindows` is pausable and the shipped defaults declare none), the
 park end (the effective end of the first open window the delivered decision
 returns; overlapping windows yield consecutive exactly-once episodes, never one
-merged park), the single park per reference (the watch's already-parked rule is
-occupancy, any standing `peak-window` park whatever its `until`; the run path
-recovers a standing park through the delivered mutating park pass,
-`recoverQueueParks`, before its first stop decision and at the first observation
-of a resume; an unrecoverable park refuses the run, because a double park fails
+merged park), the single park per reference (DEC-23, occupancy with recovery:
+the watch's already-parked rule is occupancy, any standing `peak-window` park
+whatever its `until`; DEC-22: a resume or re-dispatch of a lane whose standing
+park has not expired is a pre-session refusal with the delivered
+`queue.precondition.unmet` identity at exit 1, naming the cause and `until` and
+writing nothing; an expired standing park is recovered through the delivered
+mutating park pass, `recoverQueueParks`, before the first stop decision and at
+the first observation of a resume, so the pass only ever meets an expired park
+or none; an unrecoverable park refuses the run, because a double park fails
 every park-reading surface for good), the `lanes` composition-fact read
 (`peakEnforcement.mode` derives from the reading composition's own effective
 configuration: `window-watch` when automatic pausing is enabled,
