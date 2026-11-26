@@ -458,3 +458,24 @@ notes:
       pass / 0 fail."
     type: info
     date: "2026-11-26"
+  - text: "Plan phase 3 complete (dispatch-owned watch, exactly-once episode,
+      standing-park recovery, wait, classification-routed resume, nomination,
+      and the one authorised error row): commit 6fe78643. The new
+      dispatch-peak-pause module composes decidePeakStops/runPeakWatch, the
+      composed-grace stop, the first-open-window end, the preservation routing,
+      the pre-session dispatch.resume-parked refusal at exit 2, and the
+      standing-park occupancy rule; every active lane record now carries the
+      stored nomination. Tests: the 12 phase-3 behaviour suites 37 pass / 0
+      fail; the no-shell invariant is clean over 44 surface files; the
+      structure/check/decision batch 410 pass / 0 fail (error-table totals
+      173/172/72/+139, the five dispatch rows, the additive sets, the lane-key
+      pins, the parity lane resume, and the decision-record case). Scope note:
+      five count-bearing pages and five count-bearing pin suites outside the
+      phase's declared file list moved by the one authorised row so the table
+      totals stay truthful; they are staged as disclosed drift, not product
+      behaviour: feature-metrics, feature-ceremony-runner, feature-supervise,
+      feature-install-lifecycle, ceremony-nonregression, ceremony-contract,
+      verify-gates-suite-map, supervision-error-socialization, the parity lane
+      resume pin, and the scripted-harness finishCollect helper."
+    type: info
+    date: "2026-11-26"

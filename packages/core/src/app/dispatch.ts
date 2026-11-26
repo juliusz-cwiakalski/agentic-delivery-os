@@ -24,6 +24,7 @@ import {
   type DispatchEnvelopeData,
   type DispatchEnvelopeError,
   type DispatchEnvelopePushBlock,
+  type DispatchEpisodeFact,
   type DispatchEvidenceClass,
   type DispatchHandoverState,
   type DispatchPhaseLedger,
@@ -934,6 +935,19 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
   let leaseHeartbeatAt = claimed.heartbeatAt;
   let leaseLost = false;
   let leaseRenewalFailure: string | undefined;
+  let peakEpisode: DispatchEpisodeFact | undefined;
+  /** The one episode sentence appended to the delivered summary (GH-413 DM-5). */
+  const episodeSummary = (): string => {
+    if (peakEpisode === undefined) return "";
+    const base = ` (${peakEpisode.cause}: paused until ${peakEpisode.until}`;
+    if (peakEpisode.refusal !== undefined) {
+      return `${base}; recovery refused: ${peakEpisode.refusal})`;
+    }
+    if (peakEpisode.resumedAt !== undefined) {
+      return `${base}; resumed at ${peakEpisode.resumedAt})`;
+    }
+    return `${base})`;
+  };
   let lastRenewalAtMs =
     claimed.heartbeatAt === undefined ? Date.parse(ports.nowIso()) : Date.parse(claimed.heartbeatAt);
   const renewalCadenceMs = dispatchRenewalCadenceMs(
@@ -945,8 +959,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
    * (DEC-13): a no-op when the live lease's latest heartbeat is not this
    * invocation's own last write, and never an acquire, takeover, or displace.
    */
-  const maybeRenewLease = async (): Promise<void> => {
-    const renew = ports.renewLease;
+  const maybeRenewLease = async (): Promise<void> => {    const renew = ports.renewLease;
     if (renew === undefined || leaseHeartbeatAt === undefined || leaseLost) return;
     const nowMs = Date.parse(ports.nowIso());
     if (!Number.isFinite(nowMs)) return;
@@ -1141,8 +1154,9 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
                       ...(input.detail === undefined ? {} : { detail: input.detail }),
                     },
             }),
-        lastMessage: boundLastMessage(input.lastMessage),
+        lastMessage: boundLastMessage(`${input.lastMessage}${episodeSummary()}`),
         ...(input.push === undefined ? {} : { push: input.push }),
+        ...(peakEpisode === undefined ? {} : { episode: peakEpisode }),
       };
       releaseCause = "completed";
       return { ok: true, data, attempt, projectionClass: projectionOf(input.token) };
@@ -1404,6 +1418,11 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
                 });
                 if (observed.outcome === "parked") {
                   peakPark = observed.park;
+                  peakEpisode = {
+                    episodeId: observed.park.episodeId ?? "",
+                    cause: "peak-window",
+                    until: observed.park.until ?? "",
+                  };
                   stopped = true;
                   return;
                 }
@@ -1507,11 +1526,17 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
                 }
               })();
         if (waitOutcome.outcome === "resumed") {
+          peakEpisode = { ...peakEpisode, resumedAt: waitOutcome.resumedAt } as DispatchEpisodeFact;
           handle = session.value;
           spawnPrompt = undefined;
           continue;
         }
         if (waitOutcome.outcome === "recovered") {
+          peakEpisode = {
+            ...peakEpisode,
+            resumedAt: ports.nowIso(),
+            preservation: "session-state-not-preserved",
+          } as DispatchEpisodeFact;
           restarts += 1;
           const restartRecorded =
             ports.appendRestart === undefined ||
@@ -1547,6 +1572,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           continue;
         }
         if (waitOutcome.outcome === "refused") {
+          peakEpisode = { ...peakEpisode, refusal: waitOutcome.code } as DispatchEpisodeFact;
           const pair = admissionRefusalPair(
             waitOutcome.code as
               | "dispatch.restart-budget-exceeded"

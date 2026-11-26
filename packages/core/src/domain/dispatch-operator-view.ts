@@ -21,6 +21,7 @@ import {
   type DispatchOperatorRefsTruncation,
   type DispatchProbeVerdict,
   type DispatchStatusData,
+  type DispatchStatusParkFact,
 } from "#contracts";
 
 /** The marker name derived from a lane state; absent when no record exists. */
@@ -119,6 +120,7 @@ export const buildStatusData = (input: {
   readonly repository: string;
   readonly record: DispatchLaneRecord | undefined;
   readonly probe: DispatchProbeVerdict | undefined;
+  readonly park?: DispatchStatusParkFact;
 }): DispatchStatusData => {
   const record = input.record;
   const verdict = operatorLaneVerdictOf(record?.state, input.probe);
@@ -139,6 +141,7 @@ export const buildStatusData = (input: {
     ...(record === undefined || record.worktreePath === undefined
       ? {}
       : { worktreePath: record.worktreePath }),
+    ...(input.park === undefined ? {} : { park: input.park }),
   };
 };
 

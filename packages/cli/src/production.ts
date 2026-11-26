@@ -3007,6 +3007,21 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         : ["daemon-unreachable"];
     };
 
+    /**
+     * The composition fact behind `lanes --json`'s `peakEnforcement.mode`
+     * (GH-413 DEC-6): automatic pausing is on unless this composition's own
+     * effective configuration sets `lane.disable-peak-pausing: true`.
+     */
+    const peakPausingEnabled = (): boolean => {
+      const gitRoot = gitRootForConfig();
+      const acquired = acquireProjectConfiguration(gitRoot);
+      if (!acquired.ok) return true;
+      const resolvedConfig = resolveConfig({ sources: acquired.sources });
+      if (!resolvedConfig.ok) return true;
+      const lane = resolveLaneSettings(resolvedConfig.value.values, resolvedConfig.value.origins);
+      return lane.ok ? lane.value.disablePeakPausing !== true : true;
+    };
+
     const queueComposition = withRepositoryBinding(
       {
         store,
@@ -3015,6 +3030,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         nowMs,
         newFenceToken,
         degraded: daemonReachability,
+        peakWatchComposed: peakPausingEnabled(),
         readyRuntime: createStatusCommandRuntime(statusComposition(), noChain),
         readOwnerHold,
         readPlanMembers,

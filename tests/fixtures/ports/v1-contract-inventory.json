@@ -1010,7 +1010,8 @@
       "DispatchOperatorTruncation",
       "DispatchOwnerProbe",
       "DispatchProbeVerdict",
-      "DispatchStatusData"
+      "DispatchStatusData",
+      "DispatchStatusParkFact"
     ],
     "dispatch.ts": [
       "ATTEMPTS_DEFAULT_LIMIT",
@@ -1094,6 +1095,7 @@
       "DispatchDelayReason",
       "DispatchDivergenceBlock",
       "DispatchDivergenceRecord",
+      "DispatchEpisodeFact",
       "DispatchEnvelopeData",
       "DispatchEnvelopeError",
       "DispatchEnvelopePushBlock",
@@ -2592,6 +2594,7 @@
       "DispatchDeliveringData",
       "DispatchDivergenceBlock",
       "DispatchDivergenceRecord",
+      "DispatchEpisodeFact",
       "DispatchEnvelopeData",
       "DispatchEnvelopeError",
       "DispatchEnvelopePushBlock",
@@ -2634,6 +2637,7 @@
       "DispatchResolveData",
       "DispatchResumeMode",
       "DispatchStatusData",
+      "DispatchStatusParkFact",
       "DispatchSummaryData",
       "DispatchTranscriptRead",
       "DispatchTranscriptResult",

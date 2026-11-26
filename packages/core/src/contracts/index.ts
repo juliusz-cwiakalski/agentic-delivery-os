@@ -1132,6 +1132,7 @@ export {
   type DispatchEnvelopeData,
   type DispatchEnvelopeError,
   type DispatchEnvelopePushBlock,
+  type DispatchEpisodeFact,
   type DispatchEvidenceClass,
   type DispatchEvidenceReference,
   type DispatchExcludedEvidenceClass,
@@ -1209,6 +1210,7 @@ export {
   type DispatchOwnerProbe,
   type DispatchProbeVerdict,
   type DispatchStatusData,
+  type DispatchStatusParkFact,
 } from "./dispatch-operator.js";
 // The `delivery.doctor.v1` vocabulary (GH-224 F-2, DM-1..DM-8): constants and
 // types only; the pure aggregation lives in the core domain tier.

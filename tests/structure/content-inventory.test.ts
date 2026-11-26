@@ -252,6 +252,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/app/dispatch-lane.ts": ["DISPATCH_RESUMABLE_DAEMON_STATES", "resolveDispatchLane"],
   "core/src/app/dispatch-lane-view.ts": [
+    "dispatchStatusParkFact",
     "newestDispatchLaneWorktreePaths",
     "readOperatorDelivering",
     "readOperatorStatus",

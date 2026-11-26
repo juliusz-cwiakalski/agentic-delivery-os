@@ -17,6 +17,8 @@ import type {
   DispatchOwnerProbe,
   DispatchProbeVerdict,
   DispatchStatusData,
+  DispatchStatusParkFact,
+  QueueParkRecord,
   StateStorePort,
 } from "#contracts";
 import {
@@ -27,6 +29,7 @@ import {
   operatorLanesInRepository,
 } from "../domain/dispatch-operator-view.js";
 import { readDispatchLanes } from "./dispatch-ledger.js";
+import { readQueueParks } from "./queue.js";
 
 /** The store-read failure the query refuses with: the store's own identity. */
 export type OperatorLaneReadFailure = {
@@ -75,7 +78,29 @@ const probed = (
   record: DispatchLaneRecord | undefined,
 ): DispatchProbeVerdict | undefined => (record === undefined ? undefined : probe(record.owner));
 
-/** `dispatch status <ref>` — one bounded lane read, then the fold. */
+/** The latest open peak-window park for the ref, projected as the additive fact. */
+export const dispatchStatusParkFact = (
+  parks: readonly QueueParkRecord[],
+  ref: string,
+): DispatchStatusParkFact | undefined => {
+  for (let index = parks.length - 1; index >= 0; index -= 1) {
+    const park = parks[index];
+    if (park === undefined || park.ref !== ref || park.cause !== "peak-window") continue;
+    if (park.recoveryState !== "parked" && park.recoveryState !== "clear-observed") {
+      return undefined;
+    }
+    return {
+      cause: park.cause,
+      ...(park.until === undefined ? {} : { until: park.until }),
+      ...(park.stoppedAt === undefined ? {} : { stoppedAt: park.stoppedAt }),
+      ...(park.preservation === undefined ? {} : { preservation: park.preservation }),
+      ...(park.recoveryRefusal === undefined ? {} : { recoveryRefusal: park.recoveryRefusal }),
+    };
+  }
+  return undefined;
+};
+
+/** `dispatch status <ref>` — one bounded lane read, one bounded park read, then the fold. */
 export const readOperatorStatus = (input: {
   readonly store: StateStorePort;
   readonly repository: string;
@@ -85,6 +110,16 @@ export const readOperatorStatus = (input: {
   const read = readDispatchLanes(input.store);
   if (!read.ok) return { ok: false, code: read.code, path: read.path };
   const record = operatorLaneFor(read.records, input.repository, input.ref);
+  const parks = readQueueParks(input.store);
+  const park =
+    parks.ok
+      ? dispatchStatusParkFact(
+          parks.records.filter(
+            (candidate) => candidate.repository === undefined || candidate.repository === input.repository,
+          ),
+          input.ref,
+        )
+      : undefined;
   return {
     ok: true,
     data: buildStatusData({
@@ -92,6 +127,7 @@ export const readOperatorStatus = (input: {
       repository: input.repository,
       record,
       probe: probed(input.probe, record),
+      ...(park === undefined ? {} : { park }),
     }),
   };
 };

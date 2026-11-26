@@ -428,6 +428,16 @@ export type DispatchEnvelopeError = CommandResultError & {
 };
 
 /** The declared dispatch envelope `data` (DM-5). */
+/** One additive bounded episode fact on a dispatch result (GH-413 DM-4). */
+export type DispatchEpisodeFact = {
+  readonly episodeId: string;
+  readonly cause: "peak-window";
+  readonly until: string;
+  readonly resumedAt?: string;
+  readonly preservation?: "preserved" | "session-state-not-preserved";
+  readonly refusal?: string;
+};
+
 export type DispatchEnvelopeData = {
   readonly result: DeliveryResultToken;
   readonly prUrl: string;
@@ -448,6 +458,8 @@ export type DispatchEnvelopeData = {
    * carries it.
    */
   readonly push?: DispatchEnvelopePushBlock;
+  /** The additive bounded peak-window episode fact (GH-413 DM-4); absent otherwise. */
+  readonly episode?: DispatchEpisodeFact;
   /** Present only when a bounded field was truncated. */
   readonly truncation?: {
     readonly field: string;

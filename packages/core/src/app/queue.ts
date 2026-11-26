@@ -278,6 +278,7 @@ const PARK_KEYS = [
   "episodeId",
   "sessionRef",
   "branch",
+  "recoveryRefusal",
 ] as const;
 const INCIDENT_KEYS = ["schema", "type", "ref", "repository", "evidence", "recordedAt"] as const;
 const REMOVAL_KEYS = ["schema", "ref", "reason", "recordedAt", "callerPrincipal"] as const;
@@ -405,6 +406,7 @@ const isParkRecord = (value: unknown): value is QueueParkRecord => {
     "episodeId",
     "sessionRef",
     "branch",
+    "recoveryRefusal",
   ] as const) {
     if (value[key] !== undefined && !isNonEmptyString(value[key])) return false;
   }
