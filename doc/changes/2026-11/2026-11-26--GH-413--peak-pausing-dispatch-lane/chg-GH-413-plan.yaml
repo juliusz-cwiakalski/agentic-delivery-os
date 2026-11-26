@@ -2,26 +2,25 @@
 # GH-413: M4-S42: Peak pausing for a lane started by dispatch: it stops at the
 # window's start and resumes at the window's end
 #
+# Plan revision v1.3.
+#
 # Sources, read in full before this plan was authored (the single source of
 # truth for every phase, test case, and path below):
-#   chg-GH-413-spec.md (v1.2) and chg-GH-413-test-plan.md (v1.2), this folder;
-#   chg-GH-413-pm-notes.yaml, whose DoR remediation decisions bind the plan
-#   (decision 15: the renewal is keyed by the lease identity acquired at
-#   admission, and the post-collection withhold is at least the applied grace
-#   plus one observation cadence);
-#   readiness-review/readiness-iter-1.md and readiness-iter-2.md, whose
-#   plan-routed findings are addressed below.
+#   chg-GH-413-spec.md (v1.3) and chg-GH-413-test-plan.md (v1.4), this folder;
+#   chg-GH-413-pm-notes.yaml, whose DoR remediation decisions bind the plan;
+#   readiness-review/readiness-iter-1.md, readiness-iter-2.md, and
+#   readiness-iter-3.md, whose plan-routed findings are addressed below.
 #
 # Phase order follows the spec's delivery order (section 18) with one plan-level
 # placement: the lease-liveness phase (2) precedes the watch phase (3), so the
-# watch inherits a live lease. The remaining order is the spec's: the watch and
-# the episode, the surfaces and the mode rule, the operator command; then the
-# cross-cutting proof, the decision records, and the release and
-# spec-reconciliation declaration.
+# watch inherits a live lease. The remaining order is the spec's: the watch
+# with the standing-park recovery and the episode, the surfaces and the mode
+# rule, the operator command; then the cross-cutting proof, the decision
+# records, and the release and spec-reconciliation declaration.
 #
 # Test plan alignment: the plan is the authority for phase numbering. The test
 # plan's scenario index and mapping table follow these eight phases, and every
-# one of the 36 test cases is owned by exactly one phase below.
+# one of the 37 test cases is owned by exactly one phase below.
 #
 # Declaration discipline
 #   - The commit primitive stages an untracked (new) file only inside the
@@ -50,35 +49,54 @@
 #     are outside every scope. The park end is the delivered first open
 #     window's effective end; overlapping windows produce consecutive episodes
 #     and no union is computed (DEC-20).
-#   - Lease liveness (DEC-13, NFR-10, DM-9, TDR-0078): the lane keeps its lease
-#     live through the run and the park by the delivered renewal path and the
-#     existing lease record, at the renewal cadence
+#   - One park per reference (F-3, NFR-2, AC-F3-4, RSK-14): the already-parked
+#     rule is occupancy, so any standing `peak-window` park for the reference,
+#     whatever its `until`, suppresses a new stop. The run path closes a
+#     standing park through the delivered mutating park pass
+#     (`recoverQueueParks`: the clear-observed marker, the recovered record,
+#     and the `park-auto-recovery` incident) before its first stop decision
+#     and at the first observation of a resuming invocation, and an
+#     unrecoverable standing park refuses the run with no new episode. A
+#     second active park for one reference, or a standing park not recovered
+#     before a new stop decision, is a change defect: two active parks
+#     permanently fail every park-reading surface, and the append-only history
+#     cannot repair it.
+#   - Lease liveness (DEC-11, DEC-13, NFR-7, NFR-10, DM-9, TDR-0078): the lane
+#     keeps its lease live through the run and the park by the delivered
+#     renewal path and the existing lease record, at the renewal cadence
 #     `min(lane.liveness-interval, queue.lease-ttl / 2)`. The renewal is a
-#     no-op unless the lease is the lease identity this lane acquired at
-#     admission (its lease id, not merely the same holder and reference) and
-#     does not pass the owner-hold gate, so a parked lane under an owner hold
-#     keeps renewing. A park longer than the TTL with no renewal is a change defect,
+#     no-op unless the live lease's latest heartbeat is this invocation's own
+#     last write, so a re-dispatch's newer heartbeat makes the earlier
+#     invocation's renewal `lease:not-owned`. It never acquires, takes over,
+#     or displaces a lease, it does not pass the owner-hold gate (a parked
+#     lane under an owner hold keeps renewing), and it rides bounded waits (a
+#     bounded tracker or claim wait is not renewed). An invocation that has
+#     lost the lease returns one classified result instead of resuming or
+#     continuing as owner, and neither renews nor releases the successor's
+#     lease. A park longer than the TTL with no renewal is a change defect,
 #     never a documented exposure. The admission claim keeps its delivered
 #     refusal of a live same-ref lease, and no queue record kind, lease
-#     operation, or claim result is added.
+#     operation, or claim result is added. The wait's wake bound is
+#     `elapsed / min(lane.liveness-interval, queue.lease-ttl / 2) + 1`: a
+#     renewal wake between observations is a renewal, not an extra observation.
 #   - The mode is the only intended no-park change (DEC-6, NFR-9): with no park
 #     open, `peakEnforcement.mode` on a production composition with pausing
 #     enabled reads `window-watch`; every other delivered field and line is
 #     byte-identical.
 #   - `dispatch stop` (DEC-15, DEC-21): admits `peak-window` only and requires
 #     `--until`; another cause or a missing end is the grammar refusal
-#     `input.value.rejected` before any read, the missing end reusing the
-#     delivered `until-required` reason. It never signals itself. A lane is
-#     running only when its newest record is `active`, carries a session
-#     identity, and has no open `peak-window` park, so an already-parked lane
-#     is the not-running refusal and is never parked twice. The park is written
-#     only after a confirmed terminate; an unconfirmed terminate is the same
-#     refusal and writes nothing. The tree root is the recorded worktree path
-#     when the record carries one and otherwise the repository's main checkout.
-#     The owning invocation withholds terminal classification for at least the
-#     applied grace plus one observation cadence after its collection resolves,
-#     because the command's terminate call awaits the whole grace before the
-#     park is appended, and re-reads the park record.
+#     `input.value.rejected` before any read, the missing end carrying the
+#     delivered `until-required` reason (the reason is reused, not the
+#     comparison). It never signals itself. A lane is running only when its
+#     newest record is `active`, carries a session identity, and has no open
+#     park of any cause, so an already-parked lane is the not-running refusal
+#     and is never parked twice. The park is written only after a confirmed
+#     terminate; an unconfirmed terminate is the same refusal and writes
+#     nothing. The tree root is the recorded worktree path when the record
+#     carries one and otherwise the repository's main checkout. The owning
+#     invocation withholds terminal classification for at least the applied
+#     grace plus one observation cadence after its collection resolves and
+#     re-reads the park record.
 #   - The lane record's nomination (DEC-16) is written on every `active` record
 #     the invocation appends, only from the admission nomination, and is never
 #     fabricated, defaulted, or inferred; a pre-change record is not
@@ -94,10 +112,10 @@
 #     rule, and no provider-entry `peak` window in the lane watch.
 #   - NG-10: no pre-session park. A dispatch admitted while its nominated
 #     profile's window is already open spawns and is parked at the first
-#     observation, so at most one observation cadence of billing precedes the
-#     park (spec section 7.2, RSK-12). The case is out of scope with that
-#     declared residual; no pre-session representation, fixture, or test case
-#     exists.
+#     observation, so one observation cadence plus the applied grace of
+#     billing precedes the park and no billable call follows the park instant
+#     (spec section 7.2, RSK-12). The case is out of scope with that declared
+#     residual; no pre-session representation, fixture, or test case exists.
 #   - The aggregate gate (`pnpm check`, run once with TMPDIR=$PWD/tmp/tmpdir)
 #     belongs to the lifecycle quality_gates phase, not to a plan phase. A plan
 #     phase runs only its affected suites.
@@ -111,19 +129,20 @@ tier:
     - "A new park cause, event kind, record kind, lease operation, claim result, schema identity, error identity, error-table row, result token, reason token, or a third composition-fact mode value appears (NG-6, DEC-3, DEC-6, DEC-8, DEC-21, NFR-8, TC-PEAK-027): stop and report; vocabulary economy is a delivered discipline."
     - "The dispatch composition is observed computing a window rule of its own, including a union of overlapping windows, instead of calling the delivered decision functions, or the parity fixture disagrees between the dispatch-owned watch and the daemon watch on the same profile and instant (AC-F1-1, DEC-20, RSK-8, RSK-TP-1, TC-PEAK-001): stop and report."
     - "A file on the resident daemon's supervision path or in the delivered decision layer needs an edit to go green (NG-1, F-1): stop and report; the watch composes the delivered decision functions and never changes them."
-    - "The wait gains a timing mechanism of its own: a second cadence or configuration key, a wall-clock read, a real timer in the engine, or a pinned duration instead of the end re-derived from the injected clock at each wake (DEC-11, NFR-5, NFR-7, TC-PEAK-026): stop and report."
+    - "The wait gains a timing mechanism of its own: a second cadence or configuration key, a wall-clock read, a real timer in the engine, or a pinned duration instead of the end re-derived from the injected clock at each wake (DEC-11, NFR-5, NFR-7, TC-PEAK-026): stop and report. The derived renewal cadence `min(lane.liveness-interval, queue.lease-ttl / 2)` is exempt from this trigger: a heartbeat between observations is a renewal, not an extra observation, and it adds no timing key."
     - "A no-park golden, a delivered daemon park or resume suite assertion, or the dispatch-additive-stability pins are modified beyond the one named `peakEnforcement.mode` value (AC-F6-3, NFR-9, RSK-TP-6): stop and report; the no-park pins are read-only and the carve-out is exactly one field."
     - "The full battery is started before the change's changeset exists, or any gate is reported green while a check was skipped, disabled, or made vacuous (TC-PEAK-028, owner delivery note 1, RSK-TP-5): stop; run the two release suites first and record what actually ran."
     - "The post-upgrade hand-off (TC-PEAK-029) is treated as a substitute for the automated fixtures, as a Done criterion, or as an episode this delivering lane must produce, or a red fixture is excused by a manual result (RSK-TP-4, RSK-TP-8, spec section 18.1 item 7): stop and report; the fixtures are the merge gate and the hand-off is a recorded obligation."
-    - "The lane's lease heartbeat age reaches the lease TTL during a run or a park, a second dispatch of the work item is admitted or takes over a live lease, the renewal cadence departs from `min(lane.liveness-interval, queue.lease-ttl / 2)`, a renewal acquires, takes over, or displaces a lease, a renewal renews a lease whose id is not the one this lane acquired at admission (including a previous invocation's stale lease under the same holder and reference), or the renewal passes the owner-hold gate so a parked lane under a hold stops renewing (NFR-10, AC-F5-2, DEC-13, RSK-10): stop and report; a park longer than the TTL with no renewal is a change defect."
+    - "The lane's lease heartbeat age reaches the lease TTL during a run or a park while the owner renews, the renewal cadence departs from `min(lane.liveness-interval, queue.lease-ttl / 2)`, a renewal appends to or extends a lease whose latest heartbeat is not the invocation's own last write, a re-dispatch's newer heartbeat fails to make the earlier invocation's renewal `lease:not-owned`, a renewal acquires, takes over, or displaces a lease, a renewal passes the owner-hold gate so a parked lane under a hold stops renewing, a renewal runs during a bounded tracker or claim wait, or an invocation that has lost the lease resumes, continues as owner, or releases or renews the successor's lease (NFR-7, NFR-10, AC-F5-2, DEC-13, RSK-10): stop and report; a park longer than the TTL with no renewal is a change defect."
     - "The admission claim is observed renewing or taking over a live same-ref lease, or a new queue record kind appears (TDR-0050, TDR-0078, DM-9, spec section 8.5): stop and report; only who renews and how often is added."
     - "A no-park field or line other than the one named `peakEnforcement.mode` value moves, or the mode is derived from a test-only watch override or from another process (DEC-6, AC-F6-3, AC-F6-4, NFR-9, RSK-TP-10): stop and report."
     - "`dispatch stop` admits a cause other than `peak-window`, runs without `--until`, answers its grammar refusals with an identity or reason other than `input.value.rejected` and the delivered `until-required`, or sends a signal of its own outside the delivered terminate path (DEC-15, DEC-21, AC-F9-2, AC-F9-3, NFR-1, NFR-8): stop and report."
-    - "`dispatch stop` appends a park for a ref that already has an open `peak-window` park, writes a park before a confirmed terminate, answers success on an unconfirmed terminate, or the owning invocation classifies terminal at session end without its grace-plus-cadence park re-read (DEC-15, AC-F9-2, AC-F9-4, AC-F10-1, AC-F10-2, RSK-7, RSK-TP-13): stop and report."
-    - "A dispatch admitted inside an already-open window of its nominated profile is not parked at its first observation, or the billing before that park exceeds one observation cadence (NG-10, RSK-12, spec section 7.2): stop and report; the pre-session park stays out of scope and its residual is bounded, never widened."
+    - "`dispatch stop` appends a park for a ref that already has an open park of any cause, writes a park before a confirmed terminate, answers success on an unconfirmed terminate, or the owning invocation classifies terminal at session end without its grace-plus-cadence park re-read (DEC-15, AC-F9-2, AC-F9-4, AC-F10-1, AC-F10-2, RSK-7, RSK-TP-13): stop and report."
+    - "A dispatch admitted inside an already-open window of its nominated profile is not parked at its first observation, the billing before that park exceeds one observation cadence plus the applied grace, or any billable call follows the park instant (NG-10, RSK-12, spec section 7.2): stop and report; the pre-session park stays out of scope and its residual is bounded, never widened."
     - "A pre-session park, a pre-session representation, or a session-less park frame is reintroduced, or a lane record without a stored nomination is paused, re-nominated, or given a fabricated profile, or an `active` record the invocation appends lacks the nomination (NG-10, DEC-16, AC-F2-3, RSK-TP-12): stop and report."
     - "A non-terminal recovery refusal leaves the invocation waiting or holding the lease instead of returning one classified result and releasing the lease (DEC-18, NFR-4, AC-F4-3): stop and report."
     - "Delivery searches the file system outside the checkout and the change folder (owner delivery note 4, spec section 12): stop and report; every fact, fixture, and command is reachable from those two roots."
+    - "A second active park is appended for one reference, a standing `peak-window` park is not recovered before a new stop decision or at the first observation of a resuming invocation, the already-parked rule is read as expiry rather than occupancy, or an unrecoverable standing park starts a new episode instead of refusing the run (F-3, NFR-2, AC-F3-4, RSK-14, TC-PEAK-038): stop and report; two active parks permanently fail every park-reading surface and the append-only history cannot repair it."
 defaultLeases:
   - "repo:main-tools"
 defaultWeightClass: standard
@@ -153,10 +172,13 @@ phases:
     # body, and no pre-existing changeset modified. Its body is the release
     # note (spec section 18): the behaviour change, the one intended
     # `peakEnforcement.mode` value change, the disabling key, the deployment
-    # precondition (only a profile declaring `peakWindows` is pausable), and
-    # the two declared consequences, the one-cadence admission residual and
-    # the overlap churn. The two release suites are run in this phase and are
-    # not edited.
+    # precondition (only a profile declaring `peakWindows` is pausable), the
+    # post-collection withhold (about 50 s per session end at the defaults),
+    # and the three declared consequences: the billing residual of one
+    # observation cadence plus the applied grace for a dispatch admitted
+    # inside an already-open window, the overlap churn, and the standing-park
+    # recovery that precedes a new episode. The two release suites are run in
+    # this phase and are not edited.
     # Decision index and records: doc/decisions/00-index.md is a tracked file
     # and the commit primitive stages every tracked edit, so whichever commit
     # runs first would stage the two index rows. Both records are declared
@@ -165,10 +187,9 @@ phases:
     # The records are authored by the decision advisor as Proposed; their
     # content is not this plan's (phases 2 and 7 keep their declarations).
     # Readiness records: the orchestrator tracks readiness records before
-    # delivery (iterations 1 and 2 already are), so these two declarations are
+    # delivery (iterations 1 to 3 already are), so these two declarations are
     # inert by design. They stay so a record written during a phase is never
-    # an unstageable stray; readiness-iter-3.md exists only if the gate needs
-    # a third iteration.
+    # an unstageable stray.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/config-lane.test.ts tests/behaviour/config-schema.test.ts tests/behaviour/dispatch-peak-setting.test.ts tests/checks/dispatch-contract-invariance.test.ts tests/checks/operator-contract-invariance.test.ts tests/structure/port-contract-inventory.test.ts tests/structure/content-inventory.test.ts tests/checks/decision-record.test.ts
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/privacy-release.test.ts tests/structure/changeset-additivity.test.ts
     scope:
@@ -201,24 +222,32 @@ phases:
   - id: 2
     title: "Lease liveness: the lane keeps its repository lease live through the run and the park"
     kind: delivery
-    summary: "keep the lane's repository lease live for the whole run and the whole park: the holding invocation renews it at most once per renewal cadence of `min(lane.liveness-interval, queue.lease-ttl / 2)` through the delivered renewal path and the existing lease record, as a no-op unless the lease is the lease identity this lane acquired at admission (its lease id, not merely the same holder and reference) and without passing the owner-hold gate, so per-ref single-flight holds before, at, and after each lease TTL boundary even when the liveness interval is at or above the TTL, a second dispatch of the work item is refused `queue.single-flight` with the live holder, and a parked lane under an owner hold keeps renewing; a renewal failure is retried at the next cadence and surfaced as lease evidence, and the amendment to the delivered no-renewal rule is TDR-0078."
+    summary: "keep the lane's repository lease live for the whole run and the whole park: the holding invocation renews it at most once per renewal cadence of `min(lane.liveness-interval, queue.lease-ttl / 2)` through the delivered renewal path and the existing lease record, as a no-op unless the live lease's latest heartbeat is this invocation's own last write and without passing the owner-hold gate, so a second dispatch of the work item is refused `queue.single-flight` with the live holder before, at, and after each lease TTL boundary even when the liveness interval is at or above the TTL and a parked lane under an owner hold keeps renewing; a re-dispatch's newer heartbeat makes the earlier invocation's renewal `lease:not-owned`, an invocation that has lost the lease returns one classified result instead of resuming as owner, and a renewal failure is retried at the next cadence and surfaced as lease evidence; the amendment to the delivered no-renewal rule is TDR-0078."
     # Scope: spec F-5, DEC-11, DEC-13, DM-9, NFR-7, NFR-10, Appendix D; flows 1
-    # and 5; DoR iteration-1 finding 2 and iteration-2 finding 3; pm-notes
-    # DoR iteration-2 decision 15.
+    # and 5; DoR iteration-1 finding 2, iteration-2 finding 3, and iteration-3
+    # findings 2 and 4.
     # TC ownership: TC-PEAK-010 (the running-lane lease arms: AC-F5-2, NFR-10,
     # DM-9). A running lane, no park yet, crosses several TTL boundaries on
     # the injected lease clock, and at each boundary a second dispatch is
     # refused `queue.single-flight` with the live holder just before, exactly
-    # at, and just after it, with no takeover. Four arms ride the same suite:
+    # at, and just after it, with no takeover while the owner renews. Five
+    # arms ride the same suite:
     #   - interval-above-TTL: `lane.liveness-interval` at or above the TTL, so
     #     the renewal cadence is `queue.lease-ttl / 2` and no heartbeat gap
     #     reaches the TTL;
-    #   - lease-identity no-op (the test plan's same-ref no-op arm, keyed by
-    #     lease id): the renewal never acquires an absent lease, takes over a
-    #     stale one, or displaces another holder, and never renews a lease
-    #     whose id is not the one this lane acquired at admission, so a
-    #     re-dispatch cannot renew a previous invocation's stale lease under
-    #     the same holder and reference;
+    #   - heartbeat-ownership no-op: the live lease's latest heartbeat is not
+    #     the invocation's own last write (another writer, an absent lease,
+    #     another holder, or a stale lease), so the renewal appends nothing,
+    #     extends nothing, surfaces `lease:not-owned`, and never acquires,
+    #     takes over, or displaces;
+    #   - re-dispatch and lost lease: a second invocation takes over a stale
+    #     lease through the delivered `renewed` arm, which preserves the lease
+    #     id and the acquisition instant while appending a newer heartbeat;
+    #     the first invocation's next renewal is therefore `lease:not-owned`,
+    #     appends and extends nothing, leaves the successor's lease untouched
+    #     (neither released nor renewed), and that invocation returns one
+    #     classified result with the park standing instead of resuming as
+    #     owner;
     #   - owner hold: with an active hold the lane keeps renewing and the hold
     #     still parks nothing, because the renewal does not pass the
     #     owner-hold gate;
@@ -231,18 +260,33 @@ phases:
     # operator settings cannot produce a heartbeat gap at or above the TTL. The
     # delivered daemon renewal helper (one third of the TTL, in
     # packages/core/src/domain/queue-lease.ts) is a different cadence and is
-    # not this one.
+    # not this one. The wait's wake bound is stated on this cadence (phase 3):
+    # a renewal wake may fall between observations.
+    # Heartbeat ownership key (DEC-13): the holder, the reference, and the
+    # lease identity do not identify an invocation, because the delivered
+    # `renewed` arm preserves the lease id across a re-dispatch. The invocation
+    # remembers the heartbeat instant it last wrote and compares it with the
+    # live lease's latest heartbeat; the delivered `renewed` arm is unchanged.
+    # An invocation that no longer holds the lease must not resume or continue
+    # as owner: it returns one classified result with the park standing, and
+    # it neither renews nor releases the successor's lease (the delivered
+    # release matches on holder, and both invocations share the dispatch
+    # holder).
+    # Renewals ride bounded waits (DEC-11, NFR-7): the lane renews at each
+    # wake, at most once per renewal cadence, and a bounded tracker or claim
+    # wait is not renewed.
     # The delivered claim path, every link declared:
-    # packages/core/src/app/queue.ts (the dispatch caller's renewal entry,
-    # keyed by the lease id the admission claim returned, over the delivered
-    # same-holder `renewed` arm; the admission claim keeps its no-renewal
-    # refusal), packages/core/src/contracts/queue.ts (the lease contract the
-    # renewal reads), packages/core/src/app/dispatch.ts (the run renews at the
-    # renewal cadence and surfaces a failure as bounded lease evidence),
-    # packages/cli/src/edge.ts (the closed DispatchComposition type and the
-    # single runDispatch assembly forwarding), and packages/cli/src/production.ts
-    # (the binding over the store, the fence token, the clock, and the two
-    # resolved keys).
+    # packages/core/src/app/queue.ts (the dispatch caller's renewal entry over
+    # the delivered same-holder `renewed` arm; the admission claim keeps its
+    # no-renewal refusal), packages/core/src/contracts/queue.ts (the lease
+    # contract the renewal reads and writes), packages/core/src/app/dispatch.ts
+    # (the run remembers its last heartbeat write, renews at the renewal
+    # cadence, surfaces `lease:not-owned` and a renewal failure as bounded
+    # lease evidence, and returns instead of continuing once the lease is
+    # lost), packages/cli/src/edge.ts (the closed DispatchComposition type and
+    # the single runDispatch assembly forwarding), and
+    # packages/cli/src/production.ts (the binding over the store, the fence
+    # token, the clock, and the two resolved keys).
     # Reuse, never parallel (DEC-13): the renewal is the delivered `queue.lease`
     # record with operation `renewed`. No record kind, lease operation, claim
     # result, or second exclusion mechanism is added.
@@ -254,18 +298,22 @@ phases:
     # and tests/fixtures/dispatch/parity/harness.ts when the parity battery's
     # lease-record counts move.
     # Fixtures: the lease fixtures (a live lease with renewal records, a lease
-    # near its TTL, an interval-above-TTL configuration, the lease-identity
-    # no-op and owner-hold arms, and the second-dispatch admission probe)
-    # extend tests/fixtures/queue/single-flight/harness.ts; the lease clock is
-    # the store harness's injected clock.
+    # near its TTL, an interval-above-TTL configuration, the
+    # heartbeat-ownership no-op, re-dispatch, lost-lease, and owner-hold arms,
+    # and the second-dispatch admission probe) extend
+    # tests/fixtures/queue/single-flight/harness.ts; the lease clock is the
+    # store harness's injected clock.
     # Decision record: spec section 18 records the amendment as TDR-0078,
-    # authored in plan phase 2, so the record and its index row are declared
-    # here. Phase 1 declares the index with both records so no commit carries
-    # an index row that points at an untracked record; phase 7 stages whatever
-    # remains.
+    # authored in the plan's decision-records phase (phase 7). The record and
+    # its index row are declared here because this phase changes the rule the
+    # record amends, so a record already written when this phase commits is
+    # never an unstageable stray. Phase 1 declares the index with both records
+    # so no commit carries an index row that points at an untracked record;
+    # phase 7 stages whatever remains.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-lease-liveness.test.ts
     # Verify arms: the suite carries the TTL-crossing, interval-above-TTL,
-    # lease-identity no-op, owner-hold, and renewal-failure arms.
+    # heartbeat-ownership no-op, re-dispatch and lost-lease, owner-hold, and
+    # renewal-failure arms.
     # Verify, read-only controls (never edited): the admission claim still
     # never renews or takes over a live lease
     # (tests/behaviour/dispatch-single-flight.test.ts); the delivered lease
@@ -309,32 +357,56 @@ phases:
   - id: 3
     title: "Dispatch-owned window watch, exactly-once park episode, in-invocation wait, and classification-routed resume"
     kind: delivery
-    summary: "give the one-shot dispatch run path its own life-long profile-window watch: the nominated profile's declared `peakWindows` rules, read from the nomination stored on every `active` lane record the invocation appends, decide through the delivered decision functions and the injected clock at every observation; an open window issues one terminate call whose `graceMs` is the smallest of the profile grace, the delivered kill grace, and the time to the first open window's effective end, parks the lane exactly once with the complete episode frame, and the same invocation waits on the delivered liveness cadence and resumes at that end by the preservation classification; a non-terminal recovery refusal returns one classified result naming the refusal and the park end and releases the lease instead of waiting; the watch is bound in the production composition unless the setting disables pausing."
+    summary: "give the one-shot dispatch run path its own life-long profile-window watch: after any standing `peak-window` park for the reference has been closed through the delivered mutating park pass, and with any remaining standing park treated as occupancy, the nominated profile's declared `peakWindows` rules, read from the nomination stored on every `active` lane record the invocation appends, decide through the delivered decision functions and the injected clock at every observation; an open window issues one terminate call whose `graceMs` is the smallest of the profile grace, the delivered kill grace, and the time to the first open window's effective end, parks the lane exactly once with the complete episode frame, and the same invocation waits on the delivered liveness cadence and resumes at that end by the preservation classification; a non-terminal recovery refusal or a lost lease returns one classified result instead of waiting or resuming as owner; the watch is bound in the production composition unless the setting disables pausing."
     # Scope: spec F-1 to F-5, F-8, F-11, DEC-2 to DEC-5, DEC-10, DEC-11,
-    # DEC-16 to DEC-18, DEC-20, DM-1, DM-2, NFR-1, NFR-2, NFR-4, NFR-6, NFR-7;
-    # flows 1, 2, and 5; DoR iteration-1 findings 5, 7, and 8 and iteration-2
-    # findings 4, 5, 7, and 8.
+    # DEC-13, DEC-16 to DEC-18, DEC-20, DM-1, DM-2, NFR-1, NFR-2, NFR-4,
+    # NFR-6, NFR-7; flows 1, 2, and 5; DoR iteration-1 findings 5, 7, and 8,
+    # iteration-2 findings 4, 5, 7, and 8, and iteration-3 findings 1 and 4.
     # TC ownership: TC-PEAK-001, TC-PEAK-002, TC-PEAK-004, TC-PEAK-005,
     # TC-PEAK-006, TC-PEAK-007, TC-PEAK-008, TC-PEAK-009, TC-PEAK-015,
     # TC-PEAK-021, TC-PEAK-022, TC-PEAK-025, TC-PEAK-031, TC-PEAK-032,
-    # TC-PEAK-037.
+    # TC-PEAK-037, TC-PEAK-038.
     # Binding chain, every link declared: packages/core/src/app/dispatch.ts (the
     # run path: the optional watch ports and the per-observation watch, from
     # the first session's acquisition to the terminal classification), the new
     # packages/core/src/app/dispatch-peak-pause.ts (the dispatch-owned watch,
     # composed-grace stop, exactly-once park, wait, and resume over the
     # delivered runPeakWatch and runPeakResume), packages/cli/src/edge.ts (the
-    # closed DispatchComposition type and the single runDispatch assembly
-    # forwarding), and packages/cli/src/production.ts (the binding: the
-    # nominated profile's rule lookup, the zone facts, the stop seam over the
-    # delivered terminate path, the park append; the resolved
-    # `lane.disable-peak-pausing` of true composes no watch).
+    # closed DispatchComposition type, the composition's park-recovery call,
+    # and the single runDispatch assembly forwarding), and
+    # packages/cli/src/production.ts (the binding: the nominated profile's
+    # rule lookup, the zone facts, the stop seam over the delivered terminate
+    # path, the park append, and the park-recovery call bound over the queue
+    # composition's park context; the resolved `lane.disable-peak-pausing` of
+    # true composes no watch).
+    # Standing-park recovery (F-3, AC-F3-4, RSK-14, TC-PEAK-038): before its
+    # first stop decision for a reference, and at the first observation of an
+    # invocation that resumes a lane carrying a standing park, the run path
+    # closes that park through the delivered mutating park pass
+    # (`packages/core/src/app/queue.ts`, `recoverQueueParks`: the
+    # clear-observed marker, the recovered record, and the `park-auto-recovery`
+    # incident), so an expired, orphaned, refused, or budget-exhausted park is
+    # closed before a new episode. The pass is composed unchanged and is in
+    # scope ONLY IF the run path needs a ref-scoped entry or a result
+    # classification; it keeps its delivered owner-hold behaviour (under an
+    # active hold it mutates nothing). The already-parked rule is occupancy:
+    # any remaining standing `peak-window` park for the reference, whatever
+    # its `until`, suppresses a new stop, so no second `stop` or `parked` is
+    # appended and the reference never carries two active parks. An
+    # unrecoverable standing park (the delivered pass refuses, for example
+    # `queue.park-condition-stuck`, or the park fold fails closed) refuses the
+    # run as a classified failure through the delivered identity and starts no
+    # new episode. An operator resume during an open window recovers the
+    # standing park first and then parks again as a new exactly-once episode,
+    # with the recovery's evidence preceding the new stop. No recovery is
+    # attempted for a killed waiting process while it stays dead: the standing
+    # park is recovered when the lane next runs (spec section 7.2).
     # Already open at start (NG-10, RSK-12): the pre-session park is out of
     # scope. A dispatch admitted while its nominated profile's window is
-    # already open spawns and is parked at its first observation, so at most
-    # one observation cadence of billing precedes the park and no billable
-    # call follows it. No pre-session representation, fixture, or test case
-    # exists; TC-PEAK-015 asserts none.
+    # already open spawns and is parked at its first observation, so one
+    # observation cadence plus the applied grace of billing precedes the park
+    # and no billable call follows the park instant. No pre-session
+    # representation, fixture, or test case exists; TC-PEAK-015 asserts none.
     # Stored nomination (DEC-16, TC-PEAK-031): packages/core/src/contracts/dispatch.ts
     # gains the additive optional `providerProfile` on the durable lane
     # record, written on every `active` record the invocation appends (the
@@ -367,23 +439,33 @@ phases:
     # truth, its summary naming the refusal and the park end), the lane stays
     # parked, no ordinal is consumed, and the lease is released on return so
     # the delivered operator resume path can take the ref. No waiting
-    # invocation remains and no frame is added.
+    # invocation remains and no frame is added; the standing park it leaves
+    # is recovered by the next invocation through the pass above.
     # Owner hold (F-11, TC-PEAK-021): an active hold changes nothing about the
     # watch; the lane still parks `peak-window` with `until` and its lease
     # keeps renewing at the derived cadence while the hold is active.
     # Nothing lost (TC-PEAK-037, AC-F5-1): a complete park and resume leaves
     # the branch, the change folder, the recorded phases, and the queue state
     # unchanged, reuses the recorded worktree and the same session, and keeps
-    # the same lease record live at the derived cadence. The TTL-crossing
-    # lease arms are phase 2's TC-PEAK-010.
-    # Timing seams (DEC-11): the wait rides the delivered liveness cadence over
-    # the cancellable DispatchCadenceWait seam, renews the lease at most once
-    # per renewal cadence (`min(lane.liveness-interval, queue.lease-ttl / 2)`)
-    # and never more than once per wake, and re-derives the end from the
-    # injected clock at each wake. A DISPATCH_DELAY_REASONS member in
+    # the same lease record live at the derived cadence; a standing expired
+    # park from an earlier episode is recovered before the next one. The
+    # TTL-crossing lease arms are phase 2's TC-PEAK-010.
+    # Lease at resume (DEC-13): the window-end resume honours phase 2's
+    # heartbeat ownership key; an invocation that no longer holds the lease
+    # does not resume as owner and returns one classified result with the park
+    # standing.
+    # Timing seams (DEC-11): the wait observes at most once per delivered
+    # liveness cadence over the cancellable DispatchCadenceWait seam, renews
+    # the lease at most once per renewal cadence
+    # (`min(lane.liveness-interval, queue.lease-ttl / 2)`) and never more than
+    # once per wake, never renews during a bounded tracker or claim wait, and
+    # re-derives the end from the injected clock at each wake. The wake bound
+    # is `elapsed / min(lane.liveness-interval, queue.lease-ttl / 2) + 1`: a
+    # renewal wake may fall between observations, and it is a renewal, not an
+    # extra observation. A DISPATCH_DELAY_REASONS member in
     # packages/core/src/contracts/dispatch.ts and its closed-set pin in
     # tests/structure/dispatch-contract.test.ts move ONLY IF the wait needs an
-    # additive reason. No second timing mechanism is introduced.
+    # additive reason. No second timing mechanism or timing key is introduced.
     # New-module surfaces, moved in this same commit: the new module joins
     # DISPATCH_FLOW_SURFACE in scripts/checks/no-shell-dispatch.ts, the file
     # set in tests/structure/inventory.json, and its export allowance in
@@ -394,10 +476,10 @@ phases:
     # tests/fixtures/queue/production/harness.ts. The `window-watch`
     # derivation itself is phase 4's.
     # Fixtures: tests/fixtures/dispatch/golden/harness.ts is extended for the
-    # episode, nomination, lease, and stop-seam fixtures (a stepping clock, a
-    # controllable cadence wait, a recording stop seam that records the
-    # stop-request instant). The rule fixtures (the chain whose base entry
-    # declares no peakWindows, the small-buffer profile, the
+    # episode, nomination, lease, standing-park, and stop-seam fixtures (a
+    # stepping clock, a controllable cadence wait, a recording stop seam that
+    # records the stop-request instant). The rule fixtures (the chain whose
+    # base entry declares no peakWindows, the small-buffer profile, the
     # grace-above-cadence profile, and the overlapping-windows profile for the
     # consecutive-episode arm) land under tests/fixtures/provider/profile, the
     # fixture folder the test plan names, or inside that extended harness
@@ -405,7 +487,7 @@ phases:
     # exists. The rest of tests/fixtures/dispatch, including the
     # closed-contract baseline under operator/, stays outside every scope so
     # an edit there is disclosed as drift.
-    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-peak-parity.test.ts tests/behaviour/dispatch-peak-watch.test.ts tests/behaviour/dispatch-peak-episode.test.ts tests/behaviour/dispatch-peak-stop-grace.test.ts tests/behaviour/dispatch-peak-nomination.test.ts tests/behaviour/dispatch-peak-resume.test.ts tests/behaviour/dispatch-peak-recovery.test.ts tests/behaviour/dispatch-peak-preservation.test.ts tests/behaviour/dispatch-peak-owner-hold.test.ts tests/behaviour/dispatch-peak-isolation.test.ts tests/behaviour/dispatch-peak-setting.test.ts
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-peak-parity.test.ts tests/behaviour/dispatch-peak-watch.test.ts tests/behaviour/dispatch-peak-episode.test.ts tests/behaviour/dispatch-peak-stop-grace.test.ts tests/behaviour/dispatch-peak-nomination.test.ts tests/behaviour/dispatch-peak-resume.test.ts tests/behaviour/dispatch-peak-recovery.test.ts tests/behaviour/dispatch-peak-preservation.test.ts tests/behaviour/dispatch-peak-standing-park.test.ts tests/behaviour/dispatch-peak-owner-hold.test.ts tests/behaviour/dispatch-peak-isolation.test.ts tests/behaviour/dispatch-peak-setting.test.ts
     # Verify, read-only controls (never edited): the delivered dispatch suites
     # (dispatch-watch, dispatch-determinism, dispatch-single-flight,
     # dispatch-resume, dispatch-resume-economics, dispatch-restart-budget),
@@ -419,6 +501,7 @@ phases:
         - packages/core/src/app/dispatch-peak-pause.ts
         - packages/core/src/app/dispatch.ts
         - packages/core/src/app/index.ts
+        - packages/core/src/app/queue.ts
         - packages/core/src/contracts/dispatch.ts
         - packages/core/src/index.ts
         - packages/cli/src/edge.ts
@@ -433,6 +516,7 @@ phases:
         - tests/behaviour/dispatch-peak-recovery.test.ts
         - tests/behaviour/dispatch-peak-resume.test.ts
         - tests/behaviour/dispatch-peak-setting.test.ts
+        - tests/behaviour/dispatch-peak-standing-park.test.ts
         - tests/behaviour/dispatch-peak-stop-grace.test.ts
         - tests/behaviour/dispatch-peak-watch.test.ts
         - tests/fixtures/dispatch/golden/harness.ts
@@ -452,16 +536,19 @@ phases:
         target: packages/core/src/contracts/dispatch.ts
         role: producer
       - kind: contract-file
+        target: packages/core/src/app/queue.ts
+        role: producer
+      - kind: contract-file
         target: packages/cli/src/edge.ts
         role: consumer
 
   - id: 4
     title: "Operator surfaces and the one result: the `dispatch status` park fact and the paused-and-resumed summary"
     kind: delivery
-    summary: "carry the episode to the operator and to the answer: `dispatch status` gains the additive optional park fact (cause, park end, recorded stop instant, preservation classification, and any recorded recovery refusal) from at most one additional bounded park-record read while the delivered `stale` and `delivering` derivation stays unchanged for a parked lane; `lanes` and `board` render the dispatch-owned park and the live `leaseHolder` through the delivered projections; the `lanes` machine read derives `peakEnforcement.mode` from the production composition's own effective configuration, the one intended change to a no-park payload; and one invocation returns exactly one result whose summary states the pause and the resume for a resumed episode or names the refusal and the park end when a recovery refused, with the additive bounded episode fact in its machine envelope."
-    # Scope: spec F-6, F-7, F-12, DEC-6, DEC-9, DEC-18, DM-3, DM-4, DM-5, DM-7,
-    # NFR-3, NFR-9, RSK-11; section 10; DoR iteration-1 findings 3 and 6 and
-    # iteration-2 finding 4.
+    summary: "carry the episode to the operator and to the answer: `dispatch status` gains the additive optional park fact (cause, park end, recorded stop instant, preservation classification, and any recorded recovery refusal) from at most one additional bounded park-record read while the delivered `stale` and `delivering` derivation stays unchanged for a parked lane; `lanes` and `board` render the dispatch-owned park and the live `leaseHolder` through the delivered projections; the `lanes` machine read derives `peakEnforcement.mode` from the production composition's own effective configuration, the one intended change to a no-park payload; and one invocation returns exactly one result whose summary states the pause and the resume for a resumed episode, names the refusal and the park end when a recovery refused, or names the lost lease and the park end when the invocation lost the lease, with the additive bounded episode fact in its machine envelope."
+    # Scope: spec F-6, F-7, F-12, DEC-6, DEC-9, DEC-13, DEC-18, DM-3, DM-4,
+    # DM-5, DM-7, NFR-3, NFR-9, RSK-11; section 10; DoR iteration-1 findings
+    # 3 and 6 and iteration-2 finding 4.
     # TC ownership: TC-PEAK-011, TC-PEAK-012, TC-PEAK-013, TC-PEAK-014,
     # TC-PEAK-023, TC-PEAK-024, TC-PEAK-033.
     # The delivered verdict is unchanged (DEC-9): `stale` is true exactly when
@@ -493,9 +580,10 @@ phases:
     # packages/core/src/app/dispatch-peak-pause.ts (the summary statement rides
     # `last_message`; the four text keys are unchanged and no episode invents
     # a token). A resumed episode's summary states the pause and the resume; a
-    # refused recovery's summary names the refusal and the park end, and the
-    # refusal also stays on the `dispatch status` park fact because no waiting
-    # invocation remains (DEC-18, TC-PEAK-014).
+    # refused recovery's summary names the refusal and the park end; an
+    # invocation that lost the lease names the lost lease and the park end
+    # (F-7). The refusal also stays on the `dispatch status` park fact because
+    # no waiting invocation remains (DEC-18, TC-PEAK-014).
     # The index files are declared for the exports these additions name. The
     # enabled and disabled arms run through the real production composer, so
     # its configuration documents extend
@@ -562,26 +650,29 @@ phases:
   - id: 5
     title: "`dispatch stop`: family grammar, runtime, never-kill stop, and the classified not-running refusal"
     kind: delivery
-    summary: "add `dispatch stop` to the dispatch command family for the `peak-window` cause only, with a required end: another cause or a missing end is the grammar refusal `input.value.rejected` before any read, the missing end reusing the delivered `until-required` reason; the command resolves the newest lane record and refuses unless the lane is running (an `active` record with a session identity and no open `peak-window` park), issues one terminate call through the delivered terminate path with the composed `graceMs` and no signal of its own over the recorded worktree path or, for a path-less record, the main checkout, writes the complete watcher-shaped episode frame only after a confirmed terminate, and answers one human line and machine data at exit 0; an already-parked lane or an unconfirmed terminate is the not-running refusal and writes nothing; the owning invocation withholds terminal classification for at least the applied grace plus one observation cadence after its collection resolves, re-reads the park record, keeps renewing the lease, and waits and resumes; help, the reference page, and the pinned entry counts move in the same commit."
+    summary: "add `dispatch stop` to the dispatch command family for the `peak-window` cause only, with a required end: another cause or a missing end is the grammar refusal `input.value.rejected` before any read, the missing end reusing the delivered `until-required` reason; the command resolves the newest lane record and refuses unless the lane is running (an `active` record with a session identity and no open park of any cause), issues one terminate call through the delivered terminate path with the composed `graceMs` and no signal of its own over the recorded worktree path or, for a path-less record, the main checkout, writes the complete watcher-shaped episode frame only after a confirmed terminate, and answers one human line and machine data at exit 0; a lane with an open park or an unconfirmed terminate is the not-running refusal and writes nothing; the owning invocation withholds terminal classification for at least the applied grace plus one observation cadence after its collection resolves, re-reads the park record, keeps renewing the lease, and waits and resumes; help, the reference page, and the pinned entry counts move in the same commit."
     # Scope: spec F-9, F-10, DEC-7, DEC-8, DEC-10, DEC-15, DEC-21, DM-8, NFR-1,
     # NFR-2, NFR-8, RSK-7; flow 3; DoR iteration-1 finding 4 and iteration-2
-    # findings 1 and 9; pm-notes DoR iteration-2 decision 15.
+    # findings 1 and 9; pm-notes DoR iteration-2 decision 15 (the withhold
+    # bound).
     # TC ownership: TC-PEAK-016, TC-PEAK-018, TC-PEAK-019, TC-PEAK-020,
     # TC-PEAK-034, TC-PEAK-035, TC-PEAK-036.
     # Grammar (DEC-21, TC-PEAK-034): `dispatch stop` admits `peak-window` only
     # and requires `--until`, as the delivered expiry-carrying cause does.
     # Another cause, or a missing end, is refused `input.value.rejected` at
     # the grammar boundary before any lane read or write; the missing end
-    # reuses the delivered `until-required` reason, so no identity, row, or
-    # reason token is added. The delivered reason belongs to the release
-    # grammar (packages/cli/src/commands/queue.ts, a module-local helper in a
+    # carries the delivered `until-required` reason, so no identity, row, or
+    # reason token is added. The reason is reused, not the comparison: the
+    # delivered release grammar emits that reason under its own invocation
+    # identity (packages/cli/src/commands/queue.ts, a module-local helper in a
     # module whose export surface is pinned exactly); the dispatch grammar
     # reproduces the reason under its own value refusal and does not widen
     # that surface.
     # Running predicate (F-10, TC-PEAK-020): a lane is running only when its
     # newest lane record is `active`, carries a session identity, and has no
-    # open `peak-window` park standing for the ref. A terminal record, an
-    # absent record, an active record with no session identity, and an
+    # open park of any cause standing for the ref, because the delivered
+    # duplicate invariant counts every cause. A terminal record, an absent
+    # record, an active record with no session identity, and an
     # already-parked active record are the delivered unmet-precondition refusal
     # (`queue.precondition.unmet`, DEC-8), the summary naming the observed
     # state. The already-parked arm appends no second park: the delivered park
@@ -610,11 +701,15 @@ phases:
     # re-read could miss it. When its ref's open `peak-window` park is there
     # the invocation keeps renewing the lease, waits, and resumes at the end
     # instead of classifying and returning (packages/core/src/app/dispatch.ts
-    # and packages/core/src/app/dispatch-peak-pause.ts). A request racing a
-    # session end resolves exactly one classified outcome across three
-    # orderings, including the park-after-collection one (TC-PEAK-036). The
-    # release grammar's minimal frame and its park-edge-only projection are
-    # untouched (DEC-7).
+    # and packages/core/src/app/dispatch-peak-pause.ts). The withhold is a
+    # result-latency cost on every session end, about 50 s at the defaults
+    # (a 20 000 ms applied grace plus a 30 000 ms observation cadence), and it
+    # applies whether or not automatic pausing is enabled, because it is the
+    # run path's own post-collection rule. A request racing a session end
+    # resolves exactly one classified outcome across three orderings,
+    # including the park-after-collection one (TC-PEAK-036). The release
+    # grammar's minimal frame and its park-edge-only projection are untouched
+    # (DEC-7).
     # The delivered terminate path must reach a session of another process
     # (finding 4 of iteration 1): packages/adapters/src/harness/opencode.ts
     # resolves a terminate target only from its own in-memory session registry
@@ -650,7 +745,7 @@ phases:
     # tests/fixtures/dispatch/parity/terminate.ts; no other fixture location
     # is in scope.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-stop.test.ts tests/behaviour/dispatch-stop-cause.test.ts tests/behaviour/dispatch-stop-handoff.test.ts tests/behaviour/dispatch-stop-race.test.ts tests/behaviour/dispatch-stop-refusal.test.ts tests/behaviour/dispatch-stop-safety.test.ts tests/behaviour/dispatch-peak-setting.test.ts tests/behaviour/harness-opencode-resume-stream.test.ts
-    # Verify arms (iteration 2): the already-parked arm
+    # Verify arms (iteration 2): the already-parked arm, any open cause
     # (tests/behaviour/dispatch-stop-refusal.test.ts, no second park); the
     # unconfirmed-terminate arm (tests/behaviour/dispatch-stop-safety.test.ts
     # and tests/behaviour/dispatch-stop-refusal.test.ts, nothing written); the
@@ -707,9 +802,9 @@ phases:
   - id: 6
     title: "Cross-cutting proof: determinism, hermeticity, and vocabulary economy"
     kind: delivery
-    summary: "prove the assembled surface: paired identical runs are byte-identical over the injected clock, delay, transport, and lease clock apart from the one intended mode value, with no real sleep, network call, or credential read; the delivering suites are hermetic under armed canaries and a source scan; and the closed vocabularies hold with zero added kinds or identities while every episode frame stays inside the delivered bounds, consecutive episodes for overlapping windows included and with no union frame."
-    # Scope: spec AC-F1-3, NFR-5, NFR-7, NFR-8, DEC-20; test plan RSK-TP-1,
-    # RSK-TP-2 and section 4 (the Check and Structure layers).
+    summary: "prove the assembled surface: paired identical runs are byte-identical over the injected clock, delay, transport, and lease clock apart from the one intended mode value, with no real sleep, network call, or credential read; the delivering suites are hermetic under armed canaries and a source scan, with the wait's wake count bounded by `elapsed / min(lane.liveness-interval, queue.lease-ttl / 2) + 1`; and the closed vocabularies hold with zero added kinds or identities while every episode frame stays inside the delivered bounds, consecutive episodes for overlapping windows included, with no union frame and no frame of its own for a recovered standing park."
+    # Scope: spec AC-F1-3, NFR-5, NFR-7, NFR-8, DEC-11, DEC-20; test plan
+    # RSK-TP-1, RSK-TP-2 and section 4 (the Check and Structure layers).
     # TC ownership: TC-PEAK-003, TC-PEAK-026, TC-PEAK-027.
     # This phase proves the assembled surface, so it lands after the last code
     # phase: the determinism suite spans the full park, wait, resume, and
@@ -718,8 +813,15 @@ phases:
     # the new suites; the vocabulary suites project the episode frames and
     # assert the closed sets unchanged. Overlapping windows project consecutive
     # episodes, each with one `stop`, one `parked`, and one `park-edge`, with
-    # no union frame and no shared episode id (DEC-20). No pre-session frame
-    # exists (NG-10).
+    # no union frame and no shared episode id (DEC-20). A standing park closed
+    # before a new episode is the delivered recovery record with its
+    # `park-auto-recovery` incident, so it adds no event or record kind. No
+    # pre-session frame exists (NG-10).
+    # Wake bound (NFR-7, DEC-11): the wait's wake count is asserted over the
+    # injected clock as at most
+    # `elapsed / min(lane.liveness-interval, queue.lease-ttl / 2) + 1`, and a
+    # renewal wake on the derived renewal cadence is counted as a renewal, not
+    # as an extra observation.
     # Conditional files, declared so they can be staged if created:
     #   - tests/checks/dispatch-peak-hermetic.test.ts, only if the watched-file
     #     set outgrows tests/checks/peak-pause-hermetic.test.ts.
@@ -751,8 +853,9 @@ phases:
     # The index is a tracked file and the commit primitive stages every tracked
     # edit, so phase 1 declares the index with both records: no commit carries
     # an index row that points at an untracked record. Phase 2 declares
-    # TDR-0078 (spec section 18: authored in plan phase 2). This phase stages
-    # whatever remains and owns no test case.
+    # TDR-0078 because that phase changes the rule it amends. This phase is
+    # the plan's decision-records phase the spec names for the authoring: it
+    # stages whatever remains and owns no test case.
     # Owner acceptance happens at the pull-request review, outside Done: a
     # record still Proposed at Done does not fail it, a missing record does.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/decision-record.test.ts tests/checks/doc-conformance.test.ts

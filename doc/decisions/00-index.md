@@ -189,27 +189,38 @@ lane record; provider-entry `peak` windows stay admission-only; only a profile
 declaring `peakWindows` is pausable and the shipped defaults declare none), the
 park end (the effective end of the first open window the delivered decision
 returns; overlapping windows yield consecutive exactly-once episodes, never one
-merged park), the `lanes` composition-fact read (`peakEnforcement.mode` derives
-from the reading composition's own effective configuration: `window-watch` when
-automatic pausing is enabled, `iteration-start-gating` when it is disabled; the
-one intended change to a no-park payload; `parkClaimed` stays record-derived), and
-the operator stop (`dispatch stop <ref>` admits the `peak-window` cause only;
-another cause or a missing `--until` is `input.value.rejected` at the grammar
-boundary, the missing end reusing the delivered `until-required` reason; a lane is
-running only when its newest record is `active`, carries a session identity, and
-has no open `peak-window` park, so an already-parked lane is refused and never
-parked twice; the command resolves the session identity and the tree root from
-the lane record, sends no signal of its own, writes the park only after a
-confirmed terminate, and reaches the owning invocation through the durable lane
-and park records, the invocation withholding terminal classification for up to
-one observation cadence to receive it). A park before the first session is not
-part of either record: the specification's DEC-14 is withdrawn, and a dispatch
-admitted inside an already-open window is parked at its first observation, a
-declared residual of at most one observation cadence. TDR-0078 amends TDR-0050
-DC-3 and its restatement in C-4 for the dispatch run path only: the admission
-claim still never renews, and the invocation that holds the lease renews it at
-most once per renewal cadence, `min(lane.liveness-interval, queue.lease-ttl / 2)`,
-through the delivered `renewed` operation, as a no-op unless the lease is this
-lane's own same-ref lease and without passing the owner-hold gate, so per-ref
-single-flight holds through the run and an hours-long park on every legal
-configuration of the two keys.
+merged park), the single park per reference (the watch's already-parked rule is
+occupancy, any standing `peak-window` park whatever its `until`; the run path
+recovers a standing park through the delivered mutating park pass,
+`recoverQueueParks`, before its first stop decision and at the first observation
+of a resume; an unrecoverable park refuses the run, because a double park fails
+every park-reading surface for good), the `lanes` composition-fact read
+(`peakEnforcement.mode` derives from the reading composition's own effective
+configuration: `window-watch` when automatic pausing is enabled,
+`iteration-start-gating` when it is disabled; the one intended change to a
+no-park payload; `parkClaimed` stays record-derived), and the operator stop
+(`dispatch stop <ref>` admits the `peak-window` cause only; another cause or a
+missing `--until` is `input.value.rejected` at the grammar boundary, the missing
+end carrying the delivered `until-required` reason; a lane is running only when
+its newest record is `active`, carries a session identity, and has no open park
+of any cause, so an already-parked lane is refused and never parked twice; the
+command resolves the session identity and the tree root from the lane record,
+sends no signal of its own, writes the park only after a confirmed terminate, and
+reaches the owning invocation through the durable lane and park records; the
+invocation withholds terminal classification for at least the applied grace plus
+one observation cadence, because the terminate call awaits the whole grace, then
+re-reads the park, a result-latency cost of about 50 s at the defaults on every
+session end). A park before the first session is not part of either record: the
+specification's DEC-14 is withdrawn, and a dispatch admitted inside an
+already-open window is parked at its first observation, a declared residual of
+one observation cadence plus the applied grace. TDR-0078 amends TDR-0050 DC-3
+and its restatement in C-4 for the dispatch run path only: the admission claim
+still never renews and its stale same-holder `renewed` arm is unchanged, and the
+invocation that holds the lease renews it at most once per renewal cadence,
+`min(lane.liveness-interval, queue.lease-ttl / 2)`, through the delivered
+`renewed` operation, as a no-op unless the live lease's latest heartbeat is the
+invocation's own last write and without passing the owner-hold gate. A no-op
+renewal surfaces the bounded evidence `lease:not-owned` and extends nothing, and
+an invocation that no longer holds the lease returns one classified result
+instead of resuming as owner, so per-ref single-flight holds through the run and
+an hours-long park on every legal configuration of the two keys.
