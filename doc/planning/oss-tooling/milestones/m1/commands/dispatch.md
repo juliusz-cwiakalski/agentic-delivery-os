@@ -356,7 +356,13 @@ $ <binary> dispatch stop GH-354 --cause peak-window --until 2026-11-12T10:00:00Z
 `config.credential.missing`, `provider.auth.rejected`, `provider.outage`,
 `provider.payload.invalid`, `input.value.rejected`,
 `dispatch.session.spawn-failed`, `dispatch.restart-budget-exceeded`,
-`dispatch.resume-uneconomical`, `dispatch.state-unverified`. The operator
+`dispatch.resume-uneconomical`, `dispatch.state-unverified`,
+`dispatch.resume-parked`. The `dispatch.resume-parked` row is the pre-session
+refusal of a resume or re-dispatch whose lane's standing peak-window park has
+not expired: exit `2`, projection `platform-provider`, category `transient`,
+retryable, consequence `not_landed`, with a remediation to resume after the
+park's recorded `until` (the park stands and nothing was written); the summary
+names the park's cause and `until`. The operator
 queries add no error-table row: `no-lane`, `no-log`, `capability-gap`,
 `session-unknown`, `no-message`, and `unreadable` are DATA facts on the payload,
 not error identities — `capability-gap` applies exactly when the lane's harness

@@ -239,9 +239,12 @@ flowchart LR
 
 The guard is path-specific (TDR-0026 DC-2/DC-3): the dispatch family —
 `dispatch run` and a composed daemon supervision claim — refuses any live
-same-ref lease regardless of holder, because the dispatch path claims with
-the fixed holder `dispatch` and never renews mid-flight, so a live same-ref
-lease can only name a dispatch that is already running. `queue claim` keeps
+same-ref lease regardless of holder. The admission claim takes the lease with
+the fixed holder `dispatch` and never renews it; the holding invocation then
+renews its own lease through the run and the park at
+`min(lane.liveness-interval, queue.lease-ttl / 2)`, keyed on its own last
+heartbeat write, so a live same-ref lease can only name a dispatch that is
+already running. `queue claim` keeps
 its holder-aware outcomes: the caller's own holder's same-ref lease returns
 `renewed` (one record, no session), another holder's same-ref lease refuses
 `queue.single-flight`, and any other-ref live lease refuses the delivered
