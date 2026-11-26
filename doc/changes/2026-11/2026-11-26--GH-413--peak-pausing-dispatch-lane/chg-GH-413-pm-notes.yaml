@@ -504,3 +504,13 @@ notes:
       invariant is clean over 45 surface files."
     type: info
     date: "2026-11-26"
+  - text: "Plan phase 6 complete (determinism, hermeticity, vocabulary economy):
+      commit 416fc63d. The paired-run determinism suite proves stable
+      decisions, park records, episode facts, and summaries; the hermetic suite
+      watches the new modules and suites with the armed fetch canary and the
+      no-timer/no-credential source scan; the delivered taxonomy and release
+      suites hold with zero added kinds and the one authorised row. Tests:
+      determinism 2, hermetic 6, taxonomy 4, and the two release controls 19
+      pass; 46 pass / 0 fail in total."
+    type: info
+    date: "2026-11-26"
