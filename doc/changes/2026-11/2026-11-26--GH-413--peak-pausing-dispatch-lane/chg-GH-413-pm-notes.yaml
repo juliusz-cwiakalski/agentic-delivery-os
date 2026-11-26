@@ -237,3 +237,34 @@ notes:
       one-cadence exposure."
     type: retro
     date: "2026-11-26"
+  - text: "DoR gate iteration 3: NOT_READY (readiness-review/readiness-iter-3.md) at
+      the three-iteration cap. Three blocking findings, all code-level and
+      fixable: (1) the watch has no rule for a standing park after an abnormal
+      episode end (an orphaned/refused/exhausted park is not recovered on the
+      dispatch path, so the next window can double-park and make every park read
+      fail closed permanently); (2) the lease-id key does not distinguish
+      invocations because the delivered stale same-holder arm renews and preserves
+      the lease id, so the spec/plan/test arm cannot pass; (3) the post-collection
+      withhold bound is stated as 'at least grace plus one cadence' in DEC-15 and
+      'up to one cadence' in F-9 and TDR-0077. The reviewer recommends one more
+      gate pass and advises against accepting the risks. Escalated to the owner for
+      authorization to exceed the cap."
+    type: blocker
+    date: "2026-11-26"
+  - text: "Retro: the cap was reached because each remediation pass fixed the
+      previous findings but introduced one new seam-level contradiction. The two
+      durable lessons: (a) recover the standing park on the dispatch path before
+      the watch, or the episode's abnormal exits poison every later park read;
+      (b) a lease-id key is only an ownership key if a re-dispatch takes over with
+      a new id, so the claim's stale same-holder arm must be amended alongside the
+      renewal. Both are design fixes, not wording fixes."
+    type: retro
+    date: "2026-11-26"
+  - text: "Owner decision at the cap: this is a non-interactive run, so the
+      authorization question could not be answered. PM assumes the reviewer's
+      recommended option: one more gate pass (DoR iteration 4) for exactly the
+      three blocking findings. If iteration 4 is NOT_READY, the change is parked
+      and handed back; no further pass is attempted. This assumption is recorded
+      for the owner's PR review."
+    type: decision
+    date: "2026-11-26"
