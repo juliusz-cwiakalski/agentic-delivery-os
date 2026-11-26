@@ -586,3 +586,46 @@ notes:
       parity lane resume, operator status, and dispatch resume; all green."
     type: info
     date: "2026-11-26"
+  - text: "Plan phase 9 (Code Review Remediation, iteration 1) complete: commit
+      440ab76d. Closed F-1 to F-14 and F-16 to F-22 on the code side (F-10 and
+      F-15/F-17/F-19 statement corrections remain with the writers/doc-syncer).
+      F-1: GH-413 exclusion set for dispatch.resume-parked, the posture read pin
+      moved to the declared two reads, and dispatchDelay injected into the five
+      production-composition fixtures. F-2: observation precedes the renewal
+      await and the verdict is applied even after stop. F-3/F-4: the release is
+      ownership-fenced and skipped on a lost lease; every session end returns a
+      classified state-unverified result naming the lost lease. F-5: production
+      uses budget-only recovery admission (F-5a), ensures exhaustion on a
+      terminal refusal, and appends the recovery record only after the next real
+      session acquisition. F-6: no park without a confirmed terminate; a
+      terminate-less harness composes no watch. F-7: runaway caps removed. F-8:
+      preservation is derived from the terminate result (escalated is not
+      preserved). F-9: the withhold renews. F-11: value.stuck maps to the
+      queue.park-condition-stuck refusal. F-12: wake at the earlier observation
+      and renewal due time. F-16: resume admission re-reads rules. F-18: the
+      operator deadline is profile-bounded and a past/non-canonical end is
+      refused. F-20: the prior post-phase commits are evidenced below. F-21:
+      isStopData, no episode casts, the envelope comment restored,
+      session-interrupted restart reason, the typed append payload, and the mode
+      fails to iteration-start-gating. F-22: the one-lane-per-ref-per-host
+      precondition is recorded in the operations guide. Tests: R1 batch 124
+      pass / 0 fail across 8 files; peak/lease/status batch 60 pass / 0 fail
+      across 15 files; stop/decision/error batch 307 pass / 0 fail across 10
+      files. Full pnpm typecheck green."
+    type: info
+    date: "2026-11-26"
+  - text: "F-20 evidence for the post-phase commits: 68779723a was the
+      post-completion pin/format pass (29 files: the dispatch status one-read to
+      two-read conformance pins and Biome formatting); 822793817 was the
+      doc-syncer reconciliation plus the carrier/withhold remediation (38 files,
+      including the terminal-lane recoveryRefusal carrier and the withhold's
+      delay-seam switch that made the parity/resume suites fast). Counts at that
+      point: status/operator/status 358 pass (2 skip), parity/resume and
+      conformance lane resume 33 pass, error-table/config/pin 373 pass. The
+      22 out-of-scope files are recorded here: five count-bearing pages and
+      their five pin suites, the parity and operator-status pins, the
+      scripted-harness helper, the architecture page, dispatch-ledger.ts,
+      doc-conformance.test.ts, feature-session-lifecycle-economics.md,
+      doc/00-index.md, and readiness-iter-7.md."
+    type: info
+    date: "2026-11-26"
