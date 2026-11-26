@@ -954,8 +954,9 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
   let leaseLost = false;
   let leaseRenewalFailure: string | undefined;
   let peakEpisode: DispatchEpisodeFact | undefined;
-  let peakRecoveryRefusal: string | undefined;
   let pendingRecovery: QueueParkRecord | undefined;
+  let pendingResumeAt: string | undefined;
+  let pendingPreservation: "preserved" | "session-state-not-preserved" | undefined;
   let peakRecoveryAppendFailed = false;
   /** The one episode sentence appended to the delivered summary (GH-413 DM-5). */
   const episodeSummary = (): string => {
@@ -1096,7 +1097,6 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           restartsConsumed: restarts - persistedRestarts,
           state: "terminal",
           ...(laneWorktreePath === undefined ? {} : { worktreePath: laneWorktreePath }),
-          ...(peakRecoveryRefusal === undefined ? {} : { recoveryRefusal: peakRecoveryRefusal }),
           lastToken: input.token,
           lastOutcome: input.outcome,
           recordedAt: now,
@@ -1371,8 +1371,22 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       // F-5(c): the recovery record is appended only after the real session
       // acquisition succeeded, never before a resume that might fail.
       if (pendingRecovery !== undefined && ports.peak !== undefined) {
+        // F-5: the resume instant is claimed only after the session is acquired,
+        // so a failed resume reports the pause and the failure, not "resumed at".
+        const base = peakEpisode ?? {
+          episodeId: "",
+          cause: "peak-window" as const,
+          until: "",
+        };
+        peakEpisode = {
+          ...base,
+          ...(pendingResumeAt === undefined ? {} : { resumedAt: pendingResumeAt }),
+          ...(pendingPreservation === undefined ? {} : { preservation: pendingPreservation }),
+        };
         if (!ports.peak.appendRecovery(pendingRecovery)) peakRecoveryAppendFailed = true;
         pendingRecovery = undefined;
+        pendingResumeAt = undefined;
+        pendingPreservation = undefined;
       }
       const collectPromise = ports.harness.collect({ handle: session.value });
 
@@ -1674,12 +1688,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
                 }
               })();
         if (waitOutcome.outcome === "resumed") {
-          const base = peakEpisode ?? {
-            episodeId: "",
-            cause: "peak-window" as const,
-            until: "",
-          };
-          peakEpisode = { ...base, resumedAt: waitOutcome.resumedAt };
+          pendingResumeAt = waitOutcome.resumedAt;
           pendingRecovery = waitOutcome.recoveryRecord;
           peakPark = undefined;
           handle = session.value;
@@ -1687,16 +1696,8 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           continue;
         }
         if (waitOutcome.outcome === "recovered") {
-          const base = peakEpisode ?? {
-            episodeId: "",
-            cause: "peak-window" as const,
-            until: "",
-          };
-          peakEpisode = {
-            ...base,
-            resumedAt: ports.nowIso(),
-            preservation: "session-state-not-preserved",
-          };
+          pendingResumeAt = ports.nowIso();
+          pendingPreservation = "session-state-not-preserved";
           pendingRecovery = waitOutcome.recoveryRecord;
           restarts += 1;
           const restartRecorded =
@@ -1737,7 +1738,6 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           const exhaustionRef = waitOutcome.terminal
             ? ensureExhaustion(ports, session.value.sessionId, restarts, now)
             : undefined;
-          peakRecoveryRefusal = waitOutcome.code;
           const base = peakEpisode ?? {
             episodeId: "",
             cause: "peak-window" as const,

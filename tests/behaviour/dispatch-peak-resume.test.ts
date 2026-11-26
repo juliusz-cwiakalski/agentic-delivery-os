@@ -114,3 +114,27 @@ describe("TC-PEAK-025 resume admission re-checks the window", () => {
     expect(resumed.outcome).toBe("resumed");
   });
 });
+
+describe("TC-PEAK-008 a failed resume reports the pause and the failure, never resumed at", () => {
+  test("the episode fact omits resumedAt when the post-park resume cannot acquire a session", async () => {
+    const { scenario } = createPeakScenario({
+      label: "gh413-resume-failed",
+      startMs: atUtcHour(6, 30),
+      rules: { ...RULES_BY_PROFILE },
+      nomination: "delivery",
+    });
+    try {
+      scenario.scripted.port.resume = async () => ({
+        ok: false,
+        error: { kind: "harness", code: "harness.session.unknown" },
+      });
+      const run = await scenario.invoke(["dispatch", "GH-413", "--json"]);
+      expect(run.exit).toBe(1);
+      expect(run.envelope?.data?.episode?.resumedAt).toBeUndefined();
+      expect(run.envelope?.data?.lastMessage).not.toContain("resumed at");
+      expect(run.envelope?.data?.lastMessage).toContain("paused until");
+    } finally {
+      scenario.dispose();
+    }
+  });
+});

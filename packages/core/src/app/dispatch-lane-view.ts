@@ -82,7 +82,6 @@ const probed = (
 export const dispatchStatusParkFact = (
   parks: readonly QueueParkRecord[],
   ref: string,
-  laneRecoveryRefusal?: string,
 ): DispatchStatusParkFact | undefined => {
   for (let index = parks.length - 1; index >= 0; index -= 1) {
     const park = parks[index];
@@ -90,13 +89,11 @@ export const dispatchStatusParkFact = (
     if (park.recoveryState !== "parked" && park.recoveryState !== "clear-observed") {
       return undefined;
     }
-    const recoveryRefusal = laneRecoveryRefusal;
     return {
       cause: park.cause,
       ...(park.until === undefined ? {} : { until: park.until }),
       ...(park.stoppedAt === undefined ? {} : { stoppedAt: park.stoppedAt }),
       ...(park.preservation === undefined ? {} : { preservation: park.preservation }),
-      ...(recoveryRefusal === undefined ? {} : { recoveryRefusal }),
     };
   }
   return undefined;
@@ -120,7 +117,6 @@ export const readOperatorStatus = (input: {
             candidate.repository === undefined || candidate.repository === input.repository,
         ),
         input.ref,
-        record?.recoveryRefusal,
       )
     : undefined;
   return {

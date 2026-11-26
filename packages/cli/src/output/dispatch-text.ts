@@ -212,9 +212,6 @@ export const renderDispatchStatusText = (data: DispatchStatusData): string => {
           `parkUntil=${data.park.until ?? "none"}`,
           `parkStoppedAt=${data.park.stoppedAt ?? "none"}`,
           `parkPreservation=${data.park.preservation ?? "none"}`,
-          ...(data.park.recoveryRefusal === undefined
-            ? []
-            : [`parkRecoveryRefusal=${data.park.recoveryRefusal}`]),
         ]),
   ];
   return `${lines.join("\n")}\n`;

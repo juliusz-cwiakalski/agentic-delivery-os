@@ -143,7 +143,6 @@ export type DispatchStatusParkFact = {
   readonly until?: string;
   readonly stoppedAt?: string;
   readonly preservation?: string;
-  readonly recoveryRefusal?: string;
 };
 
 /** `dispatch status <ref>` (API-1). */

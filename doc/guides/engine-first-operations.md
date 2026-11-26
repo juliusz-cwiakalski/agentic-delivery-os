@@ -103,11 +103,12 @@ refused `dispatch.resume-parked` at exit `2` at resume admission, not
 `queue.single-flight`. `dispatch status <ref>` explains a pause: the lane reads
 `stale=false` and `delivering=true` while its owner is alive, and the additive park
 fact names the cause, the recorded end, the recorded stop instant, and the
-preservation classification, carried from the park record; the only refusal on
-the not-preserved path of a dispatch-owned episode is budget exhaustion, recorded as the
-delivered terminal exhaustion record and raised as the delivered typed question, so the park record
-carries no refusal member ([Provider Peak
-Pausing](../spec/features/feature-peak-pausing.md)).
+preservation classification, carried from the park record; the fact carries those
+four members and no refusal, and projects no `recoveryRefusal` member. The only
+refusal on the not-preserved path of a dispatch-owned episode is budget exhaustion,
+recorded as the delivered terminal exhaustion record and raised as the delivered
+typed question, so neither the park record nor the park fact carries a refusal
+([Provider Peak Pausing](../spec/features/feature-peak-pausing.md)).
 
 Run it as follows:
 

@@ -396,10 +396,11 @@ byte-identically to a status payload without the member. It carries one additive
 optional `park` fact for an open `peak-window` park of the addressed lane — the
 cause, the park end, the recorded stop instant, and the preservation classification,
 carried verbatim from the park record — absent when no park stands, read through at
-most one additional bounded park-record read. The park fact carries no refusal: on a
-dispatch-owned episode the only refusal on the not-preserved path is budget exhaustion,
-recorded as the delivered terminal exhaustion record and raised as the delivered typed
-question, and the park record carries no refusal member.
+most one additional bounded park-record read. The park fact carries no refusal and
+projects no `recoveryRefusal` member: on a dispatch-owned episode the only refusal on
+the not-preserved path is budget exhaustion, recorded as the delivered terminal
+exhaustion record and raised as the delivered typed question, so neither the park record
+nor the park fact carries a refusal.
 The human form renders `worktreePath=<path>` as the last line only when the record
 carries it, and the park members only when the fact is present. The
 derived values follow four rules:

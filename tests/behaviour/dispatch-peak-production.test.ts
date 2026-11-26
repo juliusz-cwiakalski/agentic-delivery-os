@@ -46,6 +46,7 @@ const withComposition = async (
   label: string,
   config: string,
   body: (harness: ReturnType<typeof createProductionQueueHarness>) => Promise<void>,
+  clock?: { readonly nowMs: () => number; readonly nowIso: () => string },
 ) => {
   const root = makeHarnessHome(label);
   const checkout = makeCheckout(root, "checkout", ORIGIN);
@@ -57,6 +58,7 @@ const withComposition = async (
     label,
     workingDirectory: checkout.directory,
     originUrl: ORIGIN,
+    ...(clock === undefined ? {} : { clock }),
   });
   try {
     await body(harness);

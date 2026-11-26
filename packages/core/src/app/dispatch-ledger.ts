@@ -473,12 +473,6 @@ export const isDispatchLaneRecord = (value: unknown): value is DispatchLaneRecor
   ) {
     return false;
   }
-  if (
-    value.recoveryRefusal !== undefined &&
-    (typeof value.recoveryRefusal !== "string" || value.recoveryRefusal.length === 0)
-  ) {
-    return false;
-  }
   if (value.state === "active")
     return value.lastToken === undefined && value.lastOutcome === undefined;
   if (value.state !== "terminal") return false;

@@ -331,6 +331,10 @@ export const createProductionQueueHarness = (
       ...(options.originUrl === undefined ? {} : { originUrl: options.originUrl }),
     },
     dispatchDelay: options.dispatchDelay ?? (async () => {}),
+    clock: options.clock ?? {
+      nowMs: () => Date.parse("2026-11-08T10:00:00.000Z"),
+      nowIso: () => "2026-11-08T10:00:00.000Z",
+    },
     harnessSpawnRunner: spawnRunner,
     harnessSpawnStarter: streamStarterFromRunner(spawnRunner),
     credentials: resolvingCredentials,

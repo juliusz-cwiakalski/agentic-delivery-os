@@ -699,3 +699,23 @@ notes:
       @coder as a false positive, not a new identity."
     type: info
     date: "2026-11-26"
+  - text: "Review 3 FAIL (code-review/review-iter-3.yaml; 13 findings: 0 high,
+      4 medium, 8 low, 1 info). The whole bun test battery is green at HEAD
+      (13,039 tests, 0 fail); the failure is test evidence and record. Path to
+      PASS, applied under the owner's full-speed instruction: (1)
+      dispatch-peak-lease-park.test.ts opens the window across at least two TTLs
+      and asserts renewals plus a refused second dispatch; (2)
+      dispatch-peak-production.test.ts injects the composer clock; (3) the
+      test-spec page lists only the two real production tests and drops the
+      phantom between-iterations and no-spawn/resume claims; (4) this record
+      lists each finding's true state; (5) the failed-resume summary no longer
+      says 'resumed at'. Also: the status park fact `recoveryRefusal` write is
+      retired (the non-terminal refusal is retired), and the retired-arm test in
+      dispatch-peak-recovery is removed. Accepted follow-ups, not closed: F-6
+      (evidence tokens), F-7 (citation drift), F-8 (comment nits), F-9 (rule
+      fixtures refused by the production parser), F-12 (renewal append plus
+      ledger scan compaction). Iteration-1 F-14 accepted; F-21(g) follow-up. The
+      review cap is exceeded once under the owner's live full-speed instruction;
+      if review 4 is FAIL, the change is parked and handed back."
+    type: info
+    date: "2026-11-26"

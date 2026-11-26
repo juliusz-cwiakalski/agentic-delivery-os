@@ -132,27 +132,6 @@ describe("TC-PEAK-011 the status park fact and the three probe arms", () => {
     expect(data.park?.until).toBe(UNTIL);
   });
 
-  test("the terminal lane record's recoveryRefusal is projected onto the park fact", () => {
-    const fixture = storeOf([
-      laneRecord({
-        state: "terminal",
-        lastToken: "failed",
-        lastOutcome: "failed",
-        recoveryRefusal: "dispatch.resume-uneconomical",
-      }),
-      parkRecord(),
-    ]);
-    const result = readOperatorStatus({
-      store: fixture.store,
-      repository: REPOSITORY,
-      ref: "GH-413",
-      probe: () => "dead",
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.data.park?.recoveryRefusal).toBe("dispatch.resume-uneconomical");
-  });
-
   test("the park fact is absent, never null, when no park stands", () => {
     const { data } = statusOf("live", false);
     expect(Object.hasOwn(data, "park")).toBe(false);
