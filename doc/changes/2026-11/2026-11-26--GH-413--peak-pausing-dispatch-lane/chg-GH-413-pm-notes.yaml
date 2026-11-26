@@ -207,6 +207,20 @@ decisions:
       correction was already in spec v1.3 and TDR-0078; it is recorded here so
       the pm-notes no longer carry the earlier lease-id rationale."
     date: "2026-11-26"
+  - text: "RESUMED after the provider limit reset, under the owner's live
+      instruction (newest #413 comment, issuecomment-7194705060, 2026-11-26). The
+      park was a provider token limit, not an artifact defect. The hand-back reset
+      time was reported in UTC+8 (2026-11-27T00:00:54); the real reset was
+      2026-11-26T16:00:54Z. DoR iteration 6 runs under the existing authorization
+      for the iteration-4 findings as decided there (pre-session refusal for an
+      un-expired standing park, one registered dispatch-family code, exit 2, no
+      override) and for the literal iteration-5 fixes already applied. If
+      iteration 6 is NOT_READY, park and hand back with its findings; if READY,
+      continue through delivery, system_spec_update, review_fix, quality_gates,
+      dod_check and pr_creation on this branch and stop at pr_creation. No
+      regeneration of the spec or test plan; no scope change; the three delivery
+      notes still apply; the records stay Proposed; no model assignment."
+    date: "2026-11-26"
 open_questions: []
 blockers: []
 notes:
@@ -342,10 +356,12 @@ notes:
       were corrected literally to `dispatch.resume-parked` (platform-provider,
       exit 2, transient/retryable, one owner-authorised row), the 19-page
       reconciliation set, and the NFR-8 exception. DoR iteration 6 could not run:
-      the readiness reviewer hit the provider's 5-hour usage limit, which resets
-      at 2026-11-27T00:00:54Z. READY is not established, so the change is PARKED
-      again. No source delivery, no pull request. Artifacts are committed at
-      8a086e09 (readiness-iter-5 is untracked on disk)."
+      the readiness reviewer hit the provider's 5-hour token limit. The provider
+      reported the reset as 2026-11-27T00:00:54 in UTC+8; the real reset was
+      2026-11-26T16:00:54Z. READY is not established, so the change was PARKED
+      again. This was a provider limit, not an artifact defect: nothing else is
+      wrong with the change. No source delivery, no pull request. Artifacts are
+      committed at 8a086e09 (readiness-iter-5 is untracked on disk)."
     type: blocker
     date: "2026-11-26"
   - text: "Retro: the gate found real, code-level defects on every pass, including
