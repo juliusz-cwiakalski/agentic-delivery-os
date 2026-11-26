@@ -334,3 +334,26 @@ notes:
       this change's terminal state for the run; no pull request exists."
     type: info
     date: "2026-11-26"
+  - text: "Resumed under the owner's delegated authority (newest #413 comment). DoR
+      iteration 5 ran and returned NOT_READY on one substantive finding: the
+      refusal identity/exit had to be the window refusal's exit code (2) and,
+      because `provider.profile.unavailable` does not fit, one new
+      dispatch-family code with a resume-after-`until` remediation. The artifacts
+      were corrected literally to `dispatch.resume-parked` (platform-provider,
+      exit 2, transient/retryable, one owner-authorised row), the 19-page
+      reconciliation set, and the NFR-8 exception. DoR iteration 6 could not run:
+      the readiness reviewer hit the provider's 5-hour usage limit, which resets
+      at 2026-11-27T00:00:54Z. READY is not established, so the change is PARKED
+      again. No source delivery, no pull request. Artifacts are committed at
+      8a086e09 (readiness-iter-5 is untracked on disk)."
+    type: blocker
+    date: "2026-11-26"
+  - text: "Retro: the gate found real, code-level defects on every pass, including
+      the owner's own decision being encoded with the wrong exit code (1 instead
+      of 2) and a queue-family identity instead of the authorised dispatch-family
+      row. The lesson is to run the delivered error projection against the exact
+      owner wording before writing the identity, not to substitute a plausible
+      delivered row. The final blocker is environmental: the reviewer's usage
+      limit, not an artifact defect."
+    type: retro
+    date: "2026-11-26"
