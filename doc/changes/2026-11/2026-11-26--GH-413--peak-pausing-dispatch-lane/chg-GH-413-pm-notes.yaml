@@ -6,9 +6,9 @@ branch: feat/GH-413/peak-pausing-dispatch-lane
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: null, completed: 2026-11-26T10:03:01.734Z }
-  specification: { started: null, completed: 2026-11-26T11:51:17.862Z }
-  test_planning: { started: null, completed: 2026-11-26T11:58:47.344Z }
-  delivery_planning: { started: null, completed: 2026-11-26T12:30:41.178Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -114,6 +114,54 @@ decisions:
       relaxed for a parked lane); the episode is removed from plan phase 7
       doneArtifacts."
     date: "2026-11-26"
+  - text: "DoR iter-2 NOT_READY remediation, decision 9 (pre-session already-open
+      window): move the already-open-at-start case to OUT OF SCOPE with a
+      declared bounded exposure. A dispatch admitted while its nominated
+      profile's window is already open spawns and is parked at the first
+      observation, so at most one observation cadence of billing precedes the
+      park. The KPI is re-based to 'no billable call after the first
+      observation; the residual is bounded by one cadence'. This removes the
+      unrepresentable pre-session park (no session, no lane record, no honest
+      `resumed` frame) without inventing a closed value or a new record. The
+      ticket's AC1 (a running lane when the window opens) is unaffected."
+    date: "2026-11-26"
+  - text: "DoR iter-2 remediation, decision 10 (`dispatch stop` hand-off): the
+      running predicate adds 'no open peak-window park stands for the ref'; an
+      already-parked lane is refused `queue.precondition.unmet` naming the
+      state. The command resolves the session from the lane record (tree root =
+      recorded worktree path when present, otherwise the repository's main
+      checkout), terminates, and writes the complete park record only after a
+      confirmed terminate; an unconfirmed terminate is a classified not-running
+      refusal and writes nothing. The owning invocation, when collect resolves,
+      re-reads the park record for up to one observation cadence; an open
+      peak-window park for its ref sends it into the wait/resume path instead of
+      classifying terminal. This closes the race without a request record."
+    date: "2026-11-26"
+  - text: "DoR iter-2 remediation, decision 11 (lease cadence relation): the renewal
+      cadence is `min(lane.liveness-interval, queue.lease-ttl / 2)`, so the
+      lease cannot go stale between renewals even when the liveness interval is
+      at or above the TTL. No new key; the relation is stated and tested."
+    date: "2026-11-26"
+  - text: "DoR iter-2 remediation, decision 12 (non-terminal recovery refusal): the
+      invocation returns one classified result with the park standing and the
+      refusal in its episode fact; it does not keep waiting or renewing after
+      returning. The lease is released on return, so the operator resume path
+      can take the ref. AC-F4-3 is reworded to the returned result."
+    date: "2026-11-26"
+  - text: "DoR iter-2 remediation, decision 13 (overlapping windows): the park end
+      is the effective end of the first open window, which is what the delivered
+      `peakWindowOpenAt` returns. Overlapping windows produce consecutive
+      episodes, each exactly-once; the spec's 'single contiguous union' promise
+      is removed. This composes the delivered decision layer unchanged."
+    date: "2026-11-26"
+  - text: "DoR iter-2 remediation, decision 14 (minor findings): the lag is derived
+      from the recorded instants with the injected clock as the measurement
+      basis; the nomination is on every active lane record (first acquisition
+      and every restart); a disallowed cause or a missing `--until` is
+      `input.value.rejected` at the grammar boundary; the test plan's phase
+      column is renumbered to the plan's 1-8 phases and names the lease-liveness
+      file."
+    date: "2026-11-26"
 open_questions: []
 blockers: []
 notes:
@@ -157,5 +205,25 @@ notes:
       The gate cost one remediation cycle and prevented a delivery that would
       have passed its own fixtures while failing the ticket's incident. Keep the
       gate adversarial."
+    type: retro
+    date: "2026-11-26"
+  - text: "DoR gate iteration 2: NOT_READY (readiness-review/readiness-iter-2.md),
+      10 findings (1 critical, 5 major, 3 minor, 1 nit). Twelve of the fifteen
+      iteration-1 findings are resolved. The new blocking set is code-level: the
+      `dispatch stop` hand-off race and already-parked double-park, the
+      pre-session park that the delivered layer cannot represent, the
+      liveness-interval/lease-ttl relation, the non-terminal recovery refusal
+      contradiction, the overlap union versus the delivered first-window end,
+      and the test-plan phase numbering. Reopened the three artifact phases for
+      iteration 3 with the decisions above."
+    type: blocker
+    date: "2026-11-26"
+  - text: "Retro: iteration 2's findings were all traceable to iteration 1's
+      remediation inventing behavior the delivered layer does not have (a
+      pre-session park, a contiguous union, a session-less resume). The lesson
+      for the next gate cycle: when a remediation adds a case, first prove the
+      delivered seam can represent it; otherwise declare it out of scope with a
+      bounded residual. The pre-session case is now out of scope with a
+      one-cadence exposure."
     type: retro
     date: "2026-11-26"
