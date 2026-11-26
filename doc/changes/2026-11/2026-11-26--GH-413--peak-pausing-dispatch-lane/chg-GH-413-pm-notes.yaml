@@ -554,3 +554,18 @@ notes:
       config a third time. No spec/test-plan/plan edits."
     type: info
     date: "2026-11-26"
+  - text: "Targeted remediation after doc-syncer reconciliation: the terminal
+      lane record now carries the optional recoveryRefusal, written only on the
+      non-terminal window-end refusal and read by dispatch status from the same
+      bounded lane read (no second park record, no extra status read); the
+      production lanes composition resolves peakWatchComposed lazily, so a
+      command that never reads lanes performs no extra configuration
+      acquisition (identity-override read count restored); the dispatch and
+      architecture planning pages state the dispatch-owned watch and the
+      dispatch.resume-parked admission refusal. Affected tests: status-park,
+      peak-recovery, status-brief-park-fields, identity-override, error-table,
+      error-table-sync, config-lane, config-schema, peak-setting, dispatch
+      contract/operator/inventory, the peak suites, stop suites, help/reference,
+      parity lane resume, operator status, and dispatch resume; all green."
+    type: info
+    date: "2026-11-26"
