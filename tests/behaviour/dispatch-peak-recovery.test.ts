@@ -1,0 +1,123 @@
+/**
+ * TC-PEAK-009 — a not-preserved episode routes to the delivered interrupted-
+ * lane recovery, and a non-terminal refusal returns one classified result while
+ * the lane stays parked (GH-413 F-4, AC-F4-2, AC-F4-3, NFR-4, DEC-18).
+ */
+import { describe, expect, test } from "bun:test";
+import { evaluateDispatchPeakResume } from "../../packages/core/src/app/dispatch-peak-pause";
+import type { QueueParkRecord } from "../../packages/core/src/contracts/index";
+import { createPeakScenario } from "../fixtures/dispatch/golden/harness";
+import { atUtcHour, RULES_BY_PROFILE } from "../fixtures/provider/profile/gh413-rules";
+
+const notPreserved = (): QueueParkRecord => ({
+  schema: "delivery.queue.park.v1",
+  ref: "GH-413",
+  cause: "peak-window",
+  conditionType: "provider-window",
+  condition: { type: "provider-window", expiresAt: "2026-11-12T10:00:00.000Z" },
+  recheckMs: 60_000,
+  evaluatedAt: "2026-11-12T06:30:00.000Z",
+  recoveryState: "parked",
+  providerProfile: "delivery",
+  until: "2026-11-12T10:00:00.000Z",
+  graceDeadline: "2026-11-12T06:30:20.000Z",
+  windowEnd: "2026-11-12T10:00:00.000Z",
+  stoppedAt: "2026-11-12T06:30:20.000Z",
+  preservation: "session-state-not-preserved",
+  episodeId: "episode-1",
+  recordedAt: "2026-11-12T06:30:20.000Z",
+});
+
+const evaluate = (input: {
+  readonly restartCount: number;
+  readonly prefillCost?: number | null;
+  readonly uniqueProgress?: number | null;
+  readonly reenter?: boolean;
+}) => {
+  const reentered: number[] = [];
+  const escalated: string[] = [];
+  const recovered: QueueParkRecord[] = [];
+  return {
+    reentered,
+    escalated,
+    recovered,
+    run: evaluateDispatchPeakResume({
+      ref: "GH-413",
+      parks: () => [notPreserved()],
+      rulesFor: () => RULES_BY_PROFILE.delivery,
+      nowMs: atUtcHour(10),
+      nowIso: () => "2026-11-12T10:00:00.000Z",
+      holdActive: () => false,
+      branch: "feat/GH-413/test",
+      restartCount: input.restartCount,
+      restartBound: 3,
+      economics: {
+        prefillCost: input.prefillCost ?? 0,
+        uniqueProgress: input.uniqueProgress ?? 1,
+      },
+      appendRecovery: (record) => {
+        recovered.push(record);
+        return true;
+      },
+      resumeSession: async () => true,
+      reenter: async ({ ordinal }) => {
+        reentered.push(ordinal);
+        return input.reenter ?? true;
+      },
+      escalate: ({ code }) => {
+        escalated.push(code);
+      },
+    }),
+  };
+};
+
+describe("TC-PEAK-009 the not-preserved recovery consumes one ordinal and emits no resumed", () => {
+  test("an admitted recovery re-enters with one ordinal and appends the delivered recovery record", async () => {
+    const { run, reentered, recovered } = evaluate({ restartCount: 0 });
+    const outcome = await run;
+    expect(outcome.outcome).toBe("recovered");
+    expect(reentered).toEqual([1]);
+    expect(recovered).toHaveLength(1);
+    expect(recovered[0]?.recoveryState).toBe("recovered");
+    expect(recovered[0]?.sessionRef).toBeUndefined();
+  });
+
+  test("budget exhaustion escalates the delivered terminal refusal", async () => {
+    const { run, escalated, recovered } = evaluate({ restartCount: 3 });
+    const outcome = await run;
+    expect(outcome.outcome).toBe("refused");
+    if (outcome.outcome !== "refused") return;
+    expect(outcome.terminal).toBe(true);
+    expect(outcome.code).toBe("dispatch.restart-budget-exceeded");
+    expect(escalated).toEqual(["dispatch.restart-budget-exceeded"]);
+    expect(recovered).toHaveLength(0);
+  });
+});
+
+describe("TC-PEAK-009 a non-terminal recovery refusal returns one classified result", () => {
+  test("the engine returns the delivered token, names the refusal and the park end, and releases the lease", async () => {
+    const { peak, scenario } = createPeakScenario({
+      label: "gh413-recovery-refusal",
+      startMs: atUtcHour(6, 30),
+      rules: { ...RULES_BY_PROFILE },
+      nomination: "delivery",
+      preservation: "session-state-not-preserved",
+      restartCount: 0,
+      restartBound: 3,
+      prefillCost: 100,
+      uniqueProgress: 0,
+    });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-413", "--json"]);
+      expect(run.exit).toBe(1);
+      expect(run.envelope?.data?.result).toBe("failed");
+      expect(run.envelope?.data?.error?.code).toBe("dispatch.resume-uneconomical");
+      expect(run.envelope?.data?.lastMessage).toContain("parked until 2026-11-12T10:00:00.000Z");
+      expect(peak.reentered()).toHaveLength(0);
+      expect(peak.resumed()).toBe(0);
+      expect(scenario.calls.releases.length).toBeGreaterThan(0);
+    } finally {
+      scenario.dispose();
+    }
+  });
+});

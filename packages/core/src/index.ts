@@ -87,9 +87,19 @@ export {
   type DispatchRunResult,
   type DispatchTruthReads,
   type DispatchWorktreeProvisioning,
+  type DispatchPeakWatchPorts,
   dispatchRenewalCadenceMs,
   runDispatch,
 } from "./app/dispatch.js";
+export {
+  type DispatchPeakObservation,
+  type DispatchPeakResume,
+  type DispatchPeakRulesLookup,
+  type DispatchPeakZoneFactsFor,
+  evaluateDispatchPeakResume,
+  observeDispatchPeak,
+  standingPeakPark,
+} from "./app/dispatch-peak-pause.js";
 export {
   type DispatchAttemptsReadInput,
   type DispatchAttemptsReadPorts,

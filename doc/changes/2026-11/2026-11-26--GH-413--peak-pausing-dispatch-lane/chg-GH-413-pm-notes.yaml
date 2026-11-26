@@ -442,3 +442,19 @@ notes:
       content-inventory, decision-record)."
     type: info
     date: "2026-11-26"
+  - text: "Plan phase 2 complete (lease liveness through the run and the park):
+      commit c1a8ae99. The run path renews the existing repository lease through
+      the delivered same-holder renewed arm at
+      min(lane.liveness-interval, queue.lease-ttl / 2), keyed on the invocation's
+      own last heartbeat write, as one fenced check-plus-append; a no-op appends
+      nothing, surfaces lease:not-owned, and a lost-lease invocation takes no
+      owner act and returns instead of restarting. Tests:
+      dispatch-lease-liveness 9 pass / 0 fail (cadence, several TTL crossings,
+      interval-above-TTL, no-renewal stale takeover control, heartbeat
+      ownership, re-dispatch with the preserved lease id, owner-hold source
+      guard, renewal-failure evidence and retry, lost-lease return); the
+      structure/decision pins 39 pass / 0 fail; the delivered dispatch watch,
+      determinism, single-flight, restart-budget and harness-lease controls 26
+      pass / 0 fail."
+    type: info
+    date: "2026-11-26"

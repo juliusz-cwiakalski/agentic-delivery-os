@@ -60,6 +60,7 @@ export const LANE_KEYS = [
   "lastToken",
   "lastOutcome",
   "worktreePath",
+  "providerProfile",
 ] as const;
 
 /** The attempt record key set (the delivered field set; no field may be added). */
@@ -98,7 +99,7 @@ export const CONTRACT_BASELINE: ContractBaseline = {
     "headless-mode-limitation",
   ],
   harnessKinds: ["opencode", "claude-code"],
-  errorRowCount: 172,
+  errorRowCount: 173,
   tokens: [
     ["merged", "success"],
     ["blocked", "success"],

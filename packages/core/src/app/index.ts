@@ -87,6 +87,7 @@ export {
   boundLastMessage,
   type DispatchAdmission,
   type DispatchLeaseClaim,
+  type DispatchPeakWatchPorts,
   type DispatchPorts,
   type DispatchRunResult,
   type DispatchTruthReads,
@@ -94,6 +95,15 @@ export {
   dispatchRenewalCadenceMs,
   runDispatch,
 } from "./dispatch.js";
+export {
+  type DispatchPeakObservation,
+  type DispatchPeakResume,
+  type DispatchPeakRulesLookup,
+  type DispatchPeakZoneFactsFor,
+  evaluateDispatchPeakResume,
+  observeDispatchPeak,
+  standingPeakPark,
+} from "./dispatch-peak-pause.js";
 export {
   type DispatchAttemptsReadInput,
   type DispatchAttemptsReadPorts,

@@ -160,6 +160,7 @@ export const RESERVED_TWO_SEGMENT_CODES = new Set([
   "dispatch.resume-uneconomical",
   // GH-239 pins the dispatch state-unverified identity exactly; it is a two-segment code.
   "dispatch.state-unverified",
+  "dispatch.resume-parked",
   // GH-227 pins these three commit identities exactly; they remain exact
   // declared codes, not a pattern widening.
   "commit.staging-blocked-untracked",

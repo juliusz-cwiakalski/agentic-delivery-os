@@ -699,6 +699,13 @@ export type DispatchLaneRecord = {
    * (DEC-8); nothing migrates (spec §19).
    */
   readonly worktreePath?: string;
+  /**
+   * The nominated profile recorded at admission (GH-413 DM-2, DEC-16), written
+   * on every `active` record this invocation appends. Absent on pre-change
+   * records and never fabricated or inferred; a pre-change record is not
+   * window-pausable.
+   */
+  readonly providerProfile?: string;
   readonly recordedAt: string;
 };
 

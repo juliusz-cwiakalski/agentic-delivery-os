@@ -117,6 +117,7 @@ describe("TC-CONTRACT-001 the closed dispatch surface is unchanged", () => {
         .sort();
     expect(codes("dispatch.")).toEqual([
       "dispatch.restart-budget-exceeded",
+      "dispatch.resume-parked",
       "dispatch.resume-uneconomical",
       "dispatch.session.spawn-failed",
       "dispatch.state-unverified",
@@ -172,6 +173,7 @@ describe("TC-CONTRACT-001 the closed dispatch surface is unchanged", () => {
       "dispatch.resume-uneconomical": "user-validation",
       "dispatch.session.spawn-failed": "user-validation",
       "dispatch.state-unverified": "platform-provider",
+      "dispatch.resume-parked": "platform-provider",
     });
     expect(projections("queue.single-flight")).toEqual({
       "queue.single-flight": "user-validation",
@@ -246,6 +248,7 @@ describe("GH-386 the closed vocabulary stays closed (TC-FAIL-003)", () => {
         .sort();
     expect(codes("dispatch.")).toEqual([
       "dispatch.restart-budget-exceeded",
+      "dispatch.resume-parked",
       "dispatch.resume-uneconomical",
       "dispatch.session.spawn-failed",
       "dispatch.state-unverified",

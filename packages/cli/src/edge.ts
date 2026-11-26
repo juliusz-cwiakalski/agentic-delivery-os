@@ -7931,6 +7931,8 @@ export type DispatchComposition = {
   readonly renewLease?: DispatchPorts["renewLease"];
   /** The resolved `queue.lease-ttl` the renewal cadence derives from. */
   readonly leaseTtlMs?: number;
+  /** The dispatch-owned window watch (GH-413 F-1..F-4); absent keeps no watch. */
+  readonly peak?: DispatchPorts["peak"];
   readonly releaseLease: (ref: string, cause: "completed" | "aborted") => boolean;
   /**
    * The provision-after-lease binding (GH-404 F-2, F-8; TC-WT-003,
@@ -8408,6 +8410,7 @@ export const createDispatchCommandRuntime = (
           ? {}
           : { renewLease: composition.renewLease }),
         ...(composition.leaseTtlMs === undefined ? {} : { leaseTtlMs: composition.leaseTtlMs }),
+        ...(composition.peak === undefined ? {} : { peak: composition.peak }),
         releaseLease: (cause) => composition.releaseLease(input.ref, cause),
         ...(provisionWorktree === undefined
           ? {}

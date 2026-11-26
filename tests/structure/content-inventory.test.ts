@@ -256,6 +256,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "readOperatorDelivering",
     "readOperatorStatus",
   ],
+  "core/src/app/dispatch-peak-pause.ts": [
+    "evaluateDispatchPeakResume",
+    "observeDispatchPeak",
+    "standingPeakPark",
+  ],
   "core/src/app/dispatch-log-sink.ts": [
     "createDispatchLogSink",
     "dispatchLogsDirectoryName",

@@ -106,12 +106,13 @@ describe("GH-347 the dispatch lane record is declared once", () => {
       "lastToken",
       "lastOutcome",
       "worktreePath",
+      "providerProfile",
       "recordedAt",
     ]);
     for (const field of fields ?? []) {
       expect(field.readonly, `${field.name} must be readonly`).toBe(true);
       const optional =
-        field.name === "lastToken" || field.name === "lastOutcome" || field.name === "worktreePath";
+        field.name === "lastToken" || field.name === "lastOutcome" || field.name === "worktreePath" || field.name === "providerProfile";
       expect(field.optional, `${field.name} optional`).toBe(optional);
     }
     // No prompt, transcript, diff, credential, or provider payload key exists.

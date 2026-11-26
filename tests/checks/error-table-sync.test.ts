@@ -1083,8 +1083,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 138) {
-    failures.push(`table length ${live.length} != baseline + 138 (${BASELINE_ROWS.length + 138})`);
+  if (live.length !== BASELINE_ROWS.length + 139) {
+    failures.push(`table length ${live.length} != baseline + 139 (${BASELINE_ROWS.length + 139})`);
   }
   return failures;
 };
@@ -1116,7 +1116,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
       harness: 13,
       spend: 1,
       queue: 7,
-      dispatch: 4,
+      dispatch: 5,
     });
   });
 
@@ -1164,7 +1164,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 138,
+      BASELINE_ROWS.length + 139,
     );
   });
 
@@ -1187,7 +1187,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 138);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 139);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1778,7 +1778,7 @@ describe("TC-BLK-007 blockers family mutations fail by name", () => {
 
 /**
  * TC-COORD-082 (GH-241): the six coordinator rows bind two-way against the
- * documented table, the total is 172 (GH-292 added the two queue lifecycle
+ * documented table, the total is 173 (GH-292 added the two queue lifecycle
  * identities, GH-309 the three group-surface identities, GH-309 the moved
  * three repos flat identities, GH-287 the three action-registry identities,
  * GH-298 the three steer identities, GH-299 the one metrics identity,
@@ -1796,11 +1796,11 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     "coordinator.wake.delivery-failed",
   ] as const;
 
-  test("the live tree is green at 172 entries and 172 documented rows", async () => {
+  test("the live tree is green at 173 entries and 173 documented rows", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(172);
-    expect(result.counts.documentedRows).toBe(172);
+    expect(result.counts.sourceEntries).toBe(173);
+    expect(result.counts.documentedRows).toBe(173);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     expect(result.counts.recognizedS3).toBeGreaterThan(0);
     expect(result.counts.corpusRows).toBeGreaterThan(0);
@@ -1811,7 +1811,7 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     for (const code of COORDINATOR_CODES) {
       expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
     }
-    expect(doc).toContain("172 identities");
+    expect(doc).toContain("173 identities");
   });
 
   test("removing a documented coordinator row fails naming the code", async () => {
@@ -1870,22 +1870,22 @@ describe("GH-350 the provider register moves as one edit-set", () => {
     }
   });
 
-  test("both counts hold 172, the delivered-rows metric 171, the arithmetic +138 and the allowlist 71", async () => {
+  test("both counts hold 173, the delivered-rows metric 172, the arithmetic +139 and the allowlist 72", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(172);
-    expect(result.counts.documentedRows).toBe(172);
+    expect(result.counts.sourceEntries).toBe(173);
+    expect(result.counts.documentedRows).toBe(173);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     const entries = ERROR_TABLE as readonly ErrorTableEntry[];
-    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(171);
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(71);
+    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(172);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(72);
     const doc = readFile(ROOT, DOC);
-    expect(doc).toContain("172 machine identities");
-    expect(doc).toContain("the same 172 identities");
+    expect(doc).toContain("173 machine identities");
+    expect(doc).toContain("the same 173 identities");
     expect(doc).toContain("delivered-rows metric");
-    expect(doc).toContain("171");
-    expect(doc).toContain("BASELINE_ROWS.length + 138");
-    expect(doc).toContain("exact two-segment allowlist of 71 declared identities");
+    expect(doc).toContain("172");
+    expect(doc).toContain("BASELINE_ROWS.length + 139");
+    expect(doc).toContain("exact two-segment allowlist of 72 declared identities");
   });
 
   test("the corpus holds 83 rows: 58 true-positive and 25 false-positive, one resolving row per new code", () => {
@@ -2000,9 +2000,9 @@ describe("TC-SYNC-001 every additive row is emitted by a named branch", () => {
  * `TC-FLOOR-001..005`; this block re-asserts the identity-and-count floor those
  * cases share, not their oracles.
  */
-const FLOOR_IDENTITY_TOTAL = 172;
-const FLOOR_DELIVERED_TOTAL = 171;
-const FLOOR_ALLOWLIST_TOTAL = 71;
+const FLOOR_IDENTITY_TOTAL = 173;
+const FLOOR_DELIVERED_TOTAL = 172;
+const FLOOR_ALLOWLIST_TOTAL = 72;
 
 const FLOOR_IDENTITY_SITES = [
   "tests/checks/error-table-sync.test.ts",
