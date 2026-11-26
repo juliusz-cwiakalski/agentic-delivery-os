@@ -293,3 +293,9 @@ notes:
       park, which is the only branch the delivered pass can express."
     type: retro
     date: "2026-11-26"
+  - text: "Hand-back recorded on the tracker: blocker comment posted at
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/413#issuecomment-7194494377
+      and the issue assigned to the owner, state open. The parked hand-back is
+      this change's terminal state for the run; no pull request exists."
+    type: info
+    date: "2026-11-26"
