@@ -77,6 +77,7 @@ import {
   foldDispatchDivergences,
   readDispatchDivergences,
 } from "./dispatch-ledger.js";
+import type { DispatchLeaseRenewalOutcome } from "./queue.js";
 
 /** `f` failed, `su` state-unverified, `mr` max-restarts, `po` pr-open,
  * `pou` pr-open-unverified — the few tokens this module names. */
@@ -88,7 +89,7 @@ type DispatchToken = DeliveryResultToken;
 
 /** One lease claim outcome through the scheduling engine. */
 export type DispatchLeaseClaim =
-  | { readonly ok: true; readonly leaseId: string }
+  | { readonly ok: true; readonly leaseId: string; readonly heartbeatAt?: string }
   | {
       readonly ok: false;
       readonly code: string;
@@ -107,6 +108,17 @@ export type DispatchCadenceWait = {
   readonly promise: Promise<void>;
   readonly cancel: () => void;
 };
+
+/**
+ * The derived lease renewal cadence (GH-413 DEC-13, NFR-10):
+ * `min(lane.liveness-interval, queue.lease-ttl / 2)`, so the heartbeat cannot
+ * reach the TTL between renewals even when the liveness interval is at or above
+ * it.
+ */
+export const dispatchRenewalCadenceMs = (
+  livenessIntervalMs: number,
+  leaseTtlMs: number,
+): number => Math.min(livenessIntervalMs, Math.floor(leaseTtlMs / 2));
 
 /** The delivered terminal restart-budget exhaustion append (AC-F3-2). */
 export type DispatchExhaustionRequest = {
@@ -304,6 +316,18 @@ export type DispatchPorts = {
   readonly readTruth: () => Promise<DispatchTruthReads>;
   readonly claimLease: () => DispatchLeaseClaim | Promise<DispatchLeaseClaim>;
   readonly releaseLease: (cause: "completed" | "aborted") => boolean;
+  /**
+   * The run-path lease renewal (GH-413 DEC-13, DM-9): the delivered same-holder
+   * `renewed` arm keyed on the invocation's own last heartbeat write. Absent
+   * keeps the delivered no-renewal one-shot path byte-for-byte.
+   */
+  readonly renewLease?: (input: {
+    readonly ref: string;
+    readonly repository: string;
+    readonly expectedHeartbeatAt: string;
+  }) => DispatchLeaseRenewalOutcome | Promise<DispatchLeaseRenewalOutcome>;
+  /** The resolved `queue.lease-ttl` the renewal cadence derives from. */
+  readonly leaseTtlMs?: number;
   readonly phaseLedger: DispatchPhaseLedger;
   /**
    * The admission precondition: resolves the truth-read credential and performs
@@ -824,6 +848,44 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
   }
 
   let releaseCause: "completed" | "aborted" = "aborted";
+  let leaseHeartbeatAt = claimed.heartbeatAt;
+  let leaseLost = false;
+  let leaseRenewalFailure: string | undefined;
+  let lastRenewalAtMs =
+    claimed.heartbeatAt === undefined ? Date.parse(ports.nowIso()) : Date.parse(claimed.heartbeatAt);
+  const renewalCadenceMs = dispatchRenewalCadenceMs(
+    ports.livenessIntervalMs ?? 30_000,
+    ports.leaseTtlMs ?? 90_000,
+  );
+  /**
+   * Renew at most once per renewal cadence through the delivered path
+   * (DEC-13): a no-op when the live lease's latest heartbeat is not this
+   * invocation's own last write, and never an acquire, takeover, or displace.
+   */
+  const maybeRenewLease = async (): Promise<void> => {
+    const renew = ports.renewLease;
+    if (renew === undefined || leaseHeartbeatAt === undefined || leaseLost) return;
+    const nowMs = Date.parse(ports.nowIso());
+    if (!Number.isFinite(nowMs)) return;
+    if (Number.isFinite(lastRenewalAtMs) && nowMs - lastRenewalAtMs < renewalCadenceMs) return;
+    lastRenewalAtMs = nowMs;
+    const outcome = await renew({
+      ref: ports.ref,
+      repository: ports.repository,
+      expectedHeartbeatAt: leaseHeartbeatAt,
+    });
+    if (outcome.ok) {
+      leaseHeartbeatAt = outcome.heartbeatAt;
+      return;
+    }
+    if ("result" in outcome) {
+      leaseLost = true;
+      return;
+    }
+    // A renewal failure is retried at the next cadence and surfaced as bounded
+    // lease evidence; the run does not silently continue on a stale lease.
+    leaseRenewalFailure = outcome.code;
+  };
   try {
     // The lane's worktree provisioning (GH-404 F-2, TC-WT-003): strictly after
     // the lease claim — the lease-first order is this engine's own sequence
@@ -926,6 +988,8 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       // the lane-append disclosure, so parity evidence is never truncated.
       const attemptEvidenceRefs = [
         ...(laneAppendFailed ? ["lane:append-failed"] : []),
+        ...(leaseLost ? ["lease:not-owned"] : []),
+        ...(leaseRenewalFailure === undefined ? [] : ["lease:renewal-failed"]),
         ...(input.pushRef === undefined ? [] : [input.pushRef]),
         ...input.evidenceRefs,
       ].slice(0, DISPATCH_MAX_EVIDENCE_REFS);
@@ -1180,17 +1244,38 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         watching = true;
         let stopped = false;
         let cancelWait: (() => void) | undefined;
+        let lastObservedAtMs: number | undefined;
+        const wakeCadenceMs =
+          ports.renewLease === undefined ? ports.livenessIntervalMs : renewalCadenceMs;
+        const observationDue = (): boolean => {
+          // Without a renewal port every wake observes exactly as delivered.
+          if (ports.renewLease === undefined) return true;
+          const nowMs = Date.parse(ports.nowIso());
+          if (
+            lastObservedAtMs === undefined ||
+            !Number.isFinite(nowMs) ||
+            nowMs - lastObservedAtMs >= (ports.livenessIntervalMs ?? 0)
+          ) {
+            lastObservedAtMs = nowMs;
+            return true;
+          }
+          return false;
+        };
         watcherDone = (async () => {
           while (!stopped) {
-            let report: Awaited<ReturnType<HarnessSessionPort["liveness"]>>;
-            try {
-              report = await ports.harness.liveness({ handle: session.value });
-            } catch {
-              return;
-            }
+            await maybeRenewLease();
             if (stopped) return;
-            if (report.ok) observeLiveness(livenessReadings(report.value.readings));
-            const wait = ports.waitForCadence?.(ports.livenessIntervalMs ?? 0);
+            if (observationDue()) {
+              let report: Awaited<ReturnType<HarnessSessionPort["liveness"]>>;
+              try {
+                report = await ports.harness.liveness({ handle: session.value });
+              } catch {
+                return;
+              }
+              if (stopped) return;
+              if (report.ok) observeLiveness(livenessReadings(report.value.readings));
+            }
+            const wait = ports.waitForCadence?.(wakeCadenceMs);
             if (wait === undefined) return;
             cancelWait = wait.cancel;
             await wait.promise;
@@ -1252,6 +1337,29 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       const timedOut = evidenceResult.value.timedOut;
       const stall = stalled || timedOut;
       if (stall) {
+        // GH-413 DEC-13, NFR-10: an invocation that no longer holds the lease
+        // performs no owner act on the lane. Its session has ended with the
+        // stall evidence; it does not terminate, restart, or resume, and it
+        // returns one classified result carrying the lost-lease evidence.
+        if (leaseLost) {
+          return record({
+            token: su,
+            outcome: O_FAILED,
+            errorCode: "dispatch.state-unverified",
+            comparison: comparisonFor({
+              token: su,
+              errorCode: "dispatch.state-unverified",
+              reads: staleReads(),
+              urlResolved: false,
+            }),
+            corroboration: buildCorroborationRecord({ token: su }),
+            falseSuccess: false,
+            prUrl: "",
+            urlResolved: false,
+            lastMessage: "the lease was no longer this invocation's; no owner act was taken",
+            evidenceRefs: ["lease:not-owned", ...livenessRefs],
+          });
+        }
         const reads = await ports.readTruth();
         // Terminate BEFORE any restart decision on a capable adapter; an
         // incapable adapter is never asked and (per AC-F5-4) never causes a

@@ -16,6 +16,7 @@ import {
   readActiveLeases,
   readQueueFold,
   releaseQueueLease,
+  renewDispatchLease,
 } from "../../../../packages/core/src/app/index";
 import type { StateStorePort } from "../../../../packages/core/src/contracts/index";
 import { type AuditStoreFixture, makeAuditStore, removeRoot } from "../../state/harness";
@@ -29,6 +30,8 @@ export type SingleFlightStore = {
   readonly store: StateStorePort;
   readonly dispose: () => void;
   readonly nowMs: () => number;
+  /** The injected lease clock (GH-413 TC-PEAK-010): never a wall clock. */
+  readonly setNowMs: (value: number) => void;
 };
 
 export const singleFlightStore = (label: string, ref = "GH-241"): SingleFlightStore => {
@@ -44,10 +47,14 @@ export const singleFlightStore = (label: string, ref = "GH-241"): SingleFlightSt
     });
     if (!declared.ok) throw new Error(`seed failed: ${JSON.stringify(declared)}`);
   }
+  let nowMs = NOW_MS;
   return {
     store: fixture.store,
     dispose: () => removeRoot(fixture.root),
-    nowMs: () => NOW_MS,
+    nowMs: () => nowMs,
+    setNowMs: (value) => {
+      nowMs = value;
+    },
   };
 };
 
@@ -130,6 +137,36 @@ export const activeLease = (single: SingleFlightStore) => {
   if (!read.ok) throw new Error("active lease read failed");
   return read.active;
 };
+
+/** Claim the dispatch lane's lease through the delivered admission path. */
+export const claimLane = (single: SingleFlightStore, ref: string) =>
+  claimDispatchLease(single.store, {
+    ref,
+    nowIso: () => new Date(single.nowMs()).toISOString(),
+    nowMs: single.nowMs,
+    fenceToken: `dispatch-lane-${ref}-${single.nowMs()}`,
+    ttlMs: TTL,
+  });
+
+/** Renew the dispatch lane's lease through the delivered run-path renewal. */
+export const renewLane = (
+  single: SingleFlightStore,
+  input: { readonly ref: string; readonly holder: string; readonly expectedHeartbeatAt: string },
+) =>
+  renewDispatchLease(single.store, {
+    repository: REPO,
+    ref: input.ref,
+    holder: input.holder,
+    expectedHeartbeatAt: input.expectedHeartbeatAt,
+    ttlMs: TTL,
+    nowIso: new Date(single.nowMs()).toISOString(),
+    nowMs: single.nowMs(),
+    fenceToken: `renew-lane-${input.holder}-${single.nowMs()}`,
+  });
+
+/** The second dispatch's admission probe over the same store (TC-PEAK-010). */
+export const secondDispatchRefusal = (single: SingleFlightStore, ref: string) =>
+  claimLane(single, ref);
 
 /** The durable record count for zero-append observations. */
 export const recordCount = (single: SingleFlightStore): number => {

@@ -7923,6 +7923,14 @@ export type DispatchComposition = {
     ref: string,
     repository: string,
   ) => DispatchLeaseClaim | Promise<DispatchLeaseClaim>;
+  /**
+   * The run-path lease renewal (GH-413 DEC-13, DM-9): the delivered same-holder
+   * `renewed` arm keyed on the invocation's own last heartbeat write. Absent
+   * keeps the delivered one-shot no-renewal path.
+   */
+  readonly renewLease?: DispatchPorts["renewLease"];
+  /** The resolved `queue.lease-ttl` the renewal cadence derives from. */
+  readonly leaseTtlMs?: number;
   readonly releaseLease: (ref: string, cause: "completed" | "aborted") => boolean;
   /**
    * The provision-after-lease binding (GH-404 F-2, F-8; TC-WT-003,
@@ -8396,6 +8404,10 @@ export const createDispatchCommandRuntime = (
           ? {}
           : { appendRestart: composition.appendRestart }),
         claimLease: () => composition.claimLease(input.ref, repository),
+        ...(composition.renewLease === undefined
+          ? {}
+          : { renewLease: composition.renewLease }),
+        ...(composition.leaseTtlMs === undefined ? {} : { leaseTtlMs: composition.leaseTtlMs }),
         releaseLease: (cause) => composition.releaseLease(input.ref, cause),
         ...(provisionWorktree === undefined
           ? {}

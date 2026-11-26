@@ -91,6 +91,7 @@ export {
   type DispatchRunResult,
   type DispatchTruthReads,
   type DispatchWorktreeProvisioning,
+  dispatchRenewalCadenceMs,
   runDispatch,
 } from "./dispatch.js";
 export {
@@ -279,11 +280,13 @@ export {
   claimSingleFlightRefusal,
   type DispatchAdmissionRefusal,
   type DispatchLeaseClaimOutcome,
+  type DispatchLeaseRenewalOutcome,
   declareQueueEntry,
   dispatchAdmissionRefusal,
   leaseRecordHeartbeatAgeMs,
   normalizedQueueEdges,
   prioritizeQueueEntry,
+  renewDispatchLease,
   type QueueActiveLeaseRead,
   type QueueClaimOutcome,
   type QueueClaimResult,

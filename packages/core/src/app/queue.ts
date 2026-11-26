@@ -2275,6 +2275,103 @@ export const claimQueueLease = (
 const DISPATCH_FENCE_WAIT_STEP_MS = 1_000;
 
 /**
+ * One dispatch run-path lease renewal outcome (GH-413 DM-9, DEC-13, NFR-10).
+ *
+ * `renewed` carries the landed lease whose heartbeat the invocation may now
+ * remember. `not-owned` is the delivered no-op: the live lease's latest
+ * heartbeat is not this invocation's own last write, so nothing was appended
+ * and nothing was extended. A state failure is surfaced as bounded lease
+ * evidence and retried at the next cadence.
+ */
+export type DispatchLeaseRenewalOutcome =
+  | {
+      readonly ok: true;
+      readonly result: "renewed";
+      readonly heartbeatAt: string;
+      readonly leaseId: string;
+    }
+  | { readonly ok: false; readonly result: "not-owned" }
+  | { readonly ok: false; readonly kind: "state"; readonly code: string };
+
+/**
+ * Renew one held repository lease on the dispatch run path (GH-413 DEC-13,
+ * TDR-0078): the delivered same-holder `renewed` operation over the existing
+ * lease record, preserving the lease identity and acquisition instant.
+ *
+ * The ownership check and the append are one fenced step: inside the fence the
+ * live lease is re-read and its latest heartbeat compared with the heartbeat
+ * this invocation last wrote. A mismatch means a later writer owns the lease,
+ * so the outcome is `not-owned` and nothing is appended. The renewal never
+ * acquires, takes over, or displaces a lease, and it deliberately does not pass
+ * the owner-hold gate, so a parked lane under an active hold keeps renewing.
+ */
+export const renewDispatchLease = (
+  store: StateStorePort,
+  request: {
+    readonly repository: string;
+    readonly ref: string;
+    readonly holder: string;
+    readonly expectedHeartbeatAt: string;
+    readonly ttlMs?: number;
+    readonly nowIso: string;
+    readonly nowMs: number;
+    readonly fenceToken: string;
+  },
+): DispatchLeaseRenewalOutcome => {
+  const acquired = store.acquireFence(request.fenceToken);
+  if (!acquired.ok) {
+    return { ok: false, kind: "state", code: acquired.error.code };
+  }
+  try {
+    const activeRead = readActiveLeases(store, request.nowMs);
+    if (!activeRead.ok) {
+      return { ok: false, kind: "state", code: activeRead.code };
+    }
+    const existing = activeRead.active.find((lease) => lease.repository === request.repository);
+    if (existing === undefined) return { ok: false, result: "not-owned" };
+    if (existing.holder !== request.holder || existing.ref !== request.ref) {
+      return { ok: false, result: "not-owned" };
+    }
+    if (existing.heartbeatAt !== request.expectedHeartbeatAt) {
+      return { ok: false, result: "not-owned" };
+    }
+    const record = newLeaseRecord({
+      operation: "renewed",
+      repository: request.repository,
+      holder: existing.holder,
+      ref: existing.ref,
+      runner: existing.runner,
+      weightClass: existing.weightClass,
+      ttlMs: request.ttlMs ?? existing.ttlMs,
+      nowIso: request.nowIso,
+      acquiredAt: existing.acquiredAt,
+      leaseId: existing.leaseId,
+    });
+    const appended = appendLeaseRecords(store, acquired.value.handle, [
+      {
+        kind: QUEUE_LEASE_RECORD_KIND,
+        recordKey: queueLeaseRecordKey(request.repository),
+        payload: leasePayload(record),
+      },
+    ]);
+    if (!appended.ok) {
+      return appended.kind === "state"
+        ? { ok: false, kind: "state", code: appended.code }
+        : { ok: false, result: "not-owned" };
+    }
+    return {
+      ok: true,
+      result: "renewed",
+      heartbeatAt: record.heartbeatAt,
+      leaseId: record.leaseId,
+    };
+  } finally {
+    store.releaseFence(acquired.value.handle);
+  }
+};
+
+
+/**
  * One dispatch admission outcome (GH-347 API-2, DM-7).
  *
  * The failure always carries its declared error-table kind, so the dispatch
@@ -2282,7 +2379,7 @@ const DISPATCH_FENCE_WAIT_STEP_MS = 1_000;
  * `queue`. `holder` is present on `queue.single-flight`.
  */
 export type DispatchLeaseClaimOutcome =
-  | { readonly ok: true; readonly leaseId: string }
+  | { readonly ok: true; readonly leaseId: string; readonly heartbeatAt: string }
   | {
       readonly ok: false;
       readonly kind: "queue" | "state" | "input";
@@ -2367,7 +2464,12 @@ export const claimDispatchLease = async (
       ...(request.ownerHold === undefined ? {} : { ownerHold: request.ownerHold }),
       noRenewal: true,
     });
-    if (attempt.ok) return { ok: true, leaseId: attempt.value.lease.leaseId };
+    if (attempt.ok)
+      return {
+        ok: true,
+        leaseId: attempt.value.lease.leaseId,
+        heartbeatAt: attempt.value.lease.heartbeatAt,
+      };
     const contention = attempt.kind === "state" && attempt.code === "state.lock.busy";
     if (!contention) return claimRefusalOf(attempt);
     const remaining = ttlMs - waitedMs;

@@ -227,6 +227,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/app/dispatch.ts": [
     "HARNESS_PRESESSION_REFUSAL_CODES",
     "boundLastMessage",
+    "dispatchRenewalCadenceMs",
     "harnessRefusalDetail",
     "runDispatch",
   ],
@@ -2355,6 +2356,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "readQueueParkPass",
     "readQueueParks",
     "readQueueRemovals",
+    "renewDispatchLease",
     "reconcileQueueEntries",
     "recoverQueueParks",
     "releaseQueueLease",

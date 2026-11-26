@@ -430,3 +430,15 @@ notes:
       source delivery and no PR."
     type: info
     date: "2026-11-26"
+  - text: "Plan phase 1 complete (the lane.disable-peak-pausing policy key and the
+      change's changeset): commit a27691a1. The key landed in the typed lane
+      branch with the boolean refusal naming the key, the pin surfaces moved by
+      the one key, and the change's single five-package minor changeset was
+      added before any gate run. Tests: the two release suites 19 pass / 0 fail
+      (privacy-release, changeset-additivity), and the phase-1 config and pin
+      suites 117 pass / 0 fail (config-lane, config-schema,
+      dispatch-peak-setting, dispatch-contract-invariance,
+      operator-contract-invariance, port-contract-inventory,
+      content-inventory, decision-record)."
+    type: info
+    date: "2026-11-26"

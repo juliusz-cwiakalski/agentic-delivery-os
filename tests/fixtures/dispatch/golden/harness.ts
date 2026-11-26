@@ -135,6 +135,12 @@ export type CommandScenarioOptions = {
   readonly killGraceMs?: number;
   /** An injected restart append; the default appends a real economics record. */
   readonly appendRestart?: DispatchPorts["appendRestart"];
+  /** The run-path lease renewal (GH-413 DEC-13); absent keeps no renewal. */
+  readonly renewLease?: DispatchPorts["renewLease"];
+  /** The resolved `queue.lease-ttl` the renewal cadence derives from. */
+  readonly leaseTtlMs?: number;
+  /** A fake cadence wait; defaults to one that resolves immediately. */
+  readonly waitForCadence?: DispatchPorts["waitForCadence"];
   /** An optional store wrapper (for targeted append failures). */
   readonly store?: (store: StateStorePort) => StateStorePort;
 };
@@ -287,8 +293,11 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
           livenessIntervalMs: options.livenessIntervalMs,
           // The fake cadence resolves immediately: the scripted harness decides
           // when `collect` completes, so no wall clock participates.
-          waitForCadence: () => ({ promise: Promise.resolve(), cancel: () => {} }),
+          waitForCadence:
+            options.waitForCadence ?? (() => ({ promise: Promise.resolve(), cancel: () => {} })),
         }),
+    ...(options.renewLease === undefined ? {} : { renewLease: options.renewLease }),
+    ...(options.leaseTtlMs === undefined ? {} : { leaseTtlMs: options.leaseTtlMs }),
     ensureRestartExhaustion: ({ ref, runId, restarts, recordedAt }) => {
       calls.exhaustions = [...calls.exhaustions, { ref, restarts }];
       const ensured = ensureEconomicsExhaustionRecord(state.store, state.fenceToken, {

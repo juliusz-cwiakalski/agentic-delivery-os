@@ -214,10 +214,12 @@ import {
   readQueueEntries,
   releaseQueueLease,
   renderLogLine,
+  renewDispatchLease,
   reposHandoverGateOf,
   reposListDataOf,
   resolveBinding,
   resolveConfig,
+  resolveQueueSettings,
   resolveCoordinatorSettings,
   resolveDispatchIdentity,
   resolveDispatchLane,
@@ -4783,6 +4785,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       lane: LaneSettings,
       repository: string,
       killGraceMs: number,
+      leaseTtlMs: number,
     ): DispatchComposition => ({
       store,
       stateRoot: stateDirectory,
@@ -4865,6 +4868,18 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           ownerHold: readOwnerHold(),
           delay: dispatchDelay,
         }),
+      renewLease: ({ repository: renewalRepository, ref, expectedHeartbeatAt }) =>
+        renewDispatchLease(store, {
+          repository: renewalRepository,
+          ref,
+          holder: "dispatch",
+          expectedHeartbeatAt,
+          ttlMs: leaseTtlMs,
+          nowIso: nowIso(),
+          nowMs: nowMs(),
+          fenceToken: newFenceToken(),
+        }),
+      leaseTtlMs,
       releaseLease: (ref) => {
         const released = releaseQueueLease(store, {
           ref,
@@ -4975,6 +4990,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           readonly settings: HarnessSettings;
           readonly lane: LaneSettings;
           readonly killGraceMs: number;
+          readonly leaseTtlMs: number;
         }
       | { readonly ok: false; readonly code: string } => {
       const gitRoot = gitRootForConfig();
@@ -4999,13 +5015,16 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         resolved.value.values,
         resolved.value.origins,
       );
+      const queueSettings = resolveQueueSettings(resolved.value.values, resolved.value.origins);
       if (!lane.ok) return { ok: false, code: lane.error.code };
       if (!coordinatorSettings.ok) return { ok: false, code: coordinatorSettings.error.code };
+      if (!queueSettings.ok) return { ok: false, code: queueSettings.error.code };
       return {
         ok: true,
         settings: reconciled,
         lane: lane.value,
         killGraceMs: coordinatorSettings.value.killGraceMs,
+        leaseTtlMs: queueSettings.value.leaseTtlMs,
       };
     };
 
@@ -5069,6 +5088,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
               resolution.lane,
               repository,
               resolution.killGraceMs,
+              resolution.leaseTtlMs,
             ),
           ).run.run(input);
         },

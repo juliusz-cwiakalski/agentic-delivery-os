@@ -87,6 +87,7 @@ export {
   type DispatchRunResult,
   type DispatchTruthReads,
   type DispatchWorktreeProvisioning,
+  dispatchRenewalCadenceMs,
   runDispatch,
 } from "./app/dispatch.js";
 export {
@@ -213,6 +214,7 @@ export {
   type DispatchAdmissionRefusal,
   type DispatchLaneFact,
   type DispatchLeaseClaimOutcome,
+  type DispatchLeaseRenewalOutcome,
   daemonEvidenceClass,
   declareQueueEntry,
   dispatchAdmissionRefusal,
@@ -300,6 +302,7 @@ export {
   releaseQueueLease,
   removeQueueDependency,
   removeQueueEntry,
+  renewDispatchLease,
   sessionRecordFrom,
 } from "./app/index.js";
 /**
