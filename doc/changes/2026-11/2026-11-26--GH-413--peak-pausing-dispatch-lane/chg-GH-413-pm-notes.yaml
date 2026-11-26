@@ -491,3 +491,16 @@ notes:
       fail."
     type: info
     date: "2026-11-26"
+  - text: "Plan phase 5 complete (dispatch stop): commit c9f508b2. Added the
+      peak-window-only operator command with the required --until, the grammar
+      refusals at input.value.rejected (the missing end carrying until-required),
+      the running predicate (active, session identity, no open park of any
+      cause), one delivered terminate call with the composed grace, the park
+      written only after a confirmed terminate, the record-mediated hand-off,
+      and the owning invocation's post-collection grace-plus-cadence re-read.
+      The adapter resolves a separately invoked stop over the host process table
+      by exact identity. Tests: the eight phase-5 suites 45 pass / 0 fail; the
+      help/reference/no-shell/inventory batch 73 pass / 0 fail; the no-shell
+      invariant is clean over 45 surface files."
+    type: info
+    date: "2026-11-26"

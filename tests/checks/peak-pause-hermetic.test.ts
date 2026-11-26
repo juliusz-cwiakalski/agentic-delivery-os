@@ -25,6 +25,15 @@ const WATCHED_FILES = [
   "tests/behaviour/daemon-peak-window-park.test.ts",
   "tests/behaviour/daemon-peak-window-isolation.test.ts",
   "tests/behaviour/daemon-peak-window-resume.test.ts",
+  // GH-413: the dispatch-owned watch, the operator stop, and their suites are
+  // under the same hermetic regime.
+  "packages/core/src/app/dispatch-peak-pause.ts",
+  "packages/core/src/app/dispatch-stop.ts",
+  "packages/core/src/app/dispatch.ts",
+  "tests/fixtures/dispatch/golden/harness.ts",
+  "tests/behaviour/dispatch-peak-watch.test.ts",
+  "tests/behaviour/dispatch-stop.test.ts",
+  "tests/behaviour/dispatch-stop-handoff.test.ts",
 ];
 
 describe("TC-PAUSE-092 the delivering suite is hermetic", () => {
