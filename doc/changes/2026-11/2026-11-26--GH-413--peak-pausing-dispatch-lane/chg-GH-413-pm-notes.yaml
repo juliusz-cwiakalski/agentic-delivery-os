@@ -688,3 +688,14 @@ notes:
       fixture-level evidence."
     type: info
     date: "2026-11-26"
+  - text: "Post-phase-10 doc-sync: 18 pages reconciled for the terminate-less
+      harness precondition (two mode values), the withhold renewal at
+      min(liveness, TTL/2) and the lost-lease return (no terminal lane record),
+      the `dispatch stop --until` canonical-Z and millisecond forms, the
+      exhaustion-only refusal with the typed question, and the stuck-ref naming.
+      No residual doc gap. The doc-syncer found one gate blocker: the
+      error-table-sync S1 recognizer reads `harness.value.kind` in
+      production.ts:3033 as an error code, turning 30 sync tests red; routed to
+      @coder as a false positive, not a new identity."
+    type: info
+    date: "2026-11-26"

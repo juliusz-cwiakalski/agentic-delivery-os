@@ -163,7 +163,9 @@ Three further facts pin the peak-pause episode kinds ([Provider Peak Pausing](fe
   ledger alone across many supervision ticks or dispatch observations. The
   producers are the composition that owns the lane — the daemon's watch for the
   lanes it supervises and the dispatch-owned watch for the lane a one-shot
-  invocation started — and the operator stop `dispatch stop <ref>`, which admits
+  invocation started, which is composed only for a harness that declares the
+  terminate operation and therefore emits no episode on a terminate-less harness —
+  and the operator stop `dispatch stop <ref>`, which admits
   the `peak-window` cause only and writes its complete frame only after a
   confirmed terminate. Where the nominated profile's windows overlap in effect,
   each episode is framed separately, so one lane can produce consecutive

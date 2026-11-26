@@ -161,7 +161,9 @@ than discovering work by hand.
   the first pass after the gap, and recovers with an incident naming the gap. The
   dispatch run path invokes this pass once before its first session, so an expired
   standing park the pass cannot recover refuses the run as a classified failure
-  that starts no session ([Dispatch Engine](feature-dispatch-engine.md)).
+  that starts no session, and the refusal's bounded summary names the stuck
+  references the repository-wide pass reports
+  ([Dispatch Engine](feature-dispatch-engine.md)).
   `queue release --park provider-window --until <iso>` and
   `queue release --park peak-window --until <iso>` record the supplied
   absolute expiry; `--until` is required for those two causes and refused for
@@ -246,15 +248,18 @@ than discovering work by hand.
   rather than a fabricated zero.
   The `lanes --json` machine read carries the additive `peakEnforcement` block —
   `mode` (`window-watch` when the reading composition's own effective
-  configuration enables automatic pausing and therefore composes the
-  profile-window watch, otherwise `iteration-start-gating`; a composition fact,
+  configuration enables automatic pausing and the selected harness declares a
+  terminate operation, so the profile-window watch is composed, otherwise
+  `iteration-start-gating`; a composition fact,
   never an inference from daemon reachability) and
   `parkClaimed` (read from the
   durable park records, false when none exists) — so the read declares which
   peak enforcement is active and never claims a park that did not happen. Both
   owning compositions count: the daemon's watch and the dispatch-owned watch
-  report `window-watch` from the same configuration-derived rule, and
-  `lane.disable-peak-pausing: true` reports `iteration-start-gating`.
+  report `window-watch` from the same configuration-derived rule;
+  `lane.disable-peak-pausing: true` reports `iteration-start-gating`, and so does
+  a harness that declares no terminate operation (the Claude Code adapter
+  declares none), even with pausing enabled.
   The projection also carries an additive optional `leaseHolder`, present
   exactly when a live lease exists and equal to that lease's recorded holder;
   it adds no field requirement to a delivered lane, and the payload identity

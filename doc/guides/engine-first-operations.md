@@ -85,7 +85,11 @@ engine — and `ceo-loop.sh` remains its documented fallback
 ### Peak windows, parking, and the operator stop
 
 A dispatch lane is watched for its whole life by the invocation that started it,
-so a window that opens mid-lane is respected without a resident daemon. When the
+so a window that opens mid-lane is respected without a resident daemon. The watch
+is composed only for a harness that declares the terminate operation, because the
+stop it issues is that operation: a terminate-less harness, the Claude Code
+adapter, composes no watch, so its lanes run through a window and `lanes` reports
+`iteration-start-gating` for it even with pausing enabled. When the
 nominated profile's `peakWindows` rule data declares an open window, the lane is
 stopped with one bounded-grace stop, parked with cause `peak-window` and the
 window's end, and resumed in the same invocation once the end is observed — the
@@ -99,9 +103,10 @@ refused `dispatch.resume-parked` at exit `2` at resume admission, not
 `queue.single-flight`. `dispatch status <ref>` explains a pause: the lane reads
 `stale=false` and `delivering=true` while its owner is alive, and the additive park
 fact names the cause, the recorded end, the recorded stop instant, and the
-preservation classification, carried from the park record; a recorded recovery
-refusal is read from the terminal durable lane record in the lane read the surface
-already performs, and the park record carries none ([Provider Peak
+preservation classification, carried from the park record; the only refusal on
+the not-preserved path of a dispatch-owned episode is budget exhaustion, recorded as the
+delivered terminal exhaustion record and raised as the delivered typed question, so the park record
+carries no refusal member ([Provider Peak
 Pausing](../spec/features/feature-peak-pausing.md)).
 
 Run it as follows:
@@ -112,21 +117,31 @@ Run it as follows:
   dispatch that supplies the watch also withholds its terminal classification for
   at least the applied grace plus one observation cadence after the session ends —
   about 50 s at the defaults — so a session end is reported roughly that much
-  later, with pausing enabled or disabled.
+  later, with pausing enabled or disabled. The withhold steps at the renewal
+  cadence `min(lane.liveness-interval, queue.lease-ttl / 2)` and renews the lease
+  before each step, so the heartbeat stays below the TTL even when the liveness
+  interval is at or above it; an invocation that loses the lease before or inside
+  the withhold returns the classified `dispatch.state-unverified` result with the
+  park standing, appends no terminal lane record, and derives nothing.
 - **Relax activity-keyed stall detection.** A parked lane is silent by design.
   `pm-liveness.sh`, `deliver-ticket.sh`, `ceo-loop.sh`, and any operator probe with
   the same shape must be relaxed or must exclude a parked lane before a lane is
   dispatched into a window; otherwise the probe kills the waiting invocation and
   orphans the park.
-- **Only a profile that declares windows is pausable.** The shipped
+- **Only a profile that declares windows, on a harness that declares `terminate`, is
+  pausable.** The shipped
   `provider.profiles` branch is empty, so a host that declares no `peakWindows`
   gets no lane pausing. Declare the windows on the profile your lanes are
-  nominated to.
+  nominated to, and run them on a harness that declares the terminate operation;
+  a terminate-less harness never pauses.
 - **Request the pause yourself with `dispatch stop`.** `dispatch stop <ref>
   --cause peak-window --until <iso>` sends the same bounded-grace stop to a running
   lane and parks it at the declared end. It admits the `peak-window` cause only and
-  requires `--until`; another cause or a missing end is `input.value.rejected`
-  before any read. A lane that is terminal, absent, has no session, is already
+  requires `--until`, accepted in the canonical `Z` form
+  (`2026-11-12T12:00:00Z`) or the exact millisecond form
+  (`2026-11-12T12:00:00.000Z`); another cause, a missing end, a past end, or a
+  non-canonical end is `input.value.rejected` before any read. A lane that is
+  terminal, absent, has no session, is already
   parked, or whose session cannot be confirmed stopped is refused
   `queue.precondition.unmet` and nothing is written. The park lands only after a
   confirmed terminate, and the owning invocation re-reads the park after its
@@ -139,7 +154,8 @@ Run it as follows:
   status` then answers `stale=true` with the park fact and its recorded end; the
   next invocation, or the delivered operator resume path, recovers the standing
   park before any new episode and before the invocation's first session, so an
-  unrecoverable park is a refusal that starts no session. A resume or re-dispatch
+  unrecoverable park is a refusal that starts no session and names the stuck
+  references the repository-wide recovery pass reports. A resume or re-dispatch
   while the park has not expired is refused `dispatch.resume-parked` at exit `2`
   and writes nothing.
 - **One declared residual.** A lane admitted while its nominated profile's window
@@ -148,8 +164,10 @@ Run it as follows:
   follows the park instant.
 - **Turn pausing off deliberately.** `lane.disable-peak-pausing: true` restores
   admission-gating-only behaviour, composes no watch, and makes `lanes --json`
-  report `peakEnforcement.mode: "iteration-start-gating"`; `dispatch stop` keeps
-  working either way.
+  report `peakEnforcement.mode: "iteration-start-gating"`; a harness that declares
+  no terminate operation reads the same value with pausing enabled, because no
+  watch is composed for a harness that cannot stop its session. `dispatch stop`
+  keeps working either way.
 
 ## 2. Inspecting one delivery
 

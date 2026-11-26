@@ -3030,7 +3030,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         resolvedConfig.value.values,
         resolvedConfig.value.origins,
       );
-      return harness.ok ? harnessFor(harness.value.kind).terminate !== undefined : false;
+      if (!harness.ok) return false;
+      const { kind } = harness.value;
+      return harnessFor(kind).terminate !== undefined;
     };
 
     const queueComposition = withRepositoryBinding(
