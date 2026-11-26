@@ -8,7 +8,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-26T10:03:01.734Z }
   specification: { started: null, completed: 2026-11-26T13:04:30.155Z }
   test_planning: { started: null, completed: 2026-11-26T13:12:34.906Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-26T13:25:26.802Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -161,6 +161,16 @@ decisions:
       `input.value.rejected` at the grammar boundary; the test plan's phase
       column is renumbered to the plan's 1-8 phases and names the lease-liveness
       file."
+    date: "2026-11-26"
+  - text: "DoR iter-2 remediation, decision 15 (lease identity and stop re-read
+      bound): the renewal must be keyed by the lease identity the lane acquired
+      at admission (its lease id), not merely the same holder and reference,
+      because a re-dispatch can renew a previous invocation's stale lease under
+      the same holder. The owning invocation's post-collection withhold is at
+      least the applied grace plus one observation cadence, because the
+      terminate call awaits the whole grace and a one-cadence re-read could miss
+      the park. Both are recorded in the spec and must appear in the plan and
+      test arms."
     date: "2026-11-26"
 open_questions: []
 blockers: []

@@ -104,6 +104,8 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0074](TDR-0074-project-groups-document-operator-local-overlay.md) | TDR | The Project-Groups Document Is an Operator-Local Overlay — The Ceremony Mirror's Cross-Checkout Target Set Is Declaration-Only | Proposed | 2026-11-21 | Juliusz Ćwiąkalski |
 | [TDR-0075](TDR-0075-watch-stale-as-profile-eligibility-blocker.md) | TDR | A Stale Watch Observation Is a Profile-Eligibility Blocker — A Narrowed `watch-stale` Boundary at Zero Acquisition Cost | Proposed | 2026-11-22 | Juliusz Ćwiąkalski |
 | [TDR-0076](TDR-0076-engine-ensure-push-first-remote-write.md) | TDR | The Engine-Side Ensure-Push Is the Dispatch Engine's First Remote-Write Act — One Bounded Fast-Forward Push of the Change Branch Before `pr-open` Derives | Proposed | 2026-11-23 | Juliusz Ćwiąkalski |
+| [TDR-0077](TDR-0077-dispatch-owned-window-watch.md) | TDR | A Lane Is Watched by the Composition That Owns It: The Dispatch Run Path Supplies the Profile-Window Watch for the Lanes It Starts | Proposed | 2026-11-26 | Juliusz Ćwiąkalski |
+| [TDR-0078](TDR-0078-lease-heartbeat-amends-tdr-0050.md) | TDR | A Dispatch Lane Keeps Its Repository Lease Live Through the Run and the Park: The Holding Invocation Renews at a Derived Cadence (TDR-0050 DC-3 Amended) | Proposed | 2026-11-26 | Juliusz Ćwiąkalski |
 
 Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
 acceptance is that change's pull-request review, and their status moves from
@@ -172,3 +174,42 @@ failure-token-mapping row that retains the PR URL, parity evidence rides the bou
 `push:<verdict>` references and an additive optional envelope block, text mode stays
 byte-identical, and session-side conventions, the closed vocabularies, and the shell
 fallback's behavior are unchanged.
+
+Decisions TDR-0077 and TDR-0078 are the binding design of change GH-413 (peak
+pausing for a lane started by dispatch); their owner acceptance is that change's
+pull-request review, and their status moves from `Proposed` there rather than in
+the delivery commits. TDR-0077 supersedes, for lanes started by `dispatch`, the
+statement that without a resident daemon there is no window watcher and no
+mid-flight park: a lane is watched by the composition that owns it, the dispatch
+run path watches the lane it started at every observation from its first session
+to its terminal classification, and a composition that supplies no watch degrades
+to the delivered iteration-start gating. It fixes the rule source (the nominated
+profile's `peakWindows` branch, read from the nomination stored on the durable
+lane record; provider-entry `peak` windows stay admission-only; only a profile
+declaring `peakWindows` is pausable and the shipped defaults declare none), the
+park end (the effective end of the first open window the delivered decision
+returns; overlapping windows yield consecutive exactly-once episodes, never one
+merged park), the `lanes` composition-fact read (`peakEnforcement.mode` derives
+from the reading composition's own effective configuration: `window-watch` when
+automatic pausing is enabled, `iteration-start-gating` when it is disabled; the
+one intended change to a no-park payload; `parkClaimed` stays record-derived), and
+the operator stop (`dispatch stop <ref>` admits the `peak-window` cause only;
+another cause or a missing `--until` is `input.value.rejected` at the grammar
+boundary, the missing end reusing the delivered `until-required` reason; a lane is
+running only when its newest record is `active`, carries a session identity, and
+has no open `peak-window` park, so an already-parked lane is refused and never
+parked twice; the command resolves the session identity and the tree root from
+the lane record, sends no signal of its own, writes the park only after a
+confirmed terminate, and reaches the owning invocation through the durable lane
+and park records, the invocation withholding terminal classification for up to
+one observation cadence to receive it). A park before the first session is not
+part of either record: the specification's DEC-14 is withdrawn, and a dispatch
+admitted inside an already-open window is parked at its first observation, a
+declared residual of at most one observation cadence. TDR-0078 amends TDR-0050
+DC-3 and its restatement in C-4 for the dispatch run path only: the admission
+claim still never renews, and the invocation that holds the lease renews it at
+most once per renewal cadence, `min(lane.liveness-interval, queue.lease-ttl / 2)`,
+through the delivered `renewed` operation, as a no-op unless the lease is this
+lane's own same-ref lease and without passing the owner-hold gate, so per-ref
+single-flight holds through the run and an hours-long park on every legal
+configuration of the two keys.
