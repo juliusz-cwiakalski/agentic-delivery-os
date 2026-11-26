@@ -1621,6 +1621,7 @@ phases:
     scope:
       files:
         - doc/changes/2026-11/2026-11-26--GH-413--peak-pausing-dispatch-lane/code-review/review-iter-2.yaml
+        - doc/changes/2026-11/2026-11-26--GH-413--peak-pausing-dispatch-lane/code-review/review-iter-3.yaml
         - doc/guides/engine-first-operations.md
         - doc/planning/oss-tooling/milestones/m1/commands/dispatch.md
         - doc/spec/features/feature-dispatch-engine.md
