@@ -1047,7 +1047,7 @@ Test type vocabulary used in section 5 follows the template: Unit, Integration, 
 **Related IDs**: NFR-8, events `stop`, `parked`, `resumed`, `park-edge`, DM-1
 **Test Type(s)**: Contract, Check
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/event-taxonomy-integrity.test.ts`, `tests/checks/event-taxonomy-conformance.test.ts`, and a narrow `tests/structure/dispatch-peak-contract.test.ts` only if the additive contract needs its own closed-set assertion
+**Target Layer / Location**: `tests/structure/event-taxonomy-integrity.test.ts`, `tests/checks/event-taxonomy-conformance.test.ts`, `tests/structure/error-table.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/checks/decision-record.test.ts`, and a narrow `tests/structure/dispatch-peak-contract.test.ts` only if the additive contract needs its own closed-set assertion
 **Tags**: @backend, @contract
 
 **Preconditions**:
@@ -1057,13 +1057,15 @@ Test type vocabulary used in section 5 follows the template: Unit, Integration, 
 
 **Steps**:
 
-1. Assert the closed sets carry exactly one added error-table row, `dispatch.resume-parked` (exit 2), and no other added event kind, record kind, schema identity, result token, or reason.
-2. Project the four episode frames and measure payload fields and evidence bytes.
-3. Assert the not-running refusal reuses a delivered identity; the only added row is `dispatch.resume-parked`.
+1. Assert the closed sets carry exactly one added error-table row, `dispatch.resume-parked` (exit 2), with its declared fields and remediation, and no other added event kind, record kind, schema identity, result token, or reason.
+2. Assert the row is documented on `doc/spec/features/feature-result-contract.md` (the sync check fails an undocumented source row), and that the decision-record case asserts TDR-0077 states the row.
+3. Project the four episode frames and measure payload fields and evidence bytes.
+4. Assert the not-running refusal reuses a delivered identity; the only added row is `dispatch.resume-parked`.
 
 **Expected Outcome**:
 
 - Exactly one added error-table row, `dispatch.resume-parked` (exit 2), an owner-authorised exception; no other added kind, record kind, schema identity, result token, or reason.
+- The row is documented on `doc/spec/features/feature-result-contract.md`, and the decision-record case asserts TDR-0077 states the row.
 - Every projected frame stays within at most 20 payload fields and 1024 bytes; every frame stays inside the delivered eight-field envelope.
 - Overlapping windows project consecutive episodes, each with one `stop`, one `parked`, and one `park-edge`; no union frame and no shared episode id are introduced.
 - A non-terminal recovery refusal adds no frame; it is carried by the existing park record and the surfaces, not by a new event.

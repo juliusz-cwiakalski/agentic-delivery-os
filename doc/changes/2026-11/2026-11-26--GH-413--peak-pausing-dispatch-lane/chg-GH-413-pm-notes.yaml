@@ -400,3 +400,15 @@ notes:
       the three minors, then run iteration 7."
     type: retro
     date: "2026-11-26"
+  - text: "Post-iteration-6 literal fixes applied (no gate run on them): F-4's last
+      sentence now names `dispatch.resume-parked` at exit 2, a resume or
+      re-dispatch, nothing written, and the expired park recovered at the first
+      observation; F-5's parked-case sentence now leaves the successor's lease
+      alone, with the same sentence added to DEC-13 and section 12; F-3 names a
+      resume or re-dispatch; plan phase 8 says eighteen of the nineteen pages;
+      TC-PEAK-027 now names the error-table, error-table-sync and
+      decision-record suites. The artifacts are ready for iteration 7, which has
+      not run. The change remains parked per the owner's iteration-6 rule; no
+      source delivery and no PR."
+    type: info
+    date: "2026-11-26"

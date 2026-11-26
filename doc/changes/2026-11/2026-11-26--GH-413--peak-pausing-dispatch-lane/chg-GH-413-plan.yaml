@@ -990,7 +990,7 @@ phases:
   - id: 8
     title: "Finalize and release: spec reconciliation declaration, the pull request, and the reference-host episode"
     kind: planning
-    summary: "declare the release and spec-reconciliation obligations: the documentation reconciliation of the eighteen pages the spec names, the pull request against `main-tools`, and the post-upgrade hand-off for the reference-host episode with its preconditions; this phase performs no delivery work."
+    summary: "declare the release and spec-reconciliation obligations: the documentation reconciliation of eighteen of the nineteen pages the spec names (`feature-result-contract.md` moves with the row in phase 3), the pull request against `main-tools`, and the post-upgrade hand-off for the reference-host episode with its preconditions; this phase performs no delivery work."
     # TC ownership: TC-PEAK-029 (the post-upgrade hand-off; manual, non-gating).
     # Declaration only: owned by the doc-syncer in lifecycle phase 7 and by the
     # pr-manager in lifecycle phase 11. Delivery authors none of these files.
