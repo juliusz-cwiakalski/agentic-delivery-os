@@ -96,6 +96,11 @@ export {
   runDispatch,
 } from "./dispatch.js";
 export {
+  type DispatchStopOutcome,
+  type DispatchStopPorts,
+  executeDispatchStop,
+} from "./dispatch-stop.js";
+export {
   type DispatchPeakObservation,
   type DispatchPeakResume,
   type DispatchPeakRulesLookup,

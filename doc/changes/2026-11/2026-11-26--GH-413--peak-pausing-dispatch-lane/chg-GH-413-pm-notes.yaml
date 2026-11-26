@@ -479,3 +479,15 @@ notes:
       resume pin, and the scripted-harness finishCollect helper."
     type: info
     date: "2026-11-26"
+  - text: "Plan phase 4 complete (operator surfaces and the one result): commit
+      6cb16774. dispatch status now carries the additive optional park fact from
+      at most one bounded park-record read; the delivered stale/delivering
+      verdict is unchanged; the production composition derives
+      peakEnforcement.mode from its own lane.disable-peak-pausing configuration;
+      and the result carries the additive bounded episode fact plus the
+      pause/resume or refusal sentence on last_message. Tests: the phase-4 six
+      behaviour suites 44 pass / 0 fail, the two inventory pins 33 pass / 0
+      fail, and the delivered operator/status/lanes/board controls 32 pass / 0
+      fail."
+    type: info
+    date: "2026-11-26"

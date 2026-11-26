@@ -148,6 +148,8 @@ export type CommandScenarioOptions = {
   readonly nominate?: DispatchPorts["nominate"];
   /** The dispatch-owned window watch (GH-413); absent keeps no watch. */
   readonly peak?: DispatchPorts["peak"];
+  /** The operator stop runtime (GH-413); absent refuses the command. */
+  readonly stop?: DispatchCommandRuntime["stop"];
   /** A fake cadence wait; defaults to one that resolves immediately. */
   readonly waitForCadence?: DispatchPorts["waitForCadence"];
   /** An optional store wrapper (for targeted append failures). */
@@ -309,6 +311,7 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
     ...(options.renewLease === undefined ? {} : { renewLease: options.renewLease }),
     ...(options.leaseTtlMs === undefined ? {} : { leaseTtlMs: options.leaseTtlMs }),
     ...(options.peak === undefined ? {} : { peak: options.peak }),
+    ...(options.stop === undefined ? {} : { stop: options.stop }),
     ensureRestartExhaustion: ({ ref, runId, restarts, recordedAt }) => {
       calls.exhaustions = [...calls.exhaustions, { ref, restarts }];
       const ensured = ensureEconomicsExhaustionRecord(state.store, state.fenceToken, {
@@ -413,6 +416,7 @@ export type PeakFixtureOptions = {
   readonly rules?: Readonly<Record<string, ProviderProfilePeakRules>>;
   readonly killGraceMs?: number;
   readonly preservation?: QueueParkPreservation;
+  readonly watchEnabled?: boolean;
   readonly recoverParks?: () =>
     | { readonly ok: true }
     | { readonly ok: false; readonly kind: "queue" | "state"; readonly code: string };
@@ -462,6 +466,7 @@ export const createPeakFixture = (options: PeakFixtureOptions): PeakFixture => {
     },
   };
   const peak: DispatchPeakWatchPorts = {
+    watchEnabled: options.watchEnabled ?? true,
     rulesFor: (profile) => rules[profile],
     parks: () => parks,
     recoverParks: () => {
@@ -469,6 +474,12 @@ export const createPeakFixture = (options: PeakFixtureOptions): PeakFixture => {
       return options.recoverParks?.() ?? { ok: true };
     },
     unexpiredStandingPark: (ref) => {
+      if (
+        options.standingParkVisibleAtMs !== undefined &&
+        nowMs < options.standingParkVisibleAtMs
+      ) {
+        return undefined;
+      }
       const latest = [...parks]
         .reverse()
         .find((park) => park.ref === ref && park.cause === "peak-window");
@@ -549,6 +560,9 @@ export type PeakScenarioOptions = {
   readonly rules: Readonly<Record<string, ProviderProfilePeakRules | undefined>>;
   readonly nomination: string;
   readonly preservation?: QueueParkPreservation;
+  readonly watchEnabled?: boolean;
+  /** The instant from which a seeded standing park is visible at admission. */
+  readonly standingParkVisibleAtMs?: number;
   readonly holdActive?: () => boolean;
   readonly restartCount?: number;
   readonly restartBound?: number;
@@ -566,6 +580,10 @@ export const createPeakScenario = (options: PeakScenarioOptions) => {
     startMs: options.startMs,
     rules: options.rules as Readonly<Record<string, ProviderProfilePeakRules>>,
     ...(options.preservation === undefined ? {} : { preservation: options.preservation }),
+    ...(options.watchEnabled === undefined ? {} : { watchEnabled: options.watchEnabled }),
+    ...(options.standingParkVisibleAtMs === undefined
+      ? {}
+      : { standingParkVisibleAtMs: options.standingParkVisibleAtMs }),
     ...(options.holdActive === undefined ? {} : { holdActive: options.holdActive }),
     ...(options.restartCount === undefined ? {} : { restartCount: options.restartCount }),
     ...(options.restartBound === undefined ? {} : { restartBound: options.restartBound }),

@@ -21,6 +21,7 @@ import {
   type DispatchLogData,
   type DispatchResolveData,
   type DispatchStatusData,
+  type DispatchStopData,
   type DispatchSummaryData,
 } from "@delivery-os/core/contracts";
 import { projectExitCode } from "../projection.js";
@@ -218,6 +219,10 @@ export const renderDispatchStatusText = (data: DispatchStatusData): string => {
   ];
   return `${lines.join("\n")}\n`;
 };
+
+/** `dispatch stop` success output: one human line (GH-413 DM-8). */
+export const renderDispatchStopText = (data: DispatchStopData): string =>
+  `stopped ${data.ref} cause=${data.cause} until=${data.until} episode=${data.episodeId} preservation=${data.preservation}\n`;
 
 /** `is-delivering` as the declared key=value set. */
 export const renderDispatchDeliveringText = (data: DispatchDeliveringData): string => {

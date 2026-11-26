@@ -312,6 +312,8 @@ export type DispatchWorktreeProvisioning =
  * composes none.
  */
 export type DispatchPeakWatchPorts = {
+  /** False when `lane.disable-peak-pausing` is true: no automatic stop observation. */
+  readonly watchEnabled: boolean;
   readonly rulesFor: (profile: string) => ProviderProfilePeakRules | undefined;
   readonly zoneFactsFor?: (zone: string) => ProviderZoneFacts | undefined;
   readonly parks: () => readonly QueueParkRecord[];
@@ -1391,15 +1393,18 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           }
           return false;
         };
+        let wakeTurns = 0;
         watcherDone = (async () => {
           while (!stopped) {
+            wakeTurns += 1;
+            if (wakeTurns > 5000) throw new Error("watcher runaway");
             await maybeRenewLease();
             if (stopped) return;
             if (observationDue()) {
               // The dispatch-owned window watch observes at every observation,
               // before the delivered liveness read (F-1, AC-F1-1).
               const peak = ports.peak;
-              if (peak !== undefined && peakPark === undefined) {
+              if (peak !== undefined && peak.watchEnabled && peakPark === undefined) {
                 const observed: DispatchPeakObservation = await observeDispatchPeak({
                   ref: ports.ref,
                   handle: session.value,
@@ -1463,6 +1468,44 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         }
       }
 
+      // GH-413 F-9/DEC-15: the owning invocation withholds terminal
+      // classification for at least the applied grace plus one observation
+      // cadence after collection resolves, then re-reads the park record. A
+      // separately invoked `dispatch stop` writes the park only after its
+      // terminate call awaits the whole grace, so a one-cadence re-read could
+      // miss it; the withhold spans the grace. It applies whether or not
+      // automatic pausing is enabled, because it is the run path's own
+      // post-collection rule.
+      if (ports.peak !== undefined && peakPark === undefined && !leaseLost) {
+        const withholdMs = (ports.killGraceMs ?? 20_000) + (ports.livenessIntervalMs ?? 30_000);
+        const cadence = ports.livenessIntervalMs ?? 30_000;
+        const wait = ports.waitForCadence;
+        if (wait !== undefined && cadence > 0) {
+          const steps = Math.max(1, Math.ceil(withholdMs / cadence));
+          for (let step = 0; step < steps; step += 1) await wait(cadence).promise;
+        }
+        const latestPark = [...ports.peak.parks()]
+          .reverse()
+          .find((park) => park.ref === ports.ref && park.cause === "peak-window");
+        const openPark =
+          latestPark !== undefined &&
+          (latestPark.recoveryState === "parked" || latestPark.recoveryState === "clear-observed") &&
+          // Only a park that landed during/after this invocation is the
+          // cross-process stop hand-off; a standing park from before the run
+          // was occupancy at the first observation, not a new episode.
+          Date.parse(latestPark.recordedAt) >= Date.parse(now)
+            ? latestPark
+            : undefined;
+        if (openPark !== undefined) {
+          peakPark = openPark;
+          peakEpisode = {
+            episodeId: openPark.episodeId ?? "",
+            cause: "peak-window",
+            until: openPark.until ?? "",
+          };
+        }
+      }
+
       // GH-413 F-3/F-4: a dispatch-owned park happened. Wait on the renewal
       // cadence, renew the lease, and resume at the recorded end by the
       // preservation classification; a refused recovery returns one classified
@@ -1493,7 +1536,10 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           peak === undefined
             ? { outcome: "none" }
             : await (async () => {
+                let waitTurns = 0;
                 for (;;) {
+                  waitTurns += 1;
+                  if (waitTurns > 2000) throw new Error("peak wait runaway");
                   if (leaseLost) return { outcome: "lease-lost" } as const;
                   await maybeRenewLease();
                   if (leaseLost) return { outcome: "lease-lost" } as const;
@@ -1517,9 +1563,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
                     reenter: ({ ordinal }) => peak.reenter({ ref: ports.ref, ordinal }),
                     escalate: peak.escalate,
                   });
-                  if (outcome.outcome !== "waiting" && outcome.outcome !== "none") {
-                    return outcome;
-                  }
+                  if (outcome.outcome !== "waiting") return outcome;
                   const wait = ports.waitForCadence?.(renewalCadenceMs);
                   if (wait === undefined) return { outcome: "none" } as const;
                   await wait.promise;
@@ -1527,6 +1571,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
               })();
         if (waitOutcome.outcome === "resumed") {
           peakEpisode = { ...peakEpisode, resumedAt: waitOutcome.resumedAt } as DispatchEpisodeFact;
+          peakPark = undefined;
           handle = session.value;
           spawnPrompt = undefined;
           continue;
@@ -1567,6 +1612,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
               evidenceRefs: ["economics:restart-failed", "park:recovery"],
             });
           }
+          peakPark = undefined;
           handle = session.value;
           spawnPrompt = undefined;
           continue;
@@ -1602,6 +1648,25 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
                 ? []
                 : [`episode:${waitOutcome.episodeId}`]),
             ],
+          });
+        }
+        if (waitOutcome.outcome === "none") {
+          return record({
+            token: su,
+            outcome: O_FAILED,
+            errorCode: "dispatch.state-unverified",
+            comparison: comparisonFor({
+              token: su,
+              errorCode: "dispatch.state-unverified",
+              reads: staleReads(),
+              urlResolved: false,
+            }),
+            corroboration: buildCorroborationRecord({ token: su }),
+            falseSuccess: false,
+            prUrl: "",
+            urlResolved: false,
+            lastMessage: "the standing park was no longer present; no owner act was taken",
+            evidenceRefs: ["park:standing"],
           });
         }
         // A lost lease while parked returns one classified result with the park

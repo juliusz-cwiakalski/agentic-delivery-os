@@ -19,6 +19,7 @@ the bash stack.
 <binary> dispatch log <ref> [--tail <n>] [--json]
 <binary> dispatch is-delivering [<ref>] [--json]
 <binary> dispatch last-message <ref> [--json]
+<binary> dispatch stop <ref> --cause peak-window --until <iso>
 <binary> dispatch --help
 <binary> dispatch --version
 ```
@@ -191,6 +192,12 @@ existing `tracker.credential-unavailable` check keeps parity through tests.
   negative, fractional, leading-zero, or non-numeric value is refused
   (`input.value.rejected`) rather than clamped. A missing value is the shared
   parser's refusal (`fallback.invocation`).
+- `--cause <cause>` - `dispatch stop` only: the one admitted cause is
+  `peak-window`. Another cause is refused `input.value.rejected` at the grammar
+  boundary before any lane read.
+- `--until <iso>` - `dispatch stop` only: the declared park end. It is required
+  for `peak-window`; a missing end is refused `input.value.rejected` with the
+  delivered `until-required` reason before any read.
 - `--help` - pure self-description; reads no state, git, network, or model.
 - `--version` - pure version identity.
 
@@ -278,6 +285,22 @@ starts, zero network reads, and zero deletions inside the artifact family. They
 read no shell-owned path, so the shell's marker, PID, stdout, and last-message
 files can never steer a typed answer.
 
+## OPERATOR STOP
+
+`dispatch stop <ref> --cause peak-window --until <iso>` requests the same
+bounded-grace stop the dispatch-owned window watch sends. A lane is running only
+when its newest durable lane record is `active`, carries a session identity, and
+has no open park of any cause; a terminal, absent, session-less, already-parked,
+or unconfirmed-terminate lane is refused `queue.precondition.unmet` with the
+observed state in the bounded summary and nothing is written. The command
+resolves the session identity and the tree root (the recorded worktree path,
+otherwise the main checkout) from the lane record, sends no signal of its own,
+and issues exactly one terminate call through the delivered terminate path. The
+complete watcher-shaped park record is appended only after a confirmed terminate;
+the owning invocation withholds terminal classification for at least the applied
+grace plus one observation cadence after collection resolves, re-reads the park,
+keeps renewing the lease, and waits and resumes at the declared end.
+
 ## EXIT STATUS
 
 - `0` for `merged`, `blocked`, `pr-open`, `pr-open-unverified`, `finished`, and
@@ -318,6 +341,7 @@ Summary and handover:
 $ <binary> dispatch dual-run summary --repo github.com/owner/repo --json
 $ <binary> dispatch handover github.com/owner/repo
 $ <binary> dispatch handover github.com/owner/repo --revert
+$ <binary> dispatch stop GH-354 --cause peak-window --until 2026-11-12T10:00:00Z
 ```
 
 ## ERRORS

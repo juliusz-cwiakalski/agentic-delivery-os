@@ -7933,6 +7933,8 @@ export type DispatchComposition = {
   readonly leaseTtlMs?: number;
   /** The dispatch-owned window watch (GH-413 F-1..F-4); absent keeps no watch. */
   readonly peak?: DispatchPorts["peak"];
+  /** The operator stop surface (GH-413 F-9); absent refuses the command. */
+  readonly stop?: NonNullable<DispatchCommandRuntime["stop"]>;
   readonly releaseLease: (ref: string, cause: "completed" | "aborted") => boolean;
   /**
    * The provision-after-lease binding (GH-404 F-2, F-8; TC-WT-003,
@@ -8456,4 +8458,5 @@ export const createDispatchCommandRuntime = (
   ...(composition.operator === undefined
     ? {}
     : createDispatchOperatorRuntime(composition.operator)),
+  ...(composition.stop === undefined ? {} : { stop: composition.stop }),
 });

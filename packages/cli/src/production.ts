@@ -155,6 +155,7 @@ import {
   EvaluateVerifyChange,
   emptyHandoverGate,
   evaluateCoordinatorRestartAdmission,
+  executeDispatchStop,
   evaluateHarnessModeAvailability,
   evaluateModelExpressibility,
   evaluateRestartBudget,
@@ -4803,6 +4804,58 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       };
     };
 
+    let cachedPeakRules: ReadonlyMap<string, ProviderProfilePeakRules> | undefined;
+    /** One parsed rules lookup for the watch, the stop, and the mode. */
+    const peakRulesFor = (profile: string): ProviderProfilePeakRules | undefined => {
+      if (cachedPeakRules === undefined) {
+        const rules = new Map<string, ProviderProfilePeakRules>();
+        const gitRoot = gitRootForConfig();
+        const acquired = acquireProjectConfiguration(gitRoot);
+        if (acquired.ok) {
+          const resolvedConfig = resolveConfig({ sources: acquired.sources });
+          if (resolvedConfig.ok) {
+            const providerParsed = parseAndValidateProviderConfiguration(
+              resolvedConfig.value.values,
+            );
+            if (providerParsed.ok) {
+              const profileParsed = parseAndValidateProfileConfiguration(
+                resolvedConfig.value.values,
+                providerParsed.config,
+              );
+              if (profileParsed.ok) {
+                for (const [name, fact] of Object.entries(profileParsed.config.profiles)) {
+                  if (fact.peakWindows !== undefined) rules.set(name, fact.peakWindows);
+                }
+              }
+            }
+          }
+        }
+        cachedPeakRules = rules;
+      }
+      return cachedPeakRules.get(profile);
+    };
+    /** The nominated profile's declared grace default in milliseconds. */
+    const peakProfileGraceMsFor = (profile: string | undefined): number | undefined => {
+      if (profile === undefined) return undefined;
+      const rules = peakRulesFor(profile);
+      return rules === undefined ? undefined : rules.graceSecondsDefault * 1_000;
+    };
+    /** Append one watcher-shaped park record through the store's own fence. */
+    const appendQueueParkRecord = (record: QueueParkRecord): boolean => {
+      const acquired = store.acquireFence(newFenceToken());
+      if (!acquired.ok) return false;
+      try {
+        const appended = store.append(acquired.value.handle, {
+          kind: QUEUE_PARK_RECORD_KIND,
+          recordKey: queueParkRecordKey(record.ref),
+          payload: record as unknown as never,
+        });
+        return appended.ok;
+      } finally {
+        store.releaseFence(acquired.value.handle);
+      }
+    };
+
     const dispatchComposition = (
       settings: HarnessSettings,
       lane: LaneSettings,
@@ -4903,41 +4956,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           fenceToken: newFenceToken(),
         }),
       leaseTtlMs,
-      ...(lane.disablePeakPausing === true
-        ? {}
-        : {
-            peak: (() => {
-              let cachedRules: ReadonlyMap<string, ProviderProfilePeakRules> | undefined;
-              const rulesFor = (
-                profile: string,
-              ): ProviderProfilePeakRules | undefined => {
-                if (cachedRules === undefined) {
-                  const rules = new Map<string, ProviderProfilePeakRules>();
-                  const gitRoot = gitRootForConfig();
-                  const acquired = acquireProjectConfiguration(gitRoot);
-                  if (acquired.ok) {
-                    const resolvedConfig = resolveConfig({ sources: acquired.sources });
-                    if (resolvedConfig.ok) {
-                      const providerParsed = parseAndValidateProviderConfiguration(
-                        resolvedConfig.value.values,
-                      );
-                      if (providerParsed.ok) {
-                        const profileParsed = parseAndValidateProfileConfiguration(
-                          resolvedConfig.value.values,
-                          providerParsed.config,
-                        );
-                        if (profileParsed.ok) {
-                          for (const [name, fact] of Object.entries(profileParsed.config.profiles)) {
-                            if (fact.peakWindows !== undefined) rules.set(name, fact.peakWindows);
-                          }
-                        }
-                      }
-                    }
-                  }
-                  cachedRules = rules;
-                }
-                return cachedRules.get(profile);
-              };
+      peak: (() => {
+              const rulesFor = peakRulesFor;
               const zonePort = createIntlZonePort();
               const zoneFactsFor = (zone: string): ProviderZoneFacts | undefined => {
                 const normalised = normaliseZoneName(zone);
@@ -4950,20 +4970,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
                 const read = readQueueParks(store);
                 return read.ok ? read.records : [];
               };
-              const appendParkRecord = (record: QueueParkRecord): boolean => {
-                const acquired = store.acquireFence(newFenceToken());
-                if (!acquired.ok) return false;
-                try {
-                  const appended = store.append(acquired.value.handle, {
-                    kind: QUEUE_PARK_RECORD_KIND,
-                    recordKey: queueParkRecordKey(record.ref),
-                    payload: record as unknown as never,
-                  });
-                  return appended.ok;
-                } finally {
-                  store.releaseFence(acquired.value.handle);
-                }
-              };
+              const appendParkRecord = appendQueueParkRecord;
               const stop: DispatchPeakWatchPorts["stop"] = async ({
                 handle,
                 graceMs,
@@ -4979,6 +4986,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
                   : "session-state-not-preserved";
               };
               return {
+                watchEnabled: lane.disablePeakPausing !== true,
                 rulesFor,
                 zoneFactsFor,
                 parks,
@@ -5043,7 +5051,56 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
                 escalate: () => {},
               };
             })(),
-          }),
+      stop: {
+        stop: async ({ ref, cause, until }) => {
+          const sessionPort = harnessFor(settings.kind);
+          const termination = sessionPort.terminate;
+          const outcome = await executeDispatchStop(
+            {
+              resolveRepository: (target) =>
+                resolveProductionRepository(schedulerKeyForRef(target), { persist: false }),
+              lanes: () => {
+                const read = readDispatchLanes(store);
+                return read.ok ? read.records : [];
+              },
+              parks: () => {
+                const read = readQueueParks(store);
+                return read.ok ? read.records : [];
+              },
+              terminate: async ({ handle, graceMs }) => {
+                if (termination === undefined) {
+                  return { ok: false, terminated: false };
+                }
+                const result = await termination({ handle, graceMs });
+                return result.ok
+                  ? {
+                      ok: true,
+                      terminated: result.value.terminated,
+                      escalated: result.value.escalated,
+                      reaped: result.value.reaped,
+                    }
+                  : { ok: false, terminated: false };
+              },
+              appendPark: appendQueueParkRecord,
+              newEpisodeId: (target) => `peak-${target}-${newFenceToken()}`,
+              profileGraceMsFor: peakProfileGraceMsFor,
+              killGraceMs,
+              mainCheckout: cwd,
+            },
+            { ref, cause, until, nowIso: nowIso(), nowMs: nowMs() },
+          );
+          return outcome.ok
+            ? { ok: true, data: outcome.data }
+            : {
+                ok: false,
+                error: {
+                  kind: outcome.kind,
+                  code: outcome.code,
+                  ...(outcome.summary === undefined ? {} : { summary: outcome.summary }),
+                },
+              };
+        },
+      },
       releaseLease: (ref) => {
         const released = releaseQueueLease(store, {
           ref,

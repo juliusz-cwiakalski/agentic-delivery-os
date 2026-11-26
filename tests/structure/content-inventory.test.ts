@@ -262,6 +262,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "observeDispatchPeak",
     "standingPeakPark",
   ],
+  "core/src/app/dispatch-stop.ts": ["executeDispatchStop"],
   "core/src/app/dispatch-log-sink.ts": [
     "createDispatchLogSink",
     "dispatchLogsDirectoryName",
@@ -435,6 +436,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "renderDispatchLogText",
     "renderDispatchResolveText",
     "renderDispatchStatusText",
+    "renderDispatchStopText",
     "renderDispatchSummaryText",
     "renderDispatchText",
     "renderDispatchVerboseText",

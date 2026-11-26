@@ -202,12 +202,23 @@ export type DispatchLastMessageData = {
   readonly recordedAt: string | null;
 };
 
+/** `dispatch stop <ref> --cause peak-window --until <iso>` (GH-413 DM-8). */
+export type DispatchStopData = {
+  readonly query: "stop";
+  readonly ref: string;
+  readonly cause: "peak-window";
+  readonly until: string;
+  readonly episodeId: string;
+  readonly preservation: "preserved" | "session-state-not-preserved";
+};
+
 /** Any operator answer payload; the `query` member is the only discriminator. */
 export type DispatchOperatorData =
   | DispatchStatusData
   | DispatchLogData
   | DispatchDeliveringData
-  | DispatchLastMessageData;
+  | DispatchLastMessageData
+  | DispatchStopData;
 
 /* ------------------------------------------------------------------------- */
 /* The injected read seams (API-8, API-9, API-10).                            */

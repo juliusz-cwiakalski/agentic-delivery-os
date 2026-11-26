@@ -32,6 +32,7 @@ import {
   type DispatchLogData,
   type DispatchResolveData,
   type DispatchStatusData,
+  type DispatchStopData,
   type DispatchSummaryData,
   type ProjectionClass,
 } from "@delivery-os/core/contracts";
@@ -44,10 +45,23 @@ import {
   renderDispatchLogText,
   renderDispatchResolveText,
   renderDispatchStatusText,
+  renderDispatchStopText,
   renderDispatchSummaryText,
   renderDispatchText,
   renderDispatchVerboseText,
 } from "../output/dispatch-text.js";
+
+/** The `dispatch stop` surface; the edge wires the real ports behind it. */
+export type DispatchStopRuntime = {
+  readonly stop: (input: {
+    readonly ref: string;
+    readonly cause: "peak-window";
+    readonly until: string;
+  }) => Promise<
+    | { readonly ok: true; readonly data: DispatchStopData }
+    | { readonly ok: false; readonly error: DispatchRuntimeFailure }
+  >;
+};
 
 /** The one-shot run surface; the edge wires the real ports behind it. */
 export type DispatchRunRuntime = {
@@ -223,6 +237,7 @@ export type DispatchCommandRuntime = {
   readonly delivering?: DispatchDeliveringRuntime;
   readonly log?: DispatchLogRuntime;
   readonly message?: DispatchMessageRuntime;
+  readonly stop?: DispatchStopRuntime;
   /**
    * The registered credential set the composition root already holds (the same
    * value `blockers` and `steer` receive); the message composition redacts with
@@ -362,6 +377,8 @@ const parseAttemptsRequest = (tokens: readonly string[]): AttemptsRequest => {
 /** The declared flag vocabulary of the four delivered forms, and of `attempts`. */
 const DELIVERED_FLAGS = ["--revert"] as const;
 const DELIVERED_VALUE_FLAGS = ["--harness", "--resume-prompt", "--repo", "--note"] as const;
+/** `dispatch stop`'s value flags: the cause and the required end. */
+const STOP_VALUE_FLAGS = ["--cause", "--until"] as const;
 
 /**
  * The operator forms, and the per-form flag vocabulary.
@@ -428,13 +445,14 @@ export const createDispatchCommandDefinition = (
 ): CommandDefinition => {
   const definition: CommandDefinition = {
     flags: [...DELIVERED_FLAGS],
-    requiresValue: [...DELIVERED_VALUE_FLAGS, "--tail"],
+    requiresValue: [...DELIVERED_VALUE_FLAGS, "--tail", ...STOP_VALUE_FLAGS],
     positionals: { max: 3 },
     acceptsAnyFlag: true,
     humanSuccess: true,
     exitProjection: (data) => {
       if (isSummaryData(data)) return "success";
       if (queryOf(data) === "status") return "success";
+      if ((data as { readonly query?: unknown }).query === "stop") return "success";
       if (isDeliveringData(data)) return data.delivering ? "success" : "user-validation";
       if (isLogData(data)) return data.reason === "unreadable" ? "user-validation" : "success";
       if (isLastMessageData(data)) return data.available ? "success" : "user-validation";
@@ -455,6 +473,9 @@ export const createDispatchCommandDefinition = (
     humanText: (data, _brand, context) => {
       if (isAttemptsData(data)) return renderDispatchAttemptsText(data);
       if (isStatusData(data)) return renderDispatchStatusText(data);
+      if ((data as { readonly query?: unknown }).query === "stop") {
+        return renderDispatchStopText(data as DispatchStopData);
+      }
       if (isDeliveringData(data)) return renderDispatchDeliveringText(data);
       if (isLogData(data)) return renderDispatchLogText(data);
       if (isLastMessageData(data)) return renderDispatchLastMessageText(data);
@@ -491,12 +512,33 @@ export const createDispatchCommandDefinition = (
         const delivered = new Set(
           operator
             ? [...OPERATOR_FLAGS[first as OperatorForm]]
-            : [...DELIVERED_FLAGS, ...DELIVERED_VALUE_FLAGS],
+            : first === "stop"
+              ? [...STOP_VALUE_FLAGS]
+              : [...DELIVERED_FLAGS, ...DELIVERED_VALUE_FLAGS],
         );
-        const undeclared = argv.find((token) => token.startsWith("--") && !delivered.has(token));
+        const globals = new Set(["--json", "--verbose", "--pretty", "--help", "--version"]);
+        const undeclared = argv.find(
+          (token) => token.startsWith("--") && !delivered.has(token) && !globals.has(token),
+        );
         if (undeclared !== undefined) {
           return fallbackInvocation(`unknown flag "${undeclared}"`);
         }
+      }
+
+      if (first === "stop") {
+        if (runtime.stop === undefined) return failure("input.value.rejected");
+        if (second === undefined || third !== undefined || !REF_PATTERN.test(second)) {
+          return failure("input.value.rejected");
+        }
+        if (flags["--cause"] !== "peak-window") {
+          return failure("input.value.rejected", "the admitted cause is peak-window");
+        }
+        const until = flags["--until"];
+        if (typeof until !== "string" || until.length === 0) {
+          return failure("input.value.rejected", "until-required");
+        }
+        const result = await runtime.stop.stop({ ref: second, cause: "peak-window", until });
+        return result.ok ? { data: result.data } : runtimeFailureOf(result.error);
       }
 
       if (isOperatorForm(first)) {

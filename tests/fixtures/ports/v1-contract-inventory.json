@@ -1011,7 +1011,8 @@
       "DispatchOwnerProbe",
       "DispatchProbeVerdict",
       "DispatchStatusData",
-      "DispatchStatusParkFact"
+      "DispatchStatusParkFact",
+      "DispatchStopData"
     ],
     "dispatch.ts": [
       "ATTEMPTS_DEFAULT_LIMIT",
@@ -2638,6 +2639,7 @@
       "DispatchResumeMode",
       "DispatchStatusData",
       "DispatchStatusParkFact",
+      "DispatchStopData",
       "DispatchSummaryData",
       "DispatchTranscriptRead",
       "DispatchTranscriptResult",
