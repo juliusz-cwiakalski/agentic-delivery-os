@@ -107,6 +107,7 @@ describe("GH-347 the dispatch lane record is declared once", () => {
       "lastOutcome",
       "worktreePath",
       "providerProfile",
+      "recoveryRefusal",
       "recordedAt",
     ]);
     for (const field of fields ?? []) {
@@ -115,7 +116,8 @@ describe("GH-347 the dispatch lane record is declared once", () => {
         field.name === "lastToken" ||
         field.name === "lastOutcome" ||
         field.name === "worktreePath" ||
-        field.name === "providerProfile";
+        field.name === "providerProfile" ||
+        field.name === "recoveryRefusal";
       expect(field.optional, `${field.name} optional`).toBe(optional);
     }
     // No prompt, transcript, diff, credential, or provider payload key exists.

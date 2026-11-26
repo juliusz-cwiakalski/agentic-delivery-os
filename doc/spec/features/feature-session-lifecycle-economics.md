@@ -254,7 +254,7 @@ The terminal record carries the fields the later consumers need: delivery identi
 
 ### 4.6 Error-table rows
 
-The error table declares the `dispatch` domain kind with four rows. This feature owns the two economics identities (`dispatch.restart-budget-exceeded`, `dispatch.resume-uneconomical`); the dispatch engine owns `dispatch.session.spawn-failed` and `dispatch.state-unverified` in the same kind. All four are documented in [Result Contract and Error Table](feature-result-contract.md) and bound in both directions:
+The error table declares the `dispatch` domain kind with five rows. This feature owns the two economics identities (`dispatch.restart-budget-exceeded`, `dispatch.resume-uneconomical`); the dispatch engine owns `dispatch.session.spawn-failed`, `dispatch.state-unverified`, and the transient, retryable `dispatch.resume-parked` pre-session refusal in the same kind. All five are documented in [Result Contract and Error Table](feature-result-contract.md) and bound in both directions:
 
 | Code | Kind | Category | Retryable | Consequence | Projection | Exit |
 |---|---|---|---|---|---|---|

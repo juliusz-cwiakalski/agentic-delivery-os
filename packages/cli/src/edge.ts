@@ -6915,7 +6915,7 @@ export type QueueComposition = {
    * Absent means no watch is composed and the delivered iteration-start
    * gating is the whole story.
    */
-  readonly peakWatchComposed?: boolean;
+  readonly peakWatchComposed?: boolean | (() => boolean);
 };
 
 type QueueBuilt =
@@ -7799,7 +7799,10 @@ export const createLanesCommandRuntime = (
     // writer. The already-resolved degradation is reused: no second
     // reachability resolution.
     const degraded = resolveDegraded(composition.degraded);
-    const watchComposed = composition.peakWatchComposed === true;
+    const watchComposed =
+      typeof composition.peakWatchComposed === "function"
+        ? composition.peakWatchComposed()
+        : composition.peakWatchComposed === true;
     const parksRead = readQueueParks(composition.store);
     const parkClaimed =
       parksRead.ok &&

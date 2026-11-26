@@ -4,6 +4,7 @@
  * the lane stays parked (GH-413 F-4, AC-F4-2, AC-F4-3, NFR-4, DEC-18).
  */
 import { describe, expect, test } from "bun:test";
+import { readDispatchLanes } from "../../packages/core/src/app/dispatch-ledger";
 import { evaluateDispatchPeakResume } from "../../packages/core/src/app/dispatch-peak-pause";
 import type { QueueParkRecord } from "../../packages/core/src/contracts/index";
 import { createPeakScenario } from "../fixtures/dispatch/golden/harness";
@@ -116,6 +117,11 @@ describe("TC-PEAK-009 a non-terminal recovery refusal returns one classified res
       expect(peak.reentered()).toHaveLength(0);
       expect(peak.resumed()).toBe(0);
       expect(scenario.calls.releases.length).toBeGreaterThan(0);
+      const lanes = readDispatchLanes(scenario.state.store);
+      expect(lanes.ok).toBe(true);
+      if (!lanes.ok) return;
+      const terminal = lanes.records.find((record) => record.state === "terminal");
+      expect(terminal?.recoveryRefusal).toBe("dispatch.resume-uneconomical");
     } finally {
       scenario.dispose();
     }

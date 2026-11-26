@@ -3031,7 +3031,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         nowMs,
         newFenceToken,
         degraded: daemonReachability,
-        peakWatchComposed: peakPausingEnabled(),
+        // Lazily resolved only when the `lanes` read executes, so a command that
+        // never reads lanes performs no extra configuration acquisition.
+        peakWatchComposed: peakPausingEnabled,
         readyRuntime: createStatusCommandRuntime(statusComposition(), noChain),
         readOwnerHold,
         readPlanMembers,

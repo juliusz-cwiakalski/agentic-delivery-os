@@ -299,7 +299,14 @@ and issues exactly one terminate call through the delivered terminate path. The
 complete watcher-shaped park record is appended only after a confirmed terminate;
 the owning invocation withholds terminal classification for at least the applied
 grace plus one observation cadence after collection resolves, re-reads the park,
-keeps renewing the lease, and waits and resumes at the declared end.
+keeps renewing the lease, and waits and resumes at the declared end. A resume
+or re-dispatch of a lane whose standing peak-window park has not yet expired is
+refused before any session starts with the dispatch-family
+`dispatch.resume-parked` row at exit 2 (category `transient`, retryable,
+`not_landed`, `platform-provider`); it names the park's cause and `until` in the
+bounded summary and writes nothing, while an expired standing park is recovered
+through the delivered mutating park pass at the first observation and the run
+proceeds.
 
 ## EXIT STATUS
 

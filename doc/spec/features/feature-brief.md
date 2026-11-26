@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-BRIEF
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-18
+last_updated: 2026-11-26
 owners: ["engineering"]
 service: delivery-os
 summary: "The read-only brief command and its delivery.brief.v1 payload: one deterministic, decision-first, one-screen render projected from the same injected collector facts as the status digest; the additive stateSource identity shared with status and the board; ten closed render surfaces (eight digest surfaces plus two named placeholders) as its own literal contract; three decision-first anchor groups (ready-to-merge, blocker-questions, owner-gate-ages) with a real ranked blocker group mirroring the digest items; the closed two-entry placeholder catalog; the spend citation surface with its reconciliation disclosure or classified absence; the providers surface's open lane park fields projected with zero added reads; exit 0 on collector unavailability with no status.collector identity; digest vocabulary and bounds reused by reference; no LLM in the render path."
 links:
-  related_changes: ["GH-228", "GH-243", "GH-230", "GH-242", "GH-241", "GH-277", "GH-291", "GH-294", "GH-297", "GH-338"]
+  related_changes: ["GH-228", "GH-243", "GH-230", "GH-242", "GH-241", "GH-277", "GH-291", "GH-294", "GH-297", "GH-338", "GH-413"]
   contracts:
     - "packages/core/src/contracts/brief.ts"
 ---
@@ -72,7 +72,7 @@ A digest surface copies its section's `state`, `counts`, and `truncated` flag un
 
 **Spend citation.** The `spend` surface is a render surface, not an anchor. When the verified spend fold reports captured telemetry, the payload's `spend` citation carries `state: "present"` with `tokensByClass`, the role and model breakdown rows, the phase timing summaries, and the reconciliation block (`verdict`, `tolerance`, `basis`) when the fold produced one. The human line renders the summed token total, the role and model figures, and the reconciliation statement, so the brief never states a spend figure without the tolerance. When the fold reports no telemetry of either capture plane, or the spend facts are unknown, the citation is `state: "absent"` with `code: "spend.telemetry-absent"` and the human line reads `spend  absent  spend.telemetry-absent (no captured telemetry)`. The brief never renders zeros for an absent store and never omits the surface.
 
-**Lane park fields.** When the providers section carries open lane park episodes ([Provider Peak Pausing](feature-peak-pausing.md)), the providers surface projects the identical `laneParks[]` values and the human render appends one `lane-park` line per open episode beneath the providers line: `lane-park  <ref>  <reason>  until=<instant|absent>  <preservation>`. The `until` renders `absent` for an `owner-hold` park — the classified absence, never a synthesized instant — and the preservation classification renders only when the park record carries it. The projection is pass-through of the digest values with zero added reads; with no open episode, no line renders and the surface is unchanged.
+**Lane park fields.** When the providers section carries open lane park episodes ([Provider Peak Pausing](feature-peak-pausing.md)), the providers surface projects the identical `laneParks[]` values and the human render appends one `lane-park` line per open episode beneath the providers line: `lane-park  <ref>  <reason>  until=<instant|absent>  <preservation>`. The `until` renders `absent` for an `owner-hold` park — the classified absence, never a synthesized instant — and the preservation classification renders only when the park record carries it. A dispatch-owned episode is the same durable park record and renders identically; the brief's read set is unchanged by it. The projection is pass-through of the digest values with zero added reads; with no open episode, no line renders and the surface is unchanged.
 
 ### Anchored actions
 

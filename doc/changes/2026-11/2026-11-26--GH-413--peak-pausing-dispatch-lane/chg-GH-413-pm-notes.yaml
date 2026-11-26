@@ -541,3 +541,16 @@ notes:
       batch passes 358/360 (2 skips) after the pin update."
     type: info
     date: "2026-11-26"
+  - text: "system_spec_update: @doc-syncer reconciled 25 pages (the nineteen §16
+      pages plus the count-bearing pages and indexes). Residual doc gaps outside
+      its write roots, routed to @coder: doc/planning/oss-tooling/milestones/m1/
+      commands/dispatch.md lacks `dispatch stop`, and m2/architecture.md still
+      states the daemon-absent sentence. Implementation gaps routed to @coder:
+      (a) `dispatch status` `recoveryRefusal` has no producer (AC-F4-3), though
+      the member is projected; (b) AC-F3-4's 'observed after the resume session
+      started' arm is unreachable because the recovery runs before the first
+      session, for the reviewer to judge; (c) tests/behaviour/identity-override
+      fails because the new peakPausingEnabled resolution reads the prior-identity
+      config a third time. No spec/test-plan/plan edits."
+    type: info
+    date: "2026-11-26"

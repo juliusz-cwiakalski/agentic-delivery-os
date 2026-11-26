@@ -61,6 +61,7 @@ export const LANE_KEYS = [
   "lastOutcome",
   "worktreePath",
   "providerProfile",
+  "recoveryRefusal",
 ] as const;
 
 /** The attempt record key set (the delivered field set; no field may be added). */

@@ -931,6 +931,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
   let leaseLost = false;
   let leaseRenewalFailure: string | undefined;
   let peakEpisode: DispatchEpisodeFact | undefined;
+  let peakRecoveryRefusal: string | undefined;
   /** The one episode sentence appended to the delivered summary (GH-413 DM-5). */
   const episodeSummary = (): string => {
     if (peakEpisode === undefined) return "";
@@ -1070,6 +1071,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           restartsConsumed: restarts - persistedRestarts,
           state: "terminal",
           ...(laneWorktreePath === undefined ? {} : { worktreePath: laneWorktreePath }),
+          ...(peakRecoveryRefusal === undefined ? {} : { recoveryRefusal: peakRecoveryRefusal }),
           lastToken: input.token,
           lastOutcome: input.outcome,
           recordedAt: now,
@@ -1475,10 +1477,18 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       if (ports.peak !== undefined && peakPark === undefined && !leaseLost) {
         const withholdMs = (ports.killGraceMs ?? 20_000) + (ports.livenessIntervalMs ?? 30_000);
         const cadence = ports.livenessIntervalMs ?? 30_000;
-        const wait = ports.waitForCadence;
-        if (wait !== undefined && cadence > 0) {
+        if (cadence > 0) {
           const steps = Math.max(1, Math.ceil(withholdMs / cadence));
-          for (let step = 0; step < steps; step += 1) await wait(cadence).promise;
+          for (let step = 0; step < steps; step += 1) {
+            // The delivered injected delay seam advances the clock instantly in
+            // the battery and binds a real timer in production.
+            if (ports.delay !== undefined) await ports.delay(cadence, "terminate-grace");
+            else {
+              const wait = ports.waitForCadence?.(cadence);
+              if (wait === undefined) break;
+              await wait.promise;
+            }
+          }
         }
         const latestPark = [...ports.peak.parks()]
           .reverse()
@@ -1615,6 +1625,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           continue;
         }
         if (waitOutcome.outcome === "refused") {
+          peakRecoveryRefusal = waitOutcome.code;
           peakEpisode = { ...peakEpisode, refusal: waitOutcome.code } as DispatchEpisodeFact;
           const pair = admissionRefusalPair(
             waitOutcome.code as

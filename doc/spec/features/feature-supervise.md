@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-SUPERVISE
 status: Current
 created: 2026-11-17
-last_updated: 2026-11-19
+last_updated: 2026-11-26
 owners: ["engineering"]
 service: delivery-os
 summary: "The operator-facing `supervise` family (M2-S2): one battery invocation over the invoking checkout's single managed repository that folds durable daemon, queue, dispatch, economics, and effect records into the schema-versioned `delivery.supervision.v1` report; per-lane and per-supervision-claim tri-state classification (`progressing` / `stalled` / `unknown`) from artifact evidence alone with lying-liveness detection and no process-derived input; watchdog classification, bound, and prefill-safe rule consumption instead of reimplementation; a lane's own `daemon.lane` heartbeat observation with the declared scope fallback; the battery-written-only supervised-stall park with the sixth `liveness-stall` cause (the operator path refuses `--park liveness-stall` by name, both append seams refuse an empty expiry, and the append is gated on the lane carrying no active park of any cause), the resolver-mapped `provider-window` condition, a non-null re-entry instant, and the additive active-park `until` on the lane read; duplicate-supervision refusal against an authority actively acting (live daemon presence enriches the report and gates nothing; a park intent is non-claiming; an authority class leaving no durable record is a declared detection limit); restart-policy composition over the delivered budget, resume economics, terminal exhaustion, and a ref-stable typed question raised only on an appended exhaustion record, with the park's re-entry horizon governing later actions and restart admission staying liveness-stall-only; one decision fold per run that the park, restart, and claim decisions reuse with the delivered append read-backs declared per run; exactly two `supervise` error identities in the closed two-segment allowlist; and the mount as the 25th prompt-required family with no new record kind and no event-taxonomy change."
 links:
-  related_changes: ["GH-295", "GH-238", "GH-221", "GH-235", "GH-292", "GH-241", "GH-237", "GH-174", "GH-172", "GH-346"]
+  related_changes: ["GH-295", "GH-238", "GH-221", "GH-235", "GH-292", "GH-241", "GH-237", "GH-174", "GH-172", "GH-346", "GH-413"]
   related_decisions: ["TDR-0025", "TDR-0027", "TDR-0028", "ADR-0003"]
   contracts:
     - "packages/core/src/contracts/supervise.ts"

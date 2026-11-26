@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-CEREMONY-RUNNER
 status: Current
 created: 2026-11-16
-last_updated: 2026-11-21
+last_updated: 2026-11-26
 owners: ["engineering"]
 service: delivery-os
 summary: "The `ceremony` family and the ceremony layer: four verbs (list, run, resume, catch-up) over one declaration contract (`delivery.ceremony.declarations.v1`) with closed step, slot, verification, trigger, cadence, scope-key, recorded-trigger and verdict vocabularies plus fixed bounds; six built-in declarations (morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync) executed through one runner path; deterministic intake (declaration-held scope key, note or cadence-derived window, recorded trigger provenance), artifact-verified per-step execution with read-back verification, durable `ceremony.run` and `ceremony.step` records with derived durations, phase-boundary compaction, resume from the first unverified step, and single-window catch-up with identity-based satisfaction; project declarations in one committed `<configDirectoryName>/ceremonies.yaml` document with no tooling change; the pure tier engine over the delivered plan `tier` and pm-notes `variant` phase sets with a `tier-mismatch`/`unresolved-phase`/`unevaluated-trigger` finding vocabulary; the four sub-R1 retro levels with the concept's fixed note schema and follow-through-first agenda; the ceremony artifact family; and exactly two `ceremony.*` error identities under a new `ceremony` domain kind."
 links:
-  related_changes: ["GH-296", "GH-287", "GH-298", "GH-299", "GH-346", "GH-365"]
+  related_changes: ["GH-296", "GH-287", "GH-298", "GH-299", "GH-346", "GH-365", "GH-413"]
   contracts:
     - "packages/core/src/contracts/ceremony.ts"
     - "packages/core/src/contracts/ceremony-builtins.ts"

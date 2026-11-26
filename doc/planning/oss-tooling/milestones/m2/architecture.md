@@ -286,8 +286,10 @@ sequenceDiagram
     P->>T: ledger events: stop, park, resume
 ```
 
-With no resident daemon there is no window watcher to park mid-flight: peak
-control degrades to the existing iteration-start gating, the engine does not
+A lane is watched by the composition that owns it: the resident daemon watches
+the lanes it supervises, and the one-shot dispatch run path supplies the same
+profile-window watch for the lane it started. A composition that supplies
+neither degrades to the existing iteration-start gating, the engine does not
 claim a park that did not happen, and the difference is declared to the
 operator. The S17 contract carries both branches.
 

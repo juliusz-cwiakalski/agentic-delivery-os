@@ -718,6 +718,13 @@ export type DispatchLaneRecord = {
    * window-pausable.
    */
   readonly providerProfile?: string;
+  /**
+   * The recorded window-end recovery refusal on the terminal record (GH-413
+   * AC-F4-3, DM-3): present exactly when a non-terminal recovery refused and the
+   * invocation returned one classified result with the park standing. Additive
+   * and optional; a normal terminal record carries none.
+   */
+  readonly recoveryRefusal?: string;
   readonly recordedAt: string;
 };
 

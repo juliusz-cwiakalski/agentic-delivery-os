@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-SCHEDULING-ENGINE
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-25
+last_updated: 2026-11-26
 owners: ["engineering"]
 service: delivery-os
 summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; per-member entries for a cross-repository change keyed by the derived `<canonicalChangeRef>@<repoKey>` ref with one lane per member, per-member dependency edges, release, and landing removal, and the additive `data.members[]` on `queue add`; readiness re-derived on the delivered six-condition model with scheduler sources; a global owner-hold gate that outranks parks and provider windows; repo-exclusive leases with a fence-token claim, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding, over the closed six-cause park vocabulary (`peak-window`, `owner-hold`, and the supervised-stall cause `liveness-stall` riding the delivered condition types, battery-written only and refused by name on the operator path); the complete queue lifecycle — reason-bearing append-only removal whose append position decides presence, the `dep add`/`dep remove` edge grammar, the per-ref single-flight admission refusal that names the holder at the envelope root, and bounded tracker-truth reconciliation; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, the `peakEnforcement` machine read, the additive `leaseHolder`, `until`, and `worktreePath` lane fields, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; seven proof-backed integrity properties (claim, park, reconcile, CRUD, reason-bearing removal, single-flight, append-position presence) each with a declared control and no behaviour widening; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
 links:
-  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280", "GH-286", "GH-288", "GH-292", "GH-294", "GH-295", "GH-309", "GH-310", "GH-297", "GH-347", "GH-349", "GH-404"]
+  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280", "GH-286", "GH-288", "GH-292", "GH-294", "GH-295", "GH-309", "GH-310", "GH-297", "GH-347", "GH-349", "GH-404", "GH-413"]
   related_decisions: ["ADR-0003", "TDR-0005", "ODR-0003", "TDR-0026", "TDR-0027", "TDR-0030", "TDR-0050"]
   contracts:
     - "packages/core/src/contracts/queue.ts"
@@ -175,7 +175,12 @@ than discovering work by hand.
   `owner-hold` park's expiry is a declared classified
   absence: the hold is a read-time gate with no expiry, the record carries no
   `until`, and the invoked `queue release --park owner-hold` command is the one
-  writer of an owner-hold park record — the hold itself writes none.
+  writer of an owner-hold park record — the hold itself writes none. A
+  `peak-window` park written by the daemon's watch, by the dispatch-owned watch,
+  or by `dispatch stop <ref>` carries the complete episode frame (episode id,
+  grace deadline, stop instant, preservation classification); only the operator
+  release writer stamps the minimal frame, so the same cause has two declared
+  writer shapes ([Provider Peak Pausing](feature-peak-pausing.md)).
 - **One declared total order.** Hard exclusions (readiness, dependency/deploy,
   parks, per-pass single-flight, weight) remove candidates; ordering applies rank
   class,
@@ -237,12 +242,16 @@ than discovering work by hand.
   amplification, which are `null` with an `economics-underivable` warning
   rather than a fabricated zero.
   The `lanes --json` machine read carries the additive `peakEnforcement` block —
-  `mode` (`window-watch` iff the running composition actually supplies the
-  profile-window watcher ports, otherwise `iteration-start-gating`; a
-  composition fact, never an inference from daemon reachability) and
+  `mode` (`window-watch` when the reading composition's own effective
+  configuration enables automatic pausing and therefore composes the
+  profile-window watch, otherwise `iteration-start-gating`; a composition fact,
+  never an inference from daemon reachability) and
   `parkClaimed` (read from the
   durable park records, false when none exists) — so the read declares which
-  peak enforcement is active and never claims a park that did not happen.
+  peak enforcement is active and never claims a park that did not happen. Both
+  owning compositions count: the daemon's watch and the dispatch-owned watch
+  report `window-watch` from the same configuration-derived rule, and
+  `lane.disable-peak-pausing: true` reports `iteration-start-gating`.
   The projection also carries an additive optional `leaseHolder`, present
   exactly when a live lease exists and equal to that lease's recorded holder;
   it adds no field requirement to a delivered lane, and the payload identity
@@ -706,7 +715,7 @@ CI-slot key exists or is reserved.
 | `queue.entry` | `delivery.queue.entry.v1` | `queue.entries:<REF>` | `queue add`, `queue prioritize`, a re-declaration after removal | Graph fold, presence rule, precedence, claim |
 | `queue.dependency` | `delivery.queue.dependency.v1` | `queue.deps:<REF>` | `queue add --dep`, `queue dep`, `queue dep remove` | Graph fold, readiness, deploy gating |
 | `queue.lease` | `delivery.queue.lease.v1` | `queue.leases:<repoKey>` | `queue claim`, `queue release`, stale takeover | Readiness `repo-free`, claim, lane fold |
-| `queue.park` | `delivery.queue.park.v1` | `queue.parks:<REF>` | `queue release --park` (including its compensating withdrawal), the resident daemon's peak-window watch and resume records, the `supervise` battery's supervised-stall park, park recovery, removal's park withdrawal | Park pass, precedence, lane fold, the peak-pause episode projection |
+| `queue.park` | `delivery.queue.park.v1` | `queue.parks:<REF>` | `queue release --park` (including its compensating withdrawal), the resident daemon's peak-window watch and resume records, the dispatch-owned peak-window watch and `dispatch stop <ref>`, the `supervise` battery's supervised-stall park, park recovery, removal's park withdrawal | Park pass, precedence, lane fold, the peak-pause episode projection |
 | `queue.incident` | `delivery.queue.incident.v1` | `queue.incidents:<REF or repoKey>` | Stale takeover, park auto-recovery | Incidents are read as history evidence |
 | `queue.removal` | `delivery.queue.removal.v1` | `queue.removals:<REF>` | `queue remove`, closeout's `landed` removal, `queue reconcile` | Graph fold's append-position presence rule |
 | Derived: queue graph | `delivery.queue.graph.v1` | derived document `queue-graph.json` | Intent mutations under the fence | Diagnostics and tests only; never truth |

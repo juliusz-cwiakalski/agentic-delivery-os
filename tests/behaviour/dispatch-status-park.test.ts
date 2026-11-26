@@ -11,7 +11,7 @@ const REPOSITORY = "github.com/owner/repo";
 const NOW = "2026-11-19T00:00:00.000Z";
 const UNTIL = "2026-11-19T02:00:00.000Z";
 
-const laneRecord = (): StateRecord => ({
+const laneRecord = (overrides: Record<string, unknown> = {}): StateRecord => ({
   schemaVersion: "delivery.state.v1",
   kind: "dispatch.lane",
   key: "dispatch.lanes:GH-413",
@@ -29,6 +29,7 @@ const laneRecord = (): StateRecord => ({
     restartsConsumed: 0,
     state: "active",
     recordedAt: NOW,
+    ...overrides,
   } as never,
 });
 
@@ -133,6 +134,27 @@ describe("TC-PEAK-011 the status park fact and the three probe arms", () => {
     expect(data.stale).toBe(true);
     expect(data.delivering).toBe(false);
     expect(data.park?.until).toBe(UNTIL);
+  });
+
+  test("the terminal lane record's recoveryRefusal is projected onto the park fact", () => {
+    const fixture = storeOf([
+      laneRecord({
+        state: "terminal",
+        lastToken: "failed",
+        lastOutcome: "failed",
+        recoveryRefusal: "dispatch.resume-uneconomical",
+      }),
+      parkRecord(),
+    ]);
+    const result = readOperatorStatus({
+      store: fixture.store,
+      repository: REPOSITORY,
+      ref: "GH-413",
+      probe: () => "dead",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.park?.recoveryRefusal).toBe("dispatch.resume-uneconomical");
   });
 
   test("the park fact is absent, never null, when no park stands", () => {

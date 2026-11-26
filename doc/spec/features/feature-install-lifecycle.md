@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-INSTALL-LIFECYCLE
 status: Current
 created: 2026-11-19
-last_updated: 2026-11-21
+last_updated: 2026-11-26
 owners: ["engineering"]
 service: delivery-os
 summary: "The installable product artifact and its composed `install` lifecycle (M4-S1): one Bun-compiled self-contained executable at `dist/<binary-name>` produced by the additive `build:binary` entry, a build-time-injected identity behind the preserved one-line `--version` contract with four exact tokens, and the compiled process edge that derives the detached re-entry path from the artifact's real path; the twenty-sixth prompt-required family `install` with `migrate`, `status`, `rollback`, `uninstall`, and `purge`, composed in both bins and owned by the primary identity only, with an admission predicate that refuses a linked worktree and a development run, one `install.record.v1` record written atomically, a seven-step atomic replace with an artifact-content agreement no-op and in-place record reconciliation, a single compiled-artifact rollback slot with the pair-inversion precondition and its two declared limits, an advisory-on-write and typed-on-report state-format check, the removal matrix with the always-printed residual set, five zero-write dry-runs that report the daemon `unchecked`, the delimited opt-in PATH block, the migration verb and the retired `--migrate` form, the pre-action daemon guard that no dry-run evaluates, the guarded shell launcher step, and ten `install` error rows."
 links:
-  related_changes: ["GH-346", "GH-320", "GH-242", "GH-365"]
+  related_changes: ["GH-346", "GH-320", "GH-242", "GH-365", "GH-413"]
   related_decisions: ["TDR-0044", "TDR-0045", "TDR-0046", "TDR-0047", "TDR-0048"]
   contracts:
     - "scripts/build-binary.ts"
