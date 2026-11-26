@@ -255,9 +255,10 @@ notes:
       previous findings but introduced one new seam-level contradiction. The two
       durable lessons: (a) recover the standing park on the dispatch path before
       the watch, or the episode's abnormal exits poison every later park read;
-      (b) a lease-id key is only an ownership key if a re-dispatch takes over
-      with a new id, so the claim's stale same-holder arm must be amended
-      alongside the renewal. Both are design fixes, not wording fixes."
+      (b) a lease-id key alone is not an ownership key because the delivered
+      renewed arm preserves the lease id; the heartbeat-write key is the one
+      that survives the arm, and the claim stays untouched. Both are design
+      fixes, not wording fixes."
     type: retro
     date: "2026-11-26"
   - text: "Owner decision at the cap: this is a non-interactive run, so the
@@ -267,4 +268,28 @@ notes:
       and handed back; no further pass is attempted. This assumption is recorded
       for the owner's PR review."
     type: decision
+    date: "2026-11-26"
+  - text: "DoR gate iteration 4 (the authorized final pass): NOT_READY
+      (readiness-review/readiness-iter-4.md), one blocking finding. The
+      standing-park rule closes the permanent double-park for an expired park,
+      but an un-expired standing park on an operator resume inside its own
+      window is specified three ways and one is unimplementable: the delivered
+      pass recovers only an expired park; occupancy would let the lane bill
+      inside the window while `lanes` shows it parked; the refusal reading
+      returns from a live session with no named identity or decision point.
+      The reviewer's fix is small: choose operator-override or pre-session
+      refusal, align seven passages, name the refusal identity and its point in
+      the run. The change is PARKED per the recorded assumption; no code
+      delivery, no pull request. Owner action required: authorize one more gate
+      pass for this fix, or leave GH-413 parked."
+    type: blocker
+    date: "2026-11-26"
+  - text: "Retro: the four gate passes produced a strong, code-grounded spec and a
+      precise readiness record, but they also show the cost of remediating inside
+      a 3-iteration cap: each pass fixed the previous seam and exposed one more.
+      The durable lesson is to validate every abnormal-exit rule against the
+      delivered state machine (expired vs active park, live vs lost lease) before
+      writing it, and to choose the operator-override branch for an un-expired
+      park, which is the only branch the delivered pass can express."
+    type: retro
     date: "2026-11-26"

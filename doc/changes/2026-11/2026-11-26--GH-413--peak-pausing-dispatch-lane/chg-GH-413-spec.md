@@ -445,11 +445,11 @@ The remaining namings (the exact field names of the additive status and result m
 
 | Component | Impact |
 |---|---|
-| Dispatch run path (one-shot invocation and its session loop) | Updated: the watch, the episode, the wait, the resume, the post-collection park re-read, the lease renewal, and one answer |
+| Dispatch run path (one-shot invocation and its session loop) | Updated: the standing-park recovery, the watch, the episode, the wait, the resume, the post-collection park re-read, the lease renewal, and one answer |
 | Peak-pause decision layer | Composed unchanged; one shared decision contract with the daemon's watch, first-open-window end included |
 | Park record family and preservation classification | Composed unchanged; dispatch-owned stops write the complete episode frame, and a standing park is closed by the delivered recovery record before a new episode |
 | Durable lane record | Additive optional nomination, carried on every `active` record the invocation appends |
-| Repository lease path | Updated: the lane renews through the delivered renewal path at `min(lane.liveness-interval, queue.lease-ttl / 2)` for the run and the park, as a same-ref no-op outside an owner hold |
+| Repository lease path | Updated: the lane renews through the delivered renewal path at `min(lane.liveness-interval, queue.lease-ttl / 2)` for the run and the park, as a no-op unless the live lease's latest heartbeat is the invocation's own last write, outside an owner hold |
 | Harness terminate input | Composed with the single composed `graceMs`; no new operation |
 | Event projection for the taxonomy v2 episode kinds | Updated: producer coverage for dispatch-owned episodes and the operator stop, same kinds and payloads |
 | Dispatch result derivation and summary | Updated additively: one result, summary states the pause and resume or the refusal, bounded episode fact |
