@@ -534,3 +534,10 @@ notes:
       merge gate; this episode is not a Done criterion."
     type: info
     date: "2026-11-26"
+  - text: "Post-completion pin fix: the dispatch status read now performs the
+      delivered one bounded lane read plus the one additional bounded
+      park-record read (NFR-9), so the conformance status read-count pins moved
+      from one to two; no product behavior changed. The status/operator/status
+      batch passes 358/360 (2 skips) after the pin update."
+    type: info
+    date: "2026-11-26"
