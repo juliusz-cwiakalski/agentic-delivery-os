@@ -14,7 +14,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-26T18:18:53.409Z }
   review_fix: { started: null, completed: 2026-11-26T22:32:25.674Z }
   quality_gates: { started: null, completed: 2026-11-26T22:52:18.697Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-26T22:53:59.122Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Milestone confirmed at intake: the ticket is attached to M4:
@@ -752,5 +752,14 @@ notes:
       memory-lint, forbidden-literals, new-code-naming, namespace-tree,
       prompt-conformance, help-guide-coverage and exports-parity all green. Log:
       tmp/run-logs-runner/2026-11-26/233320-pnpm-check-full-gate.log."
+    type: info
+    date: "2026-11-26"
+  - text: "Plan phase 8 (Finalize and release: declaration only) complete: this
+      phase performs no delivery work. Its documentation-reconciliation
+      obligation was executed in system_spec_update (fc80e81e and the
+      post-phase-10 doc-sync), its pull-request obligation is executed in
+      pr_creation, and the TC-PEAK-029 post-upgrade hand-off and preconditions
+      are recorded above before dod_check. No separate commit belongs to this
+      phase."
     type: info
     date: "2026-11-26"
