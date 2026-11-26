@@ -2,15 +2,16 @@
 # GH-413: M4-S42: Peak pausing for a lane started by dispatch: it stops at the
 # window's start and resumes at the window's end
 #
-# Plan revision v1.4.
+# Plan revision v1.5.
 #
 # Sources, read in full before this plan was authored (the single source of
 # truth for every phase, test case, and path below):
-#   chg-GH-413-spec.md (v1.4) and chg-GH-413-test-plan.md (v1.5), this folder;
+#   chg-GH-413-spec.md (v1.5) and chg-GH-413-test-plan.md (v1.6), this folder;
 #   chg-GH-413-pm-notes.yaml, whose DoR remediation decisions bind the plan;
 #   readiness-review/readiness-iter-1.md, readiness-iter-2.md,
-#   readiness-iter-3.md and readiness-iter-4.md, whose plan-routed findings
-#   are addressed below (iteration 4 is the parked hand-back record).
+#   readiness-iter-3.md, readiness-iter-4.md, and readiness-iter-5.md, whose
+#   plan-routed findings are addressed below (iteration 4 is the parked
+#   hand-back record; iteration 5 carries the owner's Decision 1).
 #
 # Phase order follows the spec's delivery order (section 18) with one plan-level
 # placement: the lease-liveness phase (2) precedes the watch phase (3), so the
@@ -63,10 +64,12 @@
 #     one terminate through the delivered path for the session it started and
 #     then returns the classified refusal, never abandoning a live session.
 #     An un-expired standing park is a pre-session
-#     refusal, not an operator override: a resume or re-dispatch of such a
-#     lane is refused at resume admission before any session starts, with the
-#     delivered `queue.precondition.unmet` at exit 1 naming the park's cause
-#     and `until`, and it writes nothing. The pass therefore only ever meets
+#     refusal, not an operator override: a resume or a re-dispatch of such a
+#     lane is refused at resume admission before any session starts, as the
+#     new owner-authorised row `dispatch.resume-parked` at exit 2 (category
+#     transient, retryable true, consequence not_landed) naming the park's
+#     cause and `until`, and it writes nothing. The pass therefore only ever
+#     meets
 #     an expired park or none. Three consequences of reusing the delivered
 #     pass are declared, and none is a defect: a `preserved` standing park
 #     closed by the pass projects a `resumed` frame with an empty
@@ -125,9 +128,12 @@
 #     window-pausable.
 #   - NG-6 and NFR-8: no new park cause, event kind, record kind, schema
 #     identity, error identity, error-table row, result token, composition-fact
-#     mode value, or second kill path. The refusals reuse the delivered
+#     mode value, or second kill path. One error-table row is the
+#     owner-authorised exception: `dispatch.resume-parked` (DEC-22), the
+#     pre-session refusal of an un-expired standing park at exit 2, and no
+#     second row joins it. Every other refusal reuses a delivered identity:
 #     `queue.precondition.unmet`, `config.value.invalid`, and
-#     `input.value.rejected` identities.
+#     `input.value.rejected`.
 #   - NG-2 to NG-5, NG-7 to NG-9: no parallel lanes, no calendar-shaped window
 #     policy, no resident mode, no shell-orchestrator change, no window read
 #     surface, no change to provider-entry admission gating or the nomination
@@ -148,7 +154,7 @@ tier:
   name: full
   escalationTriggers:
     - "A second signal, kill, or termination route appears beside the delivered terminate path, or a stop is issued with more or fewer than one terminate request (NG-6, NFR-1, AC-F3-3, AC-F9-2, TC-PEAK-019): stop and report; never add a signal to the command path or to the engine."
-    - "A new park cause, event kind, record kind, lease operation, claim result, schema identity, error identity, error-table row, result token, reason token, or a third composition-fact mode value appears (NG-6, DEC-3, DEC-6, DEC-8, DEC-21, NFR-8, TC-PEAK-027): stop and report; vocabulary economy is a delivered discipline."
+    - "A new park cause, event kind, record kind, lease operation, claim result, schema identity, error identity, error-table row beyond the one owner-authorised `dispatch.resume-parked` (DEC-22), result token, reason token, or a third composition-fact mode value appears (NG-6, DEC-3, DEC-6, DEC-8, DEC-22, DEC-21, NFR-8, TC-PEAK-027): stop and report; vocabulary economy is a delivered discipline and the authorised row is exactly one."
     - "The dispatch composition is observed computing a window rule of its own, including a union of overlapping windows, instead of calling the delivered decision functions, or the parity fixture disagrees between the dispatch-owned watch and the daemon watch on the same profile and instant (AC-F1-1, DEC-20, RSK-8, RSK-TP-1, TC-PEAK-001): stop and report."
     - "A file on the resident daemon's supervision path or in the delivered decision layer needs an edit to go green (NG-1, F-1): stop and report; the watch composes the delivered decision functions and never changes them."
     - "The wait gains a timing mechanism of its own: a second cadence or configuration key, a wall-clock read, a real timer in the engine, or a pinned duration instead of the end re-derived from the injected clock at each wake (DEC-11, NFR-5, NFR-7, TC-PEAK-026): stop and report. The derived renewal cadence `min(lane.liveness-interval, queue.lease-ttl / 2)` is exempt from this trigger: a heartbeat between observations is a renewal, not an extra observation, and it adds no timing key."
@@ -164,7 +170,7 @@ tier:
     - "A pre-session park, a pre-session representation, or a session-less park frame is reintroduced, or a lane record without a stored nomination is paused, re-nominated, or given a fabricated profile, or an `active` record the invocation appends lacks the nomination (NG-10, DEC-16, AC-F2-3, RSK-TP-12): stop and report."
     - "A non-terminal recovery refusal leaves the invocation waiting or holding the lease instead of returning one classified result and releasing the lease (DEC-18, NFR-4, AC-F4-3): stop and report."
     - "Delivery searches the file system outside the checkout and the change folder (owner delivery note 4, spec section 12): stop and report; every fact, fixture, and command is reachable from those two roots."
-    - "A second active park is appended for one reference, an expired standing `peak-window` park is not recovered before a new stop decision or at the first observation of a resuming invocation, a resume or re-dispatch of a lane whose standing park has not expired starts a session, recovers or overrides that park, or is answered with any identity other than `queue.precondition.unmet` at exit 1 before any session, the already-parked rule is read as expiry rather than occupancy, or an expired park the pass cannot recover starts a new episode instead of refusing the run, or, when that failure is observed after the resume's session has already started, the invocation abandons the live session, writes a park, or returns without the one terminate through the delivered path for the session it started (F-3, NFR-2, AC-F3-4, DEC-22, DEC-23, RSK-14, TC-PEAK-038): stop and report; two active parks permanently fail every park-reading surface and the append-only history cannot repair it."
+    - "A second active park is appended for one reference, an expired standing `peak-window` park is not recovered before a new stop decision or at the first observation of a resuming invocation, a resume or re-dispatch of a lane whose standing park has not expired starts a session, recovers or overrides that park, or is answered with any identity other than `dispatch.resume-parked` at exit 2 before any session, the already-parked rule is read as expiry rather than occupancy, or an expired park the pass cannot recover starts a new episode instead of refusing the run, or, when that failure is observed after the resume's session has already started, the invocation abandons the live session, writes a park, or returns without the one terminate through the delivered path for the session it started (F-3, NFR-2, AC-F3-4, DEC-22, DEC-23, RSK-14, TC-PEAK-038): stop and report; two active parks permanently fail every park-reading surface and the append-only history cannot repair it."
     - "A `preserved` standing park closed by the pass stops projecting its `resumed` frame with an empty `sessionRef` and `branch` under the original episode id, the pass is narrowed, widened, or replaced instead of staying the delivered repository-wide one, or a stuck `clear-observed` marker is hidden, cleared by hand, or retried by the pass instead of being reported (F-3, AC-F3-4, RSK-14, TC-PEAK-038): stop and report; each is a declared consequence of reusing the delivered pass, and its absence or suppression is the same defect as a second active park."
 defaultLeases:
   - "repo:main-tools"
@@ -393,7 +399,7 @@ phases:
     summary: "give the one-shot dispatch run path its own life-long profile-window watch: after an expired standing `peak-window` park for the reference has been closed through the delivered mutating park pass, a lane whose standing park has not expired being refused before any session starts and any remaining standing park treated as occupancy, the nominated profile's declared `peakWindows` rules, read from the nomination stored on every `active` lane record the invocation appends, decide through the delivered decision functions and the injected clock at every observation; an open window issues one terminate call whose `graceMs` is the smallest of the profile grace, the delivered kill grace, and the time to the first open window's effective end, parks the lane exactly once with the complete episode frame, and the same invocation waits on the delivered liveness cadence and resumes at that end by the preservation classification; a non-terminal recovery refusal or a lost lease returns one classified result instead of waiting or resuming as owner; the watch is bound in the production composition unless the setting disables pausing."
     # Scope: spec F-1 to F-5, F-8, F-11, DEC-2 to DEC-5, DEC-10, DEC-11,
     # DEC-13, DEC-16 to DEC-18, DEC-20, DEC-22, DEC-23, DM-1, DM-2, NFR-1,
-    # NFR-2, NFR-4, NFR-6, NFR-7; flows 1, 2, and 5; DoR iteration-1
+    # NFR-2, NFR-4, NFR-6, NFR-7, NFR-8; flows 1, 2, and 5; DoR iteration-1
     # findings 5, 7, and 8, iteration-2 findings 4, 5, 7, and 8,
     # iteration-3 findings 1 and 4, and iteration-4 findings 1 and 4.
     # TC ownership: TC-PEAK-001, TC-PEAK-002, TC-PEAK-004, TC-PEAK-005,
@@ -429,13 +435,14 @@ phases:
     # `until`, suppresses a new stop, so no second `stop` or `parked` is
     # appended and the reference never carries two active parks.
     # An un-expired standing park is a pre-session refusal, not an operator
-    # override (DEC-22): a resume or re-dispatch of a lane whose standing park
-    # has not expired is refused at resume admission, beside the other
-    # admission refusals and before any session starts, with the delivered
-    # `queue.precondition.unmet` at exit 1 and a bounded summary naming the
+    # override (DEC-22): a resume or a re-dispatch of a lane whose standing
+    # park has not expired is refused at resume admission, beside the other
+    # admission refusals and before any session starts, as the new row
+    # `dispatch.resume-parked` at exit 2, with a bounded summary naming the
     # park's cause and `until`. It writes nothing (no session, no park, no
     # event), and `lanes` and `board` keep showing the lane parked. An expired
-    # park is recovered through the delivered pass and the resume proceeds.
+    # park is recovered through the delivered pass at the first observation
+    # and the resume proceeds.
     # The pass therefore only ever meets an expired park or none. An expired
     # park the pass cannot recover (the delivered pass refuses, for example
     # `queue.park-condition-stuck`, or the park fold fails closed) refuses the
@@ -457,6 +464,47 @@ phases:
     # second append is refused leaves a `clear-observed` marker that the pass
     # reports as stuck and never retries, with the delivered park surfaces
     # and the operator resume path as the operator route.
+    # The new row (DEC-22; NFR-8: exactly one added error-table row): code
+    # `dispatch.resume-parked`, domain kind `dispatch`, category `transient`,
+    # retryable true, consequence `not_landed`, projectionClass
+    # `platform-provider` (exit 2), summary "A resume was refused because the
+    # lane's standing park has not expired.", remediation "Resume after the
+    # park's recorded `until`; the park stands and nothing was written." It is
+    # the one owner-authorised new code: the delivered
+    # `provider.profile.unavailable` row does not fit, because its summary
+    # says no profile is eligible and it carries an eligibility list. The row
+    # lands in packages/core/src/contracts/error-table.ts, and
+    # packages/core/src/contracts/result.ts is declared because the code rides
+    # its `AppErrorCode` alias (a string alias today, so it moves only if the
+    # delivery narrows it). Pins that move with the row, each by exactly one
+    # or by the one code:
+    #   - the two-segment reserved set the sync check admits a two-segment
+    #     code from (scripts/checks/error-table-sync.ts and its duplicate in
+    #     tests/structure/error-table.test.ts, both pinned at 71 members);
+    #   - the exact table totals (172, and 171 outside the spend kind) in
+    #     tests/structure/error-table.test.ts,
+    #     tests/structure/dispatch-attempts-taxonomy.test.ts, and
+    #     tests/checks/error-table-sync.test.ts;
+    #   - the dispatch-family code inventories that say exactly four
+    #     identities: tests/structure/dispatch-error-identity.test.ts, the two
+    #     closed lists in tests/checks/dispatch-contract-invariance.test.ts,
+    #     and the dispatch kind count in tests/structure/error-table.test.ts and
+    #     tests/structure/dispatch-attempts-taxonomy.test.ts;
+    #   - the additive-row sets over the captured baseline
+    #     (tests/structure/error-table.test.ts and
+    #     tests/structure/cross-repository-contract.test.ts) and the contract
+    #     baseline's error row count
+    #     (tests/fixtures/dispatch/operator/contract-baseline.ts);
+    #   - the documented row with its dispatch-kind sentence, which
+    #     tests/structure/error-table.test.ts asserts on
+    #     doc/spec/features/feature-result-contract.md: the sync check fails a
+    #     new source entry without a documented row, so the page moves with
+    #     the row in the same commit;
+    #   - the decision-record case asserting TDR-0077 states the row
+    #     (tests/checks/decision-record.test.ts).
+    # tests/fixtures/events/error-table-baseline.json is NOT in scope: it is
+    # the pre-change snapshot, and an addition is declared in the additive
+    # sets above, never by editing the snapshot.
     # Already open at start (NG-10, RSK-12): the pre-session park is out of
     # scope. A dispatch admitted while its nominated profile's window is
     # already open spawns and is parked at its first observation, so one
@@ -555,17 +603,22 @@ phases:
     # tests/behaviour/dispatch-additive-stability.test.ts (a lane without a
     # stored nomination keeps its delivered key set), and the daemon park and
     # resume suites.
-    # Verify: TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/no-shell-dispatch.ts; TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/no-shell-dispatch.test.ts tests/structure/content-inventory.test.ts tests/structure/dispatch-contract.test.ts tests/checks/operator-contract-invariance.test.ts tests/structure/port-contract-inventory.test.ts
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/no-shell-dispatch.ts; TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/no-shell-dispatch.test.ts tests/structure/content-inventory.test.ts tests/structure/dispatch-contract.test.ts tests/checks/operator-contract-invariance.test.ts tests/structure/port-contract-inventory.test.ts tests/structure/dispatch-error-identity.test.ts tests/structure/dispatch-attempts-taxonomy.test.ts tests/structure/cross-repository-contract.test.ts tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts tests/checks/dispatch-contract-invariance.test.ts tests/checks/decision-record.test.ts
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/error-table-sync.ts
     scope:
       files:
+        - doc/spec/features/feature-result-contract.md
         - packages/core/src/app/dispatch-peak-pause.ts
         - packages/core/src/app/dispatch.ts
         - packages/core/src/app/index.ts
         - packages/core/src/app/queue.ts
         - packages/core/src/contracts/dispatch.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/result.ts
         - packages/core/src/index.ts
         - packages/cli/src/edge.ts
         - packages/cli/src/production.ts
+        - scripts/checks/error-table-sync.ts
         - scripts/checks/no-shell-dispatch.ts
         - tests/behaviour/dispatch-peak-episode.test.ts
         - tests/behaviour/dispatch-peak-isolation.test.ts
@@ -579,12 +632,19 @@ phases:
         - tests/behaviour/dispatch-peak-standing-park.test.ts
         - tests/behaviour/dispatch-peak-stop-grace.test.ts
         - tests/behaviour/dispatch-peak-watch.test.ts
+        - tests/checks/decision-record.test.ts
+        - tests/checks/dispatch-contract-invariance.test.ts
+        - tests/checks/error-table-sync.test.ts
         - tests/fixtures/dispatch/golden/harness.ts
         - tests/fixtures/dispatch/operator/contract-baseline.ts
         - tests/fixtures/ports/v1-contract-inventory.json
         - tests/fixtures/queue/production/harness.ts
         - tests/structure/content-inventory.test.ts
+        - tests/structure/cross-repository-contract.test.ts
+        - tests/structure/dispatch-attempts-taxonomy.test.ts
         - tests/structure/dispatch-contract.test.ts
+        - tests/structure/dispatch-error-identity.test.ts
+        - tests/structure/error-table.test.ts
         - tests/structure/inventory.json
       folders:
         - tests/fixtures/provider/profile

@@ -178,10 +178,13 @@ decisions:
       standing park is a PRE-SESSION REFUSAL. A resume or re-dispatch of a lane
       whose standing park has not expired is refused before any session starts,
       at the admission of the resume beside the other admission refusals, using
-      the delivered window-refusal identity (queue.precondition.unmet at its
-      delivered user-validation exit 1) with the park's cause and `until` in the
-      bounded summary; it writes nothing, no event claims a resume, and lanes and
-      board keep showing the lane parked. The operator-override outcome is not
+      the window refusal's exit code (2): the delivered
+      `provider.profile.unavailable` contract does not fit (it says no profile is
+      eligible and carries an eligibility list), so the owner authorises one new
+      dispatch-family code, `dispatch.resume-parked` (platform-provider, exit 2,
+      transient/retryable, remediation: resume after the park's `until`), with
+      the park's cause and `until` in the bounded summary; it writes nothing, no
+      event claims a resume, and lanes and board keep showing the lane parked. The operator-override outcome is not
       chosen. Consequence: the recovery pass only ever meets an expired park or
       none. This decision supersedes the operator-resume-during-open-window
       reading in F-3/F-4/Flow 3/AC-F3-4/RSK-14 and the plan/test plan passages."

@@ -192,9 +192,12 @@ returns; overlapping windows yield consecutive exactly-once episodes, never one
 merged park), the single park per reference (DEC-23, occupancy with recovery:
 the watch's already-parked rule is occupancy, any standing `peak-window` park
 whatever its `until`; DEC-22: a resume or re-dispatch of a lane whose standing
-park has not expired is a pre-session refusal with the delivered
-`queue.precondition.unmet` identity at exit 1, naming the cause and `until` and
-writing nothing; an expired standing park is recovered through the delivered
+park has not expired is a pre-session refusal under the new
+`dispatch.resume-parked` row at exit 2 (`platform-provider`, transient,
+retryable), naming the cause and `until` and writing nothing; that one row is
+the owner-authorised exception to NG-6 and NFR-8, because the delivered window
+refusal `provider.profile.unavailable` shares the exit but says that no profile
+is eligible; an expired standing park is recovered through the delivered
 mutating park pass, `recoverQueueParks`, before the first stop decision and at
 the first observation of a resume, so the pass only ever meets an expired park
 or none; an unrecoverable park refuses the run, because a double park fails
