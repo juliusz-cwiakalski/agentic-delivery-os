@@ -657,3 +657,34 @@ notes:
       pages close F-19. Second review pending; no PR."
     type: info
     date: "2026-11-26"
+  - text: "Plan phase 10 (Code Review Remediation, iteration 2) complete: commit
+      2f8ad28a. R1: the six red tests are green (dispatch-peak-result's second
+      arm is now the budget-exhaustion arm with the exhaustion record, the typed
+      escalation call and the parked state; the parity admission pin is the
+      DECLARED THIRD lease record with a comment naming the GH-413 withhold
+      renewal; the three production-composition suites inject dispatchDelay).
+      R2: a restart budget of 0 or none refuses the not-preserved recovery
+      terminally as the stall restart does. R3: the withhold steps at the
+      renewal cadence (min(liveness, TTL/2)), with an above-TTL heartbeat-age
+      arm. R4: a lost lease appends no terminal lane record, and a lease lost
+      inside the withhold returns the classified state-unverified result before
+      the derivation. R5: the canonical Z form and the exact millisecond form
+      are accepted; a past or non-canonical end is refused. R6: production
+      escalation raises the delivered typed exhaustion question through the
+      supervision economics write port. R7: a terminate-less harness reads
+      iteration-start-gating even with pausing enabled. R8: the recovery refusal
+      summary names the stuck refs. R9: added
+      tests/behaviour/dispatch-peak-production.test.ts (terminate-less no-watch
+      and unconfirmed-stop no-park through the real composer) and
+      tests/behaviour/dispatch-peak-lease-park.test.ts (a real-store parked
+      renewal through renewDispatchLease). Tests: R1 five files 17 pass / 0
+      fail; R9/peak batch 57 pass / 0 fail across 12 files; checks/docs batch
+      100 pass / 0 fail across 6 files; read-only controls 55 pass / 0 fail
+      across 9 files; the new suites 31 pass. The whole battery was not run by
+      owner instruction; the lifecycle quality_gates runs it once. Residual:
+      the production suite does not yet drive the preserved-park resume,
+      bound-0 exhaustion with its typed question, own/foreign stuck markers, or
+      a rule change through the real composer; those arms remain engine- and
+      fixture-level evidence."
+    type: info
+    date: "2026-11-26"
