@@ -10,7 +10,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-26T13:59:17.111Z }
   delivery_planning: { started: null, completed: 2026-11-26T13:59:36.773Z }
   dor_check: { started: null, completed: 2026-11-26T16:49:05.379Z }
-  delivery: { started: null, completed: 2026-11-26T17:44:11.269Z }
+  delivery: { started: null, completed: 2026-11-26T19:16:53.080Z }
   system_spec_update: { started: null, completed: 2026-11-26T18:18:53.409Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -241,16 +241,16 @@ decisions:
       restart budget, and null economics never make every recovery refuse
       `dispatch.state-unverified`. F-10: the `recoveryRefusal` carrier is the
       terminal durable lane record, not the park record; the unused
-      `QueueParkRecord.recoveryRefusal` member is deleted and the spec, test plan
-      and current-truth pages say the terminal lane record carries it. F-15: keep
-      `dispatch.resume-parked`; a second dispatch during an un-expired park is the
-      pre-session refusal at exit 2, while `queue.single-flight` still applies to
-      a running lane without a park; correct Flow 5, AC-F5-2 and TDR-0078 C-1.
-      F-17: the code is right and the spec is wrong; the recovery pass runs before
-      the first session, so an unrecoverable standing park is a refusal that
-      starts no session; remove the 'after the session started' terminate arm
-      from F-3/AC-F3-4 and align the plan, test plan and TDR-0077 D8 to the
-      ordering invariant."
+      `QueueParkRecord.recoveryRefusal` member is deleted and the spec, test
+      plan and current-truth pages say the terminal lane record carries it.
+      F-15: keep `dispatch.resume-parked`; a second dispatch during an
+      un-expired park is the pre-session refusal at exit 2, while
+      `queue.single-flight` still applies to a running lane without a park;
+      correct Flow 5, AC-F5-2 and TDR-0078 C-1. F-17: the code is right and the
+      spec is wrong; the recovery pass runs before the first session, so an
+      unrecoverable standing park is a refusal that starts no session; remove
+      the 'after the session started' terminate arm from F-3/AC-F3-4 and align
+      the plan, test plan and TDR-0077 D8 to the ordering invariant."
     date: "2026-11-26"
 open_questions: []
 blockers: []
@@ -608,10 +608,10 @@ notes:
       isStopData, no episode casts, the envelope comment restored,
       session-interrupted restart reason, the typed append payload, and the mode
       fails to iteration-start-gating. F-22: the one-lane-per-ref-per-host
-      precondition is recorded in the operations guide. Tests: R1 batch 124
-      pass / 0 fail across 8 files; peak/lease/status batch 60 pass / 0 fail
-      across 15 files; stop/decision/error batch 307 pass / 0 fail across 10
-      files. Full pnpm typecheck green."
+      precondition is recorded in the operations guide. Tests: R1 batch 124 pass
+      / 0 fail across 8 files; peak/lease/status batch 60 pass / 0 fail across
+      15 files; stop/decision/error batch 307 pass / 0 fail across 10 files.
+      Full pnpm typecheck green."
     type: info
     date: "2026-11-26"
   - text: "F-20 evidence for the post-phase commits: 68779723a was the
@@ -621,10 +621,10 @@ notes:
       including the terminal-lane recoveryRefusal carrier and the withhold's
       delay-seam switch that made the parity/resume suites fast). Counts at that
       point: status/operator/status 358 pass (2 skip), parity/resume and
-      conformance lane resume 33 pass, error-table/config/pin 373 pass. The
-      22 out-of-scope files are recorded here: five count-bearing pages and
-      their five pin suites, the parity and operator-status pins, the
-      scripted-harness helper, the architecture page, dispatch-ledger.ts,
+      conformance lane resume 33 pass, error-table/config/pin 373 pass. The 22
+      out-of-scope files are recorded here: five count-bearing pages and their
+      five pin suites, the parity and operator-status pins, the scripted-harness
+      helper, the architecture page, dispatch-ledger.ts,
       doc-conformance.test.ts, feature-session-lifecycle-economics.md,
       doc/00-index.md, and readiness-iter-7.md."
     type: info
