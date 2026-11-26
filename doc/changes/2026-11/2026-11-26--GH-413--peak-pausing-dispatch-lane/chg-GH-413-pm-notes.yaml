@@ -11,7 +11,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-26T13:59:36.773Z }
   dor_check: { started: null, completed: 2026-11-26T16:49:05.379Z }
   delivery: { started: null, completed: 2026-11-26T17:44:11.269Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-26T18:18:53.409Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -550,18 +550,18 @@ notes:
       the member is projected; (b) AC-F3-4's 'observed after the resume session
       started' arm is unreachable because the recovery runs before the first
       session, for the reviewer to judge; (c) tests/behaviour/identity-override
-      fails because the new peakPausingEnabled resolution reads the prior-identity
-      config a third time. No spec/test-plan/plan edits."
+      fails because the new peakPausingEnabled resolution reads the
+      prior-identity config a third time. No spec/test-plan/plan edits."
     type: info
     date: "2026-11-26"
-  - text: "Targeted remediation after doc-syncer reconciliation: the terminal
-      lane record now carries the optional recoveryRefusal, written only on the
+  - text: "Targeted remediation after doc-syncer reconciliation: the terminal lane
+      record now carries the optional recoveryRefusal, written only on the
       non-terminal window-end refusal and read by dispatch status from the same
       bounded lane read (no second park record, no extra status read); the
       production lanes composition resolves peakWatchComposed lazily, so a
-      command that never reads lanes performs no extra configuration
-      acquisition (identity-override read count restored); the dispatch and
-      architecture planning pages state the dispatch-owned watch and the
+      command that never reads lanes performs no extra configuration acquisition
+      (identity-override read count restored); the dispatch and architecture
+      planning pages state the dispatch-owned watch and the
       dispatch.resume-parked admission refusal. Affected tests: status-park,
       peak-recovery, status-brief-park-fields, identity-override, error-table,
       error-table-sync, config-lane, config-schema, peak-setting, dispatch
