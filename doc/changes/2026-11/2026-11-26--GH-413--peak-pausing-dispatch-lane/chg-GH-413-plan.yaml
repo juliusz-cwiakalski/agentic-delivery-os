@@ -8,8 +8,9 @@
 # truth for every phase, test case, and path below):
 #   chg-GH-413-spec.md (v1.3) and chg-GH-413-test-plan.md (v1.4), this folder;
 #   chg-GH-413-pm-notes.yaml, whose DoR remediation decisions bind the plan;
-#   readiness-review/readiness-iter-1.md, readiness-iter-2.md, and
-#   readiness-iter-3.md, whose plan-routed findings are addressed below.
+#   readiness-review/readiness-iter-1.md, readiness-iter-2.md,
+#   readiness-iter-3.md and readiness-iter-4.md, whose plan-routed findings
+#   are addressed below (iteration 4 is the parked hand-back record).
 #
 # Phase order follows the spec's delivery order (section 18) with one plan-level
 # placement: the lease-liveness phase (2) precedes the watch phase (3), so the
@@ -187,7 +188,7 @@ phases:
     # The records are authored by the decision advisor as Proposed; their
     # content is not this plan's (phases 2 and 7 keep their declarations).
     # Readiness records: the orchestrator tracks readiness records before
-    # delivery (iterations 1 to 3 already are), so these two declarations are
+    # delivery (iterations 1 to 4 already are), so these declarations are
     # inert by design. They stay so a record written during a phase is never
     # an unstageable stray.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/config-lane.test.ts tests/behaviour/config-schema.test.ts tests/behaviour/dispatch-peak-setting.test.ts tests/checks/dispatch-contract-invariance.test.ts tests/checks/operator-contract-invariance.test.ts tests/structure/port-contract-inventory.test.ts tests/structure/content-inventory.test.ts tests/checks/decision-record.test.ts
@@ -197,6 +198,7 @@ phases:
         - .changeset/gh-413-peak-pausing-dispatch-lane-minor.md
         - doc/changes/2026-11/2026-11-26--GH-413--peak-pausing-dispatch-lane/readiness-review/readiness-iter-2.md
         - doc/changes/2026-11/2026-11-26--GH-413--peak-pausing-dispatch-lane/readiness-review/readiness-iter-3.md
+        - doc/changes/2026-11/2026-11-26--GH-413--peak-pausing-dispatch-lane/readiness-review/readiness-iter-4.md
         - doc/decisions/00-index.md
         - doc/decisions/TDR-0077-dispatch-owned-window-watch.md
         - doc/decisions/TDR-0078-lease-heartbeat-amends-tdr-0050.md
