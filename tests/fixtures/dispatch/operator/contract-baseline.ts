@@ -154,7 +154,8 @@ export const CONTRACT_BASELINE: ContractBaseline = {
   // catalog by the github branch (the branch, its credential node, its
   // source-key node, and the eight per-style keys). GH-404 DM-3/DM-4: the two
   // additive lane worktree worker settings grow it by two more leaf keys.
-  configurationKeyCount: 93,
+  // GH-413 DM-6: the peak-pausing exception grows it by one more leaf key.
+  configurationKeyCount: 94,
   opencode: {
     supportedOperations: [
       "spawn",

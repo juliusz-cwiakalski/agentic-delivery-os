@@ -474,8 +474,10 @@ const HARNESS_BRANCH = {
  * `lane.worktree-root` is the root under which lane worktrees are created (a
  * path string; unset means the sibling-of-main-checkout default derived at
  * dispatch time). `lane.disable-worktrees` is the worktree-lane exception
- * (boolean; unset or false keeps worktree lanes on). All four keys are
- * policy-as-data: no default literal lives in the gate — the two new keys stay
+ * (boolean; unset or false keeps worktree lanes on). `lane.disable-peak-pausing`
+ * is the automatic peak-pausing exception (boolean; unset or false keeps
+ * pausing on, true supplies no in-flight watch). All five keys are
+ * policy-as-data: no default literal lives in the gate — the exception keys stay
  * unset by default and their defaults are derived at the consumption seam.
  */
 export const LANE_BRANCH = {
@@ -485,6 +487,7 @@ export const LANE_BRANCH = {
     "restart-budget": { type: "number" },
     "worktree-root": { type: "string" },
     "disable-worktrees": { type: "boolean" },
+    "disable-peak-pausing": { type: "boolean" },
   },
 } as const satisfies CatalogField;
 
@@ -643,6 +646,11 @@ export type LaneSettings = {
    * lanes on — `true` restores today's in-checkout behaviour byte-for-byte.
    */
   readonly disableWorktrees?: boolean;
+  /**
+   * The automatic peak-pausing exception (GH-413 DM-6, DEC-2); absent or false
+   * keeps automatic pausing on — `true` supplies no in-flight window watch.
+   */
+  readonly disablePeakPausing?: boolean;
 };
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
@@ -685,7 +693,8 @@ export const resolveLaneSettings = (
       key !== "liveness-interval" &&
       key !== "restart-budget" &&
       key !== "worktree-root" &&
-      key !== "disable-worktrees"
+      key !== "disable-worktrees" &&
+      key !== "disable-peak-pausing"
     ) {
       return laneFailure("config.key.unknown", origins, `lane.${key}`);
     }
@@ -719,6 +728,10 @@ export const resolveLaneSettings = (
   if (disableWorktrees !== undefined && typeof disableWorktrees !== "boolean") {
     return laneFailure("config.value.invalid", origins, "lane.disable-worktrees");
   }
+  const disablePeakPausing = branch["disable-peak-pausing"];
+  if (disablePeakPausing !== undefined && typeof disablePeakPausing !== "boolean") {
+    return laneFailure("config.value.invalid", origins, "lane.disable-peak-pausing");
+  }
   return {
     ok: true,
     value: {
@@ -728,6 +741,7 @@ export const resolveLaneSettings = (
         ? { worktreeRoot: worktreeRoot.trim() }
         : {}),
       ...(disableWorktrees === true ? { disableWorktrees: true } : {}),
+      ...(disablePeakPausing === true ? { disablePeakPausing: true } : {}),
     },
   };
 };

@@ -644,6 +644,13 @@ export const DISPATCH_RESTART_BUDGET_KEY = "lane.restart-budget" as const;
 export const DISPATCH_WORKTREE_ROOT_KEY = "lane.worktree-root" as const;
 export const DISPATCH_DISABLE_WORKTREES_KEY = "lane.disable-worktrees" as const;
 
+/**
+ * The automatic peak-pausing exception key (GH-413 DM-6, DEC-2), additive and
+ * co-located with the delivered `lane.*` keys: unset or false keeps automatic
+ * pausing on, true supplies no in-flight window watch.
+ */
+export const DISPATCH_DISABLE_PEAK_PAUSING_KEY = "lane.disable-peak-pausing" as const;
+
 /* ------------------------------------------------------------------------- */
 /* GH-347 — the dispatch-owned durable lane record, the fresh-spawn title     */
 /* fact, and the injected delay vocabulary. Data and types only.              */

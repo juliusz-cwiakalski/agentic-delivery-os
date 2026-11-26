@@ -38,12 +38,13 @@ const exitOf = (token: string): number | undefined => {
 };
 
 describe("TC-TRACKER-004 the ladder adds no configuration key", () => {
-  test("the lane branch carries the delivered keys plus the GH-404 worktree settings", () => {
+  test("the lane branch carries the delivered keys plus the GH-404 worktree settings and the GH-413 peak-pausing setting", () => {
     expect(Object.keys(LANE_BRANCH.fields)).toEqual([
       "liveness-interval",
       "restart-budget",
       "worktree-root",
       "disable-worktrees",
+      "disable-peak-pausing",
     ]);
     for (const forbidden of ["tracker", "ladder", "attempts", "base-ms", "cap-ms"]) {
       expect(Object.keys(LANE_BRANCH.fields)).not.toContain(forbidden);

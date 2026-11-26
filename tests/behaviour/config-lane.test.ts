@@ -12,6 +12,8 @@ import {
 } from "../../packages/core/src/index";
 import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
 import {
+  DISABLE_PEAK_PAUSING_SOURCE,
+  ENABLE_PEAK_PAUSING_SOURCE,
   INVALID_LANE_CASES,
   laneSource,
   VALID_LANE_SOURCE,
@@ -91,6 +93,26 @@ describe("TC-ECON-070 the lane keys own their defaults and semantics", () => {
     expect(resolved.origins.harness?.layer).toBe("defaults");
     expect(resolved.origins.commit?.layer).toBe("defaults");
     expect(resolved.origins.merge?.layer).toBe("defaults");
+  });
+
+  test("the peak-pausing exception is unset by default and resolves only when true", () => {
+    const absent = resolveLane();
+    if (!absent.ok) return;
+    expect(absent.lane.disablePeakPausing).toBeUndefined();
+    expect(absent.origins["lane.disable-peak-pausing"]).toBeUndefined();
+
+    const enabled = resolveLane({ sources: [ENABLE_PEAK_PAUSING_SOURCE] });
+    expect(enabled.ok).toBe(true);
+    if (!enabled.ok) return;
+    expect(enabled.lane.disablePeakPausing).toBeUndefined();
+
+    const disabled = resolveLane({ sources: [DISABLE_PEAK_PAUSING_SOURCE] });
+    expect(disabled.ok).toBe(true);
+    if (!disabled.ok) return;
+    expect(disabled.lane.disablePeakPausing).toBe(true);
+    expect(disabled.origins["lane.disable-peak-pausing"]).toMatchObject({
+      layer: "project-committed",
+    });
   });
 });
 
