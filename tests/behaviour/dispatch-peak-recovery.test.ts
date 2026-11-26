@@ -6,7 +6,6 @@
 import { describe, expect, test } from "bun:test";
 import { evaluateDispatchPeakResume } from "../../packages/core/src/app/dispatch-peak-pause";
 import type { QueueParkRecord } from "../../packages/core/src/contracts/index";
-import { createPeakScenario } from "../fixtures/dispatch/golden/harness";
 import { atUtcHour, RULES_BY_PROFILE } from "../fixtures/provider/profile/gh413-rules";
 
 const notPreserved = (): QueueParkRecord => ({

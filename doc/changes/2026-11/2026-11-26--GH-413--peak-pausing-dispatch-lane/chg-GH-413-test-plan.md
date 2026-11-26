@@ -2,7 +2,7 @@
 id: chg-GH-413-test-plan
 status: Updated
 created: 2026-11-26T10:13:20Z
-last_updated: 2026-11-26T20:46:00Z
+last_updated: 2026-11-26T22:31:44Z
 owners: ["engineering"]
 service: delivery-os
 labels: [change, m4, peak-pausing, dispatch, lane-lifecycle, config]
@@ -50,7 +50,7 @@ The highest-integrity risks are: (1) two compositions drifting into different an
 
 - Change specification: `./chg-GH-413-spec.md` v1.5. Source of truth for sections 5 (capabilities), 8 (interfaces and data model), 9 (NFRs), 15 (decisions DEC-1 to DEC-21), 17 (33 acceptance criteria), and 18.1 (Definition of Done).
 - Testing strategy: `.ai/rules/testing-strategy.md`. Layer and module mapping, bun:test conventions, hermeticity, invariant-test authoring, and the aggregate gate.
-- Implementation plan: `./chg-GH-413-plan.yaml` v1.7. The plan is the authority for phase numbering and TC ownership; this test plan v1.8 follows it and invents no phase.
+- Implementation plan: `./chg-GH-413-plan.yaml` v1.7. The plan is the authority for phase numbering and TC ownership; this test plan v1.10 follows it and invents no phase.
 - Decision records: TDR-0077 (the dispatch-owned window watch contract, path declared by the plan as `doc/decisions/TDR-0077-dispatch-owned-window-watch.md`) and TDR-0078 (the lease-renewal amendment to the delivered no-renewal rule), both `Proposed` at Done (spec section 15, 18.1).
 - Repository rules: `AGENTS.md` and `.ai/rules/typescript.md` for the TypeScript workspace, fixture, and bun:test conventions.
 - Existing suites this plan extends rather than duplicates:
@@ -82,10 +82,10 @@ The highest-integrity risks are: (1) two compositions drifting into different an
 | AC-F3-4 | A standing `peak-window` park is recovered through the delivered mutating park pass before the first stop decision and at the first observation of a resuming invocation; any remaining standing park is occupancy; an unrecoverable park refuses the run and starts no episode; a non-expired standing park refuses a resume or re-dispatch before any session starts with `dispatch.resume-parked` at exit 2 (platform-provider, transient, retryable, not_landed) and writes nothing, while an expired standing park is recovered at the first observation and the resume proceeds; closing a `preserved` standing park projects a `dispatch.attempt/resumed` frame with empty `sessionRef` and `branch` under the original episode id | TC-PEAK-038 | Covered |
 | AC-F4-1 | A preserved episode resumes the preserved session on the same branch and worktree, records exactly one `resumed` with the no-re-dispatch fact, consumes no restart ordinal, and starts no second session | TC-PEAK-008 | Covered |
 | AC-F4-2 | A not-preserved episode attempts no session resume, routes to the delivered interrupted-lane recovery consuming at most one ordinal per observation, emits no `resumed`, and escalates on budget exhaustion | TC-PEAK-009 | Covered |
-| AC-F4-3 | At budget exhaustion, the delivered terminal exhaustion record is appended, the delivered typed question is raised, and the invocation returns the reachable classified result with the park standing, its summary naming the exhaustion and the park end rather than a pause and resume | TC-PEAK-009 | Covered |
+| AC-F4-3 | At budget exhaustion, the delivered terminal exhaustion record is appended, the delivered typed question is raised, and the invocation returns the reachable classified result with the park standing, its summary naming the exhaustion and the park end rather than a pause and resume, and the exhaustion refusal carried only by the result's bounded episode fact | TC-PEAK-009 | Covered |
 | AC-F5-1 | Branch, change folder, recorded phases, and queue state are unchanged by a complete park and resume, and the recorded worktree is reused | TC-PEAK-037 | Covered |
 | AC-F5-2 | A park outlasting the lease TTL several times keeps the lease live by renewal at `min(lane.liveness-interval, queue.lease-ttl / 2)` keyed on the invocation's own last heartbeat write; a second dispatch before, at, and after each TTL boundary is refused `queue.single-flight` while the owner renews, with no takeover and no second session; a second dispatch during an un-expired standing park is refused `dispatch.resume-parked` at exit 2 at resume admission, and `queue.single-flight` applies only to a running lane without a park; after a longer outage a re-dispatch may take the delivered `renewed` arm, and the earlier invocation's next renewal is `lease:not-owned`, extends nothing, and returns with the park standing instead of resuming | TC-PEAK-010 | Covered |
-| AC-F6-1 | `dispatch status <ref>` reports the park cause, window end, stop instant, and preservation from the park record and the terminal exhaustion refusal from the terminal durable lane record, and reports the observed probe verdict without redefining `stale` or `delivering` | TC-PEAK-011 | Covered |
+| AC-F6-1 | `dispatch status <ref>` reports the park cause, window end, stop instant, and preservation from the park record and reports the observed probe verdict without redefining `stale` or `delivering`; it carries no exhaustion refusal, which lives only in the result's bounded episode fact | TC-PEAK-011 | Covered |
 | AC-F6-2 | `lanes` renders `parked:peak-window` with the recorded `until` and delivered `leaseHolder`; `board` lists the row in `PARKED` from the same record, with no second vocabulary | TC-PEAK-012 | Covered |
 | AC-F6-3 | With no open park, `dispatch status`, `board`, `brief`, and a result are byte-identical and the added members absent; `lanes --json` differs only in `peakEnforcement.mode` on a production composition with pausing enabled | TC-PEAK-013 | Covered |
 | AC-F6-4 | The production composition reports `window-watch` with pausing enabled and `iteration-start-gating` disabled, derived from its own effective configuration, with `parkClaimed` following durable records | TC-PEAK-033 | Covered |
@@ -108,7 +108,7 @@ Capability traceability: F-1 -> TC-PEAK-001/002/003/038; F-2 -> TC-PEAK-004/005/
 
 Derived scenarios (not acceptance criteria): the invalid-value configuration refusal is TC-PEAK-017, from spec section 5.1 F-8, section 8.3 DM-6, and Appendix B; the resume-admission window re-check is TC-PEAK-025, from spec section 5.1 F-4 and RSK-6. The owner delivery note on the changeset is TC-PEAK-028. The owner behavioural verification on the reference host is TC-PEAK-029, a post-upgrade hand-off.
 
-Every TC is owned by exactly one plan phase. The plan is the authority for phase numbering and TC ownership; this list follows plan v1.7 and test plan v1.8 across the plan's eight phases: phase 1 owns TC-PEAK-017 and TC-PEAK-028; phase 2 owns TC-PEAK-010 (the running-lane lease arms); phase 3 owns TC-PEAK-001, 002, 004, 005, 006, 007, 008, 009, 015, 021, 022, 025, 031, 032, 037, 038; phase 4 owns TC-PEAK-011, 012, 013, 014, 023, 024, 033; phase 5 owns TC-PEAK-016, 018, 019, 020, 034, 035, 036; phase 6 owns TC-PEAK-003, 026, 027; phase 7 owns no TC; phase 8 owns TC-PEAK-029.
+Every TC is owned by exactly one plan phase. The plan is the authority for phase numbering and TC ownership; this list follows plan v1.7 and test plan v1.10 across the plan's eight phases: phase 1 owns TC-PEAK-017 and TC-PEAK-028; phase 2 owns TC-PEAK-010 (the running-lane lease arms); phase 3 owns TC-PEAK-001, 002, 004, 005, 006, 007, 008, 009, 015, 021, 022, 025, 031, 032, 037, 038; phase 4 owns TC-PEAK-011, 012, 013, 014, 023, 024, 033; phase 5 owns TC-PEAK-016, 018, 019, 020, 034, 035, 036; phase 6 owns TC-PEAK-003, 026, 027; phase 7 owns no TC; phase 8 owns TC-PEAK-029.
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
@@ -117,9 +117,9 @@ No HTTP or provider API is added or changed (spec sections 8.1 and 8.4). The cov
 | Interface element | TC ID(s) | Notes |
 |-------------------|----------|-------|
 | DM-1 Durable park record, episode frame | TC-PEAK-006, TC-PEAK-009, TC-PEAK-018, TC-PEAK-021, TC-PEAK-037, TC-PEAK-038 | Reused unchanged in shape; dispatch-owned stops write the complete frame; a standing park is closed by the delivered recovery record with its clear-observed marker and `park-auto-recovery` incident before a new episode; a preserved standing park's recovery projects the empty `sessionRef`/`branch` `resumed` frame under the original episode id; append-only, read-time expiry, no in-place mutation. The operator release writer keeps its minimal frame. No pre-session frame exists. |
-| DM-2 Durable lane record | TC-PEAK-008, TC-PEAK-010, TC-PEAK-011, TC-PEAK-031 | One additive optional `providerProfile`, written on every `active` record the invocation appends: first acquisition, each restart iteration, and each post-park resume. The terminal lane record carries the terminal exhaustion refusal read by `dispatch status`; the park record does not. Absent on pre-change records, never fabricated. The delivered `active` and `terminal` states and the open-park join at read time are unchanged. |
-| DM-3 `dispatch status` payload | TC-PEAK-011, TC-PEAK-013, TC-PEAK-009 | Additive optional park fact: cause, park end, stop instant, and preservation from the park record, plus the terminal exhaustion refusal read from the terminal durable lane record; absent when no park stands; all delivered members and lines unchanged and the delivered `stale`/`delivering` derivation untouched. |
-| DM-4 Dispatch result payload | TC-PEAK-014, TC-PEAK-009 | Additive optional bounded episode fact including the terminal exhaustion where the recovery exhausted its budget; no new token and no change to derivation. |
+| DM-2 Durable lane record | TC-PEAK-008, TC-PEAK-010, TC-PEAK-011, TC-PEAK-031 | One additive optional `providerProfile`, written on every `active` record the invocation appends: first acquisition, each restart iteration, and each post-park resume. The lane record carries no exhaustion refusal. Absent on pre-change records, never fabricated. The delivered `active` and `terminal` states and the open-park join at read time are unchanged. |
+| DM-3 `dispatch status` payload | TC-PEAK-011, TC-PEAK-013, TC-PEAK-009 | Additive optional park fact: cause, park end, stop instant, and preservation from the park record; absent when no park stands; all delivered members and lines unchanged and the delivered `stale`/`delivering` derivation untouched. The status payload carries no `recoveryRefusal` member; the refusal lives only in the result's bounded episode fact (DM-4). |
+| DM-4 Dispatch result payload | TC-PEAK-014, TC-PEAK-009 | Additive optional bounded episode fact including the exhaustion refusal where the recovery exhausted its budget; no new token and no change to derivation. |
 | DM-5 Dispatch result summary | TC-PEAK-014 | States paused and resumed for a resumed episode, and names the exhaustion and the park end at budget exhaustion; the delivered key set and verbose detail line keep their shape. |
 | DM-6 Configuration key for disabling pausing | TC-PEAK-015, TC-PEAK-016, TC-PEAK-017 | One boolean in the delivered typed lane policy branch, unset by default, meaning pausing is on; `true` composes no watch. |
 | DM-7 Composition-fact read | TC-PEAK-005, TC-PEAK-015, TC-PEAK-033 | Two members and two mode values kept; the mode input is the reading composition's own effective configuration, `window-watch` with pausing enabled and `iteration-start-gating` disabled or with no watch; `parkClaimed` stays derived from durable park records; the one intended value change is carved out of the byte-identical promise. |
@@ -491,7 +491,7 @@ Test type vocabulary used in section 5 follows the template: Unit, Integration, 
 
 - The park lands anyway with `session-state-not-preserved`; the preservation failure neither refuses the park nor extends the grace.
 - At the end, no session resume is attempted and no `resumed` event is emitted; the delivered interrupted-lane recovery runs on the same branch and consumes at most one restart ordinal per observation.
-- At budget exhaustion, the delivered terminal exhaustion record is appended, the delivered typed question is raised, and the invocation returns the reachable classified result with the park standing; no pause-and-resume claim is made.
+- At budget exhaustion, the delivered terminal exhaustion record is appended, the delivered typed question is raised, and the invocation returns the reachable classified result with the park standing; no pause-and-resume claim is made. The exhaustion refusal is carried only by the result's bounded episode fact, not by the status, `laneParks`, brief, or board surfaces.
 - Standing-park arm: the exhausted recovery leaves a standing `peak-window` park; the next invocation recovers it through the delivered mutating pass (clear-observed marker, recovered record, `park-auto-recovery` incident) before its first stop decision, and the ref never carries two active parks (RSK-14).
 
 #### TC-PEAK-010 - The running lane's lease stays live at the derived renewal cadence and is keyed on its own last heartbeat write
@@ -559,7 +559,7 @@ Test type vocabulary used in section 5 follows the template: Unit, Integration, 
 **Preconditions**:
 
 - A dispatch lane with an open peak-window park record and an injectable owner probe.
-- A terminal durable lane record carrying a recorded terminal exhaustion refusal in one arm; the refusal is read from the terminal durable lane record, and the park record does not carry it.
+- A budget-exhaustion result whose bounded episode fact carries the exhaustion refusal; the status, `laneParks`, brief, and board surfaces carry no refusal.
 - A store read counter that records bounded park-record reads.
 - The exact additive member names fixed by the delivery in this change.
 
@@ -568,12 +568,13 @@ Test type vocabulary used in section 5 follows the template: Unit, Integration, 
 1. Invoke `dispatch status <ref> --json` with the owner probe `live`; read the park fact, `stale`, `delivering`, and the observed probe verdict.
 2. Repeat with the owner probe `unknown`.
 3. Repeat with the owner probe `dead`.
-4. Repeat with the recovery-refusal arm and with the park record expired; read the terminal durable lane record and assert the refusal is not present on the park record.
+4. Repeat with the budget-exhaustion arm and with the park record expired; read the result's bounded episode fact and assert the status payload carries no `recoveryRefusal` member.
 5. Assert the bounded park-record read count.
 
 **Expected Outcome**:
 
-- The park fact carries the cause, the window's end, the recorded stop instant, and the preservation classification from the park record, and the recorded terminal exhaustion refusal from the terminal durable lane record, not the park record; it is absent when no park stands. The park-record member for the refusal is removed.
+- The park fact carries the cause, the window's end, the recorded stop instant, and the preservation classification from the park record; it is absent when no park stands. The status payload carries no `recoveryRefusal` member, and the same is true of `laneParks`, brief, and board.
+- The exhaustion refusal is present only in the result's bounded episode fact (DM-4); the status and park surfaces carry no refusal.
 - `live`: `stale: false`, `delivering: true`, park fact present, explaining that the invocation is alive and will resume.
 - `unknown`: `stale: false`, `delivering: true`, park fact present, with the delivered rule that an unknown probe never asserts staleness.
 - `dead`: `stale: true`, `delivering: false`, park fact present with the recorded end, so the orphaned park is visible as orphaned.
@@ -671,8 +672,8 @@ Test type vocabulary used in section 5 follows the template: Unit, Integration, 
 - Exactly one result for the work item; token and exit are the same the same truth would produce without an episode; no episode invents a token.
 - Preserved arm: the summary states that the lane was paused and resumed, naming the cause and the episode's end.
 - Budget-exhaustion arm: the terminal exhaustion record and the delivered typed question are present; the summary names the exhaustion and the park end instead of claiming a pause and a resume, and the result is the delivered derivation over the same truth.
-- The envelope carries the bounded episode fact: episode id, cause, park end, resume instant, the preservation classification when the resume was a recovery, and the exhaustion where the terminal refusal occurred.
-- The budget-exhaustion arm leaves the lane parked and visible on the `dispatch status` park fact with the recorded end.
+- The envelope carries the bounded episode fact: episode id, cause, park end, resume instant, the preservation classification when the resume was a recovery, and the exhaustion refusal where the terminal refusal occurred. The status, `laneParks`, brief, and board surfaces carry no refusal.
+- The budget-exhaustion arm leaves the lane parked and visible on the `dispatch status` park fact with the recorded end, without a `recoveryRefusal` member.
 - No new result key set or verbose detail shape is introduced.
 
 #### TC-PEAK-015 - The disabling key unset, `false`, and `true` behave exactly as declared
@@ -1083,7 +1084,7 @@ Test type vocabulary used in section 5 follows the template: Unit, Integration, 
 - The row is documented on `doc/spec/features/feature-result-contract.md`, and the decision-record case asserts TDR-0077 states the row.
 - Every projected frame stays within at most 20 payload fields and 1024 bytes; every frame stays inside the delivered eight-field envelope.
 - Overlapping windows project consecutive episodes, each with one `stop`, one `parked`, and one `park-edge`; no union frame and no shared episode id are introduced.
-- A budget-exhaustion terminal refusal adds no episode event frame; it is carried by the delivered terminal exhaustion record and the surfaces, not by a new event or the park record.
+- A budget-exhaustion terminal refusal adds no episode event frame; it is carried by the delivered terminal exhaustion record and the result's bounded episode fact, not by a status/park surface, a new event, or the park record.
 - The new producers conform to the delivered declarations without a version move.
 
 #### TC-PEAK-028 - The change's changeset exists before the first gate run
@@ -1469,12 +1470,12 @@ Execution guidance from the owner, recorded here as delivery guidance and not as
 | TC-PEAK-006 | `tests/behaviour/dispatch-peak-episode.test.ts` | `bun test tests/behaviour/dispatch-peak-episode.test.ts` | Injected clock, delay spy, stop-request recorder, event transport, grace, overlap, and standing-expired-park arms | 3 | To Implement |
 | TC-PEAK-007 | `tests/behaviour/dispatch-peak-episode.test.ts` | `bun test tests/behaviour/dispatch-peak-episode.test.ts` | `livenessIntervalMs`, stepping `nowIso`, stop seam, grace-below/above-cadence arms | 3 | To Implement |
 | TC-PEAK-008 | `tests/behaviour/dispatch-peak-resume.test.ts` | `bun test tests/behaviour/dispatch-peak-resume.test.ts` | Preserved-resume seam, session-port recorder, restart ledger | 3 | To Implement |
-| TC-PEAK-009 | `tests/behaviour/dispatch-peak-recovery.test.ts` | `bun test tests/behaviour/dispatch-peak-recovery.test.ts` | Preservation-failure fixture, restart budget, terminal exhaustion record, typed-question seam, standing-park recovery | 3 | To Implement |
+| TC-PEAK-009 | `tests/behaviour/dispatch-peak-recovery.test.ts` | `bun test tests/behaviour/dispatch-peak-recovery.test.ts` | Preservation-failure fixture, restart budget, terminal exhaustion record, typed-question seam, episode-fact exhaustion refusal, standing-park recovery | 3 | To Implement |
 | TC-PEAK-010 | `tests/behaviour/dispatch-lease-liveness.test.ts` | `bun test tests/behaviour/dispatch-lease-liveness.test.ts` | Injected lease clock crossing several 90 s TTLs, interval-above-TTL, heartbeat-ownership no-op, re-dispatch via the delivered `renewed` arm, lost lease, owner-hold, renewal failure | 2 | To Implement |
-| TC-PEAK-011 | `tests/behaviour/dispatch-status-park.test.ts` | `bun test tests/behaviour/dispatch-status-park.test.ts` | Open park record, live/unknown/dead probe arms, terminal exhaustion refusal from the terminal durable lane record, read counter | 4 | To Implement |
+| TC-PEAK-011 | `tests/behaviour/dispatch-status-park.test.ts` | `bun test tests/behaviour/dispatch-status-park.test.ts` | Open park record, live/unknown/dead probe arms, no `recoveryRefusal` on status/park surfaces, exhaustion only in the result episode fact, read counter | 4 | To Implement |
 | TC-PEAK-012 | `tests/behaviour/dispatch-peak-surfaces.test.ts` | `bun test tests/behaviour/dispatch-peak-surfaces.test.ts` | Seed one park record and a live lease, read spy, lanes and board harnesses | 4 | To Implement |
 | TC-PEAK-013 | `tests/behaviour/dispatch-peak-byte-identical.test.ts` | `bun test tests/behaviour/dispatch-peak-byte-identical.test.ts` | Pre-change goldens, no-park state, production mode enabled/disabled | 4 | To Implement |
-| TC-PEAK-014 | `tests/behaviour/dispatch-peak-result.test.ts` | `bun test tests/behaviour/dispatch-peak-result.test.ts` | Spanning episode fixture, budget-exhaustion terminal arm, no-episode control | 4 | To Implement |
+| TC-PEAK-014 | `tests/behaviour/dispatch-peak-result.test.ts` | `bun test tests/behaviour/dispatch-peak-result.test.ts` | Spanning episode fixture, budget-exhaustion terminal arm with episode-fact refusal, no-episode control | 4 | To Implement |
 | TC-PEAK-015 | `tests/behaviour/dispatch-peak-setting.test.ts` | `bun test tests/behaviour/dispatch-peak-setting.test.ts` | Three configuration arms, same episode fixture | 3 | To Implement |
 | TC-PEAK-016 | `tests/behaviour/dispatch-stop.test.ts` | `bun test tests/behaviour/dispatch-stop.test.ts` | Disabled-setting arm and enabled control, shared episode fixture, `--cause peak-window --until` | 5 | To Implement |
 | TC-PEAK-017 | `tests/behaviour/dispatch-peak-setting.test.ts`, `tests/behaviour/config-lane.test.ts`, `tests/fixtures/config/lane.ts` | `bun test tests/behaviour/dispatch-peak-setting.test.ts tests/behaviour/config-lane.test.ts` | Invalid lane source cases; delivered error table | 1 | To Implement |
@@ -1574,6 +1575,7 @@ No acceptance criterion is left uncovered. All 33 are covered by an automated sc
 | 1.7 | 2026-11-26 | @test-plan-writer | PM review remediation: TC-PEAK-011 now reads `recoveryRefusal` from the terminal durable lane record, and DM-2/DM-3/AC-F6-1 state that the park-record member is removed. TC-PEAK-010 and AC-F5-2 add the un-expired standing-park second-dispatch arm (`dispatch.resume-parked` at exit 2 at resume admission; `queue.single-flight` only for a running lane without a park), the parked-through-engine lease renewal arm, and retain the lost-lease and parked-case rules. TC-PEAK-038 replaces the started-session arm with the ordering invariant: the recovery pass runs before the first session, an unrecoverable standing park refuses with no park appended and no spawn/resume call, and there is no terminate arm. F-14 arms added to TC-PEAK-002 (mid-iteration while the session is actively producing output), TC-PEAK-006 (hand-off over one store), and TC-PEAK-013 (byte-identical no-park output); the TDR-0077 decision-record case remains in TC-PEAK-027. No TC id was added or removed; coverage remains 33 of 33 ACs, 37 TCs (36 automated, 1 manual). |
 | 1.8 | 2026-11-26 | @test-plan-writer | Review iteration-2 decisions: F-7 removes the non-terminal recovery-refusal arm from TC-PEAK-009 and TC-PEAK-014; the only terminal refusal is budget exhaustion, which appends the terminal exhaustion record, raises the delivered typed question, and keeps the reachable result shape (AC-F4-3, AC-F7-1, DM-3, DM-4, DM-5, NFR-4 updated). F-9 adds the terminate-less-harness arm (`lanes` mode `iteration-start-gating`, no watch composed) to TC-PEAK-019 and the withhold renewal-at-the-earlier-cadence measurement to TC-PEAK-035. F-14e adds the repository-wide-pass summary naming the stuck refs to TC-PEAK-020/AC-F10-1. F-18 adds canonical `Z` acceptance and past/non-canonical-end refusal to TC-PEAK-034/AC-F9-3. No TC id was added or removed; coverage remains 33 of 33 ACs, 37 TCs (36 automated, 1 manual). |
 | 1.9 | 2026-11-26 | @test-plan-writer | Plan-writer stale-sentence cleanup: TC-PEAK-010's parked-case now leaves the successor's lease alone instead of releasing it; TC-PEAK-011 reads the terminal exhaustion refusal from the terminal durable lane record, never the park record, with AC-F6-1/DM-2/DM-3 aligned; the ownership paragraph cites plan v1.7 and test plan v1.8. No TC id, coverage, or phase change. |
+| 1.10 | 2026-11-26 | @test-plan-writer | Final record correction (review iteration 4, F-1): the exhaustion refusal is carried only by the result's bounded episode fact; `dispatch status`, `laneParks`, brief, and board carry no refusal and project no `recoveryRefusal` member. TC-PEAK-011 now asserts that absence; TC-PEAK-009, TC-PEAK-014, AC-F4-3, AC-F6-1, DM-2, DM-3, DM-4, DM-5, and TC-PEAK-027 are aligned. No TC id, coverage, or phase change; 33 of 33 ACs and 37 TCs remain. |
 
 ## 10. Test Execution Log
 

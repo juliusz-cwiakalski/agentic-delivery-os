@@ -12,7 +12,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-26T16:49:05.379Z }
   delivery: { started: null, completed: 2026-11-26T20:53:32.224Z }
   system_spec_update: { started: null, completed: 2026-11-26T18:18:53.409Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-26T22:32:25.674Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -699,8 +699,8 @@ notes:
       @coder as a false positive, not a new identity."
     type: info
     date: "2026-11-26"
-  - text: "Review 3 FAIL (code-review/review-iter-3.yaml; 13 findings: 0 high,
-      4 medium, 8 low, 1 info). The whole bun test battery is green at HEAD
+  - text: "Review 3 FAIL (code-review/review-iter-3.yaml; 13 findings: 0 high, 4
+      medium, 8 low, 1 info). The whole bun test battery is green at HEAD
       (13,039 tests, 0 fail); the failure is test evidence and record. Path to
       PASS, applied under the owner's full-speed instruction: (1)
       dispatch-peak-lease-park.test.ts opens the window across at least two TTLs
@@ -724,14 +724,17 @@ notes:
       store, renews through renewDispatchLease, and asserts a second dispatch is
       refused dispatch.resume-parked at exit 2 while the park stands. F-2: the
       production harness composes an injected clock and the unconfirmed-stop arm
-      runs at 07:00 UTC deterministically. F-5: the episode resumedAt is applied
-      only after the next session acquisition succeeds, so a failed resume
-      reports the pause and the failure, never resumed at. F-10: the retired
-      recoveryRefusal carrier and its status/park projection are removed
+      runs on the harness default 2026-11-08T10:00:00Z deterministically (the
+      window is open through the 60 s after-buffer). F-5: the episode resumedAt
+      is applied only after the next session acquisition succeeds, so a failed
+      resume reports the pause and the failure, never resumed at. F-10: the
+      retired recoveryRefusal carrier and its status/park projection are removed
       together with the lane-record member and its pins; the terminal exhaustion
       record and typed question carry the exhaustion. F-11: the fixture-only
       budget-and-economics non-terminal arm is removed. Tests: 18 peak/lease
       files 68 pass / 0 fail; contract/status/inventory 56 pass / 0 fail; the
-      four directly affected suites 10 pass / 0 fail; typecheck green."
+      four directly affected suites 10 pass / 0 fail; typecheck green. Evidence
+      commits: 7b116ee2 (code/tests/fixtures/docs), da1c8ffe (pm-notes
+      evidence), da05b62e (review-iter-3 record, plan scope, docs)."
     type: info
     date: "2026-11-26"

@@ -1,0 +1,352 @@
+version: 1
+iteration: 4
+mode: local
+work_item_ref: GH-413
+branch: feat/GH-413/peak-pausing-dispatch-lane
+status: PASS
+summary: >-
+  PASS on 5 non-blocking findings (0 high, 0 medium, 4 low, 1 info), judged on
+  HEAD da05b62e after `pnpm build`. Iteration 3's four mediums and F-5 are
+  closed, and I re-verified each by driving it rather than by reading the diff.
+  The parked-interval suite now parks into the real store. Replayed with
+  instrumentation, it renewed 22 times through `renewDispatchLease` at every
+  30 s step of a ten-minute park, saw a heartbeat age of 30 s before each
+  renewal against the 90 s TTL, answered a second dispatch
+  `dispatch.resume-parked` at exit 2 and store-level probes
+  `queue.single-flight`, and kept the claimed lease id. The production harness
+  composes an injected clock, and on its default instant the unconfirmed-stop
+  arm reaches the terminate path (one 20 s grace wait; a control clock outside
+  the window shows none). A failed resume now reports "spawn failed before a
+  session existed (peak-window: paused until ...)" with no resume instant and
+  no recovery record. The status park fact is back to four members in the real
+  composer, and the test-spec page claims only what the suites assert. The
+  whole `bun test` battery is green at this HEAD (13038 tests across 1561
+  files, 0 fail), as are build, typecheck, the error-table sync and
+  `plan validate`. What remains does not block. The test plan still describes
+  the lane-record refusal carrier the fix removed. The pm-notes place the
+  unconfirmed-stop arm at 07:00 UTC where the suite runs on the harness
+  default. The `budget-and-economics` engine branch is now untested. The
+  follow-ups recorded in pm-notes stand unchanged.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 4
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-26--GH-413--peak-pausing-dispatch-lane/chg-GH-413-test-plan.md:120
+    suppressed: false
+    prior: [iteration 3 F-10]
+    message: >-
+      NEW, left by the F-10 fix, and not blocking. The fix removed the
+      lane-record `recoveryRefusal` member and the status fact's refusal. The
+      spec and the current-truth pages already describe four members and now
+      match the code, but the test plan (v1.9, untouched by the fix) still
+      describes the removed carrier. The AC-F6-1 row (line 88) says
+      `dispatch status` reports "the terminal exhaustion refusal from the
+      terminal durable lane record". The DM-2 row (120) says "The terminal lane
+      record carries the terminal exhaustion refusal read by
+      `dispatch status`". The DM-3 row (121) adds "plus the terminal
+      exhaustion refusal read from the terminal durable lane record".
+      TC-PEAK-011 (562, 571, 576) makes that refusal a precondition, a step
+      and an expected outcome, and the section 7 row (1474) repeats it. Those
+      sentences now contradict spec DM-2 and DM-3 and the code, and TC-PEAK-011
+      step 4 cannot be performed. No test or behaviour depends on them.
+    suggestion: >-
+      Test-plan writer, before dod_check, with no re-review: drop the carrier
+      from the five places, state that neither the park record nor the status
+      fact carries a refusal, and add a revision row.
+  - id: F-2
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-26--GH-413--peak-pausing-dispatch-lane/chg-GH-413-pm-notes.yaml:727
+    suppressed: false
+    prior: [iteration 3 F-4]
+    message: >-
+      Record slips in the fix evidence, none blocking. (a) Line 727 says the
+      unconfirmed-stop arm "runs at 07:00 UTC deterministically". The suite
+      passes no clock and runs on the harness default, 2026-11-08T10:00:00Z,
+      where the window is open only through the 60 s after-buffer (F-3). (b)
+      Commits da1c8ffe4 and da05b62e1 (the test-spec page, the plan scope line,
+      the previous review record and two pages) have no evidence line. (c) The
+      five phase-10 assertions iteration 3 named as undelivered are still
+      undelivered and still unrecorded. R3's renewal spy over the withhold and
+      its second-dispatch refusal are absent. R6's appended question record is
+      asserted by no suite (the result suite's test is titled "question" but
+      asserts the escalation call). R7's terminate-less arm is not in
+      `tests/behaviour/dispatch-stop-safety.test.ts`. R8's summary assertion is
+      missing (the test hands `stuck` to its double and never reads the
+      summary). The lease-park suite also carries none of the other arms plan
+      R9 lists for it (the hold, the re-dispatch arm, the R3 and R4 arms).
+    suggestion: >-
+      Correct the instant on line 727, add one evidence line for the two later
+      commits, and replace "the five" with a named list of accepted follow-ups.
+      My probes cover each behaviour at this HEAD; none needs code.
+  - id: F-3
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/behaviour/dispatch-peak-production.test.ts:96
+    suppressed: false
+    prior: [iteration 3 F-2]
+    message: >-
+      CLOSED in substance, with three robustness notes. The arm is now
+      deterministic, but its being inside the window rests on two facts it does
+      not state, the harness default instant and the 60 s after-buffer, so it
+      sits 60 s before the effective end (10:01:00Z). It still asserts only an
+      empty park list, so a regression that stopped deciding a stop would pass
+      it. `tests/fixtures/queue/production/harness.ts` reads `options.clock`
+      (line 334) without declaring it on `ProductionQueueHarnessOptions`
+      (253-275), the same hidden-error class as follow-up F-6, and
+      `withComposition`'s `clock` parameter (line 49) is unused.
+    suggestion: >-
+      Pass an explicit clock from the suite (07:00 as the record intends),
+      declare the option, drop the unused parameter, and assert the stop
+      attempt through the injected `dispatchDelay` recorder: exactly one
+      `terminate-grace` wait of the composed grace. My probe shows one 20 000 ms
+      wait on the default clock and none outside the window.
+  - id: F-4
+    severity: low
+    confidence: high
+    category: code-quality
+    location: packages/core/src/app/dispatch-peak-pause.ts:296
+    suppressed: false
+    prior: [iteration 3 F-11]
+    message: >-
+      The retired arm's test is gone, so F-11's contradiction between the
+      suite, the test plan and the page is resolved. The `budget-and-economics`
+      option stays, however, in `evaluateDispatchPeakResume` (198, 296-321) and
+      in `DispatchPeakWatchPorts.recoveryAdmission` (dispatch.ts:355), and no
+      test or page now reaches or documents it. Production binds `budget-only`.
+      It is an untested branch no production composition selects.
+    suggestion: >-
+      Follow-up: delete the option, the branch and their fixture options, or
+      document why the option is kept and test it.
+  - id: F-5
+    severity: info
+    confidence: high
+    category: observation
+    location: tests/behaviour/dispatch-peak-recovery.test.ts:9
+    suppressed: false
+    prior: [iteration 3 F-6, F-7, F-8, F-9, F-12, F-13]
+    message: >-
+      Nits and unchanged follow-ups, none blocking. (a)
+      `tests/behaviour/dispatch-peak-recovery.test.ts:9` imports
+      `createPeakScenario` unused (a biome warning). (b) New test code assigns
+      into fixture objects in place (`Object.assign(peak.peak, ...)`,
+      `scenario.scripted.port.resume = ...`) and casts the park payload
+      `as never` where production casts it `as StateJsonValue`; fixtures are
+      not type-checked, so none of it is caught. (c) Test-spec page wording:
+      line 103, "a window that opens while the lane runs and one that opens
+      mid-iteration", names the mid-iteration arm twice and omits the
+      already-open-at-first-observation arm, and line 115 credits the hand-off
+      suites with "its per-step renewal", which `dispatch-lease-liveness.test.ts`
+      asserts and `dispatch-stop-handoff.test.ts` does not. (d) Follow-ups
+      F-6, F-7, F-8, F-9 and F-12 are unchanged at this HEAD and are recorded
+      in pm-notes (lines 702-721): six evidence tokens on no page, two fixture
+      options undeclared, the comment nits, four rule fixtures refused by the
+      production parser, lease history growth. (e) In the production suite's
+      configuration the withhold is 201 steps of 100 ms, grace plus one
+      cadence, as specified.
+    suggestion: >-
+      Drop the unused import with the next touch. Carry F-9 and F-12 into work
+      items; they are the two follow-ups with substance.
+prior_findings:
+  - id: F-1
+    title: The lease-park suite never parks
+    disposition: CLOSED
+    note: >-
+      The suite starts at 06:00 inside a 06:00-06:10 window and writes its park
+      and recovery records into the real store. Instrumented replay: 1 stop, a
+      `parked` and a `recovered` record of the same family, 22 renewals at
+      +30 s to +660 s, heartbeat age 30 000 ms before every renewal, a second
+      dispatch at 06:01 answered `dispatch.resume-parked` at exit 2, store
+      level probes `queue.single-flight` with holder `dispatch` at 30, 60,
+      120, 240 and 480 s, the claimed lease id at the end with age 30 s.
+  - id: F-2
+    title: The production suite's unconfirmed-stop arm runs on the wall clock
+    disposition: CLOSED
+    note: >-
+      The harness composes an injected clock. At its default instant
+      (2026-11-08T10:00:00Z) the window is open until 10:01:00Z and the arm
+      reaches the terminate path: one `terminate-grace` wait of 20 000 ms and
+      no park. A control clock at 03:00 records no such wait. Robustness
+      notes are F-3.
+  - id: F-3
+    title: The test-spec page states coverage the tree does not have
+    disposition: CLOSED
+    note: >-
+      The page lists the two real production arms, the real-store lease-park
+      suite and the standing-park assertions as delivered, and says the other
+      production arms are not delivered. Two wording nits are in F-5.
+  - id: F-4
+    title: The closure record does not match the tree
+    disposition: CLOSED
+    note: >-
+      pm-notes (lines 702-737) now list each iteration-3 finding as fixed in
+      7b116ee2 or as an accepted follow-up, with the test counts of that
+      commit. The remaining slips are F-2.
+  - id: F-5
+    title: resumedAt is set before the next session is acquired
+    disposition: CLOSED
+    note: >-
+      The resume instant and the not-preserved fact are applied in the block
+      that follows the session acquisition. Replayed: a preserved park whose
+      resume refuses returns `dispatch.session.spawn-failed` with "spawn failed
+      before a session existed (peak-window: paused until 2026-11-12T10:00:00.000Z)",
+      an episode fact without `resumedAt`, and the park still `parked`. The
+      regression test is committed, and a successful resume still reports
+      `resumedAt`.
+  - id: F-6
+    title: Evidence tokens undocumented and two fixture options undeclared
+    disposition: ACCEPTED
+    note: >-
+      Unchanged and recorded in pm-notes as a follow-up. The fix adds one more
+      undeclared option (F-3).
+  - id: F-7
+    title: Test plan, plan and pm-notes citation remnants
+    disposition: ACCEPTED
+    note: Unchanged and recorded in pm-notes as a follow-up.
+  - id: F-8
+    title: Comment and duplicate-token nits
+    disposition: ACCEPTED
+    note: Unchanged and recorded in pm-notes as a follow-up.
+  - id: F-9
+    title: The rule fixtures are refused by the production parser
+    disposition: ACCEPTED
+    note: >-
+      Unchanged and recorded in pm-notes as a follow-up. It deserves a work
+      item.
+  - id: F-10
+    title: The status park fact carries a refusal member the spec does not declare
+    disposition: CLOSED
+    note: >-
+      The write, the contract members, the validator clause, the text line and
+      the pins are removed. Through the real composer after a terminal
+      exhaustion `park` reads cause, until, stoppedAt and preservation, the
+      human line has no `parkRecoveryRefusal`, the terminal lane record carries
+      no refusal, and the result's episode fact still carries it. The pages
+      follow. The test plan does not (F-1).
+  - id: F-11
+    title: The retired non-terminal arm is still tested
+    disposition: PARTIAL
+    note: >-
+      The test arm is removed and the suites, the test plan and the page agree
+      that none is asserted. The option and the engine branch it alone reaches
+      remain, now untested (F-4).
+  - id: F-12
+    title: Lease history grows and every read scans it
+    disposition: ACCEPTED
+    note: >-
+      Unchanged and recorded in pm-notes as a follow-up. It deserves a work
+      item.
+  - id: F-13
+    title: Observations needing no action
+    disposition: ACCEPTED
+    note: Carried into F-5 of this iteration where still relevant.
+residual_decisions:
+  - prior: [iteration 3 F-6, F-7, F-8, F-9, F-12]
+    decision: ACCEPT as recorded follow-ups (not blocking)
+    reason: >-
+      None changes behaviour. F-6, F-7 and F-8 are documentation and comment
+      items. F-9 leaves the peak suites on rule data the production parser
+      refuses, but the watch composes the delivered buffer-aware decision
+      function and the tracked profile parses. F-12 is a state-store property
+      that takes months to matter at the reference host's scale.
+    condition: >-
+      Met: all five are recorded in pm-notes (lines 702-721). Open work items
+      for F-9 and F-12.
+  - prior: [iteration 3 F-4 remainder, F-11 remainder]
+    decision: ACCEPT as follow-ups (not blocking)
+    reason: >-
+      The undelivered phase-10 assertions and the lease-park suite's other
+      planned arms each restate a behaviour that a sibling suite asserts or
+      that I verified at this HEAD: the stuck refs in the refusal summary and
+      the typed question record through the real composer, the withhold
+      renewal in `dispatch-lease-liveness.test.ts`, the terminate-less harness
+      in the mode and production suites. The untested `budget-and-economics`
+      branch is unreachable in production.
+    condition: >-
+      Name them in pm-notes as follow-ups (F-2) and delete or document the
+      branch (F-4).
+  - prior: [iteration 1 F-14, F-21g]
+    decision: ACCEPT (not blocking)
+    reason: Unchanged from iterations 2 and 3, and recorded in pm-notes.
+    condition: Met.
+  - prior: []
+    decision: CORRECT before dod_check (not blocking)
+    reason: >-
+      The five stale test-plan sentences (F-1) contradict the spec and the
+      code on the data model, and TC-PEAK-011 step 4 cannot be performed as
+      written. They affect no test and no behaviour.
+    condition: >-
+      A test-plan revision before dod_check. It needs no re-review.
+undeclared_residuals:
+  - The test plan still describes the removed lane-record refusal carrier in five places (F-1).
+  - The pm-notes place the unconfirmed-stop arm at 07:00 UTC; the suite runs on the harness default, 10:00:00Z (F-2, F-3).
+  - Five phase-10 assertions and the lease-park suite's other planned arms remain undelivered and unrecorded (F-2).
+  - The `budget-and-economics` engine option and branch are untested and undocumented (F-4).
+evidence:
+  head: da05b62e
+  full_battery:
+    command: TMPDIR=$PWD/tmp/tmpdir bun test (after TMPDIR=$PWD/tmp/tmpdir pnpm build, exit 0)
+    result: 13038 tests across 1561 files; 13034 pass; 4 skip; 0 fail; exit 0; 1068.05 s
+    log: tmp/tmpdir/review-gh413/iter4/full-battery.log
+    note: >-
+      Run for information only, because the fix changes the default clock of a
+      shared production harness; the lifecycle quality_gates phase owns the
+      recorded run.
+  targeted_runs:
+    - name: phase 10 Verify 1 (the five iteration-2 red files)
+      result: 17 pass, 0 fail across 5 files
+    - name: phase 10 Verify 2 (peak, lease, stop and status suites)
+      result: 55 pass, 0 fail across 12 files
+    - name: phase 10 Verify 3 (checks and structure)
+      result: 100 pass, 0 fail across 6 files
+    - name: read-only controls and the contract, operator and port inventory pins
+      result: 105 pass, 0 fail across 13 files
+    - name: the nine files the fix touched or directly affects, including the two production-composition suites that use the shared harness
+      result: 55 pass, 0 fail across 9 files
+  gates:
+    - pnpm build: exit 0
+    - pnpm typecheck: exit 0
+    - biome check over the 14 TypeScript and JSON files changed since 282ef0ab: 2 warnings, 0 error (the pre-existing useOptionalChain at dispatch.ts:1448; an unused import at dispatch-peak-recovery.test.ts:9)
+    - jaiship plan validate GH-413 --json: valid, ten phases
+    - scope: every file changed since 282ef0ab lies inside a declared phase scope except the change's own plan and pm-notes
+  probes:
+    - file: tmp/tmpdir/review-gh413/iter4/probe-a.test.ts
+      covers: >-
+        an instrumented replay of the rewritten lease-park scenario over a
+        real store, with the heartbeat age before each renewal, the renewal
+        instants, the second dispatch and store-level admission probes (F-1)
+    - file: tmp/tmpdir/review-gh413/iter4/probe-b.test.ts
+      covers: >-
+        the delivered unconfirmed-stop arm through the real harness on its
+        default clock against a control clock outside the window, with the
+        delay recorder showing the terminate grace wait (F-2, F-3)
+    - file: tmp/tmpdir/review-gh413/iter2/probe1.test.ts
+      covers: re-run of the failed-resume arm at this HEAD (F-5)
+    - file: tmp/tmpdir/review-gh413/iter3/probe-b.test.ts
+      covers: re-run of the status park fact after a terminal exhaustion (F-10)
+    - file: tmp/tmpdir/review-gh413/iter2/probe3.test.ts
+      covers: re-run of the spent-budget arm, for the terminal lane record and the result's episode fact (F-10)
+  note: >-
+    tmp is git-ignored scratch. The probes are evidence for this review, not
+    delivered tests. Every terminate the production probes issued targeted a
+    child process the probe had started under a unique argv token.
+reviewed_at: '2026-11-26T22:30:27Z'
+next_step: >-
+  PASS. PROCEED to quality_gates (the recorded whole-battery run), dod_check and
+  pr_creation. Three record corrections before dod_check need no re-review:
+  the five test-plan sentences (F-1), the 07:00 instant and the missing
+  evidence lines in pm-notes (F-2), and the unused import (F-5). Carry F-3,
+  F-4 and the recorded follow-ups into the pull-request description as named
+  work items. The buffered rule fixtures (iteration 3 F-9) and the
+  lease-history compaction (iteration 3 F-12) are the two with substance.
