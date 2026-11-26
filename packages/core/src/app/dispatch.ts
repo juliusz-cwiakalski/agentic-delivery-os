@@ -320,7 +320,12 @@ export type DispatchPeakWatchPorts = {
   /** `recoverQueueParks` bound over the composition's park context. */
   readonly recoverParks: () =>
     | { readonly ok: true }
-    | { readonly ok: false; readonly kind: "queue" | "state"; readonly code: string };
+    | {
+        readonly ok: false;
+        readonly kind: "queue" | "state";
+        readonly code: string;
+        readonly stuck?: readonly string[];
+      };
   /** An un-expired standing peak-window park blocks a resume/re-dispatch at admission. */
   readonly unexpiredStandingPark: (
     ref: string,
@@ -348,7 +353,11 @@ export type DispatchPeakWatchPorts = {
   };
   /** F-5a: production admits the automatic recovery by the restart budget only. */
   readonly recoveryAdmission?: "budget-only" | "budget-and-economics";
-  readonly escalate: (input: { readonly code: string }) => void;
+  readonly escalate: (input: {
+    readonly code: string;
+    readonly ref: string;
+    readonly restarts: number;
+  }) => void;
 };
 
 export type DispatchPorts = {
@@ -1074,7 +1083,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       // The terminal lane record (GH-347 AC-F1-2): appended only when this
       // dispatch held a session, and never rewritten. A failed append leaves
       // the token unchanged and is disclosed as bounded evidence (AC-F1-3).
-      if (heldSession !== undefined && ports.laneOwner !== undefined) {
+      if (heldSession !== undefined && ports.laneOwner !== undefined && !leaseLost) {
         const terminal = appendDispatchLane(ports.store, ports.fenceToken, {
           schema: DISPATCH_LANE_PAYLOAD_SCHEMA,
           ref: ports.ref,
@@ -1256,7 +1265,11 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           falseSuccess: false,
           prUrl: "",
           urlResolved: false,
-          lastMessage: `the standing park could not be recovered (${recovery.code})`,
+          lastMessage: `the standing park could not be recovered (${recovery.code})${
+            recovery.stuck === undefined || recovery.stuck.length === 0
+              ? ""
+              : `; stuck: ${recovery.stuck.join(", ")}`
+          }`,
           evidenceRefs: ["park:recovery-refused"],
         });
       }
@@ -1534,7 +1547,9 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       // post-collection rule.
       if (ports.peak !== undefined && peakPark === undefined && !leaseLost) {
         const withholdMs = (ports.killGraceMs ?? 20_000) + (ports.livenessIntervalMs ?? 30_000);
-        const cadence = ports.livenessIntervalMs ?? 30_000;
+        // R3: step at the renewal cadence so the heartbeat never reaches the
+        // TTL, including when the liveness interval is at or above the TTL.
+        const cadence = renewalCadenceMs;
         if (cadence > 0) {
           const steps = Math.max(1, Math.ceil(withholdMs / cadence));
           for (let step = 0; step < steps; step += 1) {
@@ -1572,6 +1587,28 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
             until: openPark.until ?? "",
           };
         }
+      }
+
+      // R4: a lease lost inside the withhold returns the same classified
+      // result, before the derivation and any terminal lane record.
+      if (leaseLost) {
+        return record({
+          token: su,
+          outcome: O_FAILED,
+          errorCode: "dispatch.state-unverified",
+          comparison: comparisonFor({
+            token: su,
+            errorCode: "dispatch.state-unverified",
+            reads: staleReads(),
+            urlResolved: false,
+          }),
+          corroboration: buildCorroborationRecord({ token: su }),
+          falseSuccess: false,
+          prUrl: "",
+          urlResolved: false,
+          lastMessage: "the lease was no longer this invocation's during the post-session withhold",
+          evidenceRefs: ["lease:not-owned"],
+        });
       }
 
       // GH-413 F-3/F-4: a dispatch-owned park happened. Wait on the renewal

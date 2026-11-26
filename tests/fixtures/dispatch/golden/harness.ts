@@ -420,7 +420,12 @@ export type PeakFixtureOptions = {
   readonly watchEnabled?: boolean;
   readonly recoverParks?: () =>
     | { readonly ok: true }
-    | { readonly ok: false; readonly kind: "queue" | "state"; readonly code: string };
+    | {
+        readonly ok: false;
+        readonly kind: "queue" | "state";
+        readonly code: string;
+        readonly stuck?: readonly string[];
+      };
   readonly holdActive?: () => boolean;
   readonly resumeSucceeds?: () => boolean;
   readonly reenterSucceeds?: () => boolean;
@@ -576,6 +581,8 @@ export type PeakScenarioOptions = {
   readonly recoverParks?: PeakFixtureOptions["recoverParks"];
   readonly claim?: DispatchLeaseClaim;
   readonly renewLease?: DispatchPorts["renewLease"];
+  readonly livenessIntervalMs?: number;
+  readonly leaseTtlMs?: number;
   readonly collectAfterPolls?: number;
   readonly resumeSucceeds?: () => boolean;
   readonly reenterSucceeds?: () => boolean;
@@ -610,8 +617,8 @@ export const createPeakScenario = (options: PeakScenarioOptions) => {
     reads: readsFrom(),
     laneOwner: { processId: process.pid, startedAt: new Date(options.startMs).toISOString() },
     nowIso: peak.clock.iso,
-    livenessIntervalMs: 30_000,
-    leaseTtlMs: 90_000,
+    livenessIntervalMs: options.livenessIntervalMs ?? 30_000,
+    leaseTtlMs: options.leaseTtlMs ?? 90_000,
     collectAfterPolls: options.collectAfterPolls ?? 2,
     livenessOf: (poll) => ({
       readings: [

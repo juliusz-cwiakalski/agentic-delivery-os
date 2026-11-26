@@ -205,7 +205,11 @@ export const evaluateDispatchPeakResume = async (input: {
     readonly branch: string;
   }) => Promise<boolean>;
   readonly reenter: (input: { readonly ordinal: number }) => Promise<boolean>;
-  readonly escalate: (input: { readonly code: string }) => void;
+  readonly escalate: (input: {
+    readonly code: string;
+    readonly ref: string;
+    readonly restarts: number;
+  }) => void;
 }): Promise<DispatchPeakResume> => {
   const park = standingPeakPark(input.parks(), input.ref);
   if (park === undefined) return { outcome: "none" };
@@ -251,13 +255,35 @@ export const evaluateDispatchPeakResume = async (input: {
   const budgetOnly = input.admission === undefined || input.admission === "budget-only";
   let ordinal: number;
   if (budgetOnly) {
+    // R2: `lane.restart-budget` 0 or absent is the documented admit-no-restarts
+    // policy; the stall restart refuses, so the recovery refuses the same way.
+    if (input.restartBound <= 0) {
+      input.escalate({
+        code: "dispatch.restart-budget-exceeded",
+        ref: input.ref,
+        restarts: input.restartCount,
+      });
+      return {
+        outcome: "refused",
+        code: "dispatch.restart-budget-exceeded",
+        terminal: true,
+        parkEnd,
+        ...(park.episodeId === undefined ? {} : { episodeId: park.episodeId }),
+      };
+    }
     const restart = admitDispatchRestart({
       count: input.restartCount,
       bound: input.restartBound,
       scope: "budget-consulting",
     });
     if (!restart.admitted) {
-      if (restart.terminal) input.escalate({ code: restart.reason });
+      if (restart.terminal) {
+        input.escalate({
+          code: restart.reason,
+          ref: input.ref,
+          restarts: input.restartCount,
+        });
+      }
       return {
         outcome: "refused",
         code: restart.reason,
@@ -274,7 +300,13 @@ export const evaluateDispatchPeakResume = async (input: {
       economics: input.economics,
     });
     if (!recovery.admitted) {
-      if (recovery.terminal) input.escalate({ code: recovery.code });
+      if (recovery.terminal) {
+        input.escalate({
+          code: recovery.code,
+          ref: input.ref,
+          restarts: input.restartCount,
+        });
+      }
       return {
         outcome: "refused",
         code: recovery.code,

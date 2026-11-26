@@ -3023,7 +3023,14 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       const lane = resolveLaneSettings(resolvedConfig.value.values, resolvedConfig.value.origins);
       // A configuration that would refuse every dispatch must not claim a
       // composed watch: the composition fact degrades to iteration-start gating.
-      return lane.ok ? lane.value.disablePeakPausing !== true : false;
+      if (!lane.ok || lane.value.disablePeakPausing === true) return false;
+      // R7: a harness that declares no terminate operation cannot confirm a
+      // stop, so the composition supplies no watch for it.
+      const harness = resolveHarnessSettings(
+        resolvedConfig.value.values,
+        resolvedConfig.value.origins,
+      );
+      return harness.ok ? harnessFor(harness.value.kind).terminate !== undefined : false;
     };
 
     const queueComposition = withRepositoryBinding(
@@ -5022,6 +5029,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
                 ok: false,
                 kind: "queue",
                 code: "queue.park-condition-stuck",
+                stuck: recovered.value.stuck,
               } as const;
             }
             return { ok: true as const };
@@ -5066,7 +5074,17 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             uniqueProgress: null,
           }),
           recoveryAdmission: "budget-only",
-          escalate: () => {},
+          escalate: ({ code, ref, restarts }) => {
+            // R6: terminal exhaustion raises the delivered typed question the
+            // supervision economics path already writes; no new kind or id.
+            if (code === "dispatch.restart-budget-exceeded") {
+              createSupervisionEconomicsWritePort({ store, newFenceToken }).raiseQuestion({
+                ref,
+                restarts,
+                askedAt: nowIso(),
+              });
+            }
+          },
         };
       })(),
       stop: {

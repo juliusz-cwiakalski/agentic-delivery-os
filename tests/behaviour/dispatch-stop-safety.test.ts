@@ -219,3 +219,36 @@ describe("TC-PEAK-032 the operator stop records the profile-bounded deadline", (
     expect(outcome.code).toBe("input.value.rejected");
   });
 });
+
+describe("TC-PEAK-034 the documented Z form is accepted", () => {
+  test("the reference page's 2026-11-12T12:00:00Z is accepted and normalised", async () => {
+    const appended: QueueParkRecord[] = [];
+    const outcome = await executeDispatchStop(
+      {
+        resolveRepository: () => REPOSITORY,
+        lanes: () => [lane()],
+        parks: () => [],
+        terminate: async () => ({ ok: true, terminated: true }),
+        appendPark: (record) => {
+          appended.push(record);
+          return true;
+        },
+        newEpisodeId: () => "episode-1",
+        profileGraceMsFor: () => 20_000,
+        killGraceMs: 20_000,
+        mainCheckout: "/work/repo",
+      },
+      {
+        ref: "GH-413",
+        cause: "peak-window",
+        until: "2026-11-12T12:00:00Z",
+        nowIso: new Date(NOW).toISOString(),
+        nowMs: NOW,
+      },
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.data.until).toBe("2026-11-12T12:00:00.000Z");
+    expect(appended[0]?.until).toBe("2026-11-12T12:00:00.000Z");
+  });
+});

@@ -105,8 +105,11 @@ export const executeDispatchStop = async (
     };
   }
   const untilMs = Date.parse(request.until);
-  const canonicalUntil = Number.isFinite(untilMs) ? new Date(untilMs).toISOString() : undefined;
-  if (untilMs === undefined || !Number.isFinite(untilMs) || canonicalUntil !== request.until) {
+  const normalizedUntil = Number.isFinite(untilMs) ? new Date(untilMs).toISOString() : undefined;
+  const acceptedUntil =
+    normalizedUntil !== undefined &&
+    (request.until === normalizedUntil || request.until === `${normalizedUntil.slice(0, 19)}Z`);
+  if (!acceptedUntil) {
     return {
       ok: false,
       kind: "input",
@@ -190,14 +193,14 @@ export const executeDispatchStop = async (
     repository,
     cause: "peak-window",
     conditionType: "provider-window",
-    condition: { type: "provider-window", expiresAt: request.until },
+    condition: { type: "provider-window", expiresAt: normalizedUntil },
     recheckMs: 60_000,
     evaluatedAt: request.nowIso,
     recoveryState: "parked",
     ...(lane.providerProfile === undefined ? {} : { providerProfile: lane.providerProfile }),
-    until: request.until,
+    until: normalizedUntil,
     graceDeadline: new Date(request.nowMs + (profileGraceMs ?? graceMs)).toISOString(),
-    windowEnd: request.until,
+    windowEnd: normalizedUntil,
     stoppedAt: request.nowIso,
     preservation,
     episodeId,
@@ -217,7 +220,7 @@ export const executeDispatchStop = async (
       query: "stop",
       ref: request.ref,
       cause: "peak-window",
-      until: request.until,
+      until: normalizedUntil,
       episodeId,
       preservation,
     },

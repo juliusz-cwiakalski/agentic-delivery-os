@@ -34,6 +34,8 @@ const WATCHED_FILES = [
   "tests/behaviour/dispatch-peak-watch.test.ts",
   "tests/behaviour/dispatch-stop.test.ts",
   "tests/behaviour/dispatch-stop-handoff.test.ts",
+  "tests/behaviour/dispatch-peak-production.test.ts",
+  "tests/behaviour/dispatch-peak-lease-park.test.ts",
 ];
 
 describe("TC-PAUSE-092 the delivering suite is hermetic", () => {

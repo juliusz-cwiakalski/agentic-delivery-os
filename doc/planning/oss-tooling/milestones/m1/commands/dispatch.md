@@ -197,7 +197,10 @@ existing `tracker.credential-unavailable` check keeps parity through tests.
   boundary before any lane read.
 - `--until <iso>` - `dispatch stop` only: the declared park end. It is required
   for `peak-window`; a missing end is refused `input.value.rejected` with the
-  delivered `until-required` reason before any read.
+  delivered `until-required` reason before any read. Both canonical UTC forms
+  are accepted: `2026-11-12T12:00:00Z` (the example below) and the exact
+  millisecond form `2026-11-12T12:00:00.000Z`. An end at or before the request
+  instant and a non-canonical instant are refused `input.value.rejected`.
 - `--help` - pure self-description; reads no state, git, network, or model.
 - `--version` - pure version identity.
 

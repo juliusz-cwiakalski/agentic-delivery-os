@@ -201,12 +201,15 @@ is eligible; an expired standing park is recovered through the delivered
 mutating park pass, `recoverQueueParks`, before the first stop decision and
 before the first session of a resume, so the pass only ever meets an expired
 park or none; an unrecoverable park refuses the run before any session starts,
-because a double park fails every park-reading surface for good), the `lanes`
+naming the stuck references, because a double park fails every park-reading
+surface for good), the `lanes`
 composition-fact read
 (`peakEnforcement.mode` derives from the reading composition's own effective
-configuration: `window-watch` when automatic pausing is enabled,
-`iteration-start-gating` when it is disabled; the one intended change to a
-no-park payload; `parkClaimed` stays record-derived), and the operator stop
+configuration and the selected harness's terminate capability: `window-watch`
+when automatic pausing is enabled and the harness declares `terminate`,
+`iteration-start-gating` when pausing is disabled or the harness declares none,
+so no watch is composed; the one intended change to a no-park payload;
+`parkClaimed` stays record-derived), and the operator stop
 (`dispatch stop <ref>` admits the `peak-window` cause only; another cause or a
 missing `--until` is `input.value.rejected` at the grammar boundary, the missing
 end carrying the delivered `until-required` reason; a lane is running only when

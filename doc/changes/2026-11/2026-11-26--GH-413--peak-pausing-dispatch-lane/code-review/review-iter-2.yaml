@@ -1,0 +1,738 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-413
+branch: feat/GH-413/peak-pausing-dispatch-lane
+status: FAIL
+summary: >-
+  FAIL on 16 findings (2 high, 7 medium, 6 low, 1 info), judged on HEAD
+  24f731212 after `pnpm build`. Of iteration 1's 23 findings, 12 are closed
+  (F-2, F-3, F-7, F-8, F-10, F-11, F-12, F-15, F-16, F-17, F-19, F-22; F-17
+  and F-19 are spec corrections whose code was already right, F-22 is closed
+  by documentation), 9 are partly closed (F-4, F-5, F-6, F-9, F-13, F-14,
+  F-18, F-20, F-21), F-1 is still open (the seven files it named are green and
+  five more are red), and F-23 stays an accepted observation. The remediation
+  itself works where I could drive it. Over a real store the fenced release
+  and the lost-lease returns leave the successor's lease intact, a park of
+  3.5 h renews at every cadence and refuses 141 second-dispatch claims, the
+  observation interval is the configured one, and the turn caps are gone.
+  Through the real production composer a confirmed stop parks, the lane
+  waits and resumes inside the same invocation, a killed session recovers on
+  the budget alone, a spent budget refuses terminally with the exhaustion
+  record, an unconfirmed stop writes no park, and a rule change made during
+  the episode is honoured. It still fails on four things. First, the whole
+  `bun test` battery is red: 6 failures in 5 files (one GH-413 suite broken by
+  the F-5a fixture default, one delivered control broken by the withhold's
+  renewal, three delivered production-composition suites timing out on the
+  withhold's real wait), none of them in phase 9's verify sets and no
+  full-battery run recorded. Second, the new budget-only admission restarts a
+  lane whose `lane.restart-budget` is 0 or absent, the documented
+  admit-no-restarts policy, where the stall restart it claims to reuse
+  refuses. Third, the lease-liveness and lost-lease rules hold only in the
+  default shape: the withhold renews once per liveness interval, so at an
+  interval at or above the TTL the lease goes stale at every session end
+  (measured 90, 120 and 180 s against a 90 s TTL) and a second dispatch's
+  claim succeeds there; a lease lost inside the withhold is not honoured; and
+  every lost-lease return still appends a terminal lane record, which its own
+  comment says it does not, so after a re-dispatch the live successor lane
+  reads terminal and `dispatch stop` refuses it. Fourth, `dispatch stop
+  --until` now accepts only the exact millisecond UTC form and refuses the
+  reference page's own example. No production-composition test exists for any
+  arm the remediation changed; my probes under tmp/tmpdir/review-gh413/iter2
+  are the only production-shape evidence and can seed the missing suites.
+severity_breakdown:
+  critical: 0
+  high: 2
+  medium: 7
+  low: 6
+  info: 1
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: plan-compliance
+    location: tests/behaviour/dispatch-peak-result.test.ts:69
+    suppressed: false
+    prior: [iteration 1 F-1]
+    message: >-
+      BLOCKING. The whole `bun test` battery is red on HEAD, so DoD item 3 is
+      still not established: 13031 tests across 1559 files, 13021 pass, 4 skip,
+      6 fail, exit 1 (1264.67 s, TMPDIR=$PWD/tmp/tmpdir, after `pnpm build`).
+      Each file is red alone. (a) `tests/behaviour/dispatch-peak-result.test.ts`
+      TC-PEAK-014 expects exit 1 with `episode.refusal = dispatch.resume-
+      uneconomical` and receives exit 0 (1 pass, 1 fail): the fixture now
+      defaults to `recoveryAdmission: "budget-only"` (golden/harness.ts:536), so
+      the economics it seeds no longer refuse. The file is a GH-413 suite and is
+      in no phase verify set. (b) `tests/conformance/dispatch/dispatch-parity-
+      admission.test.ts` TC-ADMIT-001 (both arms) expects 2 `queue.lease`
+      records and reads 3 (7 pass, 2 fail): the renewal F-9 added inside the
+      withhold appends a `renewed` record to a delivered read-only control.
+      (c) Three delivered production-composition suites time out because they
+      inject no `dispatchDelay` and the withhold now waits real time at every
+      session end: `tests/behaviour/projects-state-placement.test.ts`
+      TC-PROJ-021 (5 s), `tests/behaviour/owner-hold-production-composition.
+      test.ts` TC-HOLDEDGE-001/002 (5 s), `tests/behaviour/projects-scope-
+      isolation.test.ts` TC-PROJ-002 (120 s; it runs two dispatches). Iteration
+      1 ran a subset, so these three were never counted. The seven files
+      iteration 1 named are green. No pm-notes entry records a full-battery
+      run; the phase 9 entry counts only its own three batches.
+    suggestion: >-
+      Set `recoveryAdmission: "budget-and-economics"` on TC-PEAK-014 or retire
+      it with F-7 below. Decide the parity control's pin: either the admitted
+      dispatch's withhold renewal is a declared third lease record (move the pin
+      to 3 with a comment naming the renewal), or the control injects a clock on
+      which no renewal falls due. Give the three production-composition
+      fixtures an injected `dispatchDelay`. Then run the whole battery once and
+      record pass and fail counts in pm-notes; add these five files to the
+      delta phase's verify line.
+  - id: F-2
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/core/src/app/dispatch-peak-pause.ts:254
+    suppressed: false
+    prior: [iteration 1 F-5]
+    message: >-
+      NEW, introduced by the F-5a fix. The budget-only branch calls
+      `admitDispatchRestart({ count, bound })`, which treats a bound of 0 or
+      less as "no policy composed" and admits without limit (dispatch-resume.ts:
+      97-100). The stall restart it is specified to reuse refuses in that case
+      (`budget > 0 ? admitDispatchRestart : refuse`, dispatch.ts:1961-1971), and
+      the catalog documents 0 as "the valid admit-no-restarts policy"
+      (catalog.ts:472-473, feature-config-layer.md:382). Reproduced twice: over
+      a real store with `restartBudget` 0 and with no budget composed, and
+      through the real production composer with `lane.restart-budget: 0`; in
+      each a killed session's window-end recovery re-entered (exit 0, a second
+      spawn, one `economics.restart` with reason `session-interrupted`). This
+      contradicts the pm-notes decision "the same rule the stall restart uses"
+      and spec F-4 "under the delivered restart budget".
+    suggestion: >-
+      Mirror the stall rule at the call site: when the engine's budget is not
+      positive, refuse as terminal exactly as dispatch.ts:1961-1971 does, or
+      give `admitDispatchRestart` an explicit scope for it. Add a bound-0 arm to
+      the recovery suite and to the production-composition test.
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/app/dispatch.ts:1540
+    suppressed: false
+    prior: [iteration 1 F-9]
+    message: >-
+      PARTLY CLOSED. The withhold renews, so at the defaults and at 45 s and
+      60 s the heartbeat age on return is the liveness interval (30, 45, 60 s;
+      it was 90, 135, 165 s). It renews once per step and a step is the whole
+      `lane.liveness-interval`, not the renewal cadence, so the interval-at-or-
+      above-TTL configuration NFR-10 names is still broken: measured age on
+      return is 90 s at a 90 s interval (the TTL, stale at or beyond it), 120 s
+      at 120 s and 180 s at 180 s. In that window a second dispatch's claim
+      succeeds: my 120 s run records a claim taken during the post-resume
+      withhold. NFR-10's exemption list names terminate grace, worktree
+      provisioning and handle acquisition, not the withhold. The test the
+      remediation added asserts only that at least one renewal happened.
+    suggestion: >-
+      Step the withhold by `min(livenessIntervalMs, leaseTtlMs / 2)` (the
+      engine already has `renewalCadenceMs`) and keep the total at grace plus
+      one liveness interval, or renew at each cadence step inside each liveness
+      step. Add the arm NFR-10 names: liveness interval at or above the TTL,
+      heartbeat age below the TTL across a session end, second dispatch refused.
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/app/dispatch.ts:1077
+    suppressed: false
+    prior: [iteration 1 F-4]
+    message: >-
+      PARTLY CLOSED. The lost-lease branch now precedes the withhold and the
+      derivation, so no push-parity act is reachable and all three returns name
+      the lost lease. But each return goes through `record()`, which appends a
+      terminal lane record whenever the invocation held a session, so the
+      comment at 1501-1504 ("no terminal lane record over the successor's
+      active record") is false. Reproduced: a lost-lease clean exit leaves
+      `active | terminal/state-unverified` for the same attempt. After a
+      re-dispatch the successor's `active` record is no longer the newest, and
+      the delivered readers act on that: `dispatch stop <ref>` then refuses
+      `queue.precondition.unmet ... state=terminal; a stop request needs a
+      running lane` for a lane that is alive, and the resume resolver, which
+      reads the newest record carrying a session identity, would name the dead
+      attempt's session. The same record makes `dispatch status` report the
+      dead attempt's token and its dead owner.
+    suggestion: >-
+      Skip the terminal lane append in `record()` when `leaseLost` is set; the
+      attempt record is the invocation's own and stays. Correct the comment,
+      and add an arm asserting the lane records after a lost-lease return.
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/app/dispatch.ts:1554
+    suppressed: false
+    prior: [iteration 1 F-4]
+    message: >-
+      PARTLY CLOSED. The lost-lease rule is checked once, before the withhold
+      (1505). A renewal inside the withhold can answer `not-owned` and set
+      `leaseLost`, and nothing looks at it again: the invocation reads truth,
+      runs the derivation, appends the terminal lane record and returns the
+      derived token. Reproduced in my 120 s run: the lease was claimed by a
+      second dispatch during the withhold, the next renewal answered
+      `not-owned`, and the invocation still returned exit 0 `pr-open` with
+      `not-owned` merely present in the evidence.
+    suggestion: >-
+      After the withhold loop, and again before `record()` on the terminal
+      paths, return the same classified `dispatch.state-unverified` result when
+      `leaseLost` is set. Cover it with an arm that takes the lease inside the
+      withhold.
+  - id: F-6
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/app/dispatch-stop.ts:109
+    suppressed: false
+    prior: [iteration 1 F-18]
+    message: >-
+      REGRESSION from the F-18 fix. The end is accepted only when it is
+      byte-equal to `new Date(ms).toISOString()`. `--until 2026-11-12T12:00:00Z`
+      is refused with "the declared end is not a canonical instant", and so are
+      `2026-11-12T13:00:00+01:00` and `2026-11-12 12:00`. The command passes
+      the raw flag through (commands/dispatch.ts:539-543), the reference page
+      documents the argument as `<iso>` and its own example is
+      `dispatch stop GH-354 --cause peak-window --until 2026-11-12T10:00:00Z`
+      (m1/commands/dispatch.md:22 and 351), which now fails. No sibling command
+      validates an instant this way. The deadline half of F-18 is closed: with
+      a 60 s profile grace and a 20 s kill grace the record carries
+      `now + 60 s`, and a past end is refused.
+    suggestion: >-
+      Accept any instant `Date.parse` accepts, store the normalised
+      `toISOString()` form, and keep the past-end refusal; or, if the exact
+      form is intended, say so in the reference page and change its example.
+      Add the reference page's example as a test case.
+  - id: F-7
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/app/dispatch-peak-pause.ts:251
+    suppressed: false
+    prior: [iteration 1 F-5]
+    message: >-
+      The F-5a decision left two acceptance clauses without a production
+      trigger, and the artifacts were not followed. (a) `admitDispatchRestart`
+      in the budget-consulting scope is either admitted or terminally refused;
+      it never refuses non-terminal. So AC-F4-3, NFR-4's "non-terminal recovery
+      refusal", spec F-4's "when the recovery refuses without being terminal",
+      the `dispatch.resume-uneconomical` window-end arm, and the non-terminal
+      half of the `recoveryRefusal` status fact cannot occur in production. The
+      spec words the arm as "the delivered unverifiable-state refusal; the
+      recovery admits on the budget alone", which cancels itself. (b) AC-F4-2,
+      spec F-4 and NFR-4 promise that budget exhaustion "raises the delivered
+      typed question". Production binds `escalate` to a no-op (production.ts:
+      5069) and the one-shot engine has no route to a blocker question: my
+      production run at the bound appends `economics.budget-exhaustion` and no
+      question record. The one-shot stall path raises none either
+      (feature-dispatch-engine.md:120), so the clause does not describe the
+      rule the recovery reuses. The suite that pins (a) is red (F-1 above).
+    suggestion: >-
+      PM and spec-writer decide. Either retire the non-terminal arm (drop
+      AC-F4-3's refusal, the `resume-uneconomical` mapping and TC-PEAK-014) and
+      reword AC-F4-2, F-4 and NFR-4 to the exhaustion record alone, or keep
+      both as explicit options with a named composition that produces them.
+      This is a decision, not a coder task.
+  - id: F-8
+    severity: medium
+    confidence: high
+    category: testing
+    location: packages/cli/src/production.ts:4977
+    suppressed: false
+    prior: [iteration 1 F-5, F-6, F-11, F-13, F-16]
+    message: >-
+      UNDECLARED RESIDUAL. Phase 9 (R3 and R6) planned production-composition
+      arms for a terminate-less harness, an unconfirmed terminate, an escalated
+      stop, null economics, exhaustion and a stuck park, and an engine suite
+      over a real store for the parked interval. None exists: the two
+      conditional files were not created, no test that calls
+      `createProductionComposer` touches the peak binding, `watchEnabled` is
+      reached only through the fixture, and the lease-across-park test added to
+      `dispatch-lease-liveness.test.ts` uses a stub renewal port over an
+      in-memory park array. The production lines at production.ts:4977-5028 and
+      5068 (the stop port, the stuck mapping, the budget-only admission) have
+      no test, and the test plan still marks AC-F5-2 "Covered" by TC-PEAK-010.
+      My probes show the arms work and can be turned into suites:
+      `tmp/tmpdir/review-gh413/iter2/probe3.test.ts` drives the real composer
+      end to end with a scripted runner and a dummy child process the terminate
+      seam can match, and `probe1.test.ts` holds the real-store lease arms.
+    suggestion: >-
+      Add `tests/behaviour/dispatch-peak-production.test.ts` and
+      `tests/behaviour/dispatch-peak-lease-park.test.ts` as phase 9 declared,
+      seeding them from the two probe files (tmp is not committed). Correct the
+      AC-F5-2 row once they exist.
+  - id: F-9
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:4994
+    suppressed: false
+    prior: [iteration 1 F-6]
+    message: >-
+      PARTLY CLOSED, with a new inconsistency. No park is written without a
+      confirmed terminate (verified in production: an unconfirmed stop writes
+      no park), and a harness that declares no terminate composes no watch
+      (verified: a Claude Code dispatch inside the window spawns, writes no park
+      and no episode). But the mode read still looks only at the configuration
+      key (production.ts:3017-3027, 3039): with harness kind `claude-code` and
+      pausing enabled, `lanes list --json` reports `peakEnforcement.mode:
+      "window-watch"`. Spec F-6 says `iteration-start-gating` "when no watch is
+      composed", and AC-F6-4 says the mode states which enforcement the
+      composition supplies. A wrapper that trusts the mode would dispatch a
+      Claude Code lane into a window expecting a park that cannot happen. The
+      carve-out is also undocumented: spec section 12 still assumes the
+      terminate path "is capable on every harness this path spawns", and no
+      page says automatic pausing is off for a harness without terminate.
+    suggestion: >-
+      Derive the mode from the selected harness's terminate capability as well
+      as the key, and state the precondition (a harness that declares
+      `terminate`; Claude Code declares it as a gap) in spec section 12, the
+      peak-pausing page and the operations guide.
+  - id: F-10
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/app/dispatch.ts:1645
+    suppressed: false
+    prior: [iteration 1 F-5]
+    message: >-
+      PARTLY CLOSED. The recovered park record is no longer appended before the
+      resume; it is appended after the next iteration acquires a session
+      (verified in production: two spawns, then the record). The result is not
+      corrected the same way: when that resume fails, the invocation returns
+      `dispatch.session.spawn-failed` with "spawn failed before a session
+      existed (peak-window: paused until ...; resumed at ...)" and an episode
+      fact carrying `resumedAt`, for a resume that did not happen. `peakEpisode`
+      takes `resumedAt` at the `resumed` outcome (1645), before the acquisition.
+    suggestion: >-
+      Set `resumedAt` on the episode only after the next iteration's session is
+      acquired (move it beside the `pendingRecovery` append at 1360), so a
+      failed resume reports the pause and the failure without a resume instant.
+  - id: F-11
+    severity: low
+    confidence: high
+    category: code-quality
+    location: tests/fixtures/dispatch/golden/harness.ts:536
+    suppressed: false
+    prior: [iteration 1 F-21]
+    message: >-
+      PARTLY CLOSED. Done: `isStopData`, no `DispatchEpisodeFact` cast, the
+      envelope comment restored above `DispatchEnvelopeData`, the
+      `session-interrupted` restart reason (accepted by the real store), the
+      typed park payload, and the mode failing to `iteration-start-gating`.
+      Not done: (d) `peak:stop-refused`, `park:recovery-refused`,
+      `park:standing`, `park:recovery` and `lease:renewal-failed` appear in no
+      page under doc/spec, doc/guides, doc/overview or doc/decisions, and the
+      remediation adds one more undocumented token, `park:recovery-append-
+      failed` (dispatch.ts:1105). (f) `standingParkVisibleAtMs` is still absent
+      from `PeakFixtureOptions` (414-431) while `createPeakFixture` reads it at
+      479, and the remediation reads a second undeclared option there,
+      `recoveryAdmission` (536); fixtures are not type-checked, so both errors
+      are hidden.
+    suggestion: >-
+      List the six tokens beside `lease:not-owned` in the dispatch engine page,
+      and declare both options on `PeakFixtureOptions`.
+  - id: F-12
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-26--GH-413--peak-pausing-dispatch-lane/chg-GH-413-plan.yaml:66
+    suppressed: false
+    prior: [iteration 1 F-20, F-17, F-10]
+    message: >-
+      PARTLY CLOSED. Done: evidence for the post-phase commits, the revision
+      logs (spec 1.6, plan 1.6, test plan 1.7), and `plan validate` (valid, nine
+      phases). Still open: (a) SCOPE_DEVIATION. 19 files other than the change's
+      own artifacts remain outside every phase scope, two of them edited by the
+      remediation (`doc/spec/features/feature-queue-ready.md`,
+      `tests/fixtures/dispatch/admission.ts`); the new fixture
+      `tests/fixtures/provider/profile/gh413-rules.ts` was never declared. The
+      plan-writer revision the header promises has not happened. (b) The plan's
+      fence (66-70) and its escalation trigger (178) still carry the "observed
+      after the resume's session has already started" arm that F-17 removed
+      from the spec, the test plan and TDR-0077. (c) Test plan: TC-PEAK-010
+      line 544 still says the parked lost-lease invocation returns "releasing
+      the lease"; the AC-F4-3 row (85) still puts the refusal "on the episode
+      and park facts"; the execution log has no automated row. (d) Readiness
+      iteration 7's findings 2 to 6 are unapplied. (e) The phase 9 pm-notes
+      entry says "Closed F-1 to F-14 and F-16 to F-22 on the code side"; the
+      three residuals the coder declared are not recorded there, and this
+      review finds ten of those findings only partly closed.
+    suggestion: >-
+      Plan-writer revision declaring the delivered shape and the F-17 ordering
+      invariant; test-plan sentence fixes; one pm-notes entry that lists the
+      residuals as accepted or open instead of "closed".
+  - id: F-13
+    severity: low
+    confidence: high
+    category: testing
+    location: doc/quality/test-specs/test-spec-dispatch-engine.md:106
+    suppressed: false
+    prior: [iteration 1 F-14]
+    message: >-
+      DECLARED RESIDUAL, accepted (see residual_decisions), with two record
+      errors. The test-spec page now says the unrecoverable-park refusal "calls
+      neither spawn nor resume"; the test asserts no stop and no second park,
+      not that. The same page says a window opening between iterations is
+      covered by `dispatch-peak-watch.test.ts` and `dispatch-peak-episode.test.ts`;
+      no test crosses that boundary. I crossed it myself: a stall restart at
+      06:00 parks at the next iteration's first observation and resumes at
+      10:00. The TC-PEAK-013 comparison added compares exit, result and the
+      absence of `episode`; my run also finds the JSON envelope, the human text
+      and the attempt record identical, but `status`, `board` and `brief` are
+      compared by no one.
+    suggestion: >-
+      Either add the two assertions and the between-iterations arm, or trim the
+      test-spec page to what the suites assert.
+  - id: F-14
+    severity: low
+    confidence: high
+    category: code-quality
+    location: packages/core/src/app/dispatch.ts:1758
+    suppressed: false
+    prior: [iteration 1 F-4, F-6, F-11, F-22]
+    message: >-
+      Small items. (a) The comment at 1758-1759 still says the parked lost-lease
+      return "releases the lease"; nothing is released now. (b) `lease:not-owned`
+      is listed twice in every lost-lease attempt's evidence: `record()` adds it
+      from `leaseLost` (1103) and each branch lists it again (1523, 1778, 1842).
+      (c) The `peak` port comment (383-387) still says production supplies the
+      port "unless `lane.disable-peak-pausing` is true"; a harness without
+      terminate now also leaves it disabled. (d) An unconfirmed stop leaves no
+      evidence on the attempt, so a lane that ran through a window because its
+      stop was never confirmed is invisible. (e) A stuck `clear-observed` marker
+      of ANOTHER ref also refuses this dispatch (verified in production); my
+      iteration 1 text said "for this reference or any", so this follows my
+      wording, but the summary "the standing park could not be recovered" names
+      neither the stuck ref nor that it belongs to another lane. (f) The F-22
+      precondition is written for the separately invoked stop only; the
+      automatic stop matches the same non-repository-scoped title, so it binds
+      that path too.
+    suggestion: >-
+      Fix the two comments and drop the duplicate token. Decide (e): refuse
+      only when `stuck` holds this ref, or keep the repository-wide refusal and
+      name the stuck refs in the summary. Consider one bounded evidence
+      reference for an unconfirmed stop, and widen the guide sentence in (f).
+  - id: F-15
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/fixtures/provider/profile/gh413-rules.ts:23
+    suppressed: false
+    prior: []
+    message: >-
+      NEW (present since phase 3; not introduced by the remediation). All four
+      GH-413 rule fixtures are refused by the production configuration parser:
+      `parseProfilePeakWindows` rejects `graceSeconds 20 exceeds the derived
+      maximum 0 (the smallest declared window buffer)` for
+      SINGLE_WINDOW_RULES, SMALL_BUFFER_RULES, GRACE_ABOVE_CADENCE_RULES and
+      OVERLAPPING_WINDOW_RULES, while the tracked `delivery` profile parses.
+      Every peak suite therefore runs on rule data production cannot load, with
+      zero buffers. Real profiles need buffers of at least the grace; the
+      tracked one declares 1800 s and 7200 s before the 01:00 and 06:00 windows,
+      so its effective window opens at 04:00, which is the overlap the hand-off
+      note expects. No suite exercises a buffered window through the dispatch
+      watch.
+    suggestion: >-
+      Make the fixture rules pass the parser (buffers of at least the grace)
+      and add one arm on the tracked profile's rule shape, including the
+      04:00-04:05Z overlap.
+  - id: F-16
+    severity: info
+    confidence: high
+    category: observation
+    location: packages/core/src/app/dispatch-peak-pause.ts:218
+    suppressed: false
+    prior: [iteration 1 F-23]
+    message: >-
+      Observations that need no action for this change. (a) `plan diff` still
+      answers `input.value.rejected` ("repository diff for GH-413 could not be
+      read"); scope was compared by script. (b) `biome check` over the 25
+      changed TypeScript and JSON files: 2 warnings, 0 error (`useOptionalChain`
+      now at dispatch.ts:1421, and an unused import in the operator-posture
+      control). (c) `pnpm typecheck` exits 0. (d) The commit subjects are still
+      the primitive's template, so the five remediation commits do not name
+      what they change; carry the narrative into the pull-request description.
+      (e) Resume admission re-reads the rules at every wake and skips the
+      window check when the lookup answers nothing, so a configuration that
+      fails to parse at the instant the park ends lets the lane resume into an
+      open window. (f) The watch's own stop decision still reads the rule map
+      cached at its first lookup; only resume admission re-reads.
+    suggestion: >-
+      No action for this change beyond awareness of (e) and (f).
+prior_findings:
+  - id: F-1
+    title: The whole bun test battery is red on HEAD
+    disposition: OPEN
+    note: >-
+      The seven files named in iteration 1 are green; five more are red, one of
+      them a GH-413 suite. See F-1.
+  - id: F-2
+    title: The first liveness observation is lost behind the renewal await
+    disposition: CLOSED
+    note: >-
+      Observation precedes the renewal and its verdict is applied after a stop;
+      TC-TERM-007 is green in the battery and a renewal-composed run that ends
+      at the first poll records `liveness:unknown`.
+  - id: F-3
+    title: A lost-lease invocation releases the successor's lease
+    disposition: CLOSED
+    note: >-
+      The release carries `expectedHeartbeatAt` and is skipped on a lost lease.
+      Over a real store, running and parked: no release, the successor's
+      heartbeat intact; a stale own lease is revived; a release fenced by an
+      older heartbeat is a no-op.
+  - id: F-4
+    title: The lost-lease rule applied only to the stall branch
+    disposition: PARTIAL
+    note: >-
+      Every session end now returns the classified result before any
+      derivation. The terminal lane record is still appended, and a lease lost
+      inside the withhold is ignored. See F-4 and F-5.
+  - id: F-5
+    title: The production peak binding stubs the resume half
+    disposition: PARTIAL
+    note: >-
+      Budget-only admission, the exhaustion record and the deferred recovery
+      record all work in the production composer. Open: restart-budget 0 is not
+      the stall rule (F-2), the typed question is not raised and the
+      non-terminal refusal is unreachable (F-7), a failed resume still reports
+      "resumed at" (F-10), and no production-composition test exists (F-8).
+  - id: F-6
+    title: A park is written for a stop that was never confirmed
+    disposition: PARTIAL
+    note: >-
+      Closed in code and verified in production for both the unconfirmed stop
+      and the terminate-less harness. The mode read and the docs still claim a
+      watch for that harness. See F-9.
+  - id: F-7
+    title: Two test-only runaway caps are production limits
+    disposition: CLOSED
+    note: >-
+      Both caps are gone. A hold of 2001 turns clears and the lane resumes; a
+      hold of 2643 turns keeps the lease live (age at most 30 s) and then
+      resumes.
+  - id: F-8
+    title: The preservation classification ignores the escalation fact
+    disposition: CLOSED
+    note: >-
+      Both writers derive the classification from `escalated`; a process that
+      survives TERM and is killed parks as `session-state-not-preserved` in
+      production.
+  - id: F-9
+    title: The post-collection withhold is an unrenewed wait
+    disposition: PARTIAL
+    note: >-
+      Closed below the TTL. At or above it the lease goes stale on every
+      session end. See F-3.
+  - id: F-10
+    title: The recovery refusal carrier moved and the artifacts did not follow
+    disposition: CLOSED
+    note: >-
+      The terminal lane record is the sole carrier (verified in production);
+      the park member, key and validator clause are gone; spec, test plan, the
+      records and the pages follow. One stale test-plan row is in F-12.
+  - id: F-11
+    title: The production recoverParks binding drops the stuck outcome
+    disposition: CLOSED
+    note: >-
+      A stuck marker refuses the run with no session, verified in production.
+      The scope of the refusal (another ref's marker too) and its summary are
+      in F-14; the missing test is in F-8.
+  - id: F-12
+    title: The observation interval is quantized by the renewal cadence
+    disposition: CLOSED
+    note: >-
+      At a 60 s interval and a 90 s TTL the polls fall at 0, 60, 120, 180, 240 s
+      with and without a renewal port, renewals every 45 s. The planned
+      spacing assertion was not added.
+  - id: F-13
+    title: The lease-across-park invariant is not exercised end to end
+    disposition: PARTIAL
+    note: >-
+      One fixture-level test was added. The behaviour holds over a real store
+      in my probes; no delivered suite proves it. See F-8.
+  - id: F-14
+    title: Five planned proofs are weaker than their scenarios
+    disposition: PARTIAL
+    note: >-
+      Added: the mid-iteration opening, the unconfirmed stop, the decision-record
+      case, a result comparison. Not added: the between-iterations arm, the
+      AC-F5-1 comparison, the hand-off over the owning invocation's real store.
+      Declared by the coder; accepted in residual_decisions.
+  - id: F-15
+    title: The parked-interval refusal is stated two ways
+    disposition: CLOSED
+    note: >-
+      Spec Flow 5, F-5, AC-F5-2 and appendix D, TDR-0078 C-1, the operations
+      guide, the glossary and the reference page agree.
+  - id: F-16
+    title: The resume admission reads a composer-lifetime rule cache
+    disposition: CLOSED
+    note: >-
+      Verified in production: a window extended after the park lands keeps the
+      lane parked until the rule is restored.
+  - id: F-17
+    title: AC-F3-4 names an arm that cannot occur
+    disposition: CLOSED
+    note: >-
+      The spec, AC-F3-4, the guide, the glossary, the test plan and TDR-0077 D8
+      now state the ordering invariant. The plan still carries the old arm
+      (F-12). The missing assertion is accepted in residual_decisions.
+  - id: F-18
+    title: The operator stop's deadline and end grammar
+    disposition: PARTIAL
+    note: >-
+      The profile-bounded deadline and the past-end refusal are done. The
+      canonical check refuses the documented instant form. See F-6.
+  - id: F-19
+    title: Four current-truth statements do not match the code
+    disposition: CLOSED
+    note: >-
+      Both "never renews" sentences are amended, `dispatch.resume-parked` is in
+      the reference page's ERRORS list, the carrier and the refusal identity
+      are corrected on every page. The reference page's `dispatch stop`
+      example is now refused (F-6).
+  - id: F-20
+    title: Plan gaps
+    disposition: PARTIAL
+    note: >-
+      Evidence and record drift are closed. Scope, the plan fence, the test
+      plan sentences and the execution log are open. See F-12.
+  - id: F-21
+    title: Rule and clarity items
+    disposition: PARTIAL
+    note: >-
+      (a) to (c) and (e) closed. (d) and (f) open (F-11); (g) accepted in
+      residual_decisions.
+  - id: F-22
+    title: The cross-process terminate matches by a non-scoped title
+    disposition: CLOSED
+    note: >-
+      Closed by the plan's documented alternative: the one-lane-per-ref-per-host
+      precondition is in the operations guide. The sentence should also name
+      the automatic stop (F-14f).
+  - id: F-23
+    title: Observations needing no action
+    disposition: ACCEPTED
+    note: >-
+      Unchanged; carried into F-16 of this iteration.
+residual_decisions:
+  - prior: [iteration 1 F-14]
+    decision: ACCEPT (not blocking)
+    reason: >-
+      The three missing arms are covered structurally. The watcher is created
+      per iteration and observes before its first wait, so a window that opened
+      between iterations parks at the next acquisition; I ran that transition
+      and it parks at 06:00:00 and resumes at 10:00. The separate-process
+      hand-off is the durable park record, which the owning invocation re-reads
+      after the withhold; the fixture-array tests and the withhold re-read prove
+      that read. Between park and resume the engine only appends records and
+      calls the resume with the same handle and descriptor, and the worktree is
+      provisioned once before the loop, so there is no act for AC-F5-1's
+      comparison to catch.
+    condition: >-
+      Record it in pm-notes as an accepted residual, so `dod_check` does not
+      read AC-F5-1 and AC-F1-2's second arm as test-verified, and trim or
+      complete the two test-spec sentences named in F-13.
+  - prior: [iteration 1 F-17]
+    decision: ACCEPT (not blocking)
+    reason: >-
+      The ordering is a property of one function's statement order: the
+      recovery pass at dispatch.ts:1241-1263 returns before the session loop at
+      1267. I ran the refusal with a call-recording harness: no spawn, no
+      resume, no collect, one lease claim, no new park, no lane record.
+    condition: >-
+      Either add the two-line `spawn` and `resume` assertion to the
+      unrecoverable-park test, or drop "calls neither spawn nor resume" from
+      the test-spec page.
+  - prior: [iteration 1 F-21g]
+    decision: ACCEPT (not blocking)
+    reason: >-
+      The duplicated record builder is a drift risk only. The record the
+      dispatch builder produces is accepted by the store's park validator and
+      read back by the engine and the status surface in every production probe,
+      and the delivered builder lives in a file the plan fences.
+    condition: >-
+      None for merge. The parity-fixture comparison phase 9 named as the
+      substitute was not delivered; carry it as a follow-up.
+undeclared_residuals:
+  - No production-composition test for any arm phase 9 R3 and R6 named (F-8).
+  - No engine suite over a real store for the parked interval (F-8).
+  - The withhold at a liveness interval at or above the TTL (F-3).
+  - The terminal lane record and the lost-lease check after the withhold (F-4, F-5).
+  - The typed question and the non-terminal refusal under budget-only (F-7).
+  - The evidence-token documentation and the two fixture options (F-11).
+  - The plan fence and escalation trigger for F-17, and the scope declaration (F-12).
+evidence:
+  head: 24f731212
+  full_battery:
+    command: TMPDIR=$PWD/tmp/tmpdir bun test
+    result: 13031 tests across 1559 files; 13021 pass; 4 skip; 6 fail; exit 1; 1264.67 s
+    log: tmp/tmpdir/review-gh413/iter2/full-battery.log
+  isolation_runs:
+    - file: tests/behaviour/dispatch-peak-result.test.ts
+      result: 1 pass, 1 fail
+    - file: tests/conformance/dispatch/dispatch-parity-admission.test.ts
+      result: 7 pass, 2 fail
+    - file: tests/behaviour/projects-state-placement.test.ts
+      result: 0 pass, 1 fail (timeout at 5000 ms)
+    - file: tests/behaviour/owner-hold-production-composition.test.ts
+      result: 2 pass, 1 fail (timeout at 5000 ms)
+    - file: tests/behaviour/projects-scope-isolation.test.ts
+      result: 1 pass, 1 fail (timeout at 120000 ms)
+  gates:
+    - pnpm build: exit 0
+    - pnpm typecheck: exit 0
+    - biome check over the 25 changed TypeScript and JSON files: 2 warnings, 0 error
+    - jaiship plan validate GH-413 --json: valid, nine phases
+    - jaiship plan diff GH-413 --json: input.value.rejected
+  probes:
+    - file: tmp/tmpdir/review-gh413/iter2/probe1.test.ts
+      covers: >-
+        lost-lease clean exit; the re-dispatch arm over a real store, running
+        and parked; a 3.5 h park at 30 s and 120 s liveness and under an 18 h
+        hold, with 141, 143 and 881 second-dispatch claims; the window-end
+        recovery at bounds 3 and 0; a failed resume; a 2001-turn hold; the
+        operator writer's preservation and end grammar
+    - file: tmp/tmpdir/review-gh413/iter2/probe2.test.ts
+      covers: observation spacing at 60 s and 120 s; heartbeat age on return at 30, 45, 60, 90, 120 and 180 s; the first observation with a renewal port
+    - file: tmp/tmpdir/review-gh413/iter2/probe3.test.ts
+      covers: >-
+        the real production composer: unconfirmed stop, preserved park and
+        resume, killed session and budget-only recovery, exhaustion, bound 0,
+        own and foreign stuck markers, a terminate-less harness and its mode
+        read, a rule change during the episode
+    - file: tmp/tmpdir/review-gh413/iter2/probe5.test.ts
+      covers: no-park byte identity of the JSON envelope, the human text and the attempt record; stale-own revival
+    - file: tmp/tmpdir/review-gh413/iter2/probe6.test.ts
+      covers: a window opening between iterations; the unrecoverable-park refusal ordering
+    - file: tmp/tmpdir/review-gh413/iter2/x/
+      covers: the fixture rules through the production parser; the operator stop over a lost-lease record order
+  note: >-
+    tmp is git-ignored scratch. The probe files are evidence for this review
+    and a starting point for the missing suites, not delivered tests. Every
+    terminate the production probes issued targeted a child process the probe
+    had started under a unique argv token.
+reviewed_at: 2026-11-26T20:25:00Z
+next_step: >-
+  FAIL. CALL_CODER, as a delta phase or a reopen of phase 9; this review
+  appends nothing to the plan. Order of work. First F-1: green the five files
+  and run the whole battery once with counts in pm-notes. Then the two
+  decision-free code fixes, F-2 (bound 0 refuses like the stall restart) and
+  F-6 (accept the documented instant). Then F-3, F-4 and F-5 together, since
+  they touch the same withhold and return path. Before the PM settles four
+  decisions, no coder work is well defined for them: F-7 (retire or implement
+  the non-terminal refusal and the typed question under budget-only), F-9
+  (the mode read and the documented precondition for a harness without
+  terminate), F-14e (this ref only, or a named repository-wide refusal for a
+  stuck marker), and F-12 (the plan-writer revision). F-8 follows the fixes
+  and seeds its suites from the probe files. Re-review as iteration 3 with the
+  whole battery green and with the probes under tmp/tmpdir/review-gh413/iter2
+  re-run against the new head.

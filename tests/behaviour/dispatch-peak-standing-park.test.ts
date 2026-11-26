@@ -114,7 +114,12 @@ describe("TC-PEAK-038 an unrecoverable standing park refuses the run", () => {
       startMs: atUtcHour(6, 30),
       rules: { ...RULES_BY_PROFILE },
       nomination: "delivery",
-      recoverParks: () => ({ ok: false, kind: "queue", code: "queue.park-condition-stuck" }),
+      recoverParks: () => ({
+        ok: false,
+        kind: "queue",
+        code: "queue.park-condition-stuck",
+        stuck: ["GH-413", "GH-999"],
+      }),
     });
     peak.parks.push(standingPark("2026-11-12T05:30:00.000Z"));
     try {

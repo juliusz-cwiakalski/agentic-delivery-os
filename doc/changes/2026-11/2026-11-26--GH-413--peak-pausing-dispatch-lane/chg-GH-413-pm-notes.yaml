@@ -252,6 +252,22 @@ decisions:
       the 'after the session started' terminate arm from F-3/AC-F3-4 and align
       the plan, test plan and TDR-0077 D8 to the ordering invariant."
     date: "2026-11-26"
+  - text: "Review iteration 2 FAIL decisions (code-review/review-iter-2.yaml; 16
+      findings, 2 high). F-7: under the budget-only admission the non-terminal
+      refusal cannot occur, so retire that arm from the spec, AC-F4-3 and the test
+      plan; implement the delivered typed question on terminal exhaustion (the
+      escalation the stall restart uses). F-9: the `lanes` mode must read
+      `iteration-start-gating` when the harness declares no terminate and no watch
+      is composed, and the harness precondition is documented; the withhold
+      renews at the earlier of the observation and renewal due. F-14e: keep the
+      delivered repository-wide recovery pass and name the stuck refs in the
+      refusal summary. F-12: the plan gains phase 10 with the 19 out-of-scope
+      files and drops the F-17 arm. F-14 accepted (structural coverage plus the
+      review's own probe); F-17 closed as a spec correction; F-21(g) is a recorded
+      follow-up. The two high findings (six red tests and three real-timer
+      timeouts; budget-only recovery must respect restart-budget 0/absent) are
+      blocking and go to @coder."
+    date: "2026-11-26"
 open_questions: []
 blockers: []
 notes:

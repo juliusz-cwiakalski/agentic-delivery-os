@@ -9,7 +9,10 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { dispatchRenewalCadenceMs } from "../../packages/core/src/app/dispatch";
-import { readDispatchAttempts } from "../../packages/core/src/app/dispatch-ledger";
+import {
+  readDispatchAttempts,
+  readDispatchLanes,
+} from "../../packages/core/src/app/dispatch-ledger";
 import { dispatchAdmissionRefusal } from "../../packages/core/src/app/index";
 import type { HarnessLivenessReport } from "../../packages/core/src/contracts/index";
 import { createCommandScenario, createPeakScenario } from "../fixtures/dispatch/golden/harness";
@@ -217,7 +220,8 @@ describe("TC-PEAK-010 the engine surfaces a renewal failure and retries the next
   });
 
   test("one failing renewal is bounded evidence and the next cadence succeeds", async () => {
-    let clockMs = Date.parse("2026-11-08T10:00:00.000Z");
+    const startedAt = Date.parse("2026-11-08T10:00:00.000Z");
+    let clockMs = startedAt;
     let renewals = 0;
     const scenario = createCommandScenario({
       evidence: COMPLETED_EVIDENCE,
@@ -377,6 +381,11 @@ describe("TC-PEAK-010 a lost lease on a clean session exit takes no owner act", 
         "the lease was no longer this invocation's",
       );
       expect(scenario.calls.releases).toHaveLength(0);
+      const lanes = readDispatchLanes(scenario.state.store);
+      expect(lanes.ok).toBe(true);
+      if (lanes.ok) {
+        expect(lanes.records.some((record) => record.state === "terminal")).toBe(false);
+      }
       const read = readDispatchAttempts(scenario.state.store);
       expect(read.ok).toBe(true);
       if (!read.ok) return;
@@ -408,6 +417,85 @@ describe("TC-PEAK-010 the withhold renews rather than letting the heartbeat reac
       const run = await scenario.invoke(["dispatch", "GH-413", "--json"]);
       expect(run.exit).toBe(0);
       expect(renewals.length).toBeGreaterThan(0);
+    } finally {
+      scenario.dispose();
+    }
+  });
+});
+
+describe("TC-PEAK-010 the withhold keeps the lease live when the interval is above the TTL", () => {
+  test("the heartbeat age on return stays below the TTL at a 120 s interval", async () => {
+    const start = Date.parse("2026-11-12T11:00:00.000Z");
+    let heartbeat = new Date(start).toISOString();
+    const renewals: number[] = [];
+    let peakRef: { readonly clock: { readonly iso: () => string } } | undefined;
+    const { peak, scenario } = createPeakScenario({
+      label: "gh413-withhold-above-ttl",
+      startMs: start,
+      rules: { delivery: undefined },
+      nomination: "delivery",
+      watchEnabled: false,
+      livenessIntervalMs: 120_000,
+      leaseTtlMs: 90_000,
+      claim: { ok: true, leaseId: "lease-1", heartbeatAt: heartbeat },
+      renewLease: () => {
+        renewals.push(Date.parse(heartbeat));
+        heartbeat = peakRef?.clock.iso() ?? new Date(Date.parse(heartbeat) + 1_000).toISOString();
+        return { ok: true, result: "renewed", heartbeatAt: heartbeat, leaseId: "lease-1" };
+      },
+    });
+    peakRef = peak;
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-413", "--json"]);
+      expect(run.exit).toBe(0);
+      expect(renewals.length).toBeGreaterThanOrEqual(2);
+      const age = peak.clock.nowMs() - Date.parse(heartbeat);
+      expect(age).toBeLessThan(90_000);
+    } finally {
+      scenario.dispose();
+    }
+  });
+});
+
+describe("TC-PEAK-010 a lease lost inside the withhold returns before the derivation", () => {
+  test("the invocation returns state-unverified, appends no terminal lane record, and releases nothing", async () => {
+    const startedAt = Date.parse("2026-11-12T11:00:00.000Z");
+    let peakRef: { readonly clock: { readonly nowMs: () => number } } | undefined;
+    const { peak, scenario } = createPeakScenario({
+      label: "gh413-lost-in-withhold",
+      startMs: startedAt,
+      rules: { delivery: undefined },
+      nomination: "delivery",
+      watchEnabled: false,
+      claim: {
+        ok: true,
+        leaseId: "lease-1",
+        heartbeatAt: new Date(startedAt).toISOString(),
+      },
+      renewLease: () => {
+        const now = peakRef?.clock.nowMs() ?? startedAt;
+        if (now < startedAt + 80_000) {
+          return {
+            ok: true,
+            result: "renewed",
+            heartbeatAt: new Date(now).toISOString(),
+            leaseId: "lease-1",
+          };
+        }
+        return { ok: false, result: "not-owned" };
+      },
+      collectAfterPolls: 3,
+    });
+    peakRef = peak;
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-413", "--json"]);
+      expect(run.exit).toBe(2);
+      expect(run.envelope?.data?.lastMessage).toContain("during the post-session withhold");
+      expect(scenario.calls.releases).toHaveLength(0);
+      const lanes = readDispatchLanes(scenario.state.store);
+      expect(lanes.ok).toBe(true);
+      if (!lanes.ok) return;
+      expect(lanes.records.some((record) => record.state === "terminal")).toBe(false);
     } finally {
       scenario.dispose();
     }

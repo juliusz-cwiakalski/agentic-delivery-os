@@ -30,12 +30,13 @@ const withCycle = async (
   label: string,
   laneConfig: string | undefined,
   body: (harness: ReturnType<typeof createProductionQueueHarness>) => Promise<void>,
+  harnessKind?: "opencode" | "claude-code",
 ) => {
   const root = makeHarnessHome(label);
   const checkout = makeCheckout(root, "checkout", ORIGIN);
   const config = `${DEFAULT_MODE_PROVIDER_PROFILES_CONFIG}${
     laneConfig === undefined ? "" : `lane:\n${laneConfig}\n`
-  }`;
+  }${harnessKind === undefined ? "" : `harness:\n  kind: ${harnessKind}\n`}`;
   writeFileSync(
     join(checkout.directory, brand.configDirectoryName, PROVIDER_PROFILES_CONFIG_FILE),
     config,
@@ -80,6 +81,22 @@ describe("TC-PEAK-033 the production composition mode is configuration-derived",
         parkClaimed: false,
       });
     });
+  });
+
+  test("a harness that declares no terminate reads iteration-start-gating", async () => {
+    await withCycle(
+      "gh413-mode-no-terminate",
+      undefined,
+      async (harness) => {
+        const run = await harness.run(["lanes", "list", "--json"]);
+        expect(run.exitCode).toBe(0);
+        expect(peakEnforcementOf(run)).toEqual({
+          mode: "iteration-start-gating",
+          parkClaimed: false,
+        });
+      },
+      "claude-code",
+    );
   });
 
   test("parkClaimed follows the durable park records in both settings", async () => {

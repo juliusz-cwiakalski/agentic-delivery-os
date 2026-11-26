@@ -52,24 +52,27 @@ describe("TC-PEAK-014 a resumed episode returns one result that states the pause
 });
 
 describe("TC-PEAK-014 a refused recovery names the refusal and the park end", () => {
-  test("the result is the delivered derivation and the episode fact carries the refusal", async () => {
-    const { scenario } = createPeakScenario({
-      label: "gh413-result-refused",
+  test("the budget-exhaustion arm returns the terminal result with its record, question, and parked state", async () => {
+    const { peak, scenario } = createPeakScenario({
+      label: "gh413-result-exhausted",
       startMs: atUtcHour(6, 30),
       rules: { ...RULES_BY_PROFILE },
       nomination: "delivery",
       preservation: "session-state-not-preserved",
-      restartCount: 0,
+      restartCount: 3,
       restartBound: 3,
-      prefillCost: 100,
-      uniqueProgress: 0,
     });
     try {
       const run = await scenario.invoke(["dispatch", "GH-413", "--json"]);
       expect(run.exit).toBe(1);
-      expect(run.envelope?.data?.episode?.refusal).toBe("dispatch.resume-uneconomical");
+      expect(run.envelope?.data?.result).toBe("max-restarts");
+      expect(run.envelope?.data?.episode?.refusal).toBe("dispatch.restart-budget-exceeded");
       expect(run.envelope?.data?.lastMessage).toContain("recovery refused");
       expect(run.envelope?.data?.lastMessage).toContain("2026-11-12T10:00:00.000Z");
+      expect(scenario.calls.exhaustions).toHaveLength(1);
+      expect(peak.escalated()).toContain("dispatch.restart-budget-exceeded");
+      const parked = peak.parks.filter((park) => park.recoveryState === "parked");
+      expect(parked).toHaveLength(1);
     } finally {
       scenario.dispose();
     }

@@ -31,9 +31,11 @@ const notPreserved = (): QueueParkRecord => ({
 
 const evaluate = (input: {
   readonly restartCount: number;
+  readonly restartBound?: number;
   readonly prefillCost?: number | null;
   readonly uniqueProgress?: number | null;
   readonly reenter?: boolean;
+  readonly admission?: "budget-only" | "budget-and-economics";
 }) => {
   const reentered: number[] = [];
   const escalated: string[] = [];
@@ -49,8 +51,8 @@ const evaluate = (input: {
       holdActive: () => false,
       branch: "feat/GH-413/test",
       restartCount: input.restartCount,
-      restartBound: 3,
-      admission: "budget-and-economics",
+      restartBound: input.restartBound ?? 3,
+      admission: input.admission ?? "budget-and-economics",
       economics: {
         prefillCost: input.prefillCost ?? 0,
         uniqueProgress: input.uniqueProgress ?? 1,
@@ -85,6 +87,23 @@ describe("TC-PEAK-009 the not-preserved recovery consumes one ordinal and emits 
     if (outcome.outcome !== "refused") return;
     expect(outcome.terminal).toBe(true);
     expect(outcome.code).toBe("dispatch.restart-budget-exceeded");
+    expect(escalated).toEqual(["dispatch.restart-budget-exceeded"]);
+  });
+});
+
+describe("TC-PEAK-009 a zero or absent restart budget refuses like the stall restart", () => {
+  test("bound 0 is a terminal dispatch.restart-budget-exceeded refusal", async () => {
+    const { run, reentered, escalated } = evaluate({
+      restartCount: 0,
+      restartBound: 0,
+      admission: "budget-only",
+    });
+    const outcome = await run;
+    expect(outcome.outcome).toBe("refused");
+    if (outcome.outcome !== "refused") return;
+    expect(outcome.code).toBe("dispatch.restart-budget-exceeded");
+    expect(outcome.terminal).toBe(true);
+    expect(reentered).toHaveLength(0);
     expect(escalated).toEqual(["dispatch.restart-budget-exceeded"]);
   });
 });
