@@ -10,7 +10,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-26T13:59:17.111Z }
   delivery_planning: { started: null, completed: 2026-11-26T13:59:36.773Z }
   dor_check: { started: null, completed: 2026-11-26T16:49:05.379Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-26T17:42:47.938Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -438,24 +438,23 @@ notes:
       (privacy-release, changeset-additivity), and the phase-1 config and pin
       suites 117 pass / 0 fail (config-lane, config-schema,
       dispatch-peak-setting, dispatch-contract-invariance,
-      operator-contract-invariance, port-contract-inventory,
-      content-inventory, decision-record)."
+      operator-contract-invariance, port-contract-inventory, content-inventory,
+      decision-record)."
     type: info
     date: "2026-11-26"
   - text: "Plan phase 2 complete (lease liveness through the run and the park):
       commit c1a8ae99. The run path renews the existing repository lease through
-      the delivered same-holder renewed arm at
-      min(lane.liveness-interval, queue.lease-ttl / 2), keyed on the invocation's
-      own last heartbeat write, as one fenced check-plus-append; a no-op appends
-      nothing, surfaces lease:not-owned, and a lost-lease invocation takes no
-      owner act and returns instead of restarting. Tests:
-      dispatch-lease-liveness 9 pass / 0 fail (cadence, several TTL crossings,
-      interval-above-TTL, no-renewal stale takeover control, heartbeat
-      ownership, re-dispatch with the preserved lease id, owner-hold source
-      guard, renewal-failure evidence and retry, lost-lease return); the
-      structure/decision pins 39 pass / 0 fail; the delivered dispatch watch,
-      determinism, single-flight, restart-budget and harness-lease controls 26
-      pass / 0 fail."
+      the delivered same-holder renewed arm at min(lane.liveness-interval,
+      queue.lease-ttl / 2), keyed on the invocation's own last heartbeat write,
+      as one fenced check-plus-append; a no-op appends nothing, surfaces
+      lease:not-owned, and a lost-lease invocation takes no owner act and
+      returns instead of restarting. Tests: dispatch-lease-liveness 9 pass / 0
+      fail (cadence, several TTL crossings, interval-above-TTL, no-renewal stale
+      takeover control, heartbeat ownership, re-dispatch with the preserved
+      lease id, owner-hold source guard, renewal-failure evidence and retry,
+      lost-lease return); the structure/decision pins 39 pass / 0 fail; the
+      delivered dispatch watch, determinism, single-flight, restart-budget and
+      harness-lease controls 26 pass / 0 fail."
     type: info
     date: "2026-11-26"
   - text: "Plan phase 3 complete (dispatch-owned watch, exactly-once episode,
@@ -493,45 +492,45 @@ notes:
     date: "2026-11-26"
   - text: "Plan phase 5 complete (dispatch stop): commit c9f508b2. Added the
       peak-window-only operator command with the required --until, the grammar
-      refusals at input.value.rejected (the missing end carrying until-required),
-      the running predicate (active, session identity, no open park of any
-      cause), one delivered terminate call with the composed grace, the park
-      written only after a confirmed terminate, the record-mediated hand-off,
-      and the owning invocation's post-collection grace-plus-cadence re-read.
-      The adapter resolves a separately invoked stop over the host process table
-      by exact identity. Tests: the eight phase-5 suites 45 pass / 0 fail; the
-      help/reference/no-shell/inventory batch 73 pass / 0 fail; the no-shell
-      invariant is clean over 45 surface files."
+      refusals at input.value.rejected (the missing end carrying
+      until-required), the running predicate (active, session identity, no open
+      park of any cause), one delivered terminate call with the composed grace,
+      the park written only after a confirmed terminate, the record-mediated
+      hand-off, and the owning invocation's post-collection grace-plus-cadence
+      re-read. The adapter resolves a separately invoked stop over the host
+      process table by exact identity. Tests: the eight phase-5 suites 45 pass /
+      0 fail; the help/reference/no-shell/inventory batch 73 pass / 0 fail; the
+      no-shell invariant is clean over 45 surface files."
     type: info
     date: "2026-11-26"
   - text: "Plan phase 6 complete (determinism, hermeticity, vocabulary economy):
-      commit 416fc63d. The paired-run determinism suite proves stable
-      decisions, park records, episode facts, and summaries; the hermetic suite
-      watches the new modules and suites with the armed fetch canary and the
+      commit 416fc63d. The paired-run determinism suite proves stable decisions,
+      park records, episode facts, and summaries; the hermetic suite watches the
+      new modules and suites with the armed fetch canary and the
       no-timer/no-credential source scan; the delivered taxonomy and release
       suites hold with zero added kinds and the one authorised row. Tests:
       determinism 2, hermetic 6, taxonomy 4, and the two release controls 19
       pass; 46 pass / 0 fail in total."
     type: info
     date: "2026-11-26"
-  - text: "Plan phase 7 complete (decision records TDR-0077 and TDR-0078):
-      commit 2a180d31. Both records are present as Proposed with their index
-      rows (committed earlier at 8a086e09) and were verified without rewording;
-      the delivered decision-record and doc-conformance suites pass 72/72."
+  - text: "Plan phase 7 complete (decision records TDR-0077 and TDR-0078): commit
+      2a180d31. Both records are present as Proposed with their index rows
+      (committed earlier at 8a086e09) and were verified without rewording; the
+      delivered decision-record and doc-conformance suites pass 72/72."
     type: info
     date: "2026-11-26"
   - text: "Post-upgrade hand-off recorded for TC-PEAK-029 (non-gating, before
       dod_check): the reference host observes one real episode on the next lane
-      after this change is installed, not on this delivering lane. Preconditions:
-      the nominated profile declares peakWindows (the tracked .jaiship/config.yaml
-      profile delivery declares 01:00-04:00 and 06:00-10:00 UTC); the
-      activity-keyed liveness consumers (pm-liveness, deliver-ticket, ceo-loop,
-      and any operator probe with the same shape) are relaxed or exclude a parked
-      lane before it is dispatched into a window; automatic pausing is on. The
-      tracked profile's 04:00-04:05Z overlap may show a short resume and a second
-      park (DEC-20, RSK-13). Observe with dispatch status <ref>, lanes, and board
-      while parked, then the resume and the one result whose summary states
-      paused and resumed. The automated fixtures remain the merge gate; this
-      episode is not a Done criterion."
+      after this change is installed, not on this delivering lane.
+      Preconditions: the nominated profile declares peakWindows (the tracked
+      .jaiship/config.yaml profile delivery declares 01:00-04:00 and 06:00-10:00
+      UTC); the activity-keyed liveness consumers (pm-liveness, deliver-ticket,
+      ceo-loop, and any operator probe with the same shape) are relaxed or
+      exclude a parked lane before it is dispatched into a window; automatic
+      pausing is on. The tracked profile's 04:00-04:05Z overlap may show a short
+      resume and a second park (DEC-20, RSK-13). Observe with dispatch status
+      <ref>, lanes, and board while parked, then the resume and the one result
+      whose summary states paused and resumed. The automated fixtures remain the
+      merge gate; this episode is not a Done criterion."
     type: info
     date: "2026-11-26"
