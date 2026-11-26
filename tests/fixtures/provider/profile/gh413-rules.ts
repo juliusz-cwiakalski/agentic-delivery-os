@@ -7,7 +7,9 @@
 import type { ProviderProfilePeakRules } from "../../../../packages/core/src/contracts/provider-profile";
 
 const utcMs = (hour: number, minute = 0, day = 12): number =>
-  Date.parse(`2026-11-${String(day).padStart(2, "0")}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00.000Z`);
+  Date.parse(
+    `2026-11-${String(day).padStart(2, "0")}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00.000Z`,
+  );
 
 const window = (startHour: number, endHour: number, bufferBefore = 0, bufferAfter = 0) => ({
   timezone: "UTC",

@@ -4,8 +4,8 @@
  * (GH-413 F-6, AC-F6-1, AC-F6-5, DM-3, DEC-9, NFR-9).
  */
 import { describe, expect, test } from "bun:test";
-import type { StateRecord, StateStorePort } from "../../packages/core/src/contracts/index";
 import { readOperatorStatus } from "../../packages/core/src/app/dispatch-lane-view";
+import type { StateRecord, StateStorePort } from "../../packages/core/src/contracts/index";
 
 const REPOSITORY = "github.com/owner/repo";
 const NOW = "2026-11-19T00:00:00.000Z";

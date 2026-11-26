@@ -8,8 +8,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { readDispatchAttempts } from "../../packages/core/src/app/dispatch-ledger";
 import { dispatchRenewalCadenceMs } from "../../packages/core/src/app/dispatch";
+import { readDispatchAttempts } from "../../packages/core/src/app/dispatch-ledger";
 import { dispatchAdmissionRefusal } from "../../packages/core/src/app/index";
 import type { HarnessLivenessReport } from "../../packages/core/src/contracts/index";
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
@@ -64,7 +64,11 @@ describe("TC-PEAK-010 a running lane's lease stays live across several TTLs", ()
         expect(refused?.holder).toBe("dispatch");
         const probe = await secondDispatchRefusal(single, REF);
         expect(probe.ok, `probe at ${elapsed}`).toBe(false);
-        const renewed = renewLane(single, { ref: REF, holder: "dispatch", expectedHeartbeatAt: heartbeat });
+        const renewed = renewLane(single, {
+          ref: REF,
+          holder: "dispatch",
+          expectedHeartbeatAt: heartbeat,
+        });
         expect(status(renewed), `renew at ${elapsed}`).toBe("renewed");
         if (!renewed.ok) continue;
         heartbeat = renewed.heartbeatAt;
@@ -111,13 +115,17 @@ describe("TC-PEAK-010 a running lane's lease stays live across several TTLs", ()
           nowMs: single.nowMs(),
         });
         expect(refused?.code, `at ${elapsed}`).toBe("queue.single-flight");
-        const renewed = renewLane(single, { ref: REF, holder: "dispatch", expectedHeartbeatAt: heartbeat });
+        const renewed = renewLane(single, {
+          ref: REF,
+          holder: "dispatch",
+          expectedHeartbeatAt: heartbeat,
+        });
         expect(status(renewed), `renew at ${elapsed}`).toBe("renewed");
         if (!renewed.ok) continue;
         heartbeat = renewed.heartbeatAt;
-        expect(
-          activeLease(single).find((lease) => lease.ref === REF)?.heartbeatAgeMs,
-        ).toBeLessThan(TTL);
+        expect(activeLease(single).find((lease) => lease.ref === REF)?.heartbeatAgeMs).toBeLessThan(
+          TTL,
+        );
       }
     } finally {
       single.dispose();

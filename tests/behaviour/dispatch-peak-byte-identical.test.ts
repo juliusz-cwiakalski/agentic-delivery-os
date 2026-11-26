@@ -4,8 +4,8 @@
  * (GH-413 F-6, AC-F6-3, NFR-9).
  */
 import { describe, expect, test } from "bun:test";
-import type { StateRecord, StateStorePort } from "../../packages/core/src/contracts/index";
 import { readOperatorStatus } from "../../packages/core/src/app/dispatch-lane-view";
+import type { StateRecord, StateStorePort } from "../../packages/core/src/contracts/index";
 import { createCommandScenario, readsFrom } from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
 

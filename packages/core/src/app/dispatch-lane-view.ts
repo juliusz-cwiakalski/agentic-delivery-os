@@ -111,15 +111,15 @@ export const readOperatorStatus = (input: {
   if (!read.ok) return { ok: false, code: read.code, path: read.path };
   const record = operatorLaneFor(read.records, input.repository, input.ref);
   const parks = readQueueParks(input.store);
-  const park =
-    parks.ok
-      ? dispatchStatusParkFact(
-          parks.records.filter(
-            (candidate) => candidate.repository === undefined || candidate.repository === input.repository,
-          ),
-          input.ref,
-        )
-      : undefined;
+  const park = parks.ok
+    ? dispatchStatusParkFact(
+        parks.records.filter(
+          (candidate) =>
+            candidate.repository === undefined || candidate.repository === input.repository,
+        ),
+        input.ref,
+      )
+    : undefined;
   return {
     ok: true,
     data: buildStatusData({

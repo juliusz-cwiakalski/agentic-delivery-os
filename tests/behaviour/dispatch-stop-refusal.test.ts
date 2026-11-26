@@ -5,10 +5,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import { executeDispatchStop } from "../../packages/core/src/app/dispatch-stop";
-import type {
-  DispatchLaneRecord,
-  QueueParkRecord,
-} from "../../packages/core/src/contracts/index";
+import type { DispatchLaneRecord, QueueParkRecord } from "../../packages/core/src/contracts/index";
 
 const NOW = Date.parse("2026-11-12T06:30:00.000Z");
 const UNTIL = "2026-11-12T10:00:00.000Z";
@@ -37,9 +34,7 @@ const openPark = (cause: QueueParkRecord["cause"]): QueueParkRecord => ({
   cause,
   conditionType: cause === "owner-hold" ? "preemption" : "provider-window",
   condition:
-    cause === "owner-hold"
-      ? { type: "preemption" }
-      : { type: "provider-window", expiresAt: UNTIL },
+    cause === "owner-hold" ? { type: "preemption" } : { type: "provider-window", expiresAt: UNTIL },
   recheckMs: 60_000,
   evaluatedAt: "2026-11-12T06:00:00.000Z",
   recoveryState: "parked",
@@ -72,7 +67,13 @@ const runStop = async (input: {
       killGraceMs: 20_000,
       mainCheckout: "/work/repo",
     },
-    { ref: "GH-413", cause: "peak-window", until: UNTIL, nowIso: new Date(NOW).toISOString(), nowMs: NOW },
+    {
+      ref: "GH-413",
+      cause: "peak-window",
+      until: UNTIL,
+      nowIso: new Date(NOW).toISOString(),
+      nowMs: NOW,
+    },
   );
   return { outcome, appended, terminations };
 };

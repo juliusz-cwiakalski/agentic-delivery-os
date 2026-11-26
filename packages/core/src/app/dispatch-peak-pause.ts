@@ -10,11 +10,11 @@
  * clock are injected, so the dispatch watch and the daemon watch take the same
  * decision for the same profile and instant.
  */
-import {
-  type HarnessSessionHandle,
-  type ProviderProfilePeakRules,
-  type QueueParkPreservation,
-  type QueueParkRecord,
+import type {
+  HarnessSessionHandle,
+  ProviderProfilePeakRules,
+  QueueParkPreservation,
+  QueueParkRecord,
 } from "#contracts";
 import {
   decidePeakStops,

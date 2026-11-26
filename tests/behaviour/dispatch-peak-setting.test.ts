@@ -4,8 +4,8 @@
  * (GH-413 F-8, AC-F8-1, DM-6, DM-7, NFR-9, DEC-2).
  */
 import { describe, expect, test } from "bun:test";
-import { readQueueParks, resolveConfig, resolveLaneSettings } from "../../packages/core/src/index";
 import { DISPATCH_DISABLE_PEAK_PAUSING_KEY } from "../../packages/core/src/contracts/index";
+import { readQueueParks, resolveConfig, resolveLaneSettings } from "../../packages/core/src/index";
 import { laneSource } from "../fixtures/config/lane";
 import {
   createCommandScenario,

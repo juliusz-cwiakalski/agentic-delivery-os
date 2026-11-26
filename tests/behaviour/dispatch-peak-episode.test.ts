@@ -5,7 +5,10 @@
  */
 import { describe, expect, test } from "bun:test";
 import { observeDispatchPeak } from "../../packages/core/src/app/dispatch-peak-pause";
-import type { ProviderProfilePeakRules, QueueParkRecord } from "../../packages/core/src/contracts/index";
+import type {
+  ProviderProfilePeakRules,
+  QueueParkRecord,
+} from "../../packages/core/src/contracts/index";
 import {
   atUtcHour,
   GRACE_ABOVE_CADENCE_RULES,
@@ -94,7 +97,11 @@ describe("TC-PEAK-006 one bounded-grace stop and exactly-once park", () => {
     expect(first.parks[0]?.until).toBe("2026-11-12T10:00:00.000Z");
     // The first episode recovers; a short resume lands, and the second window
     // (effective open at 10:00:20) parks again at the next observation.
-    const recovered = { ...first.parks[0], recoveryState: "recovered" as const, recoveredAt: new Date(atUtcHour(10)).toISOString() };
+    const recovered = {
+      ...first.parks[0],
+      recoveryState: "recovered" as const,
+      recoveredAt: new Date(atUtcHour(10)).toISOString(),
+    };
     const parks = [recovered as QueueParkRecord];
     const second = await observe({
       nowMs: atUtcHour(10, 0) + 30_000,

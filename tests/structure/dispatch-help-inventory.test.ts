@@ -6,13 +6,13 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-required-commands";
 import {
   allHelpEntries,
   helpEntryFor,
-  renderRootHelp,
   ROOT_HELP,
+  renderRootHelp,
 } from "../../packages/cli/src/help";
+import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-required-commands";
 import { resolveBrandIdentity } from "../../packages/core/src/branding/index";
 
 const ROOT = process.cwd();

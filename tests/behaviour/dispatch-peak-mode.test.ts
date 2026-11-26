@@ -7,8 +7,8 @@
 import { describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { resolveBrandIdentity } from "../../packages/core/src/branding/index";
 import { queueParkRecordKey } from "../../packages/core/src/app/queue";
+import { resolveBrandIdentity } from "../../packages/core/src/branding/index";
 import {
   createProductionQueueHarness,
   DEFAULT_MODE_PROVIDER_PROFILES_CONFIG,
@@ -53,9 +53,13 @@ const withCycle = async (
   }
 };
 
-const peakEnforcementOf = (run: Awaited<ReturnType<ReturnType<typeof createProductionQueueHarness>["run"]>>) => {
+const peakEnforcementOf = (
+  run: Awaited<ReturnType<ReturnType<typeof createProductionQueueHarness>["run"]>>,
+) => {
   const data = (run.envelope as { readonly data?: Record<string, unknown> } | undefined)?.data;
-  return data?.peakEnforcement as { readonly mode?: string; readonly parkClaimed?: boolean } | undefined;
+  return data?.peakEnforcement as
+    | { readonly mode?: string; readonly parkClaimed?: boolean }
+    | undefined;
 };
 
 describe("TC-PEAK-033 the production composition mode is configuration-derived", () => {

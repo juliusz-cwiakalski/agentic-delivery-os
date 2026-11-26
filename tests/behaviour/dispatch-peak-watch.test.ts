@@ -5,7 +5,11 @@
  * F-2, AC-F1-2, AC-F2-1, AC-F2-2).
  */
 import { describe, expect, test } from "bun:test";
-import { createCommandScenario, createPeakFixture, readsFrom } from "../fixtures/dispatch/golden/harness";
+import {
+  createCommandScenario,
+  createPeakFixture,
+  readsFrom,
+} from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
 import { atUtcHour, RULES_BY_PROFILE } from "../fixtures/provider/profile/gh413-rules";
 

@@ -4,8 +4,8 @@
  * pausing disabled (GH-413 F-9, F-10, AC-F8-2, AC-F9-1, DM-1, DM-2, DM-8).
  */
 import { describe, expect, test } from "bun:test";
-import { executeDispatchStop } from "../../packages/core/src/app/dispatch-stop";
 import { observeDispatchPeak } from "../../packages/core/src/app/dispatch-peak-pause";
+import { executeDispatchStop } from "../../packages/core/src/app/dispatch-stop";
 import type {
   DispatchLaneRecord,
   HarnessSessionHandle,

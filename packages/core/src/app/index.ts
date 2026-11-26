@@ -96,20 +96,6 @@ export {
   runDispatch,
 } from "./dispatch.js";
 export {
-  type DispatchStopOutcome,
-  type DispatchStopPorts,
-  executeDispatchStop,
-} from "./dispatch-stop.js";
-export {
-  type DispatchPeakObservation,
-  type DispatchPeakResume,
-  type DispatchPeakRulesLookup,
-  type DispatchPeakZoneFactsFor,
-  evaluateDispatchPeakResume,
-  observeDispatchPeak,
-  standingPeakPark,
-} from "./dispatch-peak-pause.js";
-export {
   type DispatchAttemptsReadInput,
   type DispatchAttemptsReadPorts,
   type DispatchAttemptsReadResult,
@@ -173,6 +159,20 @@ export {
   type DispatchLogReadInput,
   readDispatchLog,
 } from "./dispatch-log-tail.js";
+export {
+  type DispatchPeakObservation,
+  type DispatchPeakResume,
+  type DispatchPeakRulesLookup,
+  type DispatchPeakZoneFactsFor,
+  evaluateDispatchPeakResume,
+  observeDispatchPeak,
+  standingPeakPark,
+} from "./dispatch-peak-pause.js";
+export {
+  type DispatchStopOutcome,
+  type DispatchStopPorts,
+  executeDispatchStop,
+} from "./dispatch-stop.js";
 export {
   appendCommandReceipt,
   appendOutboxEffect,
@@ -301,7 +301,6 @@ export {
   leaseRecordHeartbeatAgeMs,
   normalizedQueueEdges,
   prioritizeQueueEntry,
-  renewDispatchLease,
   type QueueActiveLeaseRead,
   type QueueClaimOutcome,
   type QueueClaimResult,
@@ -346,6 +345,7 @@ export {
   releaseQueueLease,
   removeQueueDependency,
   removeQueueEntry,
+  renewDispatchLease,
 } from "./queue.js";
 /**
  * The one state-scope policy (GH-288 F-1, F-6, DEC-12): the host-root rule, the

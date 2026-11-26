@@ -6,13 +6,12 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { decidePeakStops } from "../../packages/core/src/domain/daemon-peak-pause";
 import { observeDispatchPeak } from "../../packages/core/src/app/dispatch-peak-pause";
 import type { QueueParkRecord } from "../../packages/core/src/contracts/index";
+import { decidePeakStops } from "../../packages/core/src/domain/daemon-peak-pause";
 import { atUtcHour, SINGLE_WINDOW_RULES } from "../fixtures/provider/profile/gh413-rules";
 
-const rulesFor = (profile: string) =>
-  profile === "delivery" ? SINGLE_WINDOW_RULES : undefined;
+const rulesFor = (profile: string) => (profile === "delivery" ? SINGLE_WINDOW_RULES : undefined);
 
 const observe = async (nowMs: number) => {
   const parks: QueueParkRecord[] = [];

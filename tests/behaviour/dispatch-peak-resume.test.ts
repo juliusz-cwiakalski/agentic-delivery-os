@@ -7,7 +7,11 @@ import { describe, expect, test } from "bun:test";
 import { evaluateDispatchPeakResume } from "../../packages/core/src/app/dispatch-peak-pause";
 import type { QueueParkRecord } from "../../packages/core/src/contracts/index";
 import { createPeakScenario } from "../fixtures/dispatch/golden/harness";
-import { atUtcHour, RULES_BY_PROFILE, SINGLE_WINDOW_RULES } from "../fixtures/provider/profile/gh413-rules";
+import {
+  atUtcHour,
+  RULES_BY_PROFILE,
+  SINGLE_WINDOW_RULES,
+} from "../fixtures/provider/profile/gh413-rules";
 
 const parkAt = (until: string): QueueParkRecord => ({
   schema: "delivery.queue.park.v1",

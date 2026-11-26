@@ -210,10 +210,16 @@ export const createScriptedHarness = (options: ScriptedHarnessOptions = {}): Scr
       return { ok: true, value: { handles: [handle] } };
     },
   };
-  return { port, calls, spawnInputs, livenessPolls: () => livenessPolls, finishCollect: () => {
-    resolveCollect?.();
-    resolveCollect = undefined;
-  } };
+  return {
+    port,
+    calls,
+    spawnInputs,
+    livenessPolls: () => livenessPolls,
+    finishCollect: () => {
+      resolveCollect?.();
+      resolveCollect = undefined;
+    },
+  };
 };
 
 /** A recording merge seam: any call fails the scenario that injected it. */

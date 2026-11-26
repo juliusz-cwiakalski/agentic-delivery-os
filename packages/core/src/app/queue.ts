@@ -2372,7 +2372,6 @@ export const renewDispatchLease = (
   }
 };
 
-
 /**
  * One dispatch admission outcome (GH-347 API-2, DM-7).
  *

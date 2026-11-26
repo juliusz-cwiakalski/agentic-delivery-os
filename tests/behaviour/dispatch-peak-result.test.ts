@@ -4,13 +4,17 @@
  * DM-5; the refusal arm is AC-F4-3).
  */
 import { describe, expect, test } from "bun:test";
-import { createCommandScenario, createPeakScenario, readsFrom } from "../fixtures/dispatch/golden/harness";
+import {
+  createCommandScenario,
+  createPeakScenario,
+  readsFrom,
+} from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
 import { atUtcHour, RULES_BY_PROFILE } from "../fixtures/provider/profile/gh413-rules";
 
 describe("TC-PEAK-014 a resumed episode returns one result that states the pause and resume", () => {
   test("the token and exit match the no-episode control and the episode fact is bounded", async () => {
-    const { peak, scenario } = createPeakScenario({
+    const { scenario } = createPeakScenario({
       label: "gh413-result-resumed",
       startMs: atUtcHour(6, 30),
       rules: { ...RULES_BY_PROFILE },

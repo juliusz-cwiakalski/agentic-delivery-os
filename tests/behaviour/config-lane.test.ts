@@ -5,12 +5,12 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
 import {
   PRODUCTION_CATALOG,
   resolveConfig,
   resolveLaneSettings,
 } from "../../packages/core/src/index";
-import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
 import {
   DISABLE_PEAK_PAUSING_SOURCE,
   ENABLE_PEAK_PAUSING_SOURCE,

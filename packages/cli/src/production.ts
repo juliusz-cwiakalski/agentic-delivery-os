@@ -142,9 +142,9 @@ import {
   type DaemonComposition,
   type DispatchArtifactFacts,
   type DispatchLedgerFacts,
+  type DispatchPeakWatchPorts,
   type DispatchPreflightError,
   type DispatchPreflightResult,
-  type DispatchPeakWatchPorts,
   type DispatchPrFact,
   type DispatchRead,
   type DispatchTrackerFacts,
@@ -155,10 +155,10 @@ import {
   EvaluateVerifyChange,
   emptyHandoverGate,
   evaluateCoordinatorRestartAdmission,
-  executeDispatchStop,
   evaluateHarnessModeAvailability,
   evaluateModelExpressibility,
   evaluateRestartBudget,
+  executeDispatchStop,
   foldDispatchHandover,
   type HandoverEvidence,
   type HarnessSettings,
@@ -224,7 +224,6 @@ import {
   reposListDataOf,
   resolveBinding,
   resolveConfig,
-  resolveQueueSettings,
   resolveCoordinatorSettings,
   resolveDispatchIdentity,
   resolveDispatchLane,
@@ -235,6 +234,7 @@ import {
   resolveOwnerHoldFact,
   resolveProjectGroupMember,
   resolveProjectScope,
+  resolveQueueSettings,
   reversibilityOf,
   runDispatchTrackerLadder,
   type SupervisionEconomicsWritePort,
@@ -4957,100 +4957,95 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         }),
       leaseTtlMs,
       peak: (() => {
-              const rulesFor = peakRulesFor;
-              const zonePort = createIntlZonePort();
-              const zoneFactsFor = (zone: string): ProviderZoneFacts | undefined => {
-                const normalised = normaliseZoneName(zone);
-                if (normalised === "UTC") return UTC_ZONE_FACTS;
-                return zonePort.isKnownZone(normalised)
-                  ? bindZoneFacts(normalised, zonePort)
-                  : undefined;
-              };
-              const parks = (): readonly QueueParkRecord[] => {
-                const read = readQueueParks(store);
-                return read.ok ? read.records : [];
-              };
-              const appendParkRecord = appendQueueParkRecord;
-              const stop: DispatchPeakWatchPorts["stop"] = async ({
-                handle,
-                graceMs,
-              }) => {
-                const sessionPort = harnessFor(settings.kind);
-                const terminate = sessionPort.terminate;
-                if (terminate === undefined || handle === undefined) {
-                  return "session-state-not-preserved";
-                }
-                const terminated = await terminate({ handle, graceMs });
-                return terminated.ok && terminated.value.terminated
-                  ? "preserved"
-                  : "session-state-not-preserved";
-              };
-              return {
-                watchEnabled: lane.disablePeakPausing !== true,
-                rulesFor,
-                zoneFactsFor,
-                parks,
-                recoverParks: () => {
-                  const recovered = recoverQueueParks(store, {
-                    nowIso: nowIso(),
-                    nowMs: nowMs(),
-                    context: {
-                      providerAvailable: true,
-                      leaseHeldRepositories: [repository],
-                    },
-                    fenceToken: newFenceToken(),
-                    ownerHold: readOwnerHold(),
-                  });
-                  return recovered.ok
-                    ? { ok: true as const }
-                    : ({
-                        ok: false,
-                        kind: recovered.kind === "state" ? "state" : "queue",
-                        code: recovered.code,
-                      } as const);
-                },
-                unexpiredStandingPark: (ref: string) => {
-                  const read = readQueueParks(store);
-                  if (!read.ok) return undefined;
-                  for (let index = read.records.length - 1; index >= 0; index -= 1) {
-                    const park = read.records[index];
-                    if (park === undefined || park.ref !== ref || park.cause !== "peak-window") {
-                      continue;
-                    }
-                    if (park.recoveryState !== "parked" && park.recoveryState !== "clear-observed") {
-                      return undefined;
-                    }
-                    const untilMs = park.until === undefined ? undefined : Date.parse(park.until);
-                    if (untilMs !== undefined && Number.isFinite(untilMs) && untilMs > nowMs()) {
-                      return {
-                        cause: park.cause,
-                        ...(park.until === undefined ? {} : { until: park.until }),
-                      };
-                    }
-                    return undefined;
-                  }
-                  return undefined;
-                },
-                stop,
-                appendPark: appendParkRecord,
-                appendRecovery: appendParkRecord,
-                holdActive: () => readOwnerHold().active === true,
-                newEpisodeId: (ref: string) => `peak-${ref}-${newFenceToken()}`,
-                branch: () => dispatchBaseBranch,
-                resumeSession: async () => true,
-                reenter: async () => true,
-                restartCount: (ref: string) => {
-                  const restarts = readEconomicsRecords(store, ref);
-                  return restarts.ok ? restarts.restarts.length : 0;
-                },
-                restartBound: () => lane.restartBudget,
-                economics: () => ({
-                  prefillCost: null,
-                  uniqueProgress: null,
-                }),
-                escalate: () => {},
-              };
-            })(),
+        const rulesFor = peakRulesFor;
+        const zonePort = createIntlZonePort();
+        const zoneFactsFor = (zone: string): ProviderZoneFacts | undefined => {
+          const normalised = normaliseZoneName(zone);
+          if (normalised === "UTC") return UTC_ZONE_FACTS;
+          return zonePort.isKnownZone(normalised) ? bindZoneFacts(normalised, zonePort) : undefined;
+        };
+        const parks = (): readonly QueueParkRecord[] => {
+          const read = readQueueParks(store);
+          return read.ok ? read.records : [];
+        };
+        const appendParkRecord = appendQueueParkRecord;
+        const stop: DispatchPeakWatchPorts["stop"] = async ({ handle, graceMs }) => {
+          const sessionPort = harnessFor(settings.kind);
+          const terminate = sessionPort.terminate;
+          if (terminate === undefined || handle === undefined) {
+            return "session-state-not-preserved";
+          }
+          const terminated = await terminate({ handle, graceMs });
+          return terminated.ok && terminated.value.terminated
+            ? "preserved"
+            : "session-state-not-preserved";
+        };
+        return {
+          watchEnabled: lane.disablePeakPausing !== true,
+          rulesFor,
+          zoneFactsFor,
+          parks,
+          recoverParks: () => {
+            const recovered = recoverQueueParks(store, {
+              nowIso: nowIso(),
+              nowMs: nowMs(),
+              context: {
+                providerAvailable: true,
+                leaseHeldRepositories: [repository],
+              },
+              fenceToken: newFenceToken(),
+              ownerHold: readOwnerHold(),
+            });
+            return recovered.ok
+              ? { ok: true as const }
+              : ({
+                  ok: false,
+                  kind: recovered.kind === "state" ? "state" : "queue",
+                  code: recovered.code,
+                } as const);
+          },
+          unexpiredStandingPark: (ref: string) => {
+            const read = readQueueParks(store);
+            if (!read.ok) return undefined;
+            for (let index = read.records.length - 1; index >= 0; index -= 1) {
+              const park = read.records[index];
+              if (park === undefined || park.ref !== ref || park.cause !== "peak-window") {
+                continue;
+              }
+              if (park.recoveryState !== "parked" && park.recoveryState !== "clear-observed") {
+                return undefined;
+              }
+              const untilMs = park.until === undefined ? undefined : Date.parse(park.until);
+              if (untilMs !== undefined && Number.isFinite(untilMs) && untilMs > nowMs()) {
+                return {
+                  cause: park.cause,
+                  ...(park.until === undefined ? {} : { until: park.until }),
+                };
+              }
+              return undefined;
+            }
+            return undefined;
+          },
+          stop,
+          appendPark: appendParkRecord,
+          appendRecovery: appendParkRecord,
+          holdActive: () => readOwnerHold().active === true,
+          newEpisodeId: (ref: string) => `peak-${ref}-${newFenceToken()}`,
+          branch: () => dispatchBaseBranch,
+          resumeSession: async () => true,
+          reenter: async () => true,
+          restartCount: (ref: string) => {
+            const restarts = readEconomicsRecords(store, ref);
+            return restarts.ok ? restarts.restarts.length : 0;
+          },
+          restartBound: () => lane.restartBudget,
+          economics: () => ({
+            prefillCost: null,
+            uniqueProgress: null,
+          }),
+          escalate: () => {},
+        };
+      })(),
       stop: {
         stop: async ({ ref, cause, until }) => {
           const sessionPort = harnessFor(settings.kind);

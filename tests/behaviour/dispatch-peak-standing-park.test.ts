@@ -39,7 +39,9 @@ describe("TC-PEAK-038 an un-expired standing park refuses the resume before any 
     try {
       const run = await scenario.invoke(["dispatch", "GH-413", "--json"]);
       expect(run.exit).toBe(2);
-      expect(run.envelope?.error?.code ?? run.envelope?.data?.error?.code).toBe("dispatch.resume-parked");
+      expect(run.envelope?.error?.code ?? run.envelope?.data?.error?.code).toBe(
+        "dispatch.resume-parked",
+      );
       expect(scenario.calls.claims).toHaveLength(0);
       expect(scenario.scripted.calls.filter((call) => call === "spawn")).toHaveLength(0);
       expect(peak.stopCalls).toHaveLength(0);
@@ -112,7 +114,9 @@ describe("TC-PEAK-038 an unrecoverable standing park refuses the run", () => {
     try {
       const run = await scenario.invoke(["dispatch", "GH-413", "--json"]);
       expect(run.exit).toBe(2);
-      expect(run.envelope?.error?.code ?? run.envelope?.data?.error?.code).toBe("queue.park-condition-stuck");
+      expect(run.envelope?.error?.code ?? run.envelope?.data?.error?.code).toBe(
+        "queue.park-condition-stuck",
+      );
       expect(peak.stopCalls).toHaveLength(0);
       expect(peak.parks).toHaveLength(1);
     } finally {

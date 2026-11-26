@@ -22,7 +22,9 @@ const lane = (state: "active" | "terminal"): DispatchLaneRecord => ({
   iterationOrdinal: 1,
   restartsConsumed: 0,
   state,
-  ...(state === "terminal" ? { lastToken: "pr-open" as const, lastOutcome: "completed" as const } : {}),
+  ...(state === "terminal"
+    ? { lastToken: "pr-open" as const, lastOutcome: "completed" as const }
+    : {}),
   providerProfile: "delivery",
   recordedAt: "2026-11-12T06:00:00.000Z",
 });
@@ -48,7 +50,13 @@ const runStop = async (input: {
       killGraceMs: 20_000,
       mainCheckout: "/work/repo",
     },
-    { ref: "GH-413", cause: "peak-window", until: UNTIL, nowIso: new Date(NOW).toISOString(), nowMs: NOW },
+    {
+      ref: "GH-413",
+      cause: "peak-window",
+      until: UNTIL,
+      nowIso: new Date(NOW).toISOString(),
+      nowMs: NOW,
+    },
   );
   return { outcome, appended };
 };

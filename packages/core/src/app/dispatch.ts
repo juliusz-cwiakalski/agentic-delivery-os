@@ -82,13 +82,13 @@ import {
   foldDispatchDivergences,
   readDispatchDivergences,
 } from "./dispatch-ledger.js";
-import type { DispatchLeaseRenewalOutcome } from "./queue.js";
 import {
   type DispatchPeakObservation,
   type DispatchPeakResume,
   evaluateDispatchPeakResume,
   observeDispatchPeak,
 } from "./dispatch-peak-pause.js";
+import type { DispatchLeaseRenewalOutcome } from "./queue.js";
 
 /** `f` failed, `su` state-unverified, `mr` max-restarts, `po` pr-open,
  * `pou` pr-open-unverified — the few tokens this module names. */
@@ -126,10 +126,8 @@ export type DispatchCadenceWait = {
  * reach the TTL between renewals even when the liveness interval is at or above
  * it.
  */
-export const dispatchRenewalCadenceMs = (
-  livenessIntervalMs: number,
-  leaseTtlMs: number,
-): number => Math.min(livenessIntervalMs, Math.floor(leaseTtlMs / 2));
+export const dispatchRenewalCadenceMs = (livenessIntervalMs: number, leaseTtlMs: number): number =>
+  Math.min(livenessIntervalMs, Math.floor(leaseTtlMs / 2));
 
 /** The delivered terminal restart-budget exhaustion append (AC-F3-2). */
 export type DispatchExhaustionRequest = {
@@ -324,9 +322,7 @@ export type DispatchPeakWatchPorts = {
   /** An un-expired standing peak-window park blocks a resume/re-dispatch at admission. */
   readonly unexpiredStandingPark: (
     ref: string,
-  ) =>
-    | { readonly cause: string; readonly until?: string }
-    | undefined;
+  ) => { readonly cause: string; readonly until?: string } | undefined;
   readonly stop: (input: {
     readonly handle?: HarnessSessionHandle;
     readonly sessionId?: string;
@@ -341,10 +337,7 @@ export type DispatchPeakWatchPorts = {
     readonly sessionRef: string;
     readonly branch: string;
   }) => Promise<boolean>;
-  readonly reenter: (input: {
-    readonly ref: string;
-    readonly ordinal: number;
-  }) => Promise<boolean>;
+  readonly reenter: (input: { readonly ref: string; readonly ordinal: number }) => Promise<boolean>;
   readonly restartCount: (ref: string) => number;
   readonly restartBound: () => number;
   readonly economics: (ref: string) => {
@@ -951,7 +944,9 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
     return `${base})`;
   };
   let lastRenewalAtMs =
-    claimed.heartbeatAt === undefined ? Date.parse(ports.nowIso()) : Date.parse(claimed.heartbeatAt);
+    claimed.heartbeatAt === undefined
+      ? Date.parse(ports.nowIso())
+      : Date.parse(claimed.heartbeatAt);
   const renewalCadenceMs = dispatchRenewalCadenceMs(
     ports.livenessIntervalMs ?? 30_000,
     ports.leaseTtlMs ?? 90_000,
@@ -961,7 +956,8 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
    * (DEC-13): a no-op when the live lease's latest heartbeat is not this
    * invocation's own last write, and never an acquire, takeover, or displace.
    */
-  const maybeRenewLease = async (): Promise<void> => {    const renew = ports.renewLease;
+  const maybeRenewLease = async (): Promise<void> => {
+    const renew = ports.renewLease;
     if (renew === undefined || leaseHeartbeatAt === undefined || leaseLost) return;
     const nowMs = Date.parse(ports.nowIso());
     if (!Number.isFinite(nowMs)) return;
@@ -1489,7 +1485,8 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           .find((park) => park.ref === ports.ref && park.cause === "peak-window");
         const openPark =
           latestPark !== undefined &&
-          (latestPark.recoveryState === "parked" || latestPark.recoveryState === "clear-observed") &&
+          (latestPark.recoveryState === "parked" ||
+            latestPark.recoveryState === "clear-observed") &&
           // Only a park that landed during/after this invocation is the
           // cross-process stop hand-off; a standing park from before the run
           // was occupancy at the first observation, not a new episode.
@@ -1644,9 +1641,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
             lastMessage: `parked until ${parkEnd || "an unrecorded end"}; the window-end recovery refused (${waitOutcome.code})`,
             evidenceRefs: [
               "park:recovery-refused",
-              ...(waitOutcome.episodeId === undefined
-                ? []
-                : [`episode:${waitOutcome.episodeId}`]),
+              ...(waitOutcome.episodeId === undefined ? [] : [`episode:${waitOutcome.episodeId}`]),
             ],
           });
         }

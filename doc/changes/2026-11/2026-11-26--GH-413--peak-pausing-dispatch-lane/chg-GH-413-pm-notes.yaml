@@ -514,3 +514,24 @@ notes:
       pass; 46 pass / 0 fail in total."
     type: info
     date: "2026-11-26"
+  - text: "Plan phase 7 complete (decision records TDR-0077 and TDR-0078):
+      commit 2a180d31. Both records are present as Proposed with their index
+      rows (committed earlier at 8a086e09) and were verified without rewording;
+      the delivered decision-record and doc-conformance suites pass 72/72."
+    type: info
+    date: "2026-11-26"
+  - text: "Post-upgrade hand-off recorded for TC-PEAK-029 (non-gating, before
+      dod_check): the reference host observes one real episode on the next lane
+      after this change is installed, not on this delivering lane. Preconditions:
+      the nominated profile declares peakWindows (the tracked .jaiship/config.yaml
+      profile delivery declares 01:00-04:00 and 06:00-10:00 UTC); the
+      activity-keyed liveness consumers (pm-liveness, deliver-ticket, ceo-loop,
+      and any operator probe with the same shape) are relaxed or exclude a parked
+      lane before it is dispatched into a window; automatic pausing is on. The
+      tracked profile's 04:00-04:05Z overlap may show a short resume and a second
+      park (DEC-20, RSK-13). Observe with dispatch status <ref>, lanes, and board
+      while parked, then the resume and the one result whose summary states
+      paused and resumed. The automated fixtures remain the merge gate; this
+      episode is not a Done criterion."
+    type: info
+    date: "2026-11-26"

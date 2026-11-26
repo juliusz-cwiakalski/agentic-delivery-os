@@ -80,6 +80,7 @@ export {
   boundLastMessage,
   type DispatchAdmission,
   type DispatchLeaseClaim,
+  type DispatchPeakWatchPorts,
   type DispatchPorts,
   type DispatchPreflightError,
   type DispatchPreflightPort,
@@ -87,24 +88,9 @@ export {
   type DispatchRunResult,
   type DispatchTruthReads,
   type DispatchWorktreeProvisioning,
-  type DispatchPeakWatchPorts,
   dispatchRenewalCadenceMs,
   runDispatch,
 } from "./app/dispatch.js";
-export {
-  type DispatchStopOutcome,
-  type DispatchStopPorts,
-  executeDispatchStop,
-} from "./app/dispatch-stop.js";
-export {
-  type DispatchPeakObservation,
-  type DispatchPeakResume,
-  type DispatchPeakRulesLookup,
-  type DispatchPeakZoneFactsFor,
-  evaluateDispatchPeakResume,
-  observeDispatchPeak,
-  standingPeakPark,
-} from "./app/dispatch-peak-pause.js";
 export {
   type DispatchAttemptsReadInput,
   type DispatchAttemptsReadPorts,
@@ -170,6 +156,20 @@ export {
   type DispatchLogReadInput,
   readDispatchLog,
 } from "./app/dispatch-log-tail.js";
+export {
+  type DispatchPeakObservation,
+  type DispatchPeakResume,
+  type DispatchPeakRulesLookup,
+  type DispatchPeakZoneFactsFor,
+  evaluateDispatchPeakResume,
+  observeDispatchPeak,
+  standingPeakPark,
+} from "./app/dispatch-peak-pause.js";
+export {
+  type DispatchStopOutcome,
+  type DispatchStopPorts,
+  executeDispatchStop,
+} from "./app/dispatch-stop.js";
 export {
   appendCommandReceipt,
   appendOutboxEffect,
@@ -1484,10 +1484,10 @@ export {
   deriveLaneWorktreeEnvironment,
   GATE_TEMPORARY_DIRECTORY_EVIDENCE_LITERAL,
   LANE_LOG_SWEEP_BYTE_CAP,
-  LANE_RUNNER_LOG_DIRECTORY,
-  LANE_SCRATCH_DIRECTORY,
   LANE_PROVISIONING_STDERR_TAIL_CHARS,
   LANE_PROVISIONING_STEPS,
+  LANE_RUNNER_LOG_DIRECTORY,
+  LANE_SCRATCH_DIRECTORY,
   LANE_WORKTREE_INSTALL_COMMAND,
   type LaneProvisioningStep,
   type LaneWorktreeEnvironment,

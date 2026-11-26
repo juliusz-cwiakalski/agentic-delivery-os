@@ -8408,9 +8408,7 @@ export const createDispatchCommandRuntime = (
           ? {}
           : { appendRestart: composition.appendRestart }),
         claimLease: () => composition.claimLease(input.ref, repository),
-        ...(composition.renewLease === undefined
-          ? {}
-          : { renewLease: composition.renewLease }),
+        ...(composition.renewLease === undefined ? {} : { renewLease: composition.renewLease }),
         ...(composition.leaseTtlMs === undefined ? {} : { leaseTtlMs: composition.leaseTtlMs }),
         ...(composition.peak === undefined ? {} : { peak: composition.peak }),
         releaseLease: (cause) => composition.releaseLease(input.ref, cause),
