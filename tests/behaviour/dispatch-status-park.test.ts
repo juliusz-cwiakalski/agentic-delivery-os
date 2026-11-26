@@ -97,10 +97,7 @@ const statusOf = (probe: "live" | "unknown" | "dead", park = true) => {
 
 describe("TC-PEAK-011 the status park fact and the three probe arms", () => {
   test("the park fact carries the cause, end, stop instant, preservation, and refusal", () => {
-    const fixture = storeOf([
-      laneRecord(),
-      parkRecord({ recoveryRefusal: "dispatch.resume-uneconomical" }),
-    ]);
+    const fixture = storeOf([laneRecord(), parkRecord()]);
     const result = readOperatorStatus({
       store: fixture.store,
       repository: REPOSITORY,
@@ -114,7 +111,6 @@ describe("TC-PEAK-011 the status park fact and the three probe arms", () => {
       until: UNTIL,
       stoppedAt: NOW,
       preservation: "preserved",
-      recoveryRefusal: "dispatch.resume-uneconomical",
     });
     // One bounded lane read plus at most one bounded park read.
     expect(fixture.reads()).toBe(2);

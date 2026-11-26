@@ -12,7 +12,7 @@ import { dispatchRenewalCadenceMs } from "../../packages/core/src/app/dispatch";
 import { readDispatchAttempts } from "../../packages/core/src/app/dispatch-ledger";
 import { dispatchAdmissionRefusal } from "../../packages/core/src/app/index";
 import type { HarnessLivenessReport } from "../../packages/core/src/contracts/index";
-import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
+import { createCommandScenario, createPeakScenario } from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
 import {
   activeLease,
@@ -289,6 +289,125 @@ describe("TC-PEAK-010 the engine surfaces a renewal failure and retries the next
       expect(read.ok).toBe(true);
       if (!read.ok) return;
       expect(read.records[0]?.evidenceRefs).toContain("lease:not-owned");
+    } finally {
+      scenario.dispose();
+    }
+  });
+});
+
+describe("TC-PEAK-010 the lease stays live across a park through the engine", () => {
+  test("the own-heartbeat renewal runs during the wait and the lane resumes", async () => {
+    const renewals: string[] = [];
+    let heartbeat = new Date(Date.parse("2026-11-12T06:30:00.000Z")).toISOString();
+    const { scenario } = createPeakScenario({
+      label: "gh413-engine-park-lease",
+      startMs: Date.parse("2026-11-12T06:30:00.000Z"),
+      rules: {
+        delivery: {
+          windows: [
+            {
+              timezone: "UTC",
+              startSecondsOfDay: 6 * 3_600,
+              endSecondsOfDay: 10 * 3_600,
+              multiplier: 2,
+              bufferBeforeSeconds: 0,
+              bufferAfterSeconds: 0,
+            },
+          ],
+          graceSecondsDefault: 20,
+          graceSecondsMax: 60,
+        },
+      },
+      nomination: "delivery",
+      claim: { ok: true, leaseId: "lease-1", heartbeatAt: heartbeat },
+      renewLease: ({ expectedHeartbeatAt }) => {
+        renewals.push(expectedHeartbeatAt);
+        heartbeat = new Date(Date.parse(heartbeat) + 1_000).toISOString();
+        return { ok: true, result: "renewed", heartbeatAt: heartbeat, leaseId: "lease-1" };
+      },
+    });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-413", "--json"]);
+      expect(run.exit).toBe(0);
+      expect(renewals.length).toBeGreaterThan(1);
+      expect(renewals[0]).toBe("2026-11-12T06:30:00.000Z");
+    } finally {
+      scenario.dispose();
+    }
+  });
+});
+
+describe("TC-PEAK-010 a lost lease on a clean session exit takes no owner act", () => {
+  test("the invocation returns state-unverified with no release and lease:not-owned", async () => {
+    let clockMs = Date.parse("2026-11-08T10:00:00.000Z");
+    const scenario = createCommandScenario({
+      evidence: COMPLETED_EVIDENCE,
+      livenessIntervalMs: 30_000,
+      leaseTtlMs: 90_000,
+      nowIso: () => {
+        clockMs += 5_000;
+        return new Date(clockMs).toISOString();
+      },
+      claim: { ok: true, leaseId: "lease-1", heartbeatAt: new Date(clockMs).toISOString() },
+      renewLease: () => ({ ok: false, result: "not-owned" }),
+      livenessOf: (poll) => ({
+        readings: [
+          {
+            kind: "session-traffic",
+            status: "sourced",
+            value: poll,
+            observedAt: "2026-11-08T10:00:00.000Z",
+          },
+          {
+            kind: "process",
+            status: "sourced",
+            value: poll,
+            observedAt: "2026-11-08T10:00:00.000Z",
+          },
+        ],
+      }),
+      collectAfterPolls: 4,
+      restartBudget: 3,
+    });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-413", "--json"]);
+      expect(run.exit).toBe(2);
+      expect(run.envelope?.data?.result).toBe("state-unverified");
+      expect(run.envelope?.data?.lastMessage).toContain(
+        "the lease was no longer this invocation's",
+      );
+      expect(scenario.calls.releases).toHaveLength(0);
+      const read = readDispatchAttempts(scenario.state.store);
+      expect(read.ok).toBe(true);
+      if (!read.ok) return;
+      expect(read.records[0]?.evidenceRefs).toContain("lease:not-owned");
+    } finally {
+      scenario.dispose();
+    }
+  });
+});
+
+describe("TC-PEAK-010 the withhold renews rather than letting the heartbeat reach the TTL", () => {
+  test("a clean session end renews inside the grace-plus-cadence withhold", async () => {
+    const renewals: string[] = [];
+    let heartbeat = "2026-11-12T11:00:00.000Z";
+    const { scenario } = createPeakScenario({
+      label: "gh413-withhold-renewal",
+      startMs: Date.parse("2026-11-12T11:00:00.000Z"),
+      rules: { delivery: undefined },
+      nomination: "delivery",
+      watchEnabled: false,
+      claim: { ok: true, leaseId: "lease-1", heartbeatAt: heartbeat },
+      renewLease: ({ expectedHeartbeatAt }) => {
+        renewals.push(expectedHeartbeatAt);
+        heartbeat = new Date(Date.parse(heartbeat) + 1_000).toISOString();
+        return { ok: true, result: "renewed", heartbeatAt: heartbeat, leaseId: "lease-1" };
+      },
+    });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-413", "--json"]);
+      expect(run.exit).toBe(0);
+      expect(renewals.length).toBeGreaterThan(0);
     } finally {
       scenario.dispose();
     }

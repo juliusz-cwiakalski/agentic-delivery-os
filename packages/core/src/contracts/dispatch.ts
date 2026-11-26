@@ -427,7 +427,6 @@ export type DispatchEnvelopeError = CommandResultError & {
   };
 };
 
-/** The declared dispatch envelope `data` (DM-5). */
 /** One additive bounded episode fact on a dispatch result (GH-413 DM-4). */
 export type DispatchEpisodeFact = {
   readonly episodeId: string;
@@ -438,6 +437,7 @@ export type DispatchEpisodeFact = {
   readonly refusal?: string;
 };
 
+/** The declared dispatch envelope `data` (DM-5). */
 export type DispatchEnvelopeData = {
   readonly result: DeliveryResultToken;
   readonly prUrl: string;

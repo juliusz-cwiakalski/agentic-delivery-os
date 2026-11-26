@@ -90,7 +90,7 @@ export const dispatchStatusParkFact = (
     if (park.recoveryState !== "parked" && park.recoveryState !== "clear-observed") {
       return undefined;
     }
-    const recoveryRefusal = park.recoveryRefusal ?? laneRecoveryRefusal;
+    const recoveryRefusal = laneRecoveryRefusal;
     return {
       cause: park.cause,
       ...(park.until === undefined ? {} : { until: park.until }),

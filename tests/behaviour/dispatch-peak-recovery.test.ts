@@ -37,11 +37,9 @@ const evaluate = (input: {
 }) => {
   const reentered: number[] = [];
   const escalated: string[] = [];
-  const recovered: QueueParkRecord[] = [];
   return {
     reentered,
     escalated,
-    recovered,
     run: evaluateDispatchPeakResume({
       ref: "GH-413",
       parks: () => [notPreserved()],
@@ -52,13 +50,10 @@ const evaluate = (input: {
       branch: "feat/GH-413/test",
       restartCount: input.restartCount,
       restartBound: 3,
+      admission: "budget-and-economics",
       economics: {
         prefillCost: input.prefillCost ?? 0,
         uniqueProgress: input.uniqueProgress ?? 1,
-      },
-      appendRecovery: (record) => {
-        recovered.push(record);
-        return true;
       },
       resumeSession: async () => true,
       reenter: async ({ ordinal }) => {
@@ -74,24 +69,23 @@ const evaluate = (input: {
 
 describe("TC-PEAK-009 the not-preserved recovery consumes one ordinal and emits no resumed", () => {
   test("an admitted recovery re-enters with one ordinal and appends the delivered recovery record", async () => {
-    const { run, reentered, recovered } = evaluate({ restartCount: 0 });
+    const { run, reentered } = evaluate({ restartCount: 0 });
     const outcome = await run;
     expect(outcome.outcome).toBe("recovered");
     expect(reentered).toEqual([1]);
-    expect(recovered).toHaveLength(1);
-    expect(recovered[0]?.recoveryState).toBe("recovered");
-    expect(recovered[0]?.sessionRef).toBeUndefined();
+    if (outcome.outcome !== "recovered") return;
+    expect(outcome.recoveryRecord.recoveryState).toBe("recovered");
+    expect(outcome.recoveryRecord.sessionRef).toBeUndefined();
   });
 
   test("budget exhaustion escalates the delivered terminal refusal", async () => {
-    const { run, escalated, recovered } = evaluate({ restartCount: 3 });
+    const { run, escalated } = evaluate({ restartCount: 3 });
     const outcome = await run;
     expect(outcome.outcome).toBe("refused");
     if (outcome.outcome !== "refused") return;
     expect(outcome.terminal).toBe(true);
     expect(outcome.code).toBe("dispatch.restart-budget-exceeded");
     expect(escalated).toEqual(["dispatch.restart-budget-exceeded"]);
-    expect(recovered).toHaveLength(0);
   });
 });
 
@@ -105,6 +99,7 @@ describe("TC-PEAK-009 a non-terminal recovery refusal returns one classified res
       preservation: "session-state-not-preserved",
       restartCount: 0,
       restartBound: 3,
+      recoveryAdmission: "budget-and-economics",
       prefillCost: 100,
       uniqueProgress: 0,
     });

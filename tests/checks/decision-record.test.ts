@@ -168,3 +168,17 @@ describe("TC-HARNESS-010 independent decision review", () => {
     expect(review).not.toContain("REWORK");
   });
 });
+
+describe("TC-PEAK-027 TDR-0077 states the dispatch-owned watch and the one new row", () => {
+  test("the record names dispatch.resume-parked, the terminal-lane refusal, and the watch ownership", () => {
+    const record = readFileSync(
+      join(ROOT, "doc/decisions/TDR-0077-dispatch-owned-window-watch.md"),
+      "utf8",
+    );
+    expect(record).toContain("dispatch.resume-parked");
+    expect(record).toContain("platform-provider");
+    expect(record.toLowerCase()).toContain("pre-session refusal");
+    expect(record).toContain("exit 2");
+    expect(record.toLowerCase()).toContain("dispatch-owned");
+  });
+});

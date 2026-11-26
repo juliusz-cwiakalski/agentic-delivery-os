@@ -198,10 +198,11 @@ retryable), naming the cause and `until` and writing nothing; that one row is
 the owner-authorised exception to NG-6 and NFR-8, because the delivered window
 refusal `provider.profile.unavailable` shares the exit but says that no profile
 is eligible; an expired standing park is recovered through the delivered
-mutating park pass, `recoverQueueParks`, before the first stop decision and at
-the first observation of a resume, so the pass only ever meets an expired park
-or none; an unrecoverable park refuses the run, because a double park fails
-every park-reading surface for good), the `lanes` composition-fact read
+mutating park pass, `recoverQueueParks`, before the first stop decision and
+before the first session of a resume, so the pass only ever meets an expired
+park or none; an unrecoverable park refuses the run before any session starts,
+because a double park fails every park-reading surface for good), the `lanes`
+composition-fact read
 (`peakEnforcement.mode` derives from the reading composition's own effective
 configuration: `window-watch` when automatic pausing is enabled,
 `iteration-start-gating` when it is disabled; the one intended change to a
@@ -229,5 +230,8 @@ invocation that holds the lease renews it at most once per renewal cadence,
 invocation's own last write and without passing the owner-hold gate. A no-op
 renewal surfaces the bounded evidence `lease:not-owned` and extends nothing, and
 an invocation that no longer holds the lease returns one classified result
-instead of resuming as owner, so per-ref single-flight holds through the run and
-an hours-long park on every legal configuration of the two keys.
+instead of resuming as owner, so a second dispatch of a running lane is refused
+`queue.single-flight` on every legal configuration of the two keys and the lease
+is still live when a park ends, while a second dispatch during an un-expired
+standing park is refused `dispatch.resume-parked` at exit 2 at resume admission,
+not by the lease.

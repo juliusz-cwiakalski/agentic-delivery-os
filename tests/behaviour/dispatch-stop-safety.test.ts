@@ -131,3 +131,91 @@ describe("TC-PEAK-019 one terminate call carries the composed grace", () => {
     expect(source).toContain("terminate(");
   });
 });
+
+describe("TC-PEAK-032 the operator stop records the profile-bounded deadline", () => {
+  test("a differing kill grace records the profile deadline but applies the smaller grace", async () => {
+    const stops: number[] = [];
+    const appended: QueueParkRecord[] = [];
+    const outcome = await executeDispatchStop(
+      {
+        resolveRepository: () => REPOSITORY,
+        lanes: () => [lane()],
+        parks: () => [],
+        terminate: async ({ graceMs }) => {
+          stops.push(graceMs);
+          return { ok: true, terminated: true };
+        },
+        appendPark: (record) => {
+          appended.push(record);
+          return true;
+        },
+        newEpisodeId: () => "episode-1",
+        profileGraceMsFor: () => 20_000,
+        killGraceMs: 5_000,
+        mainCheckout: "/work/repo",
+      },
+      {
+        ref: "GH-413",
+        cause: "peak-window",
+        until: new Date(NOW + 3_600_000).toISOString(),
+        nowIso: new Date(NOW).toISOString(),
+        nowMs: NOW,
+      },
+    );
+    expect(outcome.ok).toBe(true);
+    expect(stops).toEqual([5_000]);
+    expect(appended[0]?.graceDeadline).toBe(new Date(NOW + 20_000).toISOString());
+  });
+
+  test("an end at or before the request instant is refused", async () => {
+    const outcome = await executeDispatchStop(
+      {
+        resolveRepository: () => REPOSITORY,
+        lanes: () => [lane()],
+        parks: () => [],
+        terminate: async () => ({ ok: true, terminated: true }),
+        appendPark: () => true,
+        newEpisodeId: () => "episode-1",
+        profileGraceMsFor: () => 20_000,
+        killGraceMs: 20_000,
+        mainCheckout: "/work/repo",
+      },
+      {
+        ref: "GH-413",
+        cause: "peak-window",
+        until: new Date(NOW - 1_000).toISOString(),
+        nowIso: new Date(NOW).toISOString(),
+        nowMs: NOW,
+      },
+    );
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) return;
+    expect(outcome.code).toBe("input.value.rejected");
+  });
+
+  test("a non-canonical instant is refused", async () => {
+    const outcome = await executeDispatchStop(
+      {
+        resolveRepository: () => REPOSITORY,
+        lanes: () => [lane()],
+        parks: () => [],
+        terminate: async () => ({ ok: true, terminated: true }),
+        appendPark: () => true,
+        newEpisodeId: () => "episode-1",
+        profileGraceMsFor: () => 20_000,
+        killGraceMs: 20_000,
+        mainCheckout: "/work/repo",
+      },
+      {
+        ref: "GH-413",
+        cause: "peak-window",
+        until: "2026-11-12",
+        nowIso: new Date(NOW).toISOString(),
+        nowMs: NOW,
+      },
+    );
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) return;
+    expect(outcome.code).toBe("input.value.rejected");
+  });
+});

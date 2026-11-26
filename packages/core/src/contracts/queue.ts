@@ -226,12 +226,6 @@ export type QueueParkRecord = {
   readonly preservation?: QueueParkPreservation;
   /** The episode identity joining the park record, its events, and the resume (GH-294 DM-4). */
   readonly episodeId?: string;
-  /**
-   * The recorded window-end recovery refusal (GH-413 DM-3), when a not-preserved
-   * recovery refused without being terminal. Optional and absent on a park with
-   * no recorded refusal.
-   */
-  readonly recoveryRefusal?: string;
   /** The preserved session-state reference, recorded at recovery (GH-294 DM-4). */
   readonly sessionRef?: string;
   /** The lane's branch, recorded at recovery; unchanged by the episode (GH-294 DM-4). */

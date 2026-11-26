@@ -6,7 +6,11 @@
 import { describe, expect, test } from "bun:test";
 import { readOperatorStatus } from "../../packages/core/src/app/dispatch-lane-view";
 import type { StateRecord, StateStorePort } from "../../packages/core/src/contracts/index";
-import { createCommandScenario, readsFrom } from "../fixtures/dispatch/golden/harness";
+import {
+  createCommandScenario,
+  createPeakScenario,
+  readsFrom,
+} from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
 
 const REPOSITORY = "github.com/owner/repo";
@@ -65,6 +69,36 @@ describe("TC-PEAK-013 the no-park additive members are absent", () => {
     expect(result.data.marker).toBe("active");
     expect(result.data.delivering).toBe(true);
     expect(result.data.stale).toBe(false);
+  });
+
+  test("a peak composition with no open window leaves the result byte-identical", async () => {
+    const peak = createPeakScenario({
+      label: "gh413-byte-identical-peak",
+      startMs: Date.parse("2026-11-12T11:00:00.000Z"),
+      rules: { delivery: undefined },
+      nomination: "delivery",
+      watchEnabled: false,
+    });
+    const control = createCommandScenario({
+      label: "gh413-byte-identical-control",
+      evidence: COMPLETED_EVIDENCE,
+      reads: readsFrom(),
+      nowIso: () => new Date("2026-11-12T11:00:00.000Z").toISOString(),
+      livenessIntervalMs: 30_000,
+      leaseTtlMs: 90_000,
+      collectAfterPolls: 2,
+      nominate: () => ({ ok: true, profile: "delivery" }),
+    });
+    try {
+      const run = await peak.scenario.invoke(["dispatch", "GH-413", "--json"]);
+      const base = await control.invoke(["dispatch", "GH-413", "--json"]);
+      expect(run.exit).toBe(base.exit);
+      expect(run.envelope?.data?.result).toBe(base.envelope?.data?.result);
+      expect(Object.hasOwn(run.envelope?.data ?? {}, "episode")).toBe(false);
+    } finally {
+      peak.scenario.dispose();
+      control.dispose();
+    }
   });
 
   test("a dispatch result with no episode carries no episode member", async () => {

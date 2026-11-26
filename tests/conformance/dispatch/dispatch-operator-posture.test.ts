@@ -11,23 +11,23 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
+  decoyFiles,
+  fingerprintDrift,
+  plantShellArtifacts,
+  removeShellArtifacts,
+} from "../../fixtures/dispatch/operator/decoys";
+import {
   createOperatorHarness,
   createRecordingLogFs,
   OPERATOR_REF,
 } from "../../fixtures/dispatch/operator/harness";
 import {
-  plantShellArtifacts,
-  fingerprintDrift,
-  removeShellArtifacts,
-  decoyFiles,
-} from "../../fixtures/dispatch/operator/decoys";
-import {
   familySnapshot,
   materializeFamily,
   segmentName,
 } from "../../fixtures/dispatch/operator/logs";
-import { createGuardedRunner } from "../../fixtures/dispatch/parity/process-runner";
 import { createTranscriptDouble } from "../../fixtures/dispatch/operator/transcript";
+import { createGuardedRunner } from "../../fixtures/dispatch/parity/process-runner";
 
 const FIRST_SEGMENT = (attempt: string, segment: number): string =>
   segmentName({
@@ -190,7 +190,8 @@ describe("TC-RO the read-only posture", () => {
 
       const statusBefore = h.counters.readRecords;
       await h.run(["dispatch", "status", OPERATOR_REF, "--json"]);
-      expect(h.counters.readRecords - statusBefore).toBe(1);
+      // GH-413: one bounded lane read plus one bounded park read.
+      expect(h.counters.readRecords - statusBefore).toBe(2);
       expect(logFs.records.filter((record) => record.op === "list")).toHaveLength(0);
       expect(transcript.calls).toHaveLength(0);
 

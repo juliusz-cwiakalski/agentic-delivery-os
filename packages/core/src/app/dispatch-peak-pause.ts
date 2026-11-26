@@ -24,6 +24,7 @@ import {
   recoverInterruptedLane,
   runPeakWatch,
 } from "../domain/daemon-peak-pause.js";
+import { admitDispatchRestart } from "../domain/dispatch-resume.js";
 
 /** The latest standing peak-window park for a reference, whatever its cause state. */
 export const standingPeakPark = (
@@ -45,6 +46,7 @@ export const standingPeakPark = (
 export type DispatchPeakObservation =
   | { readonly outcome: "none" }
   | { readonly outcome: "already-parked" }
+  | { readonly outcome: "unconfirmed" }
   | { readonly outcome: "parked"; readonly park: QueueParkRecord }
   | { readonly outcome: "refused"; readonly code: string };
 
@@ -77,7 +79,7 @@ export const observeDispatchPeak = async (input: {
     readonly handle?: HarnessSessionHandle;
     readonly sessionId?: string;
     readonly graceMs: number;
-  }) => Promise<QueueParkPreservation>;
+  }) => Promise<QueueParkPreservation | { readonly confirmed: false }>;
   readonly appendPark: (record: QueueParkRecord) => boolean;
 }): Promise<DispatchPeakObservation> => {
   if (standingPeakPark(input.parks(), input.ref) !== undefined) {
@@ -104,7 +106,7 @@ export const observeDispatchPeak = async (input: {
     0,
     Math.min(remainingProfileGraceMs, input.killGraceMs, timeToWindowEndMs),
   );
-  let preservation: QueueParkPreservation;
+  let preservation: QueueParkPreservation | { readonly confirmed: false };
   try {
     preservation = await input.stop({
       ...(input.handle === undefined ? {} : { handle: input.handle }),
@@ -113,6 +115,12 @@ export const observeDispatchPeak = async (input: {
     });
   } catch {
     return { outcome: "refused", code: "dispatch.state-unverified" };
+  }
+  if (typeof preservation !== "string") {
+    // No confirmed terminate: never append a park for a stop that did not
+    // happen. The watcher keeps observing and renewing so the next
+    // observation retries under the occupancy rule.
+    return { outcome: "unconfirmed" };
   }
   const appended = await runPeakWatch({
     lanes: [lane],
@@ -140,12 +148,15 @@ export type DispatchPeakResume =
       readonly resumedAt: string;
       readonly episodeId?: string;
       readonly parkEnd: string;
+      /** The recovery record to append only after the real session resume succeeds. */
+      readonly recoveryRecord: QueueParkRecord;
     }
   | {
       readonly outcome: "recovered";
       readonly ordinal: number;
       readonly episodeId?: string;
       readonly parkEnd: string;
+      readonly recoveryRecord: QueueParkRecord;
     }
   | {
       readonly outcome: "refused";
@@ -183,11 +194,12 @@ export const evaluateDispatchPeakResume = async (input: {
   readonly branch: string;
   readonly restartCount: number;
   readonly restartBound: number;
+  /** F-5a: production admits the automatic recovery by the restart budget only. */
+  readonly admission?: "budget-only" | "budget-and-economics";
   readonly economics: {
     readonly prefillCost: number | null;
     readonly uniqueProgress: number | null;
   };
-  readonly appendRecovery: (record: QueueParkRecord) => boolean;
   readonly resumeSession: (input: {
     readonly sessionRef: string;
     readonly branch: string;
@@ -228,36 +240,58 @@ export const evaluateDispatchPeakResume = async (input: {
     if (sessionRef === undefined || sessionRef.length === 0) return { outcome: "waiting" };
     const resumed = await input.resumeSession({ sessionRef, branch: input.branch });
     if (!resumed) return { outcome: "waiting" };
-    input.appendRecovery({ ...recovery(), sessionRef, branch: input.branch });
     return {
       outcome: "resumed",
       resumedAt: nowIso,
       parkEnd,
+      recoveryRecord: { ...recovery(), sessionRef, branch: input.branch },
       ...(park.episodeId === undefined ? {} : { episodeId: park.episodeId }),
     };
   }
-  const admission = recoverInterruptedLane({
-    restartCount: input.restartCount,
-    restartBound: input.restartBound,
-    economics: input.economics,
-  });
-  if (!admission.admitted) {
-    if (admission.terminal) input.escalate({ code: admission.code });
-    return {
-      outcome: "refused",
-      code: admission.code,
-      terminal: admission.terminal,
-      parkEnd,
-      ...(park.episodeId === undefined ? {} : { episodeId: park.episodeId }),
-    };
+  const budgetOnly = input.admission === undefined || input.admission === "budget-only";
+  let ordinal: number;
+  if (budgetOnly) {
+    const restart = admitDispatchRestart({
+      count: input.restartCount,
+      bound: input.restartBound,
+      scope: "budget-consulting",
+    });
+    if (!restart.admitted) {
+      if (restart.terminal) input.escalate({ code: restart.reason });
+      return {
+        outcome: "refused",
+        code: restart.reason,
+        terminal: restart.terminal,
+        parkEnd,
+        ...(park.episodeId === undefined ? {} : { episodeId: park.episodeId }),
+      };
+    }
+    ordinal = restart.nextOrdinal;
+  } else {
+    const recovery = recoverInterruptedLane({
+      restartCount: input.restartCount,
+      restartBound: input.restartBound,
+      economics: input.economics,
+    });
+    if (!recovery.admitted) {
+      if (recovery.terminal) input.escalate({ code: recovery.code });
+      return {
+        outcome: "refused",
+        code: recovery.code,
+        terminal: recovery.terminal,
+        parkEnd,
+        ...(park.episodeId === undefined ? {} : { episodeId: park.episodeId }),
+      };
+    }
+    ordinal = recovery.ordinal;
   }
-  const reentered = await input.reenter({ ordinal: admission.ordinal });
+  const reentered = await input.reenter({ ordinal });
   if (!reentered) return { outcome: "waiting" };
-  input.appendRecovery(recovery());
   return {
     outcome: "recovered",
-    ordinal: admission.ordinal,
+    ordinal,
     parkEnd,
+    recoveryRecord: recovery(),
     ...(park.episodeId === undefined ? {} : { episodeId: park.episodeId }),
   };
 };

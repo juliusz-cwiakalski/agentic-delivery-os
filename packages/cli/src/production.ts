@@ -354,6 +354,7 @@ import {
   renderPriorIdentityNotice,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
+  type StateJsonValue,
   type StateStorePort,
   type SupervisorPort,
   TELEMETRY_RUN_ID_UNAVAILABLE,
@@ -3016,11 +3017,13 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const peakPausingEnabled = (): boolean => {
       const gitRoot = gitRootForConfig();
       const acquired = acquireProjectConfiguration(gitRoot);
-      if (!acquired.ok) return true;
+      if (!acquired.ok) return false;
       const resolvedConfig = resolveConfig({ sources: acquired.sources });
-      if (!resolvedConfig.ok) return true;
+      if (!resolvedConfig.ok) return false;
       const lane = resolveLaneSettings(resolvedConfig.value.values, resolvedConfig.value.origins);
-      return lane.ok ? lane.value.disablePeakPausing !== true : true;
+      // A configuration that would refuse every dispatch must not claim a
+      // composed watch: the composition fact degrades to iteration-start gating.
+      return lane.ok ? lane.value.disablePeakPausing !== true : false;
     };
 
     const queueComposition = withRepositoryBinding(
@@ -4806,34 +4809,34 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       };
     };
 
-    let cachedPeakRules: ReadonlyMap<string, ProviderProfilePeakRules> | undefined;
-    /** One parsed rules lookup for the watch, the stop, and the mode. */
-    const peakRulesFor = (profile: string): ProviderProfilePeakRules | undefined => {
-      if (cachedPeakRules === undefined) {
-        const rules = new Map<string, ProviderProfilePeakRules>();
-        const gitRoot = gitRootForConfig();
-        const acquired = acquireProjectConfiguration(gitRoot);
-        if (acquired.ok) {
-          const resolvedConfig = resolveConfig({ sources: acquired.sources });
-          if (resolvedConfig.ok) {
-            const providerParsed = parseAndValidateProviderConfiguration(
+    /** A fresh parse of the declared peak rules; used at resume admission. */
+    const readPeakRules = (): ReadonlyMap<string, ProviderProfilePeakRules> => {
+      const rules = new Map<string, ProviderProfilePeakRules>();
+      const gitRoot = gitRootForConfig();
+      const acquired = acquireProjectConfiguration(gitRoot);
+      if (acquired.ok) {
+        const resolvedConfig = resolveConfig({ sources: acquired.sources });
+        if (resolvedConfig.ok) {
+          const providerParsed = parseAndValidateProviderConfiguration(resolvedConfig.value.values);
+          if (providerParsed.ok) {
+            const profileParsed = parseAndValidateProfileConfiguration(
               resolvedConfig.value.values,
+              providerParsed.config,
             );
-            if (providerParsed.ok) {
-              const profileParsed = parseAndValidateProfileConfiguration(
-                resolvedConfig.value.values,
-                providerParsed.config,
-              );
-              if (profileParsed.ok) {
-                for (const [name, fact] of Object.entries(profileParsed.config.profiles)) {
-                  if (fact.peakWindows !== undefined) rules.set(name, fact.peakWindows);
-                }
+            if (profileParsed.ok) {
+              for (const [name, fact] of Object.entries(profileParsed.config.profiles)) {
+                if (fact.peakWindows !== undefined) rules.set(name, fact.peakWindows);
               }
             }
           }
         }
-        cachedPeakRules = rules;
       }
+      return rules;
+    };
+    let cachedPeakRules: ReadonlyMap<string, ProviderProfilePeakRules> | undefined;
+    /** One parsed rules lookup for the watch, the stop, and the mode. */
+    const peakRulesFor = (profile: string): ProviderProfilePeakRules | undefined => {
+      cachedPeakRules ??= readPeakRules();
       return cachedPeakRules.get(profile);
     };
     /** The nominated profile's declared grace default in milliseconds. */
@@ -4850,7 +4853,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         const appended = store.append(acquired.value.handle, {
           kind: QUEUE_PARK_RECORD_KIND,
           recordKey: queueParkRecordKey(record.ref),
-          payload: record as unknown as never,
+          payload: record as StateJsonValue,
         });
         return appended.ok;
       } finally {
@@ -4975,16 +4978,23 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           const sessionPort = harnessFor(settings.kind);
           const terminate = sessionPort.terminate;
           if (terminate === undefined || handle === undefined) {
-            return "session-state-not-preserved";
+            return { confirmed: false } as const;
           }
           const terminated = await terminate({ handle, graceMs });
-          return terminated.ok && terminated.value.terminated
-            ? "preserved"
-            : "session-state-not-preserved";
+          if (!terminated.ok || !terminated.value.terminated) {
+            return { confirmed: false } as const;
+          }
+          // F-8: a session that survived the grace and was KILLed is not
+          // preserved; a TERM-only stop is.
+          return terminated.value.escalated ? "session-state-not-preserved" : "preserved";
         };
         return {
-          watchEnabled: lane.disablePeakPausing !== true,
+          // F-6: a harness without a terminate capability cannot confirm a
+          // stop, so it composes no automatic watch.
+          watchEnabled:
+            lane.disablePeakPausing !== true && harnessFor(settings.kind).terminate !== undefined,
           rulesFor,
+          resumeRulesFor: (profile: string) => readPeakRules().get(profile),
           zoneFactsFor,
           parks,
           recoverParks: () => {
@@ -4998,13 +5008,23 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
               fenceToken: newFenceToken(),
               ownerHold: readOwnerHold(),
             });
-            return recovered.ok
-              ? { ok: true as const }
-              : ({
-                  ok: false,
-                  kind: recovered.kind === "state" ? "state" : "queue",
-                  code: recovered.code,
-                } as const);
+            if (!recovered.ok) {
+              return {
+                ok: false,
+                kind: recovered.kind === "state" ? "state" : "queue",
+                code: recovered.code,
+              } as const;
+            }
+            // F-11: the delivered pass reports an unrecoverable park as
+            // `value.stuck`; a stuck marker is a refusal, never a recovery.
+            if (recovered.value.stuck.length > 0) {
+              return {
+                ok: false,
+                kind: "queue",
+                code: "queue.park-condition-stuck",
+              } as const;
+            }
+            return { ok: true as const };
           },
           unexpiredStandingPark: (ref: string) => {
             const read = readQueueParks(store);
@@ -5045,6 +5065,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             prefillCost: null,
             uniqueProgress: null,
           }),
+          recoveryAdmission: "budget-only",
           escalate: () => {},
         };
       })(),
@@ -5098,10 +5119,11 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
               };
         },
       },
-      releaseLease: (ref) => {
+      releaseLease: (ref, _cause, expectedHeartbeatAt) => {
         const released = releaseQueueLease(store, {
           ref,
           holder: "dispatch",
+          ...(expectedHeartbeatAt === undefined ? {} : { expectedHeartbeatAt }),
           nowIso: nowIso(),
           nowMs: nowMs(),
           fenceToken: newFenceToken(),

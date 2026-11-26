@@ -278,7 +278,6 @@ const PARK_KEYS = [
   "episodeId",
   "sessionRef",
   "branch",
-  "recoveryRefusal",
 ] as const;
 const INCIDENT_KEYS = ["schema", "type", "ref", "repository", "evidence", "recordedAt"] as const;
 const REMOVAL_KEYS = ["schema", "ref", "reason", "recordedAt", "callerPrincipal"] as const;
@@ -406,7 +405,6 @@ const isParkRecord = (value: unknown): value is QueueParkRecord => {
     "episodeId",
     "sessionRef",
     "branch",
-    "recoveryRefusal",
   ] as const) {
     if (value[key] !== undefined && !isNonEmptyString(value[key])) return false;
   }
@@ -2493,6 +2491,8 @@ export const releaseQueueLease = (
   request: {
     readonly ref: string;
     readonly holder?: string;
+    /** F-3: release only when the live lease's latest heartbeat is this write. */
+    readonly expectedHeartbeatAt?: string;
     readonly park?: {
       readonly cause: QueueParkCause;
       readonly condition: QueueParkCondition;
@@ -2529,6 +2529,14 @@ export const releaseQueueLease = (
     }
     const existing = activeRead.active.find((lease) => lease.repository === repository);
     if (existing === undefined) {
+      return { ok: true, value: { result: "noop" } };
+    }
+    if (
+      request.expectedHeartbeatAt !== undefined &&
+      existing.heartbeatAt !== request.expectedHeartbeatAt
+    ) {
+      // The live lease is not this invocation's own last write: it belongs to
+      // a successor, so the release is a no-op, never a deletion.
       return { ok: true, value: { result: "noop" } };
     }
     if (request.holder !== undefined && existing.holder !== request.holder) {

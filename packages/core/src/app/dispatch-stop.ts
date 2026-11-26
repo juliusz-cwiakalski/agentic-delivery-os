@@ -105,12 +105,21 @@ export const executeDispatchStop = async (
     };
   }
   const untilMs = Date.parse(request.until);
-  if (!Number.isFinite(untilMs)) {
+  const canonicalUntil = Number.isFinite(untilMs) ? new Date(untilMs).toISOString() : undefined;
+  if (untilMs === undefined || !Number.isFinite(untilMs) || canonicalUntil !== request.until) {
     return {
       ok: false,
       kind: "input",
       code: "input.value.rejected",
       summary: "the declared end is not a canonical instant",
+    };
+  }
+  if (untilMs <= request.nowMs) {
+    return {
+      ok: false,
+      kind: "input",
+      code: "input.value.rejected",
+      summary: "the declared end must be after the request instant",
     };
   }
   const lane = newestLaneFor(ports.lanes(), repository, request.ref);
@@ -171,7 +180,9 @@ export const executeDispatchStop = async (
       summary: `ref=${request.ref}; state=unconfirmed-terminate; no live exact identity matched`,
     };
   }
-  const preservation: QueueParkPreservation = "preserved";
+  // F-8: an escalated stop (TERM survived, KILLed) is not a preserved session.
+  const preservation: QueueParkPreservation =
+    terminated.escalated === true ? "session-state-not-preserved" : "preserved";
   const episodeId = ports.newEpisodeId(request.ref);
   const record: QueueParkRecord = {
     schema: "delivery.queue.park.v1",
@@ -185,7 +196,7 @@ export const executeDispatchStop = async (
     recoveryState: "parked",
     ...(lane.providerProfile === undefined ? {} : { providerProfile: lane.providerProfile }),
     until: request.until,
-    graceDeadline: new Date(request.nowMs + graceMs).toISOString(),
+    graceDeadline: new Date(request.nowMs + (profileGraceMs ?? graceMs)).toISOString(),
     windowEnd: request.until,
     stoppedAt: request.nowIso,
     preservation,

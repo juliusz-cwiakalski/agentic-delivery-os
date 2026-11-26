@@ -4,9 +4,15 @@
  * NFR-2, DM-1, RSK-14, DEC-22, DEC-23).
  */
 import { describe, expect, test } from "bun:test";
+import {
+  declareQueueEntry,
+  queueParkRecordKey,
+  recoverQueueParks,
+} from "../../packages/core/src/app/index";
 import type { QueueParkRecord } from "../../packages/core/src/contracts/index";
 import { createPeakScenario } from "../fixtures/dispatch/golden/harness";
 import { atUtcHour, RULES_BY_PROFILE } from "../fixtures/provider/profile/gh413-rules";
+import { makeAuditStore, removeRoot } from "../fixtures/state/harness";
 
 const standingPark = (until: string): QueueParkRecord => ({
   schema: "delivery.queue.park.v1",
@@ -121,6 +127,55 @@ describe("TC-PEAK-038 an unrecoverable standing park refuses the run", () => {
       expect(peak.parks).toHaveLength(1);
     } finally {
       scenario.dispose();
+    }
+  });
+});
+
+describe("TC-PEAK-038 the real mutating pass reports a stuck marker", () => {
+  test("a clear-observed marker is surfaceable as queue.park-condition-stuck", () => {
+    const fixture = makeAuditStore("gh413-stuck-marker");
+    try {
+      const declared = declareQueueEntry(fixture.store, {
+        ref: "GH-413",
+        repository: "github.com/owner/repo",
+        repositoryRoot: "/work/repo",
+        priority: 1,
+        recordedAt: "2026-11-12T06:00:00.000Z",
+        fenceToken: "gh413-stuck-seed",
+      });
+      expect(declared.ok).toBe(true);
+      const acquired = fixture.store.acquireFence("gh413-stuck-park");
+      if (!acquired.ok) throw new Error("fence refused");
+      const appended = fixture.store.append(acquired.value.handle, {
+        kind: "queue.park",
+        recordKey: queueParkRecordKey("GH-413"),
+        payload: {
+          schema: "delivery.queue.park.v1",
+          ref: "GH-413",
+          repository: "github.com/owner/repo",
+          cause: "peak-window",
+          conditionType: "provider-window",
+          condition: { type: "provider-window", expiresAt: "2026-11-12T06:30:00.000Z" },
+          recheckMs: 60_000,
+          evaluatedAt: "2026-11-12T06:00:00.000Z",
+          recoveryState: "clear-observed",
+          clearObservedAt: "2026-11-12T06:00:00.000Z",
+          recordedAt: "2026-11-12T06:00:00.000Z",
+        } as never,
+      });
+      fixture.store.releaseFence(acquired.value.handle);
+      expect(appended.ok).toBe(true);
+      const pass = recoverQueueParks(fixture.store, {
+        nowIso: "2026-11-12T06:31:00.000Z",
+        nowMs: Date.parse("2026-11-12T06:31:00.000Z"),
+        context: { providerAvailable: true, leaseHeldRepositories: ["github.com/owner/repo"] },
+        fenceToken: "gh413-stuck-pass",
+      });
+      expect(pass.ok).toBe(true);
+      if (!pass.ok) return;
+      expect(pass.value.stuck).toContain("GH-413");
+    } finally {
+      removeRoot(fixture.root);
     }
   });
 });

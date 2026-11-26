@@ -2,7 +2,12 @@
 # GH-413: M4-S42: Peak pausing for a lane started by dispatch: it stops at the
 # window's start and resumes at the window's end
 #
-# Plan revision v1.5.
+# Plan revision v1.6.
+#
+#   v1.6 (2026-11-26): phase 9 appended by the code review, iteration 1
+#   (code-review/review-iter-1.yaml, FAIL on 23 findings). Phases 1 to 8
+#   are unchanged; a later plan-writer revision is expected to declare the
+#   delivered shape that drifted after phase 8 (review finding F-20).
 #
 # Sources, read in full before this plan was authored (the single source of
 # truth for every phase, test case, and path below):
@@ -1083,3 +1088,201 @@ phases:
     doneArtifacts:
       mergeRequestUrl: "the GH-413 pull request against main-tools, carrying the release note and the hand-off and its preconditions recorded in the change's pm-notes before dod_check (TC-PEAK-029)"
       pipelineId: "the CI pipeline of the GH-413 pull request (the aggregate pnpm check green with every suite executed)"
+  - id: 9
+    title: "Code Review Remediation (Iteration 1): the red suites, lease ownership on return, the production peak binding, no park without a confirmed stop, bounded waits, and the parked-interval proof"
+    kind: delivery
+    summary: "remediate the code review iteration-1 findings (code-review/review-iter-1.yaml): turn the red suites green, fence the lease release and the lost-lease return on ownership, bind real economics, exhaustion and resume facts in the production peak composition, never append a park without a confirmed stop, turn the runaway throws into classified outcomes, renew through the post-collection withhold, keep the first liveness observation and the observation cadence, classify an escalated stop as not preserved, surface stuck parks, and prove the parked-interval lease, the window opening and the cross-process hand-off end to end"
+    # Scope: code-review/review-iter-1.yaml, iteration 1 (FAIL on 23 findings:
+    # F-1 to F-14 and F-16 to F-23). That record is the authority for each
+    # item; this comment maps the findings to the files below. Phases 1 to 8
+    # are not reopened by this phase.
+    #
+    # Decisions this phase does NOT take (the PM settles them first; the coder
+    # implements the settled answer):
+    #   - F-5a: the admission rule of the production not-preserved recovery
+    #     (real cost facts, or the delivered budget-consulting admission the
+    #     stall restart already uses).
+    #   - F-10: the carrier of the recovery refusal. Recommended: the terminal
+    #     lane record, with the unused park-record member removed; spec DM-2,
+    #     DM-3, spec F-6, AC-F4-3 and AC-F6-1 follow through the spec-writer.
+    #   - F-15: the parked-interval refusal identity. Recommended: keep
+    #     `dispatch.resume-parked`; Flow 5, AC-F5-2, TDR-0078 C-1 and the
+    #     guide follow through the spec-writer and the doc-syncer.
+    # Spec, test plan and record corrections (F-10, F-15, F-17, F-19, F-20)
+    # are routed by the PM to the spec-writer, the plan-writer and the
+    # doc-syncer. This phase edits no change artifact and no decision record
+    # substance.
+    #
+    # R1 Red suites first (F-1). Add `dispatch.resume-parked` to a named GH-413
+    #    exclusion set in tests/structure/supervision-error-family.test.ts (the
+    #    pattern of every earlier additive row; the pinned length stays 150).
+    #    Move the one-read pin of tests/conformance/dispatch/
+    #    dispatch-operator-posture.test.ts to the declared two reads of
+    #    `dispatch status`. Give the production-composition fixtures an
+    #    injected `dispatchDelay` recorder so the post-collection withhold
+    #    costs no wall time in the battery, with production semantics
+    #    unchanged, in tests/structure/dispatch-composition.test.ts,
+    #    tests/behaviour/dispatch-production-worktree.test.ts,
+    #    tests/behaviour/queue-production-binding.test.ts,
+    #    tests/behaviour/dispatch-admission-preflight.test.ts and
+    #    tests/behaviour/dispatch-admission-diagnostics.test.ts. Those seven
+    #    files were red at HEAD in the review's run (two stale pins, 31
+    #    timeouts at 5000 ms) and none was in a phase verify set.
+    # R2 Lease ownership on return (F-3, F-4). The engine's `finally` releases
+    #    only a lease whose latest heartbeat is this invocation's own last write
+    #    (an ownership-fenced release through the delivered path; a lost-lease
+    #    invocation releases nothing and never the successor's lease). After
+    #    any session end, not only a stall, a lease-lost invocation returns one
+    #    classified `dispatch.state-unverified` result naming the lost lease
+    #    with `lease:not-owned` in evidence, before the withhold, the
+    #    derivation and the push-parity act. Correct the self-contradictory
+    #    comment at the parked return.
+    # R3 The production peak binding (F-5, F-6, F-8, F-11, F-16, F-18, F-22).
+    #    Implement the settled F-5a rule and call `ensureExhaustion` on a
+    #    terminal window-end refusal; append the recovery record only after the
+    #    next iteration's session acquisition succeeds. Never append a park
+    #    without a confirmed terminate: compose `watchEnabled` false for a
+    #    harness that declares no terminate, refuse an unconfirmed terminate in
+    #    the production stop port, and keep the watcher observing and renewing
+    #    after an unconfirmed stop. Derive the preservation classification from
+    #    the terminate result in both writers (an escalated stop is
+    #    `session-state-not-preserved`). Map a non-empty `value.stuck` of the
+    #    delivered pass to the run refusal. Re-read the rule configuration at
+    #    resume admission instead of the composer-lifetime cache. In
+    #    `dispatch stop`: record the profile-bounded grace deadline as the
+    #    watch does, refuse an end at or before the request instant, and
+    #    validate the canonical instant. Scope the cross-process terminate
+    #    match to the resolved repository, or carry the
+    #    one-lane-per-ref-per-host precondition into the operations guide.
+    # R4 The watcher and bounded waits (F-2, F-7, F-9, F-12). Take the first
+    #    liveness observation before any await can let the post-collection
+    #    stop intervene, so a session that ends in the spawn tick still
+    #    carries its `liveness:unknown` evidence (TC-TERM-007). Remove the
+    #    `watcher runaway` and `peak wait runaway` turn caps; if a guard stays
+    #    for hermeticity it keys on a non-advancing injected clock and returns
+    #    a classified result with its attempt and terminal lane record. Renew
+    #    inside the post-collection withhold. Wake at the earlier of the next
+    #    observation due and the next renewal due, so the configured
+    #    `lane.liveness-interval` is the observation interval, and record the
+    #    effective cadence in the verdict trail.
+    # R5 The recovery-refusal carrier (F-10), per the settled decision: remove
+    #    the unused `QueueParkRecord.recoveryRefusal` member, its `PARK_KEYS`
+    #    entry and its validator clause when the terminal lane record is the
+    #    carrier; the pins move with it.
+    # R6 Tests that prove the spec at the production shape (F-13, F-14): an
+    #    engine-level suite over a real store with the renewal port bound to
+    #    `renewDispatchLease` (a park crossing three TTL boundaries with a
+    #    second dispatch refused at each; the same above the TTL; the same
+    #    under an active hold; the re-dispatch arm with the successor's lease
+    #    surviving the earlier return); the two window-opening arms of AC-F1-2
+    #    (one across a restart iteration); the snapshot comparison and the
+    #    standing-park arm of TC-PEAK-037; one hand-off test that runs
+    #    `executeDispatchStop` against the owning invocation's real store; the
+    #    byte comparison of TC-PEAK-013 with the peak port composed; the
+    #    decision-record case of TC-PEAK-027 step 2; production-composition
+    #    arms for a terminate-less harness, an unconfirmed terminate, an
+    #    escalated stop, null economics, exhaustion and a stuck park; the arms
+    #    named in R2 and R4; and declare the fixture option
+    #    `standingParkVisibleAtMs` on `PeakFixtureOptions`. The ordering
+    #    assertion of F-17 (the refusal appends no park and no spawn or resume
+    #    is called) rides on the standing-park suite.
+    # R7 Rule and clarity items (F-21): `isStopData` and a non-optional local
+    #    in place of the casts; the envelope doc comment back above
+    #    `DispatchEnvelopeData`; `session-interrupted` as the restart reason of
+    #    a not-preserved recovery (the port widened to the delivered reason
+    #    set); the evidence tokens documented beside `lease:not-owned`;
+    #    `peakPausingEnabled` failing to `iteration-start-gating`. F-21 (g) is
+    #    NOT in this phase: sharing the recovery-record builder with the
+    #    delivered resume pass edits the fenced decision layer
+    #    (daemon-peak-pause.ts is outside every scope by the plan's own
+    #    fence), so the duplicated shape is covered by extending the parity
+    #    fixture (TC-PEAK-001) to compare the recovered record instead.
+    #
+    # Idempotency: this phase exists once. A re-review that still fails appends
+    # nothing to this phase and records its findings in review-iter-2.yaml; the
+    # PM routes them as a delta phase or as a reopen of this one.
+    #
+    # Close: `phase complete GH-413 delivery` with one pm-notes `notes:` entry
+    # naming phase id 9, every commit hash of the phase, and the pass and fail
+    # counts of the suites below, including the seven files of R1 and the four
+    # production-composition suites run in isolation.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/supervision-error-family.test.ts tests/conformance/dispatch/dispatch-operator-posture.test.ts tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts tests/structure/dispatch-composition.test.ts tests/behaviour/dispatch-production-worktree.test.ts tests/behaviour/queue-production-binding.test.ts tests/behaviour/dispatch-admission-preflight.test.ts tests/behaviour/dispatch-admission-diagnostics.test.ts
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-lease-liveness.test.ts tests/behaviour/dispatch-peak-parity.test.ts tests/behaviour/dispatch-peak-watch.test.ts tests/behaviour/dispatch-peak-episode.test.ts tests/behaviour/dispatch-peak-stop-grace.test.ts tests/behaviour/dispatch-peak-nomination.test.ts tests/behaviour/dispatch-peak-resume.test.ts tests/behaviour/dispatch-peak-recovery.test.ts tests/behaviour/dispatch-peak-preservation.test.ts tests/behaviour/dispatch-peak-standing-park.test.ts tests/behaviour/dispatch-peak-owner-hold.test.ts tests/behaviour/dispatch-peak-isolation.test.ts tests/behaviour/dispatch-peak-setting.test.ts tests/behaviour/dispatch-peak-mode.test.ts tests/behaviour/dispatch-status-park.test.ts tests/behaviour/dispatch-stop.test.ts tests/behaviour/dispatch-stop-cause.test.ts tests/behaviour/dispatch-stop-handoff.test.ts tests/behaviour/dispatch-stop-race.test.ts tests/behaviour/dispatch-stop-refusal.test.ts tests/behaviour/dispatch-stop-safety.test.ts tests/behaviour/harness-opencode-resume-stream.test.ts tests/checks/decision-record.test.ts tests/checks/error-table-sync.test.ts tests/structure/error-table.test.ts
+    # Verify, read-only controls (never edited): the delivered dispatch,
+    # queue-lease, single-flight and identity-override suites, and the whole
+    # `bun test` battery once before the re-review (DoD item 3).
+    scope:
+      files:
+        - packages/adapters/src/harness/opencode.ts
+        - packages/cli/src/commands/dispatch.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - packages/core/src/app/dispatch-lane-view.ts
+        - packages/core/src/app/dispatch-ledger.ts
+        - packages/core/src/app/dispatch-peak-pause.ts
+        - packages/core/src/app/dispatch-stop.ts
+        - packages/core/src/app/dispatch.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/app/queue.ts
+        - packages/core/src/contracts/dispatch.ts
+        - packages/core/src/contracts/queue.ts
+        - doc/guides/engine-first-operations.md
+        - doc/spec/features/feature-dispatch-engine.md
+        - doc/spec/features/feature-peak-pausing.md
+        - doc/spec/features/feature-scheduling-engine.md
+        - doc/spec/features/feature-status-digest.md
+        - doc/spec/nonfunctional.md
+        - tests/behaviour/dispatch-admission-diagnostics.test.ts
+        - tests/behaviour/dispatch-admission-preflight.test.ts
+        - tests/behaviour/dispatch-lease-liveness.test.ts
+        - tests/behaviour/dispatch-peak-byte-identical.test.ts
+        - tests/behaviour/dispatch-peak-episode.test.ts
+        - tests/behaviour/dispatch-peak-mode.test.ts
+        - tests/behaviour/dispatch-peak-nomination.test.ts
+        - tests/behaviour/dispatch-peak-owner-hold.test.ts
+        - tests/behaviour/dispatch-peak-preservation.test.ts
+        - tests/behaviour/dispatch-peak-recovery.test.ts
+        - tests/behaviour/dispatch-peak-resume.test.ts
+        - tests/behaviour/dispatch-peak-standing-park.test.ts
+        - tests/behaviour/dispatch-peak-watch.test.ts
+        - tests/behaviour/dispatch-production-worktree.test.ts
+        - tests/behaviour/dispatch-status-park.test.ts
+        - tests/behaviour/dispatch-stop-cause.test.ts
+        - tests/behaviour/dispatch-stop-handoff.test.ts
+        - tests/behaviour/dispatch-stop-race.test.ts
+        - tests/behaviour/dispatch-stop-refusal.test.ts
+        - tests/behaviour/dispatch-stop-safety.test.ts
+        - tests/behaviour/dispatch-stop.test.ts
+        - tests/behaviour/harness-opencode-resume-stream.test.ts
+        - tests/behaviour/queue-production-binding.test.ts
+        - tests/checks/decision-record.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/conformance/dispatch/dispatch-operator-posture.test.ts
+        - tests/conformance/dispatch/dispatch-operator-status.test.ts
+        - tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts
+        - tests/fixtures/dispatch/golden/harness.ts
+        - tests/fixtures/dispatch/operator/contract-baseline.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/fixtures/queue/production/harness.ts
+        - tests/fixtures/queue/single-flight/harness.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/dispatch-composition.test.ts
+        - tests/structure/dispatch-contract.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/supervision-error-family.test.ts
+        # Conditional, ONLY IF created (R6):
+        #   tests/behaviour/dispatch-peak-production.test.ts (the
+        #     production-composition arms of R3 and R6)
+        #   tests/behaviour/dispatch-peak-lease-park.test.ts (the
+        #     parked-interval lease arms of F-13)
+        # Both must be added to this list in the commit that creates them.
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/app/dispatch.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/dispatch.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/production.ts
+        role: consumer

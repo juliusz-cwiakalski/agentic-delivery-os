@@ -7938,7 +7938,11 @@ export type DispatchComposition = {
   readonly peak?: DispatchPorts["peak"];
   /** The operator stop surface (GH-413 F-9); absent refuses the command. */
   readonly stop?: NonNullable<DispatchCommandRuntime["stop"]>;
-  readonly releaseLease: (ref: string, cause: "completed" | "aborted") => boolean;
+  readonly releaseLease: (
+    ref: string,
+    cause: "completed" | "aborted",
+    expectedHeartbeatAt?: string,
+  ) => boolean;
   /**
    * The provision-after-lease binding (GH-404 F-2, F-8; TC-WT-003,
    * TC-REG-002): forwarded to the engine, which invokes it exactly once after
@@ -8414,7 +8418,8 @@ export const createDispatchCommandRuntime = (
         ...(composition.renewLease === undefined ? {} : { renewLease: composition.renewLease }),
         ...(composition.leaseTtlMs === undefined ? {} : { leaseTtlMs: composition.leaseTtlMs }),
         ...(composition.peak === undefined ? {} : { peak: composition.peak }),
-        releaseLease: (cause) => composition.releaseLease(input.ref, cause),
+        releaseLease: (cause, expectedHeartbeatAt) =>
+          composition.releaseLease(input.ref, cause, expectedHeartbeatAt),
         ...(provisionWorktree === undefined
           ? {}
           : { provisionWorktree: () => provisionWorktree(input.ref) }),

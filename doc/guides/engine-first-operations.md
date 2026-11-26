@@ -128,7 +128,10 @@ Run it as follows:
   `queue.precondition.unmet` and nothing is written. The park lands only after a
   confirmed terminate, and the owning invocation re-reads the park after its
   collection resolves and waits and resumes, so the stop's answer is not the
-  resume.
+  resume. Because a fresh session's argv carries only the deterministic,
+  non-repository-scoped `ticket-<REF>` title, run at most one lane per work-item
+  ref per host: a separately invoked stop resolves the exact argv identity and
+  could otherwise reach a same-titled session in another repository.
 - **A parked lane whose invocation is gone is visible, not hidden.** `dispatch
   status` then answers `stale=true` with the park fact and its recorded end; the
   next invocation, or the delivered operator resume path, recovers the standing

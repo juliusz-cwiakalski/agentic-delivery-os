@@ -268,6 +268,11 @@ const projectionOf = (value: DispatchToken): ProjectionClass => {
   return row.projectionClass;
 };
 
+const isStopData = (data: unknown): data is DispatchStopData =>
+  typeof data === "object" &&
+  data !== null &&
+  (data as { readonly query?: unknown }).query === "stop";
+
 const isResolveData = (data: unknown): data is DispatchResolveData =>
   typeof data === "object" &&
   data !== null &&
@@ -452,7 +457,7 @@ export const createDispatchCommandDefinition = (
     exitProjection: (data) => {
       if (isSummaryData(data)) return "success";
       if (queryOf(data) === "status") return "success";
-      if ((data as { readonly query?: unknown }).query === "stop") return "success";
+      if (isStopData(data)) return "success";
       if (isDeliveringData(data)) return data.delivering ? "success" : "user-validation";
       if (isLogData(data)) return data.reason === "unreadable" ? "user-validation" : "success";
       if (isLastMessageData(data)) return data.available ? "success" : "user-validation";
@@ -473,9 +478,7 @@ export const createDispatchCommandDefinition = (
     humanText: (data, _brand, context) => {
       if (isAttemptsData(data)) return renderDispatchAttemptsText(data);
       if (isStatusData(data)) return renderDispatchStatusText(data);
-      if ((data as { readonly query?: unknown }).query === "stop") {
-        return renderDispatchStopText(data as DispatchStopData);
-      }
+      if (isStopData(data)) return renderDispatchStopText(data);
       if (isDeliveringData(data)) return renderDispatchDeliveringText(data);
       if (isLogData(data)) return renderDispatchLogText(data);
       if (isLastMessageData(data)) return renderDispatchLastMessageText(data);

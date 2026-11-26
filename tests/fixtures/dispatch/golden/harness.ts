@@ -290,7 +290,7 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
       calls.claims.push("claim");
       return options.claim ?? { ok: true, leaseId: "lease-1" };
     },
-    releaseLease: (_ref, cause) => {
+    releaseLease: (_ref, cause, _expectedHeartbeatAt) => {
       calls.releases.push(cause);
       return true;
     },
@@ -416,6 +416,7 @@ export type PeakFixtureOptions = {
   readonly rules?: Readonly<Record<string, ProviderProfilePeakRules>>;
   readonly killGraceMs?: number;
   readonly preservation?: QueueParkPreservation;
+  readonly stopUnconfirmed?: boolean;
   readonly watchEnabled?: boolean;
   readonly recoverParks?: () =>
     | { readonly ok: true }
@@ -498,6 +499,7 @@ export const createPeakFixture = (options: PeakFixtureOptions): PeakFixture => {
     },
     stop: async ({ handle, graceMs }) => {
       stopCalls.push({ ...(handle === undefined ? {} : { handle }), graceMs });
+      if (options.stopUnconfirmed === true) return { confirmed: false } as const;
       onStop?.();
       return options.preservation ?? "preserved";
     },
@@ -531,6 +533,7 @@ export const createPeakFixture = (options: PeakFixtureOptions): PeakFixture => {
       prefillCost: options.prefillCost ?? null,
       uniqueProgress: options.uniqueProgress ?? null,
     }),
+    recoveryAdmission: options.recoveryAdmission ?? "budget-only",
     escalate: ({ code }) => {
       escalatedCodes.push(code);
     },
@@ -560,6 +563,7 @@ export type PeakScenarioOptions = {
   readonly rules: Readonly<Record<string, ProviderProfilePeakRules | undefined>>;
   readonly nomination: string;
   readonly preservation?: QueueParkPreservation;
+  readonly stopUnconfirmed?: boolean;
   readonly watchEnabled?: boolean;
   /** The instant from which a seeded standing park is visible at admission. */
   readonly standingParkVisibleAtMs?: number;
@@ -568,7 +572,10 @@ export type PeakScenarioOptions = {
   readonly restartBound?: number;
   readonly prefillCost?: number | null;
   readonly uniqueProgress?: number | null;
+  readonly recoveryAdmission?: "budget-only" | "budget-and-economics";
   readonly recoverParks?: PeakFixtureOptions["recoverParks"];
+  readonly claim?: DispatchLeaseClaim;
+  readonly renewLease?: DispatchPorts["renewLease"];
   readonly collectAfterPolls?: number;
   readonly resumeSucceeds?: () => boolean;
   readonly reenterSucceeds?: () => boolean;
@@ -580,6 +587,7 @@ export const createPeakScenario = (options: PeakScenarioOptions) => {
     startMs: options.startMs,
     rules: options.rules as Readonly<Record<string, ProviderProfilePeakRules>>,
     ...(options.preservation === undefined ? {} : { preservation: options.preservation }),
+    ...(options.stopUnconfirmed === undefined ? {} : { stopUnconfirmed: options.stopUnconfirmed }),
     ...(options.watchEnabled === undefined ? {} : { watchEnabled: options.watchEnabled }),
     ...(options.standingParkVisibleAtMs === undefined
       ? {}
@@ -589,6 +597,9 @@ export const createPeakScenario = (options: PeakScenarioOptions) => {
     ...(options.restartBound === undefined ? {} : { restartBound: options.restartBound }),
     ...(options.prefillCost === undefined ? {} : { prefillCost: options.prefillCost }),
     ...(options.uniqueProgress === undefined ? {} : { uniqueProgress: options.uniqueProgress }),
+    ...(options.recoveryAdmission === undefined
+      ? {}
+      : { recoveryAdmission: options.recoveryAdmission }),
     ...(options.recoverParks === undefined ? {} : { recoverParks: options.recoverParks }),
     ...(options.resumeSucceeds === undefined ? {} : { resumeSucceeds: options.resumeSucceeds }),
     ...(options.reenterSucceeds === undefined ? {} : { reenterSucceeds: options.reenterSucceeds }),
@@ -609,6 +620,8 @@ export const createPeakScenario = (options: PeakScenarioOptions) => {
       ],
     }),
     nominate: () => ({ ok: true, profile: options.nomination }),
+    ...(options.claim === undefined ? {} : { claim: options.claim }),
+    ...(options.renewLease === undefined ? {} : { renewLease: options.renewLease }),
     peak: peak.peak,
     waitForCadence: peak.waitForCadence,
   });

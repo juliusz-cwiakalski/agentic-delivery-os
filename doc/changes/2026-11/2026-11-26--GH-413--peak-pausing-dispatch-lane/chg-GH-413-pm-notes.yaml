@@ -235,6 +235,23 @@ decisions:
       no scope change; the three delivery notes still apply; the records stay
       Proposed; no model assignment."
     date: "2026-11-26"
+  - text: "Review iteration 1 FAIL decisions. F-5a: the production not-preserved
+      recovery uses the delivered budget-only admission (the same rule the stall
+      restart uses), not real cost facts; it consumes one ordinal under the
+      restart budget, and null economics never make every recovery refuse
+      `dispatch.state-unverified`. F-10: the `recoveryRefusal` carrier is the
+      terminal durable lane record, not the park record; the unused
+      `QueueParkRecord.recoveryRefusal` member is deleted and the spec, test plan
+      and current-truth pages say the terminal lane record carries it. F-15: keep
+      `dispatch.resume-parked`; a second dispatch during an un-expired park is the
+      pre-session refusal at exit 2, while `queue.single-flight` still applies to
+      a running lane without a park; correct Flow 5, AC-F5-2 and TDR-0078 C-1.
+      F-17: the code is right and the spec is wrong; the recovery pass runs before
+      the first session, so an unrecoverable standing park is a refusal that
+      starts no session; remove the 'after the session started' terminate arm
+      from F-3/AC-F3-4 and align the plan, test plan and TDR-0077 D8 to the
+      ordering invariant."
+    date: "2026-11-26"
 open_questions: []
 blockers: []
 notes:
