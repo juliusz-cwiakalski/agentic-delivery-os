@@ -4,13 +4,22 @@
 #
 # Sources, read in full before this plan was authored (the single source of
 # truth for every phase, test case, and path below):
-#   chg-GH-413-spec.md (v1.0) and chg-GH-413-test-plan.md (v1.0), this folder.
+#   chg-GH-413-spec.md (v1.1) and chg-GH-413-test-plan.md (v1.1), this folder;
+#   readiness-review/readiness-iter-1.md, whose findings 2, 4, 5, 9, 11, 12
+#   and 13 route to this plan.
 #
-# Phase order is the spec's delivery order (section 18) restated by the test
-# plan's implementation mapping (section 7): the setting and its validation,
-# the watch and the episode with the wait and the resume, the surfaces and the
-# one-result summary, the operator command; then the cross-cutting proof, the
-# decision record, and the release and spec-reconciliation declaration.
+# Phase order follows the spec's delivery order (section 18) with one plan-level
+# placement: the lease-liveness phase (2) precedes the watch phase (3), so the
+# watch inherits a live lease, and the renewal's park-side proof completes with
+# the wait in phase 3. The remaining order is the spec's: the watch and the
+# episode, the surfaces and the mode rule, the operator command; then the
+# cross-cutting proof, the decision records, and the release and
+# spec-reconciliation declaration.
+#
+# Test plan crosswalk: the scenario index and the mapping table number phases
+# before the lease phase was inserted. Their phases 2 to 7 are this plan's
+# phases 3 to 8, and TC-PEAK-010's lease arms are owned by this plan's phase 2.
+# Every one of the 36 test cases is owned by exactly one phase below.
 #
 # Declaration discipline
 #   - The commit primitive stages an untracked (new) file only inside the
@@ -25,7 +34,10 @@
 #     counts. Each is declared beside that code with its authorising clause.
 #   - A file whose edit is conditional says so in the comment beside it.
 #
-# Fences binding every phase (spec sections 4.2, 7.2, 8.5, 15)
+# Fences binding every phase (spec sections 4.2, 7.2, 8.5, 12, 15, 18)
+#   - Owner delivery note 4: delivery never searches the file system outside
+#     the checkout and the change folder. Every fact, fixture, and command is
+#     reachable from those two roots.
 #   - NG-1: the resident daemon's supervision cycle, watch, park, and resume
 #     are not edited. packages/core/src/app/daemon-supervision.ts,
 #     packages/core/src/app/supervise.ts, and packages/cli/src/daemon-compose.ts
@@ -34,13 +46,30 @@
 #     packages/core/src/domain/daemon-peak-pause.ts, queue-park.ts, spend.ts,
 #     event-projection.ts, and packages/core/src/provider/peak.ts, peak-rules.ts
 #     are outside every scope.
+#   - Lease liveness (DEC-13, NFR-10, DM-9, TDR-0078): the lane keeps its lease
+#     live through the run and the park by the delivered renewal path and the
+#     existing lease record. A park longer than the TTL with no renewal is a
+#     change defect, never a documented exposure. The admission claim keeps its
+#     delivered refusal of a live same-ref lease, and no queue record kind,
+#     lease operation, or claim result is added.
+#   - The mode is the only intended no-park change (DEC-6, NFR-9): with no park
+#     open, `peakEnforcement.mode` on a production composition with pausing
+#     enabled reads `window-watch`; every other delivered field and line is
+#     byte-identical.
+#   - `dispatch stop` (DEC-15): admits `peak-window` only, requires `--until`,
+#     never signals itself, and hands the stop to the owning invocation through
+#     the durable lane and park records.
+#   - The lane record's nomination (DEC-16) is written only from the admission
+#     nomination and is never fabricated, defaulted, or inferred; a pre-change
+#     record is not window-pausable.
 #   - NG-6 and NFR-8: no new park cause, event kind, record kind, schema
 #     identity, error identity, error-table row, result token, composition-fact
-#     mode value, or second kill path. The not-running refusal reuses the
-#     delivered `queue.precondition.unmet` identity (DEC-8).
-#   - NG-2 to NG-5, NG-7, NG-8: no parallel lanes, no calendar-shaped window
+#     mode value, or second kill path. The refusals reuse the delivered
+#     `queue.precondition.unmet` and `config.value.invalid` identities.
+#   - NG-2 to NG-5, NG-7 to NG-9: no parallel lanes, no calendar-shaped window
 #     policy, no resident mode, no shell-orchestrator change, no window read
-#     surface, and no change to admission gating or the nomination rule.
+#     surface, no change to provider-entry admission gating or the nomination
+#     rule, and no provider-entry `peak` window in the lane watch.
 #   - The aggregate gate (`pnpm check`, run once with TMPDIR=$PWD/tmp/tmpdir)
 #     belongs to the lifecycle quality_gates phase, not to a plan phase. A plan
 #     phase runs only its affected suites.
@@ -50,14 +79,20 @@ workItemRef: GH-413
 tier:
   name: full
   escalationTriggers:
-    - "A second signal, kill, or termination route appears beside the delivered terminate path, or a stop is issued with more or fewer than one terminate request (NG-6, NFR-1, AC-F9-2, TC-PEAK-019): stop and report; never add a signal to the command path or to the engine."
-    - "A new park cause, event kind, record kind, schema identity, error identity, error-table row, result token, or a third composition-fact mode value appears (NG-6, DEC-3, DEC-6, DEC-8, NFR-8, TC-PEAK-027): stop and report; vocabulary economy is a delivered discipline."
+    - "A second signal, kill, or termination route appears beside the delivered terminate path, or a stop is issued with more or fewer than one terminate request (NG-6, NFR-1, AC-F3-3, AC-F9-2, TC-PEAK-019): stop and report; never add a signal to the command path or to the engine."
+    - "A new park cause, event kind, record kind, lease operation, claim result, schema identity, error identity, error-table row, result token, or a third composition-fact mode value appears (NG-6, DEC-3, DEC-6, DEC-8, NFR-8, TC-PEAK-027): stop and report; vocabulary economy is a delivered discipline."
     - "The dispatch composition is observed computing a window rule of its own instead of calling the delivered decision functions, or the parity fixture disagrees between the dispatch-owned watch and the daemon watch on the same profile and instant (AC-F1-1, RSK-8, RSK-TP-1, TC-PEAK-001): stop and report."
     - "A file on the resident daemon's supervision path or in the delivered decision layer needs an edit to go green (NG-1, F-1): stop and report; the watch composes the delivered decision functions and never changes them."
     - "The wait gains a timing mechanism of its own: a second cadence or configuration key, a wall-clock read, a real timer in the engine, or a pinned duration instead of the end re-derived from the injected clock at each wake (DEC-11, NFR-5, NFR-7, TC-PEAK-026): stop and report."
-    - "A no-park golden, a delivered daemon park or resume suite assertion, or the dispatch-additive-stability pins are modified to accommodate this change (AC-F6-3, RSK-TP-6, test plan section 7 notes): stop and report; the no-park pins are read-only and absence is asserted, never null presence."
+    - "A no-park golden, a delivered daemon park or resume suite assertion, or the dispatch-additive-stability pins are modified beyond the one named `peakEnforcement.mode` value (AC-F6-3, NFR-9, RSK-TP-6): stop and report; the no-park pins are read-only and the carve-out is exactly one field."
     - "The full battery is started before the change's changeset exists, or any gate is reported green while a check was skipped, disabled, or made vacuous (TC-PEAK-028, owner delivery note 1, RSK-TP-5): stop; run the two release suites first and record what actually ran."
-    - "The manual reference-host episode is treated as a substitute for the automated fixtures, or a red fixture is excused by a manual result (RSK-TP-8, TC-PEAK-029): stop and report; the fixtures are the merge gate and the manual episode is owner behavioural evidence."
+    - "The post-upgrade hand-off (TC-PEAK-029) is treated as a substitute for the automated fixtures, as a Done criterion, or as an episode this delivering lane must produce, or a red fixture is excused by a manual result (RSK-TP-4, RSK-TP-8, spec section 18.1 item 7): stop and report; the fixtures are the merge gate and the hand-off is a recorded obligation."
+    - "The lane's lease heartbeat age reaches the lease TTL during a run or a park, or a second dispatch of the work item is admitted or takes over a live lease (NFR-10, AC-F5-2, DEC-13, RSK-10): stop and report; a park longer than the TTL with no renewal is a change defect."
+    - "The admission claim is observed renewing or taking over a live same-ref lease, or a new queue record kind appears (TDR-0050, TDR-0078, DM-9, spec section 8.5): stop and report; only who renews and how often is added."
+    - "A no-park field or line other than the one named `peakEnforcement.mode` value moves, or the mode is derived from a test-only watch override or from another process (DEC-6, AC-F6-3, AC-F6-4, NFR-9, RSK-TP-10): stop and report."
+    - "`dispatch stop` admits a cause other than `peak-window`, runs without `--until`, or sends a signal of its own outside the delivered terminate path (DEC-15, AC-F9-2, AC-F9-3, NFR-1): stop and report."
+    - "A session is spawned or resumed before the pre-session watch evaluation, or a lane record without a stored nomination is paused, re-nominated, or given a fabricated profile (DEC-14, DEC-16, NFR-11, AC-F2-3, RSK-TP-12): stop and report."
+    - "Delivery searches the file system outside the checkout and the change folder (owner delivery note 4, spec section 12): stop and report; every fact, fixture, and command is reachable from those two roots."
 defaultLeases:
   - "repo:main-tools"
 defaultWeightClass: standard
@@ -65,11 +100,11 @@ phases:
   - id: 1
     title: "The `lane.disable-peak-pausing` policy key and the change's changeset"
     kind: delivery
-    summary: "declare the `lane.disable-peak-pausing` boolean in the typed lane policy branch (unset or false keeps automatic pausing on, the declared default; true supplies no in-flight watch), refuse a non-boolean value with the delivered `config.value.invalid` identity naming the key and no partial effect, resolve the key per admitted change through the delivered layered configuration, and add the change's single five-package minor changeset before any gate run."
+    summary: "declare the `lane.disable-peak-pausing` boolean in the typed lane policy branch (unset or false keeps automatic pausing on, the declared default; true supplies no in-flight watch and no pre-session evaluation), refuse a non-boolean value with the delivered `config.value.invalid` identity naming the key and no partial effect, resolve the key per admitted change through the delivered layered configuration, and add the change's single five-package minor changeset before any gate run."
     # Scope: spec F-8, DEC-2, DM-6, Appendix B; test plan TC-PEAK-017 and
     # TC-PEAK-028.
     # TC ownership: TC-PEAK-017 (the invalid-value refusal; its dispatch
-    # admission step is completed in phase 2) and TC-PEAK-028 (the changeset
+    # admission step is completed in phase 3) and TC-PEAK-028 (the changeset
     # check, run early and never edited).
     # The key is pinned as a contracts key constant beside
     # DISPATCH_DISABLE_WORKTREES_KEY (the GH-404 pattern), so these pinned
@@ -86,11 +121,17 @@ phases:
     # fixed-group packages at minor, `@delivery-os/testkit` absent, a non-empty
     # body, and no pre-existing changeset modified. The two release suites are
     # run in this phase and are not edited.
+    # Readiness records: readiness-iter-1.md is already tracked.
+    # readiness-iter-2.md exists before delivery and is staged by this phase's
+    # commit. readiness-iter-3.md is declared ONLY IF the gate needs a third
+    # iteration.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/config-lane.test.ts tests/behaviour/config-schema.test.ts tests/behaviour/dispatch-peak-setting.test.ts tests/checks/dispatch-contract-invariance.test.ts tests/checks/operator-contract-invariance.test.ts tests/structure/port-contract-inventory.test.ts tests/structure/content-inventory.test.ts
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/privacy-release.test.ts tests/structure/changeset-additivity.test.ts
     scope:
       files:
         - .changeset/gh-413-peak-pausing-dispatch-lane-minor.md
+        - doc/changes/2026-11/2026-11-26--GH-413--peak-pausing-dispatch-lane/readiness-review/readiness-iter-2.md
+        - doc/changes/2026-11/2026-11-26--GH-413--peak-pausing-dispatch-lane/readiness-review/readiness-iter-3.md
         - packages/core/src/config/catalog.ts
         - packages/core/src/contracts/dispatch.ts
         - packages/core/src/contracts/index.ts
@@ -111,49 +152,169 @@ phases:
         role: producer
 
   - id: 2
+    title: "Lease liveness: the lane keeps its repository lease live through the run and the park"
+    kind: delivery
+    summary: "keep the lane's repository lease live for the whole run and the whole park: the holding invocation renews it at the observation cadence through the delivered renewal path and the existing lease record, adding no queue record kind, so per-ref single-flight holds before, at, and after each lease TTL boundary and a second dispatch of the work item is refused `queue.single-flight` with the live holder; a renewal failure is retried at the next cadence and surfaced as lease evidence, and the amendment to the delivered no-renewal rule is TDR-0078."
+    # Scope: spec F-5, DEC-11, DEC-13, DM-9, NFR-7, NFR-10, Appendix D; flows 1
+    # and 5; DoR iteration-1 finding 2.
+    # TC ownership: TC-PEAK-010, for its lease arms (AC-F5-2, NFR-10, DM-9):
+    # renewal at the observation cadence across several TTL boundaries, a
+    # second dispatch refused `queue.single-flight` with the live holder
+    # before, at, and after each boundary, no takeover, and the
+    # renewal-failure arm. Its park-interval arms and its nothing-lost arms
+    # (AC-F5-1) need a park and are completed in phase 3 under this ownership.
+    # The delivered claim path, every link declared:
+    # packages/core/src/app/queue.ts (the dispatch caller's renewal entry over
+    # the delivered same-holder `renewed` arm; the admission claim keeps its
+    # no-renewal refusal), packages/core/src/contracts/queue.ts (the lease
+    # contract the renewal reads), packages/core/src/app/dispatch.ts (the run
+    # renews at each observation and surfaces a failure as bounded lease
+    # evidence), packages/cli/src/edge.ts (the closed DispatchComposition type
+    # and the single runDispatch assembly forwarding), and
+    # packages/cli/src/production.ts (the binding over the store, the fence
+    # token, and the clock).
+    # Reuse, never parallel (DEC-13): the renewal is the delivered `queue.lease`
+    # record with operation `renewed`. No record kind, lease operation, claim
+    # result, or second exclusion mechanism is added.
+    # Pins: tests/structure/content-inventory.test.ts carries the export
+    # allowance of the renewal entry; the two index files carry its exports.
+    # Conditional, ONLY IF the named change happens:
+    # tests/fixtures/ports/v1-contract-inventory.json when contracts/queue.ts
+    # names a new export; tests/conformance/dispatch/dispatch-parity-admission.test.ts
+    # and tests/fixtures/dispatch/parity/harness.ts when the parity battery's
+    # lease-record counts move.
+    # Fixtures: the lease fixtures (a live lease with renewal records, a lease
+    # near its TTL, the second-dispatch admission probe) extend
+    # tests/fixtures/queue/single-flight/harness.ts; the lease clock is the
+    # store harness's injected clock.
+    # Decision record: spec section 18 records the amendment as TDR-0078
+    # before delivery, so the record and its index row are declared here as
+    # well as in phase 7. The decision advisor writes that row and that record
+    # together, and only that row, so no commit carries an index row that
+    # points at an untracked record.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-lease-liveness.test.ts
+    # Verify, read-only controls (never edited): the admission claim still
+    # never renews or takes over a live lease
+    # (tests/behaviour/dispatch-single-flight.test.ts); the delivered lease
+    # suites tests/behaviour/queue-claim-single-flight.test.ts,
+    # tests/behaviour/queue-lease.test.ts,
+    # tests/behaviour/queue-lease-renewal-narrowing.test.ts,
+    # tests/behaviour/queue-lease-takeover.test.ts,
+    # tests/behaviour/queue-single-flight-purity.test.ts,
+    # tests/behaviour/queue-single-flight-read-cost.test.ts, and
+    # tests/behaviour/dispatch-harness-lease.test.ts; no new record kind
+    # (tests/structure/queue-additivity.test.ts,
+    # tests/structure/queue-surface.test.ts,
+    # tests/structure/queue-scheduling-contract.test.ts,
+    # tests/structure/event-additivity-inventory.test.ts).
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/content-inventory.test.ts tests/structure/port-contract-inventory.test.ts tests/checks/decision-record.test.ts
+    scope:
+      files:
+        - doc/decisions/00-index.md
+        - doc/decisions/TDR-0078-lease-heartbeat-amends-tdr-0050.md
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - packages/core/src/app/dispatch.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/app/queue.ts
+        - packages/core/src/contracts/queue.ts
+        - packages/core/src/index.ts
+        - tests/behaviour/dispatch-lease-liveness.test.ts
+        - tests/conformance/dispatch/dispatch-parity-admission.test.ts
+        - tests/fixtures/dispatch/parity/harness.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/fixtures/queue/single-flight/harness.ts
+        - tests/structure/content-inventory.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/app/queue.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/app/dispatch.ts
+        role: consumer
+
+  - id: 3
     title: "Dispatch-owned window watch, exactly-once park episode, in-invocation wait, and classification-routed resume"
     kind: delivery
-    summary: "give the one-shot dispatch run path its own life-long profile-window watch: once per observation, before the session liveness observation, the nominated profile's declared `peakWindows` rules decide through the delivered decision functions and the injected clock; an open window stops the lane once with a bounded grace over the delivered terminate path and parks it exactly once with the complete episode frame, then the same invocation waits on the delivered liveness cadence and resumes at the effective end by the preservation classification, bound in the production composition unless the setting disables pausing."
-    # Scope: spec F-1 to F-5, F-8, F-11, DEC-2 to DEC-5, DEC-10, DEC-11, NFR-1,
-    # NFR-2, NFR-4, NFR-6, NFR-7; flows 1, 2, 4, 5.
+    summary: "give the one-shot dispatch run path its own life-long profile-window watch: the nominated profile's declared `peakWindows` rules, read from the nomination stored on the durable lane record, decide through the delivered decision functions and the injected clock, once before the first spawn or resume (an already-open window parks the lane with no session) and then at every observation; an open window issues one terminate call whose `graceMs` is the smallest of the profile grace, the delivered kill grace, and the time to the effective end, parks the lane exactly once with the complete episode frame, and the same invocation waits on the delivered liveness cadence and resumes at the effective end by the preservation classification, surfacing a non-terminal recovery refusal instead of waiting it out; the watch is bound in the production composition unless the setting disables pausing."
+    # Scope: spec F-1 to F-5, F-8, F-11, DEC-2 to DEC-5, DEC-10, DEC-11,
+    # DEC-14, DEC-16, DEC-17, DEC-18, DM-1, DM-2, NFR-1, NFR-2, NFR-4, NFR-6,
+    # NFR-7, NFR-11; flows 1, 2, and 6; DoR iteration-1 findings 5, 7, and 8.
     # TC ownership: TC-PEAK-001, TC-PEAK-002, TC-PEAK-004, TC-PEAK-005,
-    # TC-PEAK-006, TC-PEAK-007, TC-PEAK-008, TC-PEAK-009, TC-PEAK-010,
-    # TC-PEAK-015, TC-PEAK-021, TC-PEAK-022, TC-PEAK-025.
+    # TC-PEAK-006, TC-PEAK-007, TC-PEAK-008, TC-PEAK-009, TC-PEAK-015,
+    # TC-PEAK-021, TC-PEAK-022, TC-PEAK-025, TC-PEAK-030, TC-PEAK-031,
+    # TC-PEAK-032.
     # Binding chain, every link declared: packages/core/src/app/dispatch.ts (the
-    # run path: the optional watch ports and the per-observation watch), the new
+    # run path: the optional watch ports, the pre-session evaluation before
+    # the first spawn or resume, and the per-observation watch), the new
     # packages/core/src/app/dispatch-peak-pause.ts (the dispatch-owned watch,
-    # bounded-grace stop, exactly-once park, wait, and resume over the delivered
-    # runPeakWatch and runPeakResume), packages/cli/src/edge.ts (the closed
-    # DispatchComposition type and the single runDispatch assembly forwarding),
-    # and packages/cli/src/production.ts (the binding: the nominated profile's
-    # rule lookup, the zone facts, the stop seam over the delivered terminate
-    # path, the park append, and the composition fact `peakWatchComposed`; the
-    # resolved `lane.disable-peak-pausing` of true composes no watch).
+    # pre-session park, composed-grace stop, exactly-once park, wait, and
+    # resume over the delivered runPeakWatch and runPeakResume),
+    # packages/cli/src/edge.ts (the closed DispatchComposition type and the
+    # single runDispatch assembly forwarding), and packages/cli/src/production.ts
+    # (the binding: the nominated profile's rule lookup, the zone facts, the
+    # stop seam over the delivered terminate path, the park append; the
+    # resolved `lane.disable-peak-pausing` of true composes no watch and no
+    # pre-session evaluation).
+    # Pre-session park (DEC-14, TC-PEAK-030): the watch evaluates once before
+    # the first spawn or resume. An open window parks the lane with
+    # `preservation: preserved` and no stop or grace frame, so the record
+    # projects the `park-edge` alone; no session and no billable call exist
+    # before the park, and the first session starts at the effective end.
+    # Stored nomination (DEC-16, TC-PEAK-031): packages/core/src/contracts/dispatch.ts
+    # gains the additive optional `providerProfile` on the durable lane
+    # record, written at first acquisition and never fabricated; a pre-change
+    # record reads absent and is not window-pausable. The lane-key pins move
+    # with it, by exactly that one member: the field set and its optional
+    # predicate in tests/structure/dispatch-contract.test.ts, and LANE_KEYS in
+    # tests/fixtures/dispatch/operator/contract-baseline.ts. The attempt
+    # record's key set does not move.
+    # Composed grace (DEC-5, TC-PEAK-032): one terminate call carries `graceMs`
+    # equal to the smallest of the remaining profile grace deadline, the
+    # delivered kill grace, and the time to the effective window end. The
+    # harness terminate input is composed, not changed.
+    # Non-terminal recovery refusal (DEC-18, TC-PEAK-009): the lane stays
+    # parked, no ordinal is consumed in that observation, and the refusal is
+    # surfaced on the episode fact and the park fact; no frame is added.
     # Timing seams (DEC-11): the wait rides the delivered liveness cadence over
-    # the cancellable DispatchCadenceWait seam and re-derives the end from the
-    # injected clock at each wake. packages/core/src/contracts/dispatch.ts and
-    # tests/structure/dispatch-contract.test.ts are in scope ONLY IF the wait
-    # needs an additive DISPATCH_DELAY_REASONS member; then the closed-set pin
-    # moves in this same commit. No second timing mechanism is introduced.
+    # the cancellable DispatchCadenceWait seam, renews the lease at most once
+    # per wake, and re-derives the end from the injected clock at each wake. A
+    # DISPATCH_DELAY_REASONS member in packages/core/src/contracts/dispatch.ts
+    # and its closed-set pin in tests/structure/dispatch-contract.test.ts move
+    # ONLY IF the wait needs an additive reason. No second timing mechanism is
+    # introduced.
+    # Lease arms completed here, under phase 2's ownership of TC-PEAK-010: the
+    # parked-interval renewal (tests/behaviour/dispatch-lease-liveness.test.ts)
+    # and the nothing-lost snapshot over a complete park and resume
+    # (tests/behaviour/dispatch-peak-preservation.test.ts, AC-F5-1).
     # New-module surfaces, moved in this same commit: the new module joins
     # DISPATCH_FLOW_SURFACE in scripts/checks/no-shell-dispatch.ts, the file
     # set in tests/structure/inventory.json, and its export allowance in
     # tests/structure/content-inventory.test.ts.
+    # Production composition (TC-PEAK-015): the three key arms and the
+    # pre-session-disabled arm run through the real production composer, so
+    # the composition-fact value is the real one; its configuration documents
+    # extend tests/fixtures/queue/production/harness.ts. The `window-watch`
+    # derivation itself is phase 4's.
     # Fixtures: tests/fixtures/dispatch/golden/harness.ts is extended for the
-    # episode fixture (a stepping clock, a controllable cadence wait, a
-    # recording stop seam). The chain fixture (a base entry declaring no
-    # peakWindows and a later nominated profile with an open window) lands
-    # under tests/fixtures/provider/profile, the fixture folder the test plan
-    # names, or inside that extended harness file; no other fixture location
-    # is in scope. The rest of tests/fixtures/dispatch, including the
+    # episode, pre-session, and nomination fixtures (a stepping clock, a
+    # controllable cadence wait, a recording stop seam, a spawn recorder). The
+    # rule fixtures (the chain whose base entry declares no peakWindows, the
+    # small-buffer profile, and the grace-above-cadence profile) land under
+    # tests/fixtures/provider/profile, the fixture folder the test plan names,
+    # or inside that extended harness file; no other fixture location is in
+    # scope. The rest of tests/fixtures/dispatch, including the
     # closed-contract baseline under operator/, stays outside every scope so
     # an edit there is disclosed as drift.
-    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-peak-parity.test.ts tests/behaviour/dispatch-peak-watch.test.ts tests/behaviour/dispatch-peak-episode.test.ts tests/behaviour/dispatch-peak-resume.test.ts tests/behaviour/dispatch-peak-recovery.test.ts tests/behaviour/dispatch-peak-preservation.test.ts tests/behaviour/dispatch-peak-owner-hold.test.ts tests/behaviour/dispatch-peak-isolation.test.ts tests/behaviour/dispatch-peak-setting.test.ts
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-peak-parity.test.ts tests/behaviour/dispatch-peak-watch.test.ts tests/behaviour/dispatch-peak-episode.test.ts tests/behaviour/dispatch-peak-stop-grace.test.ts tests/behaviour/dispatch-peak-presession.test.ts tests/behaviour/dispatch-peak-nomination.test.ts tests/behaviour/dispatch-peak-resume.test.ts tests/behaviour/dispatch-peak-recovery.test.ts tests/behaviour/dispatch-peak-preservation.test.ts tests/behaviour/dispatch-lease-liveness.test.ts tests/behaviour/dispatch-peak-owner-hold.test.ts tests/behaviour/dispatch-peak-isolation.test.ts tests/behaviour/dispatch-peak-setting.test.ts
     # Verify, read-only controls (never edited): the delivered dispatch suites
     # (dispatch-watch, dispatch-determinism, dispatch-single-flight,
-    # dispatch-resume, dispatch-resume-economics, dispatch-restart-budget) and
-    # the daemon park and resume suites.
-    # Verify: TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/no-shell-dispatch.ts; TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/no-shell-dispatch.test.ts tests/structure/content-inventory.test.ts tests/structure/dispatch-contract.test.ts
+    # dispatch-resume, dispatch-resume-economics, dispatch-restart-budget),
+    # tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts and
+    # tests/behaviour/dispatch-additive-stability.test.ts (a lane without a
+    # stored nomination keeps its delivered key set), and the daemon park and
+    # resume suites.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/no-shell-dispatch.ts; TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/no-shell-dispatch.test.ts tests/structure/content-inventory.test.ts tests/structure/dispatch-contract.test.ts tests/checks/operator-contract-invariance.test.ts tests/structure/port-contract-inventory.test.ts
     scope:
       files:
         - packages/core/src/app/dispatch-peak-pause.ts
@@ -164,16 +325,23 @@ phases:
         - packages/cli/src/edge.ts
         - packages/cli/src/production.ts
         - scripts/checks/no-shell-dispatch.ts
+        - tests/behaviour/dispatch-lease-liveness.test.ts
         - tests/behaviour/dispatch-peak-episode.test.ts
         - tests/behaviour/dispatch-peak-isolation.test.ts
+        - tests/behaviour/dispatch-peak-nomination.test.ts
         - tests/behaviour/dispatch-peak-owner-hold.test.ts
         - tests/behaviour/dispatch-peak-parity.test.ts
         - tests/behaviour/dispatch-peak-preservation.test.ts
+        - tests/behaviour/dispatch-peak-presession.test.ts
         - tests/behaviour/dispatch-peak-recovery.test.ts
         - tests/behaviour/dispatch-peak-resume.test.ts
         - tests/behaviour/dispatch-peak-setting.test.ts
+        - tests/behaviour/dispatch-peak-stop-grace.test.ts
         - tests/behaviour/dispatch-peak-watch.test.ts
         - tests/fixtures/dispatch/golden/harness.ts
+        - tests/fixtures/dispatch/operator/contract-baseline.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/fixtures/queue/production/harness.ts
         - tests/structure/content-inventory.test.ts
         - tests/structure/dispatch-contract.test.ts
         - tests/structure/inventory.json
@@ -184,48 +352,75 @@ phases:
         target: packages/core/src/app/dispatch.ts
         role: producer
       - kind: contract-file
+        target: packages/core/src/contracts/dispatch.ts
+        role: producer
+      - kind: contract-file
         target: packages/cli/src/edge.ts
         role: consumer
 
-  - id: 3
+  - id: 4
     title: "Operator surfaces and the one result: the `dispatch status` park fact and the paused-and-resumed summary"
     kind: delivery
-    summary: "carry the episode to the operator and to the answer: `dispatch status` gains the additive optional park fact (cause, park end, recorded stop instant, preservation classification) from at most one additional bounded park-record read and no longer classifies a parked lane stale, `lanes` and `board` are confirmed to render the dispatch-owned park through the delivered projections, and one invocation returns exactly one result whose summary states the pause and the resume and whose machine envelope carries the additive bounded episode fact, with every no-park surface byte-identical."
-    # Scope: spec F-6, F-7, F-12, DEC-6, DEC-9, DM-3, DM-4, DM-5, DM-7, NFR-3,
-    # NFR-9; section 10.
+    summary: "carry the episode to the operator and to the answer: `dispatch status` gains the additive optional park fact (cause, park end, recorded stop instant, preservation classification, and any recorded recovery refusal) from at most one additional bounded park-record read while the delivered `stale` and `delivering` derivation stays unchanged for a parked lane; `lanes` and `board` render the dispatch-owned park and the live `leaseHolder` through the delivered projections; the `lanes` machine read derives `peakEnforcement.mode` from the production composition's own effective configuration, the one intended change to a no-park payload; and one invocation returns exactly one result whose summary states the pause and the resume and whose machine envelope carries the additive bounded episode fact."
+    # Scope: spec F-6, F-7, F-12, DEC-6, DEC-9, DEC-18, DM-3, DM-4, DM-5, DM-7,
+    # NFR-3, NFR-9, RSK-11; section 10; DoR iteration-1 findings 3 and 6.
     # TC ownership: TC-PEAK-011, TC-PEAK-012, TC-PEAK-013, TC-PEAK-014,
-    # TC-PEAK-023, TC-PEAK-024.
-    # Additive only (NFR-9): with no open park every delivered field and line
-    # is byte-identical; the park and episode members are absent, never null.
+    # TC-PEAK-023, TC-PEAK-024, TC-PEAK-033.
+    # The delivered verdict is unchanged (DEC-9): `stale` is true exactly when
+    # the owner probe is `dead` and `delivering` is its negation. A parked lane
+    # answers that pair by probe (live and unknown: `stale: false` and
+    # `delivering: true`; dead: `stale: true` and `delivering: false`), and the
+    # additive park fact explains the pause or the orphaned park (TC-PEAK-011,
+    # AC-F6-5). No derivation is redefined and no signal is suppressed.
+    # One intended change (DEC-6, NFR-9): with no park open every delivered
+    # field and line is byte-identical except `peakEnforcement.mode`, which
+    # reads `window-watch` on a production composition with pausing enabled
+    # and keeps `iteration-start-gating` when disabled. The mode input is the
+    # reading composition's own effective configuration
+    # (`lane.disable-peak-pausing`), set in packages/cli/src/production.ts and
+    # read in packages/cli/src/edge.ts; it is never another process's state and
+    # never the test-only `peakWatchComposed` override (TC-PEAK-033, with a
+    # proven-firing control). The park and episode members are absent when no
+    # park stands, never null.
     # The status chain: packages/core/src/contracts/dispatch-operator.ts (the
     # additive park fact on DispatchStatusData), packages/core/src/app/dispatch-lane-view.ts
     # (at most one additional bounded park-record read),
     # packages/core/src/domain/dispatch-operator-view.ts (the fact carried
-    # verbatim; a parked lane is not classified stale, DEC-9),
-    # packages/cli/src/edge.ts and packages/cli/src/production.ts (the clock the
-    # read-time expiry of the open park needs), and
+    # verbatim), packages/cli/src/edge.ts (the operator runtime) and
     # packages/cli/src/output/dispatch-text.ts (the human line, absent when no
     # park stands).
     # The result chain: packages/core/src/contracts/dispatch.ts (the additive
-    # bounded episode fact on DispatchEnvelopeData), packages/core/src/app/dispatch.ts
-    # and packages/core/src/app/dispatch-peak-pause.ts (the summary statement
-    # rides `last_message`; the four text keys are unchanged and no episode
-    # invents a token).
-    # The index files are declared for the exports these additions name.
-    # Composed unchanged and outside every scope: the `lanes`, `board`, `brief`,
-    # and spend read sides (domain/queue-lanes.ts, domain/owner-gate-sla.ts,
-    # domain/brief.ts, domain/status.ts, domain/spend.ts).
+    # bounded episode fact on DispatchEnvelopeData, including the refusal where
+    # a recovery refused), packages/core/src/app/dispatch.ts and
+    # packages/core/src/app/dispatch-peak-pause.ts (the summary statement rides
+    # `last_message`; the four text keys are unchanged and no episode invents
+    # a token).
+    # The index files are declared for the exports these additions name. The
+    # enabled and disabled arms run through the real production composer, so
+    # its configuration documents extend
+    # tests/fixtures/queue/production/harness.ts.
+    # Composed unchanged and outside every scope: the `lanes`, `board`,
+    # `brief`, and spend read sides (domain/queue-lanes.ts,
+    # domain/owner-gate-sla.ts, domain/brief.ts, domain/status.ts,
+    # domain/spend.ts). `parked:peak-window` with the recorded `until` and the
+    # delivered `leaseHolder` from the live lease render as delivered
+    # (TC-PEAK-012).
     # Goldens: the pre-change no-park goldens under tests/golden and the
     # surface fixture folders are read as read-only pins and none is
-    # regenerated (RSK-TP-6). tests/golden is deliberately outside every
-    # scope, so any golden edit is staged with its drift disclosed rather than
-    # silently; TC-PEAK-013 asserts absence through each command's own JSON
-    # contract and needs no new golden.
-    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-status-park.test.ts tests/behaviour/dispatch-peak-surfaces.test.ts tests/behaviour/dispatch-peak-byte-identical.test.ts tests/behaviour/dispatch-peak-result.test.ts tests/behaviour/dispatch-peak-spend.test.ts
+    # regenerated (RSK-TP-6). The three mode goldens (under
+    # tests/fixtures/queue/golden and tests/fixtures/supervise/golden) are
+    # rendered from a fixture composition and keep their value. tests/golden
+    # is deliberately outside every scope, so any golden edit is staged with
+    # its drift disclosed rather than silently; TC-PEAK-013 asserts the
+    # carve-out as one named field through the production composition and
+    # regenerates nothing.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-status-park.test.ts tests/behaviour/dispatch-peak-surfaces.test.ts tests/behaviour/dispatch-peak-byte-identical.test.ts tests/behaviour/dispatch-peak-result.test.ts tests/behaviour/dispatch-peak-spend.test.ts tests/behaviour/dispatch-peak-mode.test.ts
     # Verify, read-only controls (never edited): tests/behaviour/dispatch-additive-stability.test.ts,
     # tests/behaviour/status-brief-park-fields.test.ts,
     # tests/behaviour/lanes-parked-stall.test.ts, tests/behaviour/board-parked.test.ts,
-    # tests/behaviour/spend-zero-window.test.ts, and the tests/golden suites.
+    # tests/behaviour/spend-zero-window.test.ts,
+    # tests/behaviour/daemon-absent-degradation.test.ts, and the tests/golden
+    # suites.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/port-contract-inventory.test.ts tests/structure/content-inventory.test.ts
     scope:
       files:
@@ -243,11 +438,13 @@ phases:
         - packages/core/src/domain/index.ts
         - packages/core/src/index.ts
         - tests/behaviour/dispatch-peak-byte-identical.test.ts
+        - tests/behaviour/dispatch-peak-mode.test.ts
         - tests/behaviour/dispatch-peak-result.test.ts
         - tests/behaviour/dispatch-peak-spend.test.ts
         - tests/behaviour/dispatch-peak-surfaces.test.ts
         - tests/behaviour/dispatch-status-park.test.ts
         - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/fixtures/queue/production/harness.ts
         - tests/structure/content-inventory.test.ts
       # The seeded telemetry steps the window-scoped reading proves (TC-PEAK-023,
       # TC-PEAK-024) land in the telemetry fixture family the test plan names.
@@ -261,26 +458,58 @@ phases:
         target: packages/core/src/contracts/dispatch.ts
         role: producer
 
-  - id: 4
+  - id: 5
     title: "`dispatch stop`: family grammar, runtime, never-kill stop, and the classified not-running refusal"
     kind: delivery
-    summary: "add `dispatch stop` to the dispatch command family: the canonical work item reference, a cause from the delivered closed park-cause set, and an optional end; a running lane receives the same bounded-grace stop request a window stop sends and lands the same complete-episode-frame park with one `stop` and one `parked`, the command sends no signal of its own, and a lane that is not running is refused before any write with the delivered `queue.precondition.unmet` identity; help, the reference page, and the pinned entry counts move in the same commit."
-    # Scope: spec F-9, F-10, DEC-7, DEC-8, DEC-10, NFR-1, NFR-2, NFR-8; flow 3.
-    # TC ownership: TC-PEAK-016, TC-PEAK-018, TC-PEAK-019, TC-PEAK-020.
-    # Never kills: the command issues one stop request and sends no signal of
-    # its own; the delivered terminate path stays the only signalling route
-    # (TERM before KILL, KILL only after the declared grace and only over a
-    # target still listed, an unknown session is success).
-    # Its record is the complete watcher-shaped episode frame (DEC-7). The
+    summary: "add `dispatch stop` to the dispatch command family for the `peak-window` cause only, with a required end: the command resolves the run from the durable lane record, issues one terminate call through the delivered terminate path with the composed `graceMs` and no signal of its own, writes the complete watcher-shaped episode frame, and answers one human line and machine data at exit 0; the owning invocation re-reads the records at each observation, recognises the open park it did not create, keeps renewing the lease, and waits and resumes; another cause, a missing end, and a lane that is not running are refused by name before any write, and a request racing a session end resolves exactly one classified outcome; help, the reference page, and the pinned entry counts move in the same commit."
+    # Scope: spec F-9, F-10, DEC-7, DEC-8, DEC-10, DEC-15, DM-8, NFR-1, NFR-2,
+    # NFR-8, RSK-7; flow 3; DoR iteration-1 finding 4.
+    # TC ownership: TC-PEAK-016, TC-PEAK-018, TC-PEAK-019, TC-PEAK-020,
+    # TC-PEAK-034, TC-PEAK-035, TC-PEAK-036.
+    # One cause, one end: `dispatch stop` admits `peak-window` only and
+    # requires `--until`, as the delivered expiry-carrying cause does. Another
+    # cause, or a missing end, is refused by name before any lane read
+    # (TC-PEAK-034): the delivered projection and resume path frame only the
+    # `peak-window` cause, so no other cause is promised.
+    # Never kills: the command sends no signal of its own and issues exactly
+    # one terminate call through the delivered terminate path, with the
+    # composed `graceMs` of phase 3 (TC-PEAK-019). TERM before KILL, KILL only
+    # over a still-listed target, and an unknown session as success all hold.
+    # The hand-off is the record, not a control channel (DEC-15): the command
+    # resolves the run from the durable lane record (session identity,
+    # recorded worktree path, stored nomination), writes the complete
+    # watcher-shaped episode frame, and answers one human line and machine
+    # data at exit 0 (DM-8, TC-PEAK-035). The owning invocation re-reads the
+    # lane and park records at each observation, recognises the open park it
+    # did not create, keeps renewing the lease, and waits and resumes instead
+    # of classifying and returning (packages/core/src/app/dispatch.ts and
+    # packages/core/src/app/dispatch-peak-pause.ts). A request racing a
+    # session end resolves exactly one classified outcome (TC-PEAK-036). The
     # release grammar's minimal frame and its park-edge-only projection are
-    # untouched.
-    # A lane that is not running is refused before any write (DEC-8): no park,
+    # untouched (DEC-7).
+    # Not running (F-10): a terminal record, an absent record, or an active
+    # record with no session identity refuses before any write with the
+    # delivered `queue.precondition.unmet` identity (DEC-8); no park,
     # episode, attempt, lane, or queue record is appended and no error-table
     # row is added.
+    # The delivered terminate path must reach a session of another process
+    # (finding 4): packages/adapters/src/harness/opencode.ts resolves a
+    # terminate target only from its own in-memory session registry and
+    # answers a session it does not hold with success and no signal, so a
+    # separately invoked command could not stop the owning invocation's
+    # session. The adapter gains the delivered exact-identity match (the
+    # session id or its deterministic work item title over the host process
+    # table) for a handle resolved from the durable lane record; a session
+    # matching no live exact identity stays success with no signal (TDR-0051).
+    # The real-adapter arm lands in
+    # tests/behaviour/harness-opencode-resume-stream.test.ts.
+    # packages/core/src/contracts/harness.ts is in scope ONLY IF the terminate
+    # input needs an additive optional member to mark such a handle; then its
+    # inventory pin moves in this same commit.
     # `stop` is an operator command of the family, not a fifth read query: it
     # does not join DISPATCH_OPERATOR_QUERIES or the four-query pins. The
     # setting governs automatic policy only, so the command is identical
-    # whether or not pausing is enabled (DEC-10).
+    # whether or not pausing is enabled (DEC-10, TC-PEAK-016).
     # Doc obligations `pnpm check` depends on land here, not in the
     # documentation phase: the help entry in packages/cli/src/help.ts and the
     # reference page, whose pinned phrases are preserved
@@ -289,12 +518,21 @@ phases:
     # suites: tests/structure/dispatch-help-inventory.test.ts,
     # tests/structure/dispatch-attempts-composition.test.ts, and
     # tests/checks/reference-page-parity.test.ts.
-    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-stop.test.ts tests/behaviour/dispatch-stop-refusal.test.ts tests/behaviour/dispatch-stop-safety.test.ts tests/behaviour/dispatch-peak-setting.test.ts
+    # Fixtures: the stop hand-off and race fixture (a separately invoked stop
+    # command and the owning invocation over one durable store, with a
+    # deterministic clock) extends tests/fixtures/dispatch/golden/harness.ts,
+    # and the terminate-path model and doubles extend
+    # tests/fixtures/dispatch/parity/terminate.ts; no other fixture location
+    # is in scope.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-stop.test.ts tests/behaviour/dispatch-stop-cause.test.ts tests/behaviour/dispatch-stop-handoff.test.ts tests/behaviour/dispatch-stop-race.test.ts tests/behaviour/dispatch-stop-refusal.test.ts tests/behaviour/dispatch-stop-safety.test.ts tests/behaviour/dispatch-peak-setting.test.ts tests/behaviour/harness-opencode-resume-stream.test.ts
+    # Verify, read-only controls (never edited): tests/structure/dispatch-composition.test.ts
+    # and tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/dispatch-help-inventory.test.ts tests/structure/dispatch-attempts-composition.test.ts tests/checks/reference-page-parity.test.ts tests/checks/dispatch-doc-conformance.test.ts tests/checks/help-guide-coverage.test.ts tests/checks/operator-contract-invariance.test.ts tests/structure/port-contract-inventory.test.ts tests/structure/content-inventory.test.ts tests/checks/no-shell-dispatch.test.ts
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/no-shell-dispatch.ts
     scope:
       files:
         - doc/planning/oss-tooling/milestones/m1/commands/dispatch.md
+        - packages/adapters/src/harness/opencode.ts
         - packages/cli/src/commands/dispatch.ts
         - packages/cli/src/edge.ts
         - packages/cli/src/help.ts
@@ -302,15 +540,23 @@ phases:
         - packages/cli/src/production.ts
         - packages/core/src/app/dispatch-peak-pause.ts
         - packages/core/src/app/dispatch-stop.ts
+        - packages/core/src/app/dispatch.ts
         - packages/core/src/app/index.ts
         - packages/core/src/contracts/dispatch-operator.ts
+        - packages/core/src/contracts/harness.ts
         - packages/core/src/contracts/index.ts
         - packages/core/src/index.ts
         - scripts/checks/no-shell-dispatch.ts
+        - tests/behaviour/dispatch-stop-cause.test.ts
+        - tests/behaviour/dispatch-stop-handoff.test.ts
+        - tests/behaviour/dispatch-stop-race.test.ts
         - tests/behaviour/dispatch-stop-refusal.test.ts
         - tests/behaviour/dispatch-stop-safety.test.ts
         - tests/behaviour/dispatch-stop.test.ts
+        - tests/behaviour/harness-opencode-resume-stream.test.ts
         - tests/checks/reference-page-parity.test.ts
+        - tests/fixtures/dispatch/golden/harness.ts
+        - tests/fixtures/dispatch/parity/terminate.ts
         - tests/fixtures/ports/v1-contract-inventory.json
         - tests/structure/content-inventory.test.ts
         - tests/structure/dispatch-attempts-composition.test.ts
@@ -324,24 +570,26 @@ phases:
         target: packages/core/src/contracts/dispatch-operator.ts
         role: producer
 
-  - id: 5
+  - id: 6
     title: "Cross-cutting proof: determinism, hermeticity, and vocabulary economy"
     kind: delivery
-    summary: "prove the assembled surface: paired identical runs are byte-identical over the injected clock, delay, and transport with no real sleep, network call, or credential read; the delivering suites are hermetic under armed canaries and a source scan; and the closed vocabularies hold with zero added kinds or identities while every episode frame stays inside the delivered bounds."
-    # Scope: spec AC-F1-3, NFR-5, NFR-7, NFR-8; test plan RSK-TP-1, RSK-TP-2 and
-    # section 4 (the Check and Structure layers).
+    summary: "prove the assembled surface: paired identical runs are byte-identical over the injected clock, delay, transport, and lease clock apart from the one intended mode value, with no real sleep, network call, or credential read; the delivering suites are hermetic under armed canaries and a source scan; and the closed vocabularies hold with zero added kinds or identities while every episode frame, including the pre-session `park-edge` alone, stays inside the delivered bounds."
+    # Scope: spec AC-F1-3, NFR-5, NFR-7, NFR-8; test plan RSK-TP-1, RSK-TP-2
+    # and section 4 (the Check and Structure layers).
     # TC ownership: TC-PEAK-003, TC-PEAK-026, TC-PEAK-027.
     # This phase proves the assembled surface, so it lands after the last code
     # phase: the determinism suite spans the full park, wait, resume, and
-    # result; the hermetic watched-file set covers the new modules and suites;
-    # the vocabulary suites project the four episode frames and assert the
-    # closed sets unchanged.
+    # result and asserts the mode carve-out as exactly one named field; the
+    # hermetic watched-file set covers the new modules, the lease renewal, and
+    # the new suites; the vocabulary suites project the episode frames,
+    # including the pre-session `park-edge` alone, and assert the closed sets
+    # unchanged.
     # Conditional files, declared so they can be staged if created:
     #   - tests/checks/dispatch-peak-hermetic.test.ts, only if the watched-file
     #     set outgrows tests/checks/peak-pause-hermetic.test.ts.
     #   - tests/structure/dispatch-peak-contract.test.ts, only if the additive
     #     contract needs its own closed-set assertion.
-    # TC-PEAK-028's two release suites are re-run here as read-only controls.
+    # The two release suites of phase 1 are re-run here as read-only controls.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-peak-determinism.test.ts tests/checks/peak-pause-hermetic.test.ts tests/structure/event-taxonomy-integrity.test.ts tests/checks/event-taxonomy-conformance.test.ts
     # Verify, read-only controls (never edited): tests/checks/privacy-release.test.ts
     # and tests/structure/changeset-additivity.test.ts.
@@ -354,54 +602,102 @@ phases:
         - tests/structure/dispatch-peak-contract.test.ts
         - tests/structure/event-taxonomy-integrity.test.ts
 
-  - id: 6
-    title: "Decision record TDR-0077: the dispatch-owned window watch"
+  - id: 7
+    title: "Decision records TDR-0077 and TDR-0078: the dispatch-owned window watch and the lease heartbeat"
     kind: delivery
-    summary: "stage the technical decision record TDR-0077 that carries DEC-1 (the dispatch run path supplies the watch for the lanes it starts, superseding the daemon-absent degradation), DEC-6 (the two-value composition-fact reading), and DEC-7 (the complete watcher-shaped episode frame of `dispatch stop`), authored by the decision advisor as Proposed with its index row; the owner accepts or rejects it at pull-request review."
-    # Scope: spec section 15 (DEC-1, DEC-6, DEC-7) and its decision-records
-    # note; the next free technical decision id on `main-tools`.
-    # The record is authored by the decision advisor. This plan declares the
-    # record and its index row so the delivery commit stages both. The record
-    # stays Proposed with a null decision date; its status moves from Proposed
-    # at the change's pull-request review, never in the delivery commits.
+    summary: "stage the two technical decision records as Proposed with their index rows: TDR-0077 carries the dispatch-owned watch contract (DEC-1, DEC-3, DEC-6, DEC-12, DEC-14, DEC-15) and TDR-0078 carries the lease-heartbeat amendment to the delivered no-renewal rule (DEC-13); both are authored by the decision advisor, and the owner accepts or rejects them at pull-request review."
+    # Scope: spec section 15 (TDR-0077: DEC-1, DEC-3, DEC-6, DEC-12, DEC-14,
+    # DEC-15; TDR-0078: DEC-13) and section 18.1 item 5; the next two free
+    # technical decision ids on `main-tools`.
+    # Both records are authored by the decision advisor as Proposed with a
+    # null decision date. This plan declares the records and their index rows
+    # so the delivery commit stages them; each row is written with its record,
+    # so no commit carries an index row that points at an untracked record.
+    # TDR-0078 is also declared in phase 2, because spec section 18 records it
+    # before the claim path changes: whichever phase stages it first creates
+    # it, and this phase stages whatever remains. This phase owns no test
+    # case.
+    # Owner acceptance happens at the pull-request review, outside Done: a
+    # record still Proposed at Done does not fail it, a missing record does.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/decision-record.test.ts tests/checks/doc-conformance.test.ts
     scope:
       files:
         - doc/decisions/00-index.md
         - doc/decisions/TDR-0077-dispatch-owned-window-watch.md
+        - doc/decisions/TDR-0078-lease-heartbeat-amends-tdr-0050.md
 
-  - id: 7
+  - id: 8
     title: "Finalize and release: spec reconciliation declaration, the pull request, and the reference-host episode"
     kind: planning
-    summary: "declare the release and spec-reconciliation obligations: the phase-7 documentation reconciliation of the pages this change supersedes or extends to the replacement truth, the pull request against `main-tools`, and the one real reference-host peak-pause episode recorded on that pull request; this phase performs no delivery work."
+    summary: "declare the release and spec-reconciliation obligations: the documentation reconciliation of the sixteen pages the spec names plus the two that carry the new key and the operator guidance, the pull request against `main-tools`, and the post-upgrade hand-off for the reference-host episode with its preconditions; this phase performs no delivery work."
+    # TC ownership: TC-PEAK-029 (the post-upgrade hand-off; manual, non-gating).
     # Declaration only: owned by the doc-syncer in lifecycle phase 7 and by the
     # pr-manager in lifecycle phase 11. Delivery authors none of these files.
-    # Spec reconciliation to the replacement truth (DEC-1, DEC-6, DEC-7):
-    #   - feature-peak-pausing.md: the daemon-absent statement (section 9) is
-    #     superseded; a lane is watched by the composition that owns it.
-    #   - feature-dispatch-engine.md: the dispatch-owned watch, the additive
-    #     status park fact, the result summary and episode fact, and
-    #     `dispatch stop`.
-    #   - feature-resident-daemon.md, feature-provider-profiles.md,
-    #     feature-event-taxonomy.md, feature-status-digest.md, feature-brief.md,
-    #     feature-board.md, and feature-spend.md: with the two pages above, the
-    #     nine-page set spec section 16 names for reconciliation.
-    #   - feature-config-layer.md joins the set because its lane branch table
-    #     is the current-truth home of the new key (spec DEC-2, Appendix B).
+    # The sixteen pages spec section 16 names, one reason each:
+    #   - feature-peak-pausing.md: the daemon-absent statement, the
+    #     composition-fact mode rule, and the episode's producer set.
+    #   - feature-dispatch-engine.md: the lane record's nomination, the run
+    #     order's pre-session evaluation, the lease renewal, and the operator
+    #     surface (`dispatch stop`, the `status` park fact).
+    #   - feature-resident-daemon.md: the shared composition-fact sentence it
+    #     restates for the watch it composes.
+    #   - feature-provider-profiles.md: profile `peakWindows` now drive the
+    #     one-shot watch too, with the pausability precondition named.
+    #   - feature-event-taxonomy.md: which producer emits the episode frames,
+    #     the pre-session park's `park-edge`-only shape, and the
+    #     operator-shaped-park sentence.
+    #   - feature-scheduling-engine.md (added, finding 11): the
+    #     composition-fact rule, the `queue.park` writers row, and the
+    #     owner-hold one-writer sentence.
+    #   - feature-status-digest.md: the park fact's added members and the
+    #     unchanged `stale`/`delivering` verdict.
+    #   - feature-brief.md: the park fields now include dispatch-owned episodes.
+    #   - feature-board.md: the `PARKED` population's writer set grows to the
+    #     dispatch-owned watch.
+    #   - feature-spend.md: the window-scoped reading's consumer set grows to
+    #     dispatch-owned episodes.
+    #   - feature-autonomous-delivery.md (added, finding 11): the dispatch
+    #     family grammar gains `dispatch stop`.
+    #   - doc/overview/glossary.md (added, finding 11): the mode rule and the
+    #     bounded-grace definition.
+    #   - doc/overview/architecture-overview.md (added, finding 11): the
+    #     one-shot dispatch paragraph.
+    #   - doc/spec/nonfunctional.md (added, finding 11): the added NFR
+    #     thresholds (lease liveness, pre-session park, stop composition).
+    #   - doc/quality/test-specs/test-spec-dispatch-engine.md (added, finding
+    #     11): the new suites and the extended arms are mapped.
+    #   - doc/guides/change-lifecycle.md (added, finding 11): the park, the
+    #     operator stop, and the liveness precondition, where the lifecycle is
+    #     described.
+    # Two pages beyond the sixteen, each with its reason:
+    #   - feature-config-layer.md: its lane branch table is the current-truth
+    #     home of the new key (spec DEC-2, Appendix B).
     #   - doc/guides/engine-first-operations.md: the operator-facing
-    #     consequence spec section 18 places in the dispatch family's delivery
-    #     guide.
-    # The pages' pinned phrases stay present (tests/checks/engine-first-doc-reconciliation.test.ts
-    # and tests/checks/dispatch-doc-conformance.test.ts run there).
-    # Release: TC-PEAK-029, the one real reference-host episode, is recorded on
-    # the pull request and in the test plan's execution log (section 10). If no
-    # declared window opens during the delivery window, the lane records that
-    # fact on the pull request and schedules the observation on the next lane
-    # (OQ-TP-2, non-blocking); the automated fixtures remain the merge gate.
+    #     consequence and the liveness precondition that spec section 18
+    #     places in the dispatch family's delivery guide and operations
+    #     guidance.
+    # Pin map: tests/checks/operation-count-pages.test.ts line-pins statements
+    # on doc/spec/nonfunctional.md and doc/overview/architecture-overview.md,
+    # so its map moves with those two pages in the same commit.
+    # The pages' other pinned phrases stay present
+    # (tests/checks/engine-first-doc-reconciliation.test.ts,
+    # tests/checks/dispatch-doc-conformance.test.ts, and
+    # tests/checks/doc-conformance.test.ts run there).
+    # Release: TC-PEAK-029 is a post-upgrade hand-off, not an episode this
+    # delivering lane produces. The pull request records the hand-off and its
+    # preconditions (the nominated profile declares `peakWindows`; the
+    # activity-keyed liveness consumers are relaxed for a parked lane) and the
+    # command sequence to observe the episode; the reference host observes it
+    # on the next lane after the upgrade (OQ-TP-2, non-gating; spec section
+    # 18.1 item 7). The automated fixtures remain the merge gate.
     scope:
       files:
-        - doc/changes/2026-11/2026-11-26--GH-413--peak-pausing-dispatch-lane/chg-GH-413-test-plan.md
+        - doc/guides/change-lifecycle.md
         - doc/guides/engine-first-operations.md
+        - doc/overview/architecture-overview.md
+        - doc/overview/glossary.md
+        - doc/quality/test-specs/test-spec-dispatch-engine.md
+        - doc/spec/features/feature-autonomous-delivery.md
         - doc/spec/features/feature-board.md
         - doc/spec/features/feature-brief.md
         - doc/spec/features/feature-config-layer.md
@@ -410,8 +706,11 @@ phases:
         - doc/spec/features/feature-peak-pausing.md
         - doc/spec/features/feature-provider-profiles.md
         - doc/spec/features/feature-resident-daemon.md
+        - doc/spec/features/feature-scheduling-engine.md
         - doc/spec/features/feature-spend.md
         - doc/spec/features/feature-status-digest.md
+        - doc/spec/nonfunctional.md
+        - tests/checks/operation-count-pages.test.ts
     doneArtifacts:
-      mergeRequestUrl: "the GH-413 pull request against main-tools, carrying the release note and the recorded reference-host episode (TC-PEAK-029)"
+      mergeRequestUrl: "the GH-413 pull request against main-tools, carrying the release note and recording the reference-host hand-off and its preconditions (TC-PEAK-029)"
       pipelineId: "the CI pipeline of the GH-413 pull request (the aggregate pnpm check green with every suite executed)"
