@@ -373,3 +373,30 @@ notes:
       limit, not an artifact defect."
     type: retro
     date: "2026-11-26"
+  - text: "DoR gate iteration 6 (the final authorized pass, resumed after the real
+      provider reset 2026-11-26T16:00:54Z): NOT_READY
+      (readiness-review/readiness-iter-6.md), two wording-only blocking
+      findings. (1) F-4's last sentence still names the superseded delivered
+      unmet-precondition identity and omits a re-dispatch; replace it with the
+      pre-session `dispatch.resume-parked` at exit 2 wording, naming the cause and
+      `until`, no session, nothing written, surfaces keep the park, and the
+      expired park recovered at the first observation. (2) F-5's restored
+      parked-case sentence says the invocation 'releases the lease'; the
+      delivered release matches on holder and would end the successor's lease, so
+      replace it with 'leaves the successor's lease alone; the delivered operator
+      resume path applies' and align DEC-13/§12. Minors: F-3 also names a
+      re-dispatch; the row's table pins/document sync/decision-record case need a
+      traced test; plan phase 8 says eighteen pages, the spec says nineteen.
+      Per the owner's rule, iteration 6 NOT_READY parks and hands back with these
+      findings; no further pass is attempted. No source delivery, no PR."
+    type: blocker
+    date: "2026-11-26"
+  - text: "Retro: the final gate is down to two sentences, both literal fixes; the
+      change is otherwise fully READY (spec_completeness, ac_quality,
+      plan_coverage, test_traceability, decision_capture, system_spec_consistency,
+      plan_doc_update_coverage, plan_code_area_coverage and dod_defined all PASS).
+      The park is the owner's explicit iteration-6 rule, not a substantive gap.
+      The next pass needs no design work: apply the two literal replacements and
+      the three minors, then run iteration 7."
+    type: retro
+    date: "2026-11-26"

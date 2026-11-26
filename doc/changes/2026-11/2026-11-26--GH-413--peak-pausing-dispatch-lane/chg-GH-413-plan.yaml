@@ -228,6 +228,7 @@ phases:
         - doc/changes/2026-11/2026-11-26--GH-413--peak-pausing-dispatch-lane/readiness-review/readiness-iter-3.md
         - doc/changes/2026-11/2026-11-26--GH-413--peak-pausing-dispatch-lane/readiness-review/readiness-iter-4.md
         - doc/changes/2026-11/2026-11-26--GH-413--peak-pausing-dispatch-lane/readiness-review/readiness-iter-5.md
+        - doc/changes/2026-11/2026-11-26--GH-413--peak-pausing-dispatch-lane/readiness-review/readiness-iter-6.md
         - doc/decisions/00-index.md
         - doc/decisions/TDR-0077-dispatch-owned-window-watch.md
         - doc/decisions/TDR-0078-lease-heartbeat-amends-tdr-0050.md
