@@ -9,7 +9,7 @@ phases:
   specification: { started: null, completed: 2026-11-26T13:58:56.356Z }
   test_planning: { started: null, completed: 2026-11-26T13:59:17.111Z }
   delivery_planning: { started: null, completed: 2026-11-26T13:59:36.773Z }
-  dor_check: { started: null, completed: null }
+  dor_check: { started: null, completed: 2026-11-26T16:49:05.379Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -179,15 +179,16 @@ decisions:
       whose standing park has not expired is refused before any session starts,
       at the admission of the resume beside the other admission refusals, using
       the window refusal's exit code (2): the delivered
-      `provider.profile.unavailable` contract does not fit (it says no profile is
-      eligible and carries an eligibility list), so the owner authorises one new
-      dispatch-family code, `dispatch.resume-parked` (platform-provider, exit 2,
-      transient/retryable, remediation: resume after the park's `until`), with
-      the park's cause and `until` in the bounded summary; it writes nothing, no
-      event claims a resume, and lanes and board keep showing the lane parked. The operator-override outcome is not
-      chosen. Consequence: the recovery pass only ever meets an expired park or
-      none. This decision supersedes the operator-resume-during-open-window
-      reading in F-3/F-4/Flow 3/AC-F3-4/RSK-14 and the plan/test plan passages."
+      `provider.profile.unavailable` contract does not fit (it says no profile
+      is eligible and carries an eligibility list), so the owner authorises one
+      new dispatch-family code, `dispatch.resume-parked` (platform-provider,
+      exit 2, transient/retryable, remediation: resume after the park's
+      `until`), with the park's cause and `until` in the bounded summary; it
+      writes nothing, no event claims a resume, and lanes and board keep showing
+      the lane parked. The operator-override outcome is not chosen. Consequence:
+      the recovery pass only ever meets an expired park or none. This decision
+      supersedes the operator-resume-during-open-window reading in F-3/F-4/Flow
+      3/AC-F3-4/RSK-14 and the plan/test plan passages."
     date: "2026-11-26"
   - text: "RESUMED under the owner's delegated authority. Source: the newest comment
       on #413 (2026-11-26, CEO authorization), Decision 2: up to two more
@@ -201,25 +202,38 @@ decisions:
       unchanged."
     date: "2026-11-26"
   - text: "Decision 15 is superseded on its lease-key rationale: the ownership key
-      is the live lease's latest heartbeat being the invocation's own last write,
-      not the lease id, because the delivered `renewed` arm preserves the lease
-      id across a same-holder re-dispatch. The claim stays untouched. This
+      is the live lease's latest heartbeat being the invocation's own last
+      write, not the lease id, because the delivered `renewed` arm preserves the
+      lease id across a same-holder re-dispatch. The claim stays untouched. This
       correction was already in spec v1.3 and TDR-0078; it is recorded here so
       the pm-notes no longer carry the earlier lease-id rationale."
     date: "2026-11-26"
   - text: "RESUMED after the provider limit reset, under the owner's live
-      instruction (newest #413 comment, issuecomment-7194705060, 2026-11-26). The
-      park was a provider token limit, not an artifact defect. The hand-back reset
-      time was reported in UTC+8 (2026-11-27T00:00:54); the real reset was
-      2026-11-26T16:00:54Z. DoR iteration 6 runs under the existing authorization
-      for the iteration-4 findings as decided there (pre-session refusal for an
-      un-expired standing park, one registered dispatch-family code, exit 2, no
-      override) and for the literal iteration-5 fixes already applied. If
-      iteration 6 is NOT_READY, park and hand back with its findings; if READY,
+      instruction (newest #413 comment, issuecomment-7194705060, 2026-11-26).
+      The park was a provider token limit, not an artifact defect. The hand-back
+      reset time was reported in UTC+8 (2026-11-27T00:00:54); the real reset was
+      2026-11-26T16:00:54Z. DoR iteration 6 runs under the existing
+      authorization for the iteration-4 findings as decided there (pre-session
+      refusal for an un-expired standing park, one registered dispatch-family
+      code, exit 2, no override) and for the literal iteration-5 fixes already
+      applied. If iteration 6 is NOT_READY, park and hand back with its
+      findings; if READY, continue through delivery, system_spec_update,
+      review_fix, quality_gates, dod_check and pr_creation on this branch and
+      stop at pr_creation. No regeneration of the spec or test plan; no scope
+      change; the three delivery notes still apply; the records stay Proposed;
+      no model assignment."
+    date: "2026-11-26"
+  - text: "RESUMED under the owner's live go (newest #413 comment,
+      issuecomment-7197852375, 2026-11-26T16:40Z): iterations 7 and 8 are
+      authorized. Run iteration 7 now; if NOT_READY only on wording the
+      reviewer's suggested fix covers, apply it literally and run iteration 8;
+      if iteration 8 is still NOT_READY, park and hand back. When READY,
       continue through delivery, system_spec_update, review_fix, quality_gates,
-      dod_check and pr_creation on this branch and stop at pr_creation. No
-      regeneration of the spec or test plan; no scope change; the three delivery
-      notes still apply; the records stay Proposed; no model assignment."
+      dod_check and pr_creation on this branch and stop at pr_creation. Delivery
+      is at full speed and a run into the peak hours is accepted; the 04:00Z
+      cut-off is lifted for this lane. No regeneration of the spec or test plan;
+      no scope change; the three delivery notes still apply; the records stay
+      Proposed; no model assignment."
     date: "2026-11-26"
 open_questions: []
 blockers: []
@@ -325,52 +339,55 @@ notes:
       window is specified three ways and one is unimplementable: the delivered
       pass recovers only an expired park; occupancy would let the lane bill
       inside the window while `lanes` shows it parked; the refusal reading
-      returns from a live session with no named identity or decision point.
-      The reviewer's fix is small: choose operator-override or pre-session
-      refusal, align seven passages, name the refusal identity and its point in
-      the run. The change is PARKED per the recorded assumption; no code
-      delivery, no pull request. Owner action required: authorize one more gate
-      pass for this fix, or leave GH-413 parked."
+      returns from a live session with no named identity or decision point. The
+      reviewer's fix is small: choose operator-override or pre-session refusal,
+      align seven passages, name the refusal identity and its point in the run.
+      The change is PARKED per the recorded assumption; no code delivery, no
+      pull request. Owner action required: authorize one more gate pass for this
+      fix, or leave GH-413 parked."
     type: blocker
     date: "2026-11-26"
   - text: "Retro: the four gate passes produced a strong, code-grounded spec and a
-      precise readiness record, but they also show the cost of remediating inside
-      a 3-iteration cap: each pass fixed the previous seam and exposed one more.
-      The durable lesson is to validate every abnormal-exit rule against the
-      delivered state machine (expired vs active park, live vs lost lease) before
-      writing it, and to choose the operator-override branch for an un-expired
-      park, which is the only branch the delivered pass can express."
+      precise readiness record, but they also show the cost of remediating
+      inside a 3-iteration cap: each pass fixed the previous seam and exposed
+      one more. The durable lesson is to validate every abnormal-exit rule
+      against the delivered state machine (expired vs active park, live vs lost
+      lease) before writing it, and to choose the operator-override branch for
+      an un-expired park, which is the only branch the delivered pass can
+      express."
     type: retro
     date: "2026-11-26"
   - text: "Hand-back recorded on the tracker: blocker comment posted at
-      https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/413#issuecomment-7194494377
-      and the issue assigned to the owner, state open. The parked hand-back is
-      this change's terminal state for the run; no pull request exists."
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/413#issu\
+      ecomment-7194494377 and the issue assigned to the owner, state open. The
+      parked hand-back is this change's terminal state for the run; no pull
+      request exists."
     type: info
     date: "2026-11-26"
   - text: "Resumed under the owner's delegated authority (newest #413 comment). DoR
       iteration 5 ran and returned NOT_READY on one substantive finding: the
       refusal identity/exit had to be the window refusal's exit code (2) and,
       because `provider.profile.unavailable` does not fit, one new
-      dispatch-family code with a resume-after-`until` remediation. The artifacts
-      were corrected literally to `dispatch.resume-parked` (platform-provider,
-      exit 2, transient/retryable, one owner-authorised row), the 19-page
-      reconciliation set, and the NFR-8 exception. DoR iteration 6 could not run:
-      the readiness reviewer hit the provider's 5-hour token limit. The provider
-      reported the reset as 2026-11-27T00:00:54 in UTC+8; the real reset was
-      2026-11-26T16:00:54Z. READY is not established, so the change was PARKED
-      again. This was a provider limit, not an artifact defect: nothing else is
-      wrong with the change. No source delivery, no pull request. Artifacts are
-      committed at 8a086e09 (readiness-iter-5 is untracked on disk)."
+      dispatch-family code with a resume-after-`until` remediation. The
+      artifacts were corrected literally to `dispatch.resume-parked`
+      (platform-provider, exit 2, transient/retryable, one owner-authorised
+      row), the 19-page reconciliation set, and the NFR-8 exception. DoR
+      iteration 6 could not run: the readiness reviewer hit the provider's
+      5-hour token limit. The provider reported the reset as 2026-11-27T00:00:54
+      in UTC+8; the real reset was 2026-11-26T16:00:54Z. READY is not
+      established, so the change was PARKED again. This was a provider limit,
+      not an artifact defect: nothing else is wrong with the change. No source
+      delivery, no pull request. Artifacts are committed at 8a086e09
+      (readiness-iter-5 is untracked on disk)."
     type: blocker
     date: "2026-11-26"
   - text: "Retro: the gate found real, code-level defects on every pass, including
       the owner's own decision being encoded with the wrong exit code (1 instead
-      of 2) and a queue-family identity instead of the authorised dispatch-family
-      row. The lesson is to run the delivered error projection against the exact
-      owner wording before writing the identity, not to substitute a plausible
-      delivered row. The final blocker is environmental: the reviewer's usage
-      limit, not an artifact defect."
+      of 2) and a queue-family identity instead of the authorised
+      dispatch-family row. The lesson is to run the delivered error projection
+      against the exact owner wording before writing the identity, not to
+      substitute a plausible delivered row. The final blocker is environmental:
+      the reviewer's usage limit, not an artifact defect."
     type: retro
     date: "2026-11-26"
   - text: "DoR gate iteration 6 (the final authorized pass, resumed after the real
@@ -378,26 +395,27 @@ notes:
       (readiness-review/readiness-iter-6.md), two wording-only blocking
       findings. (1) F-4's last sentence still names the superseded delivered
       unmet-precondition identity and omits a re-dispatch; replace it with the
-      pre-session `dispatch.resume-parked` at exit 2 wording, naming the cause and
-      `until`, no session, nothing written, surfaces keep the park, and the
+      pre-session `dispatch.resume-parked` at exit 2 wording, naming the cause
+      and `until`, no session, nothing written, surfaces keep the park, and the
       expired park recovered at the first observation. (2) F-5's restored
       parked-case sentence says the invocation 'releases the lease'; the
-      delivered release matches on holder and would end the successor's lease, so
-      replace it with 'leaves the successor's lease alone; the delivered operator
-      resume path applies' and align DEC-13/§12. Minors: F-3 also names a
-      re-dispatch; the row's table pins/document sync/decision-record case need a
-      traced test; plan phase 8 says eighteen pages, the spec says nineteen.
-      Per the owner's rule, iteration 6 NOT_READY parks and hands back with these
-      findings; no further pass is attempted. No source delivery, no PR."
+      delivered release matches on holder and would end the successor's lease,
+      so replace it with 'leaves the successor's lease alone; the delivered
+      operator resume path applies' and align DEC-13/§12. Minors: F-3 also names
+      a re-dispatch; the row's table pins/document sync/decision-record case
+      need a traced test; plan phase 8 says eighteen pages, the spec says
+      nineteen. Per the owner's rule, iteration 6 NOT_READY parks and hands back
+      with these findings; no further pass is attempted. No source delivery, no
+      PR."
     type: blocker
     date: "2026-11-26"
   - text: "Retro: the final gate is down to two sentences, both literal fixes; the
       change is otherwise fully READY (spec_completeness, ac_quality,
-      plan_coverage, test_traceability, decision_capture, system_spec_consistency,
-      plan_doc_update_coverage, plan_code_area_coverage and dod_defined all PASS).
-      The park is the owner's explicit iteration-6 rule, not a substantive gap.
-      The next pass needs no design work: apply the two literal replacements and
-      the three minors, then run iteration 7."
+      plan_coverage, test_traceability, decision_capture,
+      system_spec_consistency, plan_doc_update_coverage, plan_code_area_coverage
+      and dod_defined all PASS). The park is the owner's explicit iteration-6
+      rule, not a substantive gap. The next pass needs no design work: apply the
+      two literal replacements and the three minors, then run iteration 7."
     type: retro
     date: "2026-11-26"
   - text: "Post-iteration-6 literal fixes applied (no gate run on them): F-4's last
