@@ -10,7 +10,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-26T13:59:17.111Z }
   delivery_planning: { started: null, completed: 2026-11-26T13:59:36.773Z }
   dor_check: { started: null, completed: 2026-11-26T16:49:05.379Z }
-  delivery: { started: null, completed: 2026-11-26T19:16:53.080Z }
+  delivery: { started: null, completed: 2026-11-26T20:53:32.224Z }
   system_spec_update: { started: null, completed: 2026-11-26T18:18:53.409Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -254,19 +254,19 @@ decisions:
     date: "2026-11-26"
   - text: "Review iteration 2 FAIL decisions (code-review/review-iter-2.yaml; 16
       findings, 2 high). F-7: under the budget-only admission the non-terminal
-      refusal cannot occur, so retire that arm from the spec, AC-F4-3 and the test
-      plan; implement the delivered typed question on terminal exhaustion (the
-      escalation the stall restart uses). F-9: the `lanes` mode must read
-      `iteration-start-gating` when the harness declares no terminate and no watch
-      is composed, and the harness precondition is documented; the withhold
-      renews at the earlier of the observation and renewal due. F-14e: keep the
-      delivered repository-wide recovery pass and name the stuck refs in the
-      refusal summary. F-12: the plan gains phase 10 with the 19 out-of-scope
-      files and drops the F-17 arm. F-14 accepted (structural coverage plus the
-      review's own probe); F-17 closed as a spec correction; F-21(g) is a recorded
-      follow-up. The two high findings (six red tests and three real-timer
-      timeouts; budget-only recovery must respect restart-budget 0/absent) are
-      blocking and go to @coder."
+      refusal cannot occur, so retire that arm from the spec, AC-F4-3 and the
+      test plan; implement the delivered typed question on terminal exhaustion
+      (the escalation the stall restart uses). F-9: the `lanes` mode must read
+      `iteration-start-gating` when the harness declares no terminate and no
+      watch is composed, and the harness precondition is documented; the
+      withhold renews at the earlier of the observation and renewal due. F-14e:
+      keep the delivered repository-wide recovery pass and name the stuck refs
+      in the refusal summary. F-12: the plan gains phase 10 with the 19
+      out-of-scope files and drops the F-17 arm. F-14 accepted (structural
+      coverage plus the review's own probe); F-17 closed as a spec correction;
+      F-21(g) is a recorded follow-up. The two high findings (six red tests and
+      three real-timer timeouts; budget-only recovery must respect
+      restart-budget 0/absent) are blocking and go to @coder."
     date: "2026-11-26"
 open_questions: []
 blockers: []
@@ -645,16 +645,16 @@ notes:
       doc/00-index.md, and readiness-iter-7.md."
     type: info
     date: "2026-11-26"
-  - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml), 23 findings
-      (7 high). The high set was a red test set, a lease-release ownership bug, a
+  - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml), 23 findings (7
+      high). The high set was a red test set, a lease-release ownership bug, a
       lost-lease derivation path, a production recovery stub, a park without a
       confirmed terminate, runaway caps, and the missing GH-413 exclusion set.
       Decisions: budget-only recovery admission (F-5a), terminal-lane-record
       recoveryRefusal carrier (F-10), keep `dispatch.resume-parked` for the
       parked interval (F-15), and the pre-session ordering invariant (F-17).
-      @coder executed plan phase 9 (440ab76d, 258ea4de, ba563712); the spec, test
-      plan and TDR-0077/0078 were corrected; the doc-syncer and the planning
-      pages close F-19. Second review pending; no PR."
+      @coder executed plan phase 9 (440ab76d, 258ea4de, ba563712); the spec,
+      test plan and TDR-0077/0078 were corrected; the doc-syncer and the
+      planning pages close F-19. Second review pending; no PR."
     type: info
     date: "2026-11-26"
   - text: "Plan phase 10 (Code Review Remediation, iteration 2) complete: commit
@@ -681,10 +681,10 @@ notes:
       fail; R9/peak batch 57 pass / 0 fail across 12 files; checks/docs batch
       100 pass / 0 fail across 6 files; read-only controls 55 pass / 0 fail
       across 9 files; the new suites 31 pass. The whole battery was not run by
-      owner instruction; the lifecycle quality_gates runs it once. Residual:
-      the production suite does not yet drive the preserved-park resume,
-      bound-0 exhaustion with its typed question, own/foreign stuck markers, or
-      a rule change through the real composer; those arms remain engine- and
+      owner instruction; the lifecycle quality_gates runs it once. Residual: the
+      production suite does not yet drive the preserved-park resume, bound-0
+      exhaustion with its typed question, own/foreign stuck markers, or a rule
+      change through the real composer; those arms remain engine- and
       fixture-level evidence."
     type: info
     date: "2026-11-26"
