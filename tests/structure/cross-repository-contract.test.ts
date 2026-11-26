@@ -520,6 +520,8 @@ describe("TC-XCTR-007 identity reuse and the distinct report types", () => {
       "merge.branch-unresolved",
       "merge.request-unresolved",
       "merge.work-item-unresolved",
+      // GH-413 adds the pre-session refusal of an un-expired standing park.
+      "dispatch.resume-parked",
     ]);
     const delivered = entries.filter((entry) => !additive.has(entry.code));
     expect(delivered).toHaveLength(preChange.length);

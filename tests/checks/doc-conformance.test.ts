@@ -735,8 +735,8 @@ const GH346_ROWS: readonly PageClaimRow[] = [
     ],
     required: [
       "install | user | false | not_landed | Build and install from the main checkout",
-      "The table declares 172 machine identities",
-      "allowlist of 71 declared identities",
+      "The table declares 173 machine identities",
+      "allowlist of 72 declared identities",
       "the ten `install` rows",
       "the thirteen `harness` rows",
       "the twelve concrete `merge` rows",
@@ -754,7 +754,7 @@ const GH346_ROWS: readonly PageClaimRow[] = [
       "66-entry allowlist",
       "68-entry allowlist",
     ],
-    required: ["172 identities", "71-entry allowlist"],
+    required: ["173 identities", "72-entry allowlist"],
   },
   {
     page: "doc/spec/features/feature-metrics.md",
@@ -779,17 +779,17 @@ const GH346_ROWS: readonly PageClaimRow[] = [
       "family count (27)",
     ],
     required: [
-      "172 entries",
-      "171 delivered rows",
-      "71 allowlisted two-segment codes",
-      "BASELINE_ROWS.length + 138",
+      "173 entries",
+      "172 delivered rows",
+      "72 allowlisted two-segment codes",
+      "BASELINE_ROWS.length + 139",
       "family count (28)",
     ],
   },
   {
     page: "doc/spec/features/feature-supervise.md",
     stale: ["65-member allowlist", "66-member allowlist", "68-member allowlist", "26th family"],
-    required: ["71-member allowlist", "25th family"],
+    required: ["72-member allowlist", "25th family"],
   },
   {
     page: "doc/spec/features/feature-branding-seam.md",
@@ -905,10 +905,10 @@ describe("GH-346 TC-INST-111/112 the page set states the delivered truth", () =>
     );
     const withoutRequired = (page: string): string | undefined =>
       page === "doc/spec/features/feature-ceremony-runner.md"
-        ? (pageText(page) ?? "").replaceAll("172 identities", "the moved count")
+        ? (pageText(page) ?? "").replaceAll("173 identities", "the moved count")
         : pageText(page);
     expect(pageClaimViolations(GH346_ROWS, withoutRequired).join("\n")).toContain(
-      "missing required phrase: 172 identities",
+      "missing required phrase: 173 identities",
     );
   });
 
@@ -989,10 +989,10 @@ const GH350_PHASE1_ROWS: readonly GH350Row[] = [
       "BASELINE_ROWS.length + 135",
     ],
     required: [
-      "172 machine identities",
-      "the same 172 identities",
+      "173 machine identities",
+      "the same 173 identities",
       "delivered-rows metric",
-      "BASELINE_ROWS.length + 138",
+      "BASELINE_ROWS.length + 139",
       "the sixteen `provider` rows",
       "provider.peak.zone-unknown",
       "provider.budget.exceeded",
@@ -1008,7 +1008,7 @@ const GH350_PHASE1_ROWS: readonly GH350Row[] = [
       "66-entry allowlist",
       "68-entry allowlist",
     ],
-    required: ["172 identities", "71-entry allowlist"],
+    required: ["173 identities", "72-entry allowlist"],
   },
   {
     page: "doc/spec/features/feature-metrics.md",
@@ -1023,7 +1023,7 @@ const GH350_PHASE1_ROWS: readonly GH350Row[] = [
       "BASELINE_ROWS.length + 133",
       "BASELINE_ROWS.length + 135",
     ],
-    required: ["172 entries", "171 delivered rows", "BASELINE_ROWS.length + 138"],
+    required: ["173 entries", "172 delivered rows", "BASELINE_ROWS.length + 139"],
   },
   {
     page: "doc/spec/features/feature-install-lifecycle.md",
@@ -1034,7 +1034,7 @@ const GH350_PHASE1_ROWS: readonly GH350Row[] = [
       "66 declared identities",
       "68 declared identities",
     ],
-    required: ["declared table total at 172 machine identities", "71 declared identities"],
+    required: ["declared table total at 173 machine identities", "72 declared identities"],
   },
   {
     page: "doc/spec/features/feature-provider-engine.md",

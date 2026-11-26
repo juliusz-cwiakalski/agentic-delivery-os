@@ -794,60 +794,44 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
       if (!capabilities.supportedOperations.includes("terminate")) return gap("terminate");
       const record = sessions.get(input.handle.sessionId);
       // An already-exited or unknown session is SUCCESS, never an error
-      // (GH-347 AC-F5-5, TDR-0051 DC-4).
+      // (GH-347 AC-F5-5, TDR-0051 DC-4). A separately invoked stop command has
+      // no in-memory record, so the exact identity over the host process table
+      // is the delivered cross-process resolution (GH-413 F-9): the session id
+      // or its deterministic work-item title, never a broad pattern.
+      const signalTargets = async (): Promise<HarnessTerminateResult> => {
+        const tree = options.terminateTree;
+        if (tree === undefined) {
+          return { terminated: false, escalated: false, reaped: false };
+        }
+        const title = record?.title ?? `ticket-${input.handle.workItemRef}`;
+        const targets = exactIdentityTargets({
+          table: tree.list(),
+          sessionId: input.handle.sessionId,
+          title,
+        });
+        const termSignals = targets.filter((pid) => tree.signalTree(pid, "SIGTERM")).length;
+        if (options.terminateWait !== undefined) await options.terminateWait(input.graceMs);
+        const live = new Set(tree.list().map((entry) => entry.pid));
+        const survivors = targets.filter((pid) => live.has(pid));
+        const escalated = survivors.length > 0;
+        if (escalated) {
+          for (const pid of survivors) tree.signalTree(pid, "SIGKILL");
+        }
+        return {
+          terminated: termSignals > 0,
+          escalated,
+          reaped: targets.length > 0,
+        };
+      };
       if (record === undefined) {
-        return { ok: true, value: { terminated: true, escalated: false, reaped: false } };
+        return { ok: true, value: await signalTargets() };
       }
       // Idempotent: a second terminate signals nothing further and replays the
       // facts the FIRST call observed.
       if (record.termination !== undefined) {
         return { ok: true, value: record.termination };
       }
-      // A composition that supplies no process-tree seam has not given the
-      // adapter a way to signal anything; it reports the absence honestly rather
-      // than claiming a termination it did not perform. Production injects the
-      // seam at the composition edge (no ambient process access lives here).
-      const tree = options.terminateTree;
-      if (tree === undefined) {
-        const value: HarnessTerminateResult = {
-          terminated: false,
-          escalated: false,
-          reaped: false,
-        };
-        record.termination = value;
-        return { ok: true, value };
-      }
-      const title = record.title ?? `ticket-${input.handle.workItemRef}`;
-      // The exact-identity match: this lane's session id or its deterministic
-      // `ticket-<REF>` title, never a broad name or substring.
-      const targets = exactIdentityTargets({
-        table: tree.list(),
-        sessionId: input.handle.sessionId,
-        title,
-      });
-      // 1. The terminal signal first, over each matched process's own tree (the
-      //    group it leads), which reaches the runtime's children too.
-      const termSignals = targets.filter((pid) => tree.signalTree(pid, "SIGTERM")).length;
-      // 2. The DECLARED grace — the resolved `coordinator.kill-grace`, never the
-      //    100 ms probe escalation — waited through the one injected fact.
-      if (options.terminateWait !== undefined) await options.terminateWait(input.graceMs);
-      // 3. The kill signal only AFTER the grace, and only for a target that is
-      //    still listed: an escalation runs because an act is observable.
-      const live = new Set(tree.list().map((entry) => entry.pid));
-      const survivors = targets.filter((pid) => live.has(pid));
-      const escalated = survivors.length > 0;
-      if (escalated) {
-        for (const pid of survivors) tree.signalTree(pid, "SIGKILL");
-      }
-      // Every reported boolean is an OBSERVED fact: the terminal signal was
-      // issued to a matched tree, the escalation ran, and `reaped` reports that
-      // this lane's exact identity (session id or `ticket-<REF>` title) was
-      // MATCHED in the runtime table — a match, not an OS reap act.
-      const value: HarnessTerminateResult = {
-        terminated: termSignals > 0,
-        escalated,
-        reaped: targets.length > 0,
-      };
+      const value = await signalTargets();
       record.termination = value;
       return { ok: true, value };
     },

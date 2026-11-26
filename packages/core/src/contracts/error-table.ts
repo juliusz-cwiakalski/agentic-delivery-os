@@ -1382,6 +1382,17 @@ export const ERROR_TABLE = [
     summary: "Dispatch truth could not be read, so no verdict was derived.",
   },
   {
+    code: "dispatch.resume-parked",
+    domainKind: "dispatch",
+    category: "transient",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Resume after the park's recorded `until`; the park stands and nothing was written.",
+    projectionClass: "platform-provider",
+    summary: "A resume was refused because the lane's standing park has not expired.",
+  },
+  {
     code: "queue.dependency-cycle",
     domainKind: "queue",
     category: "user",

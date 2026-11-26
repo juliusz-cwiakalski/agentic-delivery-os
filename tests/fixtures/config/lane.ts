@@ -118,6 +118,18 @@ export const INVALID_LANE_CASES: readonly InvalidLaneCase[] = [
     code: "config.value.invalid",
     key: "lane",
   },
+  {
+    id: "disable-peak-pausing-string",
+    lane: { "liveness-interval": 30000, "restart-budget": 3, "disable-peak-pausing": "yes" },
+    code: "config.value.invalid",
+    key: "lane",
+  },
+  {
+    id: "disable-peak-pausing-number",
+    lane: { "liveness-interval": 30000, "restart-budget": 3, "disable-peak-pausing": 1 },
+    code: "config.value.invalid",
+    key: "lane",
+  },
 ] as const;
 
 /** A resolvable zero bound: the positive control proving budget 0 is valid (D-12). */
@@ -155,4 +167,18 @@ export const DISABLE_WORKTREES_SOURCE: ConfigSourceFacts = laneSource({
   "liveness-interval": 30000,
   "restart-budget": 3,
   "disable-worktrees": true,
+});
+
+/** A valid branch with automatic peak pausing disabled (GH-413 DM-6, DEC-2). */
+export const DISABLE_PEAK_PAUSING_SOURCE: ConfigSourceFacts = laneSource({
+  "liveness-interval": 30000,
+  "restart-budget": 3,
+  "disable-peak-pausing": true,
+});
+
+/** A valid branch with automatic peak pausing explicitly enabled (false). */
+export const ENABLE_PEAK_PAUSING_SOURCE: ConfigSourceFacts = laneSource({
+  "liveness-interval": 30000,
+  "restart-budget": 3,
+  "disable-peak-pausing": false,
 });

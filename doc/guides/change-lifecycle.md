@@ -9,7 +9,7 @@ created: 2026-02-03
 owners: ["engineering"]
 summary: "End-to-end change delivery workflow (planning to PR) with PM-led gates and artifacts." 
 links:
-  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242", "GH-268", "GH-313", "GH-300", "GH-366", "GH-404"]
+  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242", "GH-268", "GH-313", "GH-300", "GH-366", "GH-404", "GH-413"]
 ---
 
 # Change Lifecycle
@@ -77,6 +77,8 @@ All lifecycle commits route through the `commit` primitive, directly or through 
 Lifecycle phase state is written only through the `phase` family (`phase list`, `phase complete`, `phase reopen`). No prompt hand-edits phase timestamps or the PR-URL field; the PR URL is a pm-notes `notes:` entry. The typed engine is the regular delivery path: `dispatch <ref>` appends real `pilot` attempts, and the lifecycle merge and closeout run through the engine primitives. The shell entry points (`deliver-ticket.sh`, `batch-deliver.sh`, `pm-liveness.sh`, `ceo-loop.sh`) are the documented, still-executable fallback, and their authoritative-mode deprecation pointer names `dispatch <ref>` and `dispatch handover <repo> --revert`. A repository is flipped only by a separate owner act (`dispatch handover <repo>`) once its gate reads eligible; nothing in the lifecycle flips one.
 
 A dispatched work item runs its whole lifecycle in its own linked worktree, created before the first phase, so the main checkout stays on the base branch and clean while the lane delivers. `lane.worktree-root` places the worktrees elsewhere and `lane.disable-worktrees: true` runs a lane in the invoking checkout instead ([Engine-first Delivery Operations](engine-first-operations.md)).
+
+**Peak windows pause a lane instead of failing it.** When the profile a lane was nominated to declares an open peak window, the invocation that owns the lane stops it with one bounded-grace stop, parks it with cause `peak-window` and the window's end, keeps its repository lease live through the pause, and resumes it once the end is observed — `dispatch status <ref>`, `lanes`, and `board` explain the pause, and the invocation still returns one result at the end. This holds on a harness that declares the terminate operation; a harness that declares none composes no watch, so its lanes run through a window and `lanes` reports `iteration-start-gating` for them even with pausing enabled. Nothing is lost or duplicated: the same session, branch, worktree, change folder, phases, and queue state survive, and a second dispatch of the work item stays refused. Two operator facts follow. A parked lane is **silent by design**, so activity-keyed stall detection (`pm-liveness.sh`, `deliver-ticket.sh`, `ceo-loop.sh`, and any probe with the same shape) must be relaxed or must exclude a parked lane before a lane is dispatched into a window, or the probe kills the waiting invocation and orphans the park. And a lane paused on purpose can be requested with `dispatch stop <ref> --cause peak-window --until <iso>`, which parks a running lane at the declared end only after a confirmed terminate; a lane that is not running is refused with nothing written. The pausing is on by default and only applies where a profile declares windows; `lane.disable-peak-pausing: true` restores admission-gating-only behaviour ([Provider Peak Pausing](../spec/features/feature-peak-pausing.md)).
 
 ### Pure-Writer Agents
 

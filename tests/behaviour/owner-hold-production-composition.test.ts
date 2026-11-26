@@ -142,6 +142,7 @@ const createHarness = (input: {
     timedOut: false,
   });
   const program = createProductionComposer({
+    dispatchDelay: async () => {},
     harnessVersionProbe: async () => ({ status: "answered" as const, stdout: "opencode v2.3.2" }),
     environment: {
       HOME: home,

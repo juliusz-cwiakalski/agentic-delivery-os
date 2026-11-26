@@ -15,7 +15,9 @@ import {
 import { type CliStreams, runCli } from "../../../../packages/cli/src/index";
 import { projectExitCode } from "../../../../packages/cli/src/projection";
 import type {
+  DispatchCadenceWait,
   DispatchLeaseClaim,
+  DispatchPeakWatchPorts,
   DispatchPreflightPort,
   DispatchTruthReads,
 } from "../../../../packages/core/src/app/dispatch";
@@ -33,13 +35,16 @@ import {
   type HarnessFailure,
   type HarnessLivenessReport,
   type HarnessSessionPort,
+  type ProviderProfilePeakRules,
+  type QueueParkPreservation,
+  type QueueParkRecord,
   type StateStorePort,
 } from "../../../../packages/core/src/contracts/index";
 import {
   appendEconomicsRestartEvent,
   ensureEconomicsExhaustionRecord,
 } from "../../../../packages/core/src/state/index";
-import { createDispatchState, createScriptedHarness } from "../harness";
+import { COMPLETED_EVIDENCE, createDispatchState, createScriptedHarness } from "../harness";
 import { truthInput as defaultTruthInput } from "../truth";
 
 const BRAND = (() => {
@@ -135,6 +140,18 @@ export type CommandScenarioOptions = {
   readonly killGraceMs?: number;
   /** An injected restart append; the default appends a real economics record. */
   readonly appendRestart?: DispatchPorts["appendRestart"];
+  /** The run-path lease renewal (GH-413 DEC-13); absent keeps no renewal. */
+  readonly renewLease?: DispatchPorts["renewLease"];
+  /** The resolved `queue.lease-ttl` the renewal cadence derives from. */
+  readonly leaseTtlMs?: number;
+  /** The nomination gate (GH-413 tests need a stored profile). */
+  readonly nominate?: DispatchPorts["nominate"];
+  /** The dispatch-owned window watch (GH-413); absent keeps no watch. */
+  readonly peak?: DispatchPorts["peak"];
+  /** The operator stop runtime (GH-413); absent refuses the command. */
+  readonly stop?: DispatchCommandRuntime["stop"];
+  /** A fake cadence wait; defaults to one that resolves immediately. */
+  readonly waitForCadence?: DispatchPorts["waitForCadence"];
   /** An optional store wrapper (for targeted append failures). */
   readonly store?: (store: StateStorePort) => StateStorePort;
 };
@@ -268,11 +285,12 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
         });
         return appended.ok;
       }),
+    ...(options.nominate === undefined ? {} : { nominate: options.nominate }),
     claimLease: () => {
       calls.claims.push("claim");
       return options.claim ?? { ok: true, leaseId: "lease-1" };
     },
-    releaseLease: (_ref, cause) => {
+    releaseLease: (_ref, cause, _expectedHeartbeatAt) => {
       calls.releases.push(cause);
       return true;
     },
@@ -287,8 +305,13 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
           livenessIntervalMs: options.livenessIntervalMs,
           // The fake cadence resolves immediately: the scripted harness decides
           // when `collect` completes, so no wall clock participates.
-          waitForCadence: () => ({ promise: Promise.resolve(), cancel: () => {} }),
+          waitForCadence:
+            options.waitForCadence ?? (() => ({ promise: Promise.resolve(), cancel: () => {} })),
         }),
+    ...(options.renewLease === undefined ? {} : { renewLease: options.renewLease }),
+    ...(options.leaseTtlMs === undefined ? {} : { leaseTtlMs: options.leaseTtlMs }),
+    ...(options.peak === undefined ? {} : { peak: options.peak }),
+    ...(options.stop === undefined ? {} : { stop: options.stop }),
     ensureRestartExhaustion: ({ ref, runId, restarts, recordedAt }) => {
       calls.exhaustions = [...calls.exhaustions, { ref, restarts }];
       const ensured = ensureEconomicsExhaustionRecord(state.store, state.fenceToken, {
@@ -382,4 +405,233 @@ export const exitOf = (value: DispatchToken): number => {
   const row = DELIVERY_RESULT_TAXONOMY.find((entry) => entry.token === value);
   if (row === undefined) throw new Error("token is not in the taxonomy");
   return projectExitCode(row.projectionClass);
+};
+
+/* ------------------------------------------------------------------------- */
+/* GH-413 — the dispatch-owned peak-window fixture family                     */
+/* ------------------------------------------------------------------------- */
+
+export type PeakFixtureOptions = {
+  readonly startMs: number;
+  readonly rules?: Readonly<Record<string, ProviderProfilePeakRules>>;
+  readonly killGraceMs?: number;
+  readonly preservation?: QueueParkPreservation;
+  readonly stopUnconfirmed?: boolean;
+  readonly watchEnabled?: boolean;
+  readonly recoverParks?: () =>
+    | { readonly ok: true }
+    | {
+        readonly ok: false;
+        readonly kind: "queue" | "state";
+        readonly code: string;
+        readonly stuck?: readonly string[];
+      };
+  readonly holdActive?: () => boolean;
+  readonly resumeSucceeds?: () => boolean;
+  readonly reenterSucceeds?: () => boolean;
+  readonly restartCount?: number;
+  readonly restartBound?: number;
+  readonly prefillCost?: number | null;
+  readonly uniqueProgress?: number | null;
+};
+
+export type PeakFixture = {
+  readonly clock: {
+    readonly nowMs: () => number;
+    readonly iso: () => string;
+    readonly advance: (ms: number) => void;
+  };
+  readonly peak: DispatchPeakWatchPorts;
+  readonly parks: QueueParkRecord[];
+  readonly stopCalls: { readonly handle?: unknown; readonly graceMs: number }[];
+  readonly resumed: () => number;
+  readonly reentered: () => readonly number[];
+  readonly recoveryCalls: () => number;
+  readonly escalated: () => readonly string[];
+  readonly setOnStop: (hook: () => void) => void;
+  readonly waitForCadence: (ms: number) => DispatchCadenceWait;
+};
+
+/** One deterministic dispatch-owned watch fixture over an injected clock. */
+export const createPeakFixture = (options: PeakFixtureOptions): PeakFixture => {
+  let nowMs = options.startMs;
+  let episode = 0;
+  let resumed = 0;
+  let recoveryCalls = 0;
+  const reenteredOrdinals: number[] = [];
+  const escalatedCodes: string[] = [];
+  const parks: QueueParkRecord[] = [];
+  const stopCalls: { readonly handle?: unknown; readonly graceMs: number }[] = [];
+  let onStop: (() => void) | undefined;
+  const rules = options.rules ?? {};
+  const clock = {
+    nowMs: () => nowMs,
+    iso: () => new Date(nowMs).toISOString(),
+    advance: (ms: number) => {
+      nowMs += ms;
+    },
+  };
+  const peak: DispatchPeakWatchPorts = {
+    watchEnabled: options.watchEnabled ?? true,
+    rulesFor: (profile) => rules[profile],
+    parks: () => parks,
+    recoverParks: () => {
+      recoveryCalls += 1;
+      return options.recoverParks?.() ?? { ok: true };
+    },
+    unexpiredStandingPark: (ref) => {
+      if (
+        options.standingParkVisibleAtMs !== undefined &&
+        nowMs < options.standingParkVisibleAtMs
+      ) {
+        return undefined;
+      }
+      const latest = [...parks]
+        .reverse()
+        .find((park) => park.ref === ref && park.cause === "peak-window");
+      if (latest === undefined) return undefined;
+      if (latest.recoveryState !== "parked" && latest.recoveryState !== "clear-observed") {
+        return undefined;
+      }
+      const untilMs = latest.until === undefined ? undefined : Date.parse(latest.until);
+      if (untilMs !== undefined && Number.isFinite(untilMs) && untilMs > nowMs) {
+        return {
+          cause: latest.cause,
+          ...(latest.until === undefined ? {} : { until: latest.until }),
+        };
+      }
+      return undefined;
+    },
+    stop: async ({ handle, graceMs }) => {
+      stopCalls.push({ ...(handle === undefined ? {} : { handle }), graceMs });
+      if (options.stopUnconfirmed === true) return { confirmed: false } as const;
+      onStop?.();
+      return options.preservation ?? "preserved";
+    },
+    appendPark: (record) => {
+      parks.push(record);
+      return true;
+    },
+    appendRecovery: (record) => {
+      parks.push(record);
+      return true;
+    },
+    holdActive: () => options.holdActive?.() ?? false,
+    newEpisodeId: (ref) => {
+      episode += 1;
+      return `episode-${ref}-${episode}`;
+    },
+    branch: () => "feat/GH-413/peak-pausing-dispatch-lane",
+    resumeSession: async () => {
+      if (options.resumeSucceeds !== undefined && !options.resumeSucceeds()) return false;
+      resumed += 1;
+      return true;
+    },
+    reenter: async ({ ordinal }) => {
+      if (options.reenterSucceeds !== undefined && !options.reenterSucceeds()) return false;
+      reenteredOrdinals.push(ordinal);
+      return true;
+    },
+    restartCount: () => options.restartCount ?? 0,
+    restartBound: () => options.restartBound ?? 3,
+    economics: () => ({
+      prefillCost: options.prefillCost ?? null,
+      uniqueProgress: options.uniqueProgress ?? null,
+    }),
+    recoveryAdmission: options.recoveryAdmission ?? "budget-only",
+    escalate: ({ code }) => {
+      escalatedCodes.push(code);
+    },
+  };
+  return {
+    clock,
+    peak,
+    parks,
+    stopCalls,
+    resumed: () => resumed,
+    reentered: () => reenteredOrdinals,
+    recoveryCalls: () => recoveryCalls,
+    escalated: () => escalatedCodes,
+    setOnStop: (hook) => {
+      onStop = hook;
+    },
+    waitForCadence: (ms) => {
+      clock.advance(ms);
+      return { promise: Promise.resolve(), cancel: () => {} };
+    },
+  };
+};
+
+export type PeakScenarioOptions = {
+  readonly label: string;
+  readonly startMs: number;
+  readonly rules: Readonly<Record<string, ProviderProfilePeakRules | undefined>>;
+  readonly nomination: string;
+  readonly preservation?: QueueParkPreservation;
+  readonly stopUnconfirmed?: boolean;
+  readonly watchEnabled?: boolean;
+  /** The instant from which a seeded standing park is visible at admission. */
+  readonly standingParkVisibleAtMs?: number;
+  readonly holdActive?: () => boolean;
+  readonly restartCount?: number;
+  readonly restartBound?: number;
+  readonly prefillCost?: number | null;
+  readonly uniqueProgress?: number | null;
+  readonly recoveryAdmission?: "budget-only" | "budget-and-economics";
+  readonly recoverParks?: PeakFixtureOptions["recoverParks"];
+  readonly claim?: DispatchLeaseClaim;
+  readonly renewLease?: DispatchPorts["renewLease"];
+  readonly livenessIntervalMs?: number;
+  readonly leaseTtlMs?: number;
+  readonly collectAfterPolls?: number;
+  readonly resumeSucceeds?: () => boolean;
+  readonly reenterSucceeds?: () => boolean;
+};
+
+/** A command scenario with the GH-413 dispatch-owned watch composed. */
+export const createPeakScenario = (options: PeakScenarioOptions) => {
+  const peak = createPeakFixture({
+    startMs: options.startMs,
+    rules: options.rules as Readonly<Record<string, ProviderProfilePeakRules>>,
+    ...(options.preservation === undefined ? {} : { preservation: options.preservation }),
+    ...(options.stopUnconfirmed === undefined ? {} : { stopUnconfirmed: options.stopUnconfirmed }),
+    ...(options.watchEnabled === undefined ? {} : { watchEnabled: options.watchEnabled }),
+    ...(options.standingParkVisibleAtMs === undefined
+      ? {}
+      : { standingParkVisibleAtMs: options.standingParkVisibleAtMs }),
+    ...(options.holdActive === undefined ? {} : { holdActive: options.holdActive }),
+    ...(options.restartCount === undefined ? {} : { restartCount: options.restartCount }),
+    ...(options.restartBound === undefined ? {} : { restartBound: options.restartBound }),
+    ...(options.prefillCost === undefined ? {} : { prefillCost: options.prefillCost }),
+    ...(options.uniqueProgress === undefined ? {} : { uniqueProgress: options.uniqueProgress }),
+    ...(options.recoveryAdmission === undefined
+      ? {}
+      : { recoveryAdmission: options.recoveryAdmission }),
+    ...(options.recoverParks === undefined ? {} : { recoverParks: options.recoverParks }),
+    ...(options.resumeSucceeds === undefined ? {} : { resumeSucceeds: options.resumeSucceeds }),
+    ...(options.reenterSucceeds === undefined ? {} : { reenterSucceeds: options.reenterSucceeds }),
+  });
+  const scenario = createCommandScenario({
+    label: options.label,
+    evidence: COMPLETED_EVIDENCE,
+    reads: readsFrom(),
+    laneOwner: { processId: process.pid, startedAt: new Date(options.startMs).toISOString() },
+    nowIso: peak.clock.iso,
+    livenessIntervalMs: options.livenessIntervalMs ?? 30_000,
+    leaseTtlMs: options.leaseTtlMs ?? 90_000,
+    collectAfterPolls: options.collectAfterPolls ?? 2,
+    livenessOf: (poll) => ({
+      readings: [
+        { kind: "session-traffic", status: "sourced", value: poll, observedAt: peak.clock.iso() },
+        { kind: "process", status: "sourced", value: poll, observedAt: peak.clock.iso() },
+      ],
+    }),
+    nominate: () => ({ ok: true, profile: options.nomination }),
+    ...(options.claim === undefined ? {} : { claim: options.claim }),
+    ...(options.renewLease === undefined ? {} : { renewLease: options.renewLease }),
+    peak: peak.peak,
+    waitForCadence: peak.waitForCadence,
+  });
+  peak.setOnStop(() => scenario.scripted.finishCollect());
+  return { peak, scenario };
 };

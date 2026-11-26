@@ -235,6 +235,7 @@ describe("the production composer builds a real harness session port", () => {
         homeDirectory: home,
         workingName: "delivery-os",
         repositoryFacts: { originUrl: GITHUB_ORIGIN },
+        dispatchDelay: async () => {},
         harnessSpawnRunner: runner,
         harnessSpawnStarter: starter,
         // A failing credential port keeps the truth read hermetic: the provider
@@ -466,6 +467,7 @@ const observeTruth = async (scenario: TruthScenario): Promise<TruthObservation> 
       homeDirectory: home,
       workingName: "delivery-os",
       repositoryFacts: facts,
+      dispatchDelay: async () => {},
       harnessSpawnRunner: completedSessionRunner,
       harnessSpawnStarter: streamStarterFromRunner(completedSessionRunner),
       credentials: credentialPort(scenario.credentialMissing === true),
@@ -874,6 +876,7 @@ const createProductionHarness = (input: {
     ...(input.originUrl === undefined
       ? { repositoryFacts: {} }
       : { repositoryFacts: { originUrl: input.originUrl } }),
+    dispatchDelay: async () => {},
     harnessSpawnRunner: runner,
     harnessSpawnStarter: streamStarterFromRunner(runner),
     credentials: credentialPort(input.credentialMissing === true),

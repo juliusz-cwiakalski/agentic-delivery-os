@@ -17,6 +17,8 @@
     "src/app/dispatch-ledger.ts",
     "src/app/dispatch-log-sink.ts",
     "src/app/dispatch-log-tail.ts",
+    "src/app/dispatch-peak-pause.ts",
+    "src/app/dispatch-stop.ts",
     "src/app/dispatch.ts",
     "src/app/effects.ts",
     "src/app/host-index.ts",

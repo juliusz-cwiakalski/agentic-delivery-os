@@ -1,0 +1,776 @@
+change_id: GH-413
+title: "M4-S42: Peak pausing for a lane started by dispatch: it stops at the
+  window's start and resumes at the window's end"
+milestone: "M4: Jaiship-native delivery"
+branch: feat/GH-413/peak-pausing-dispatch-lane
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-26T10:03:01.734Z }
+  specification: { started: null, completed: 2026-11-26T13:58:56.356Z }
+  test_planning: { started: null, completed: 2026-11-26T13:59:17.111Z }
+  delivery_planning: { started: null, completed: 2026-11-26T13:59:36.773Z }
+  dor_check: { started: null, completed: 2026-11-26T16:49:05.379Z }
+  delivery: { started: null, completed: 2026-11-26T20:53:32.224Z }
+  system_spec_update: { started: null, completed: 2026-11-26T18:18:53.409Z }
+  review_fix: { started: null, completed: 2026-11-26T22:32:25.674Z }
+  quality_gates: { started: null, completed: 2026-11-26T22:52:18.697Z }
+  dod_check: { started: null, completed: 2026-11-26T22:53:59.122Z }
+  pr_creation: { started: null, completed: 2026-11-26T22:56:38.474Z }
+decisions:
+  - text: "Milestone confirmed at intake: the ticket is attached to M4:
+      Jaiship-native delivery (milestone 5). No milestone change proposed."
+    date: "2026-11-26"
+  - text: "Requirements are complete and consistent with the system spec. The one
+      intentional supersession: feature-peak-pausing.md section 9 states that
+      without a resident daemon there is no window watcher and no mid-flight
+      park. This change is the owner direction that a dispatch-started lane is
+      watched for its whole life, so phase 7 must reconcile section 9 and the
+      composition-fact peakEnforcement wording with the delivered dispatch-owned
+      watch. That is a documentation reconciliation, not an open requirement."
+    date: "2026-11-26"
+  - text: "The change rides the delivered machinery rather than inventing a parallel
+      one: decidePeakStops/decidePeakResumes (core domain), the dispatch
+      engine's in-flight cadence watcher and terminate-with-grace seam, the
+      durable park record family, and the taxonomy v2
+      stop/parked/resumed/park-edge events. The one-shot dispatch session loop
+      is extended to park and wait until the window's end and then resume the
+      preserved session, so one dispatch invocation spans the episode."
+    date: "2026-11-26"
+  - text: "Scope addition from owner comment 1 on GH-413 (2026-11-25T10:24Z), taken
+      as part of the brief: the same bounded-grace stop is exposed as the
+      operator command `dispatch stop <ref>`. It never kills; it parks with the
+      given reason and `until`, records exactly one stop and one parked event,
+      and a stop request to a lane that is not running is a classified refusal
+      that names the work item and writes nothing. Included in this change, not
+      split."
+    date: "2026-11-26"
+  - text: "Owner delivery notes for this lane (comments 2 and 3): add the change's
+      changeset before the first gate run because TC-RELEASE-001 fails a
+      packages change with no changeset; run only the affected tests while
+      working and the full battery once at the gate; behavioural proof is
+      fixtures with an injected clock and transport plus one real episode
+      recorded on the pull request; never search the file system outside the
+      checkout and the change folder."
+    date: "2026-11-26"
+  - text: "DoR iter-1 NOT_READY remediation, decision 1 (rule source and deployment
+      precondition): the owner pause question is answered from tracked
+      repository truth. `.jaiship/config.yaml` is tracked and profile `delivery`
+      declares `peakWindows` (01:00-04:00 and 06:00-10:00 UTC, the incident's
+      window). The rule source stays the nominated profile's `peakWindows` (same
+      rules as the daemon). The spec gains a numbered decision, a deployment
+      precondition (only a profile declaring `peakWindows` is pausable; shipped
+      defaults declare none), a re-based KPI that cannot pass on an empty rule
+      set, and a residual risk."
+    date: "2026-11-26"
+  - text: "DoR iter-1 remediation, decision 2 (single-flight through the park): the
+      delivered lease expires after `queue.lease-ttl` (90 s default) and the
+      claim never renews, so a hours-long park lets a second dispatch take the
+      ref. The change adds a lease heartbeat/renewal during the run and the
+      wait, amending TDR-0050 through TDR-0078, and scopes the claim path in the
+      plan. The alternative (declare the takeover exposure) would violate ticket
+      requirement 5 and AC3, so it is rejected."
+    date: "2026-11-26"
+  - text: "DoR iter-1 remediation, decision 3 (composition-fact mode): the mode is
+      derived from the effective configuration of the reading composition, not
+      from another process. Production reports `window-watch` when automatic
+      pausing is enabled and `iteration-start-gating` when disabled; the mode is
+      carved out of the byte-identical no-park promise as the one intended value
+      change, and a production-composition test pins it."
+    date: "2026-11-26"
+  - text: "DoR iter-1 remediation, decision 4 (`dispatch stop`): this change admits
+      the `peak-window` cause only (the same stop the watcher sends), requires
+      `--until`, resolves the session from the durable lane record's session id,
+      stops through the delivered harness terminate path, writes the complete
+      watcher-shaped episode frame, and the owning invocation observes the open
+      park and waits/resumes instead of returning. Other causes are refused by
+      name because the delivered projection frames only `peak-window`. The run
+      path and the lane-record nomination are scoped."
+    date: "2026-11-26"
+  - text: "DoR iter-1 remediation, decision 5 (record and view facts): an additive
+      `providerProfile` is added to `dispatch.lane` so the park/stop payloads
+      and a cross-process stop have a stored source. The delivered `stale` and
+      `delivering` table is unchanged: a live parked lane is not stale, an
+      orphaned park stays stale, and the additive park fact explains it. The
+      spec drops the `delivering: false` claim."
+    date: "2026-11-26"
+  - text: "DoR iter-1 remediation, decision 6 (already-open window): the watch
+      evaluates before the first spawn or resume, so a dispatch whose nominated
+      profile's window is already open parks before any session exists, waits,
+      and proceeds at the end. This closes the pre-change admission gap for
+      profile `peakWindows` without changing provider-entry admission gating."
+    date: "2026-11-26"
+  - text: "DoR iter-1 remediation, decision 7 (stop sequence and bounds): one
+      terminate call is issued with a grace of the smallest of the profile's
+      bounded grace, `coordinator.kill-grace`, and the time to the effective
+      window end, so KILL cannot outlast the buffer. The park bound is re-based
+      to \"stop request within one observation cadence, park no later than the
+      stop request plus the applied grace\"; lag evidence is derived from the
+      recorded instants, with no new field."
+    date: "2026-11-26"
+  - text: "DoR iter-1 remediation, decision 8 (real episode): TC-PEAK-029 is the
+      reference host's episode on the next lane after the upgrade, not an
+      episode this delivering lane must produce. The PR records the hand-off and
+      its preconditions (profile `peakWindows` declared, outer stall detection
+      relaxed for a parked lane); the episode is removed from plan phase 7
+      doneArtifacts."
+    date: "2026-11-26"
+  - text: "DoR iter-2 NOT_READY remediation, decision 9 (pre-session already-open
+      window): move the already-open-at-start case to OUT OF SCOPE with a
+      declared bounded exposure. A dispatch admitted while its nominated
+      profile's window is already open spawns and is parked at the first
+      observation, so at most one observation cadence of billing precedes the
+      park. The KPI is re-based to 'no billable call after the first
+      observation; the residual is bounded by one cadence'. This removes the
+      unrepresentable pre-session park (no session, no lane record, no honest
+      `resumed` frame) without inventing a closed value or a new record. The
+      ticket's AC1 (a running lane when the window opens) is unaffected."
+    date: "2026-11-26"
+  - text: "DoR iter-2 remediation, decision 10 (`dispatch stop` hand-off): the
+      running predicate adds 'no open peak-window park stands for the ref'; an
+      already-parked lane is refused `queue.precondition.unmet` naming the
+      state. The command resolves the session from the lane record (tree root =
+      recorded worktree path when present, otherwise the repository's main
+      checkout), terminates, and writes the complete park record only after a
+      confirmed terminate; an unconfirmed terminate is a classified not-running
+      refusal and writes nothing. The owning invocation, when collect resolves,
+      re-reads the park record for up to one observation cadence; an open
+      peak-window park for its ref sends it into the wait/resume path instead of
+      classifying terminal. This closes the race without a request record."
+    date: "2026-11-26"
+  - text: "DoR iter-2 remediation, decision 11 (lease cadence relation): the renewal
+      cadence is `min(lane.liveness-interval, queue.lease-ttl / 2)`, so the
+      lease cannot go stale between renewals even when the liveness interval is
+      at or above the TTL. No new key; the relation is stated and tested."
+    date: "2026-11-26"
+  - text: "DoR iter-2 remediation, decision 12 (non-terminal recovery refusal): the
+      invocation returns one classified result with the park standing and the
+      refusal in its episode fact; it does not keep waiting or renewing after
+      returning. The lease is released on return, so the operator resume path
+      can take the ref. AC-F4-3 is reworded to the returned result."
+    date: "2026-11-26"
+  - text: "DoR iter-2 remediation, decision 13 (overlapping windows): the park end
+      is the effective end of the first open window, which is what the delivered
+      `peakWindowOpenAt` returns. Overlapping windows produce consecutive
+      episodes, each exactly-once; the spec's 'single contiguous union' promise
+      is removed. This composes the delivered decision layer unchanged."
+    date: "2026-11-26"
+  - text: "DoR iter-2 remediation, decision 14 (minor findings): the lag is derived
+      from the recorded instants with the injected clock as the measurement
+      basis; the nomination is on every active lane record (first acquisition
+      and every restart); a disallowed cause or a missing `--until` is
+      `input.value.rejected` at the grammar boundary; the test plan's phase
+      column is renumbered to the plan's 1-8 phases and names the lease-liveness
+      file."
+    date: "2026-11-26"
+  - text: "DoR iter-2 remediation, decision 15 (lease identity and stop re-read
+      bound): the renewal must be keyed by the lease identity the lane acquired
+      at admission (its lease id), not merely the same holder and reference,
+      because a re-dispatch can renew a previous invocation's stale lease under
+      the same holder. The owning invocation's post-collection withhold is at
+      least the applied grace plus one observation cadence, because the
+      terminate call awaits the whole grace and a one-cadence re-read could miss
+      the park. Both are recorded in the spec and must appear in the plan and
+      test arms."
+    date: "2026-11-26"
+  - text: "RESUMED under the owner's delegated authority. Source: the newest comment
+      on https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/413
+      (2026-11-26, CEO authorization), Decision 1: the outcome of an un-expired
+      standing park is a PRE-SESSION REFUSAL. A resume or re-dispatch of a lane
+      whose standing park has not expired is refused before any session starts,
+      at the admission of the resume beside the other admission refusals, using
+      the window refusal's exit code (2): the delivered
+      `provider.profile.unavailable` contract does not fit (it says no profile
+      is eligible and carries an eligibility list), so the owner authorises one
+      new dispatch-family code, `dispatch.resume-parked` (platform-provider,
+      exit 2, transient/retryable, remediation: resume after the park's
+      `until`), with the park's cause and `until` in the bounded summary; it
+      writes nothing, no event claims a resume, and lanes and board keep showing
+      the lane parked. The operator-override outcome is not chosen. Consequence:
+      the recovery pass only ever meets an expired park or none. This decision
+      supersedes the operator-resume-during-open-window reading in F-3/F-4/Flow
+      3/AC-F3-4/RSK-14 and the plan/test plan passages."
+    date: "2026-11-26"
+  - text: "RESUMED under the owner's delegated authority. Source: the newest comment
+      on #413 (2026-11-26, CEO authorization), Decision 2: up to two more
+      readiness passes are authorized (iterations 5 and 6) for the iteration-4
+      findings; if iteration 5 is NOT_READY only on wording the reviewer's
+      suggested fix covers, apply it literally and run iteration 6; after
+      iteration 6, if still NOT_READY, park and hand back again. When READY,
+      continue through delivery, system_spec_update, review_fix, quality_gates,
+      dod_check and pr_creation on this branch and stop at pr_creation. The
+      decision records stay Proposed; the three delivery notes and scope are
+      unchanged."
+    date: "2026-11-26"
+  - text: "Decision 15 is superseded on its lease-key rationale: the ownership key
+      is the live lease's latest heartbeat being the invocation's own last
+      write, not the lease id, because the delivered `renewed` arm preserves the
+      lease id across a same-holder re-dispatch. The claim stays untouched. This
+      correction was already in spec v1.3 and TDR-0078; it is recorded here so
+      the pm-notes no longer carry the earlier lease-id rationale."
+    date: "2026-11-26"
+  - text: "RESUMED after the provider limit reset, under the owner's live
+      instruction (newest #413 comment, issuecomment-7194705060, 2026-11-26).
+      The park was a provider token limit, not an artifact defect. The hand-back
+      reset time was reported in UTC+8 (2026-11-27T00:00:54); the real reset was
+      2026-11-26T16:00:54Z. DoR iteration 6 runs under the existing
+      authorization for the iteration-4 findings as decided there (pre-session
+      refusal for an un-expired standing park, one registered dispatch-family
+      code, exit 2, no override) and for the literal iteration-5 fixes already
+      applied. If iteration 6 is NOT_READY, park and hand back with its
+      findings; if READY, continue through delivery, system_spec_update,
+      review_fix, quality_gates, dod_check and pr_creation on this branch and
+      stop at pr_creation. No regeneration of the spec or test plan; no scope
+      change; the three delivery notes still apply; the records stay Proposed;
+      no model assignment."
+    date: "2026-11-26"
+  - text: "RESUMED under the owner's live go (newest #413 comment,
+      issuecomment-7197852375, 2026-11-26T16:40Z): iterations 7 and 8 are
+      authorized. Run iteration 7 now; if NOT_READY only on wording the
+      reviewer's suggested fix covers, apply it literally and run iteration 8;
+      if iteration 8 is still NOT_READY, park and hand back. When READY,
+      continue through delivery, system_spec_update, review_fix, quality_gates,
+      dod_check and pr_creation on this branch and stop at pr_creation. Delivery
+      is at full speed and a run into the peak hours is accepted; the 04:00Z
+      cut-off is lifted for this lane. No regeneration of the spec or test plan;
+      no scope change; the three delivery notes still apply; the records stay
+      Proposed; no model assignment."
+    date: "2026-11-26"
+  - text: "Review iteration 1 FAIL decisions. F-5a: the production not-preserved
+      recovery uses the delivered budget-only admission (the same rule the stall
+      restart uses), not real cost facts; it consumes one ordinal under the
+      restart budget, and null economics never make every recovery refuse
+      `dispatch.state-unverified`. F-10: the `recoveryRefusal` carrier is the
+      terminal durable lane record, not the park record; the unused
+      `QueueParkRecord.recoveryRefusal` member is deleted and the spec, test
+      plan and current-truth pages say the terminal lane record carries it.
+      F-15: keep `dispatch.resume-parked`; a second dispatch during an
+      un-expired park is the pre-session refusal at exit 2, while
+      `queue.single-flight` still applies to a running lane without a park;
+      correct Flow 5, AC-F5-2 and TDR-0078 C-1. F-17: the code is right and the
+      spec is wrong; the recovery pass runs before the first session, so an
+      unrecoverable standing park is a refusal that starts no session; remove
+      the 'after the session started' terminate arm from F-3/AC-F3-4 and align
+      the plan, test plan and TDR-0077 D8 to the ordering invariant."
+    date: "2026-11-26"
+  - text: "Review iteration 2 FAIL decisions (code-review/review-iter-2.yaml; 16
+      findings, 2 high). F-7: under the budget-only admission the non-terminal
+      refusal cannot occur, so retire that arm from the spec, AC-F4-3 and the
+      test plan; implement the delivered typed question on terminal exhaustion
+      (the escalation the stall restart uses). F-9: the `lanes` mode must read
+      `iteration-start-gating` when the harness declares no terminate and no
+      watch is composed, and the harness precondition is documented; the
+      withhold renews at the earlier of the observation and renewal due. F-14e:
+      keep the delivered repository-wide recovery pass and name the stuck refs
+      in the refusal summary. F-12: the plan gains phase 10 with the 19
+      out-of-scope files and drops the F-17 arm. F-14 accepted (structural
+      coverage plus the review's own probe); F-17 closed as a spec correction;
+      F-21(g) is a recorded follow-up. The two high findings (six red tests and
+      three real-timer timeouts; budget-only recovery must respect
+      restart-budget 0/absent) are blocking and go to @coder."
+    date: "2026-11-26"
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection at session start: lane worktree detached at main-tools
+      tip febf3906 (equal to origin/main-tools), clean; no GH-413 branch, no
+      change folder, no open pull request, no prior lane session. This is a
+      fresh lifecycle start, not a resume."
+    type: info
+    date: "2026-11-26"
+  - text: "Retro: the first spec draft read ticket requirement 2 ('any provider that
+      its seats resolve to has a window') as provider-entry peak windows and
+      invented a seat-resolved outside the profile's declared provider list.
+      Current truth (feature-provider-profiles.md) separates the two: profile
+      peakWindows drive the lane watch, provider-entry peak windows gate
+      admission only. Caught at PM validation before the specification phase
+      completed; one correction cycle, no downstream rework."
+    type: retro
+    date: "2026-11-26"
+  - text: "Retro: the plan's phase summaries started with a capital letter; the
+      commit path uses each phase summary as its commit subject, so `phase
+      complete delivery_planning` failed commitlint `subject-case` once. Fixed
+      all seven summaries to lowercase-start (the delivered GH-404 plan
+      convention) and re-ran; the phase landed as 123175ef. No artifact rework
+      beyond the casing; downstream plan-phase commits now start compliant."
+    type: retro
+    date: "2026-11-26"
+  - text: "DoR gate iteration 1: NOT_READY (readiness-review/readiness-iter-1.md),
+      15 findings (4 critical, 7 major, 4 minor). The pause-required owner
+      question (does the reference host's nominated profile declare
+      peakWindows?) is resolved from tracked truth: yes, `.jaiship/config.yaml`
+      profile `delivery` declares two UTC windows including 06:00-10:00.
+      Reopened `specification`, `test_planning`, and `delivery_planning`;
+      remediation decisions are recorded above. Re-run the gate after the three
+      artifacts are revised."
+    type: blocker
+    date: "2026-11-26"
+  - text: "Retro: DoR iter-1 caught four critical gaps the artifact chain missed:
+      the shipped-default empty rule set, the 90 s lease versus an hours-long
+      park, the always-iteration-start-gating composition fact, and the
+      cross-process `dispatch stop` mechanism. All four were real against code.
+      The gate cost one remediation cycle and prevented a delivery that would
+      have passed its own fixtures while failing the ticket's incident. Keep the
+      gate adversarial."
+    type: retro
+    date: "2026-11-26"
+  - text: "DoR gate iteration 2: NOT_READY (readiness-review/readiness-iter-2.md),
+      10 findings (1 critical, 5 major, 3 minor, 1 nit). Twelve of the fifteen
+      iteration-1 findings are resolved. The new blocking set is code-level: the
+      `dispatch stop` hand-off race and already-parked double-park, the
+      pre-session park that the delivered layer cannot represent, the
+      liveness-interval/lease-ttl relation, the non-terminal recovery refusal
+      contradiction, the overlap union versus the delivered first-window end,
+      and the test-plan phase numbering. Reopened the three artifact phases for
+      iteration 3 with the decisions above."
+    type: blocker
+    date: "2026-11-26"
+  - text: "Retro: iteration 2's findings were all traceable to iteration 1's
+      remediation inventing behavior the delivered layer does not have (a
+      pre-session park, a contiguous union, a session-less resume). The lesson
+      for the next gate cycle: when a remediation adds a case, first prove the
+      delivered seam can represent it; otherwise declare it out of scope with a
+      bounded residual. The pre-session case is now out of scope with a
+      one-cadence exposure."
+    type: retro
+    date: "2026-11-26"
+  - text: "DoR gate iteration 3: NOT_READY (readiness-review/readiness-iter-3.md) at
+      the three-iteration cap. Three blocking findings, all code-level and
+      fixable: (1) the watch has no rule for a standing park after an abnormal
+      episode end (an orphaned/refused/exhausted park is not recovered on the
+      dispatch path, so the next window can double-park and make every park read
+      fail closed permanently); (2) the lease-id key does not distinguish
+      invocations because the delivered stale same-holder arm renews and
+      preserves the lease id, so the spec/plan/test arm cannot pass; (3) the
+      post-collection withhold bound is stated as 'at least grace plus one
+      cadence' in DEC-15 and 'up to one cadence' in F-9 and TDR-0077. The
+      reviewer recommends one more gate pass and advises against accepting the
+      risks. Escalated to the owner for authorization to exceed the cap."
+    type: blocker
+    date: "2026-11-26"
+  - text: "Retro: the cap was reached because each remediation pass fixed the
+      previous findings but introduced one new seam-level contradiction. The two
+      durable lessons: (a) recover the standing park on the dispatch path before
+      the watch, or the episode's abnormal exits poison every later park read;
+      (b) a lease-id key alone is not an ownership key because the delivered
+      renewed arm preserves the lease id; the heartbeat-write key is the one
+      that survives the arm, and the claim stays untouched. Both are design
+      fixes, not wording fixes."
+    type: retro
+    date: "2026-11-26"
+  - text: "Owner decision at the cap: this is a non-interactive run, so the
+      authorization question could not be answered. PM assumes the reviewer's
+      recommended option: one more gate pass (DoR iteration 4) for exactly the
+      three blocking findings. If iteration 4 is NOT_READY, the change is parked
+      and handed back; no further pass is attempted. This assumption is recorded
+      for the owner's PR review."
+    type: decision
+    date: "2026-11-26"
+  - text: "DoR gate iteration 4 (the authorized final pass): NOT_READY
+      (readiness-review/readiness-iter-4.md), one blocking finding. The
+      standing-park rule closes the permanent double-park for an expired park,
+      but an un-expired standing park on an operator resume inside its own
+      window is specified three ways and one is unimplementable: the delivered
+      pass recovers only an expired park; occupancy would let the lane bill
+      inside the window while `lanes` shows it parked; the refusal reading
+      returns from a live session with no named identity or decision point. The
+      reviewer's fix is small: choose operator-override or pre-session refusal,
+      align seven passages, name the refusal identity and its point in the run.
+      The change is PARKED per the recorded assumption; no code delivery, no
+      pull request. Owner action required: authorize one more gate pass for this
+      fix, or leave GH-413 parked."
+    type: blocker
+    date: "2026-11-26"
+  - text: "Retro: the four gate passes produced a strong, code-grounded spec and a
+      precise readiness record, but they also show the cost of remediating
+      inside a 3-iteration cap: each pass fixed the previous seam and exposed
+      one more. The durable lesson is to validate every abnormal-exit rule
+      against the delivered state machine (expired vs active park, live vs lost
+      lease) before writing it, and to choose the operator-override branch for
+      an un-expired park, which is the only branch the delivered pass can
+      express."
+    type: retro
+    date: "2026-11-26"
+  - text: "Hand-back recorded on the tracker: blocker comment posted at
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/413#issu\
+      ecomment-7194494377 and the issue assigned to the owner, state open. The
+      parked hand-back is this change's terminal state for the run; no pull
+      request exists."
+    type: info
+    date: "2026-11-26"
+  - text: "Resumed under the owner's delegated authority (newest #413 comment). DoR
+      iteration 5 ran and returned NOT_READY on one substantive finding: the
+      refusal identity/exit had to be the window refusal's exit code (2) and,
+      because `provider.profile.unavailable` does not fit, one new
+      dispatch-family code with a resume-after-`until` remediation. The
+      artifacts were corrected literally to `dispatch.resume-parked`
+      (platform-provider, exit 2, transient/retryable, one owner-authorised
+      row), the 19-page reconciliation set, and the NFR-8 exception. DoR
+      iteration 6 could not run: the readiness reviewer hit the provider's
+      5-hour token limit. The provider reported the reset as 2026-11-27T00:00:54
+      in UTC+8; the real reset was 2026-11-26T16:00:54Z. READY is not
+      established, so the change was PARKED again. This was a provider limit,
+      not an artifact defect: nothing else is wrong with the change. No source
+      delivery, no pull request. Artifacts are committed at 8a086e09
+      (readiness-iter-5 is untracked on disk)."
+    type: blocker
+    date: "2026-11-26"
+  - text: "Retro: the gate found real, code-level defects on every pass, including
+      the owner's own decision being encoded with the wrong exit code (1 instead
+      of 2) and a queue-family identity instead of the authorised
+      dispatch-family row. The lesson is to run the delivered error projection
+      against the exact owner wording before writing the identity, not to
+      substitute a plausible delivered row. The final blocker is environmental:
+      the reviewer's usage limit, not an artifact defect."
+    type: retro
+    date: "2026-11-26"
+  - text: "DoR gate iteration 6 (the final authorized pass, resumed after the real
+      provider reset 2026-11-26T16:00:54Z): NOT_READY
+      (readiness-review/readiness-iter-6.md), two wording-only blocking
+      findings. (1) F-4's last sentence still names the superseded delivered
+      unmet-precondition identity and omits a re-dispatch; replace it with the
+      pre-session `dispatch.resume-parked` at exit 2 wording, naming the cause
+      and `until`, no session, nothing written, surfaces keep the park, and the
+      expired park recovered at the first observation. (2) F-5's restored
+      parked-case sentence says the invocation 'releases the lease'; the
+      delivered release matches on holder and would end the successor's lease,
+      so replace it with 'leaves the successor's lease alone; the delivered
+      operator resume path applies' and align DEC-13/§12. Minors: F-3 also names
+      a re-dispatch; the row's table pins/document sync/decision-record case
+      need a traced test; plan phase 8 says eighteen pages, the spec says
+      nineteen. Per the owner's rule, iteration 6 NOT_READY parks and hands back
+      with these findings; no further pass is attempted. No source delivery, no
+      PR."
+    type: blocker
+    date: "2026-11-26"
+  - text: "Retro: the final gate is down to two sentences, both literal fixes; the
+      change is otherwise fully READY (spec_completeness, ac_quality,
+      plan_coverage, test_traceability, decision_capture,
+      system_spec_consistency, plan_doc_update_coverage, plan_code_area_coverage
+      and dod_defined all PASS). The park is the owner's explicit iteration-6
+      rule, not a substantive gap. The next pass needs no design work: apply the
+      two literal replacements and the three minors, then run iteration 7."
+    type: retro
+    date: "2026-11-26"
+  - text: "Post-iteration-6 literal fixes applied (no gate run on them): F-4's last
+      sentence now names `dispatch.resume-parked` at exit 2, a resume or
+      re-dispatch, nothing written, and the expired park recovered at the first
+      observation; F-5's parked-case sentence now leaves the successor's lease
+      alone, with the same sentence added to DEC-13 and section 12; F-3 names a
+      resume or re-dispatch; plan phase 8 says eighteen of the nineteen pages;
+      TC-PEAK-027 now names the error-table, error-table-sync and
+      decision-record suites. The artifacts are ready for iteration 7, which has
+      not run. The change remains parked per the owner's iteration-6 rule; no
+      source delivery and no PR."
+    type: info
+    date: "2026-11-26"
+  - text: "Plan phase 1 complete (the lane.disable-peak-pausing policy key and the
+      change's changeset): commit a27691a1. The key landed in the typed lane
+      branch with the boolean refusal naming the key, the pin surfaces moved by
+      the one key, and the change's single five-package minor changeset was
+      added before any gate run. Tests: the two release suites 19 pass / 0 fail
+      (privacy-release, changeset-additivity), and the phase-1 config and pin
+      suites 117 pass / 0 fail (config-lane, config-schema,
+      dispatch-peak-setting, dispatch-contract-invariance,
+      operator-contract-invariance, port-contract-inventory, content-inventory,
+      decision-record)."
+    type: info
+    date: "2026-11-26"
+  - text: "Plan phase 2 complete (lease liveness through the run and the park):
+      commit c1a8ae99. The run path renews the existing repository lease through
+      the delivered same-holder renewed arm at min(lane.liveness-interval,
+      queue.lease-ttl / 2), keyed on the invocation's own last heartbeat write,
+      as one fenced check-plus-append; a no-op appends nothing, surfaces
+      lease:not-owned, and a lost-lease invocation takes no owner act and
+      returns instead of restarting. Tests: dispatch-lease-liveness 9 pass / 0
+      fail (cadence, several TTL crossings, interval-above-TTL, no-renewal stale
+      takeover control, heartbeat ownership, re-dispatch with the preserved
+      lease id, owner-hold source guard, renewal-failure evidence and retry,
+      lost-lease return); the structure/decision pins 39 pass / 0 fail; the
+      delivered dispatch watch, determinism, single-flight, restart-budget and
+      harness-lease controls 26 pass / 0 fail."
+    type: info
+    date: "2026-11-26"
+  - text: "Plan phase 3 complete (dispatch-owned watch, exactly-once episode,
+      standing-park recovery, wait, classification-routed resume, nomination,
+      and the one authorised error row): commit 6fe78643. The new
+      dispatch-peak-pause module composes decidePeakStops/runPeakWatch, the
+      composed-grace stop, the first-open-window end, the preservation routing,
+      the pre-session dispatch.resume-parked refusal at exit 2, and the
+      standing-park occupancy rule; every active lane record now carries the
+      stored nomination. Tests: the 12 phase-3 behaviour suites 37 pass / 0
+      fail; the no-shell invariant is clean over 44 surface files; the
+      structure/check/decision batch 410 pass / 0 fail (error-table totals
+      173/172/72/+139, the five dispatch rows, the additive sets, the lane-key
+      pins, the parity lane resume, and the decision-record case). Scope note:
+      five count-bearing pages and five count-bearing pin suites outside the
+      phase's declared file list moved by the one authorised row so the table
+      totals stay truthful; they are staged as disclosed drift, not product
+      behaviour: feature-metrics, feature-ceremony-runner, feature-supervise,
+      feature-install-lifecycle, ceremony-nonregression, ceremony-contract,
+      verify-gates-suite-map, supervision-error-socialization, the parity lane
+      resume pin, and the scripted-harness finishCollect helper."
+    type: info
+    date: "2026-11-26"
+  - text: "Plan phase 4 complete (operator surfaces and the one result): commit
+      6cb16774. dispatch status now carries the additive optional park fact from
+      at most one bounded park-record read; the delivered stale/delivering
+      verdict is unchanged; the production composition derives
+      peakEnforcement.mode from its own lane.disable-peak-pausing configuration;
+      and the result carries the additive bounded episode fact plus the
+      pause/resume or refusal sentence on last_message. Tests: the phase-4 six
+      behaviour suites 44 pass / 0 fail, the two inventory pins 33 pass / 0
+      fail, and the delivered operator/status/lanes/board controls 32 pass / 0
+      fail."
+    type: info
+    date: "2026-11-26"
+  - text: "Plan phase 5 complete (dispatch stop): commit c9f508b2. Added the
+      peak-window-only operator command with the required --until, the grammar
+      refusals at input.value.rejected (the missing end carrying
+      until-required), the running predicate (active, session identity, no open
+      park of any cause), one delivered terminate call with the composed grace,
+      the park written only after a confirmed terminate, the record-mediated
+      hand-off, and the owning invocation's post-collection grace-plus-cadence
+      re-read. The adapter resolves a separately invoked stop over the host
+      process table by exact identity. Tests: the eight phase-5 suites 45 pass /
+      0 fail; the help/reference/no-shell/inventory batch 73 pass / 0 fail; the
+      no-shell invariant is clean over 45 surface files."
+    type: info
+    date: "2026-11-26"
+  - text: "Plan phase 6 complete (determinism, hermeticity, vocabulary economy):
+      commit 416fc63d. The paired-run determinism suite proves stable decisions,
+      park records, episode facts, and summaries; the hermetic suite watches the
+      new modules and suites with the armed fetch canary and the
+      no-timer/no-credential source scan; the delivered taxonomy and release
+      suites hold with zero added kinds and the one authorised row. Tests:
+      determinism 2, hermetic 6, taxonomy 4, and the two release controls 19
+      pass; 46 pass / 0 fail in total."
+    type: info
+    date: "2026-11-26"
+  - text: "Plan phase 7 complete (decision records TDR-0077 and TDR-0078): commit
+      2a180d31. Both records are present as Proposed with their index rows
+      (committed earlier at 8a086e09) and were verified without rewording; the
+      delivered decision-record and doc-conformance suites pass 72/72."
+    type: info
+    date: "2026-11-26"
+  - text: "Post-upgrade hand-off recorded for TC-PEAK-029 (non-gating, before
+      dod_check): the reference host observes one real episode on the next lane
+      after this change is installed, not on this delivering lane.
+      Preconditions: the nominated profile declares peakWindows (the tracked
+      .jaiship/config.yaml profile delivery declares 01:00-04:00 and 06:00-10:00
+      UTC); the activity-keyed liveness consumers (pm-liveness, deliver-ticket,
+      ceo-loop, and any operator probe with the same shape) are relaxed or
+      exclude a parked lane before it is dispatched into a window; automatic
+      pausing is on. The tracked profile's 04:00-04:05Z overlap may show a short
+      resume and a second park (DEC-20, RSK-13). Observe with dispatch status
+      <ref>, lanes, and board while parked, then the resume and the one result
+      whose summary states paused and resumed. The automated fixtures remain the
+      merge gate; this episode is not a Done criterion."
+    type: info
+    date: "2026-11-26"
+  - text: "Post-completion pin fix: the dispatch status read now performs the
+      delivered one bounded lane read plus the one additional bounded
+      park-record read (NFR-9), so the conformance status read-count pins moved
+      from one to two; no product behavior changed. The status/operator/status
+      batch passes 358/360 (2 skips) after the pin update."
+    type: info
+    date: "2026-11-26"
+  - text: "system_spec_update: @doc-syncer reconciled 25 pages (the nineteen §16
+      pages plus the count-bearing pages and indexes). Residual doc gaps outside
+      its write roots, routed to @coder: doc/planning/oss-tooling/milestones/m1/
+      commands/dispatch.md lacks `dispatch stop`, and m2/architecture.md still
+      states the daemon-absent sentence. Implementation gaps routed to @coder:
+      (a) `dispatch status` `recoveryRefusal` has no producer (AC-F4-3), though
+      the member is projected; (b) AC-F3-4's 'observed after the resume session
+      started' arm is unreachable because the recovery runs before the first
+      session, for the reviewer to judge; (c) tests/behaviour/identity-override
+      fails because the new peakPausingEnabled resolution reads the
+      prior-identity config a third time. No spec/test-plan/plan edits."
+    type: info
+    date: "2026-11-26"
+  - text: "Targeted remediation after doc-syncer reconciliation: the terminal lane
+      record now carries the optional recoveryRefusal, written only on the
+      non-terminal window-end refusal and read by dispatch status from the same
+      bounded lane read (no second park record, no extra status read); the
+      production lanes composition resolves peakWatchComposed lazily, so a
+      command that never reads lanes performs no extra configuration acquisition
+      (identity-override read count restored); the dispatch and architecture
+      planning pages state the dispatch-owned watch and the
+      dispatch.resume-parked admission refusal. Affected tests: status-park,
+      peak-recovery, status-brief-park-fields, identity-override, error-table,
+      error-table-sync, config-lane, config-schema, peak-setting, dispatch
+      contract/operator/inventory, the peak suites, stop suites, help/reference,
+      parity lane resume, operator status, and dispatch resume; all green."
+    type: info
+    date: "2026-11-26"
+  - text: "Plan phase 9 (Code Review Remediation, iteration 1) complete: commit
+      440ab76d. Closed F-1 to F-14 and F-16 to F-22 on the code side (F-10 and
+      F-15/F-17/F-19 statement corrections remain with the writers/doc-syncer).
+      F-1: GH-413 exclusion set for dispatch.resume-parked, the posture read pin
+      moved to the declared two reads, and dispatchDelay injected into the five
+      production-composition fixtures. F-2: observation precedes the renewal
+      await and the verdict is applied even after stop. F-3/F-4: the release is
+      ownership-fenced and skipped on a lost lease; every session end returns a
+      classified state-unverified result naming the lost lease. F-5: production
+      uses budget-only recovery admission (F-5a), ensures exhaustion on a
+      terminal refusal, and appends the recovery record only after the next real
+      session acquisition. F-6: no park without a confirmed terminate; a
+      terminate-less harness composes no watch. F-7: runaway caps removed. F-8:
+      preservation is derived from the terminate result (escalated is not
+      preserved). F-9: the withhold renews. F-11: value.stuck maps to the
+      queue.park-condition-stuck refusal. F-12: wake at the earlier observation
+      and renewal due time. F-16: resume admission re-reads rules. F-18: the
+      operator deadline is profile-bounded and a past/non-canonical end is
+      refused. F-20: the prior post-phase commits are evidenced below. F-21:
+      isStopData, no episode casts, the envelope comment restored,
+      session-interrupted restart reason, the typed append payload, and the mode
+      fails to iteration-start-gating. F-22: the one-lane-per-ref-per-host
+      precondition is recorded in the operations guide. Tests: R1 batch 124 pass
+      / 0 fail across 8 files; peak/lease/status batch 60 pass / 0 fail across
+      15 files; stop/decision/error batch 307 pass / 0 fail across 10 files.
+      Full pnpm typecheck green."
+    type: info
+    date: "2026-11-26"
+  - text: "F-20 evidence for the post-phase commits: 68779723a was the
+      post-completion pin/format pass (29 files: the dispatch status one-read to
+      two-read conformance pins and Biome formatting); 822793817 was the
+      doc-syncer reconciliation plus the carrier/withhold remediation (38 files,
+      including the terminal-lane recoveryRefusal carrier and the withhold's
+      delay-seam switch that made the parity/resume suites fast). Counts at that
+      point: status/operator/status 358 pass (2 skip), parity/resume and
+      conformance lane resume 33 pass, error-table/config/pin 373 pass. The 22
+      out-of-scope files are recorded here: five count-bearing pages and their
+      five pin suites, the parity and operator-status pins, the scripted-harness
+      helper, the architecture page, dispatch-ledger.ts,
+      doc-conformance.test.ts, feature-session-lifecycle-economics.md,
+      doc/00-index.md, and readiness-iter-7.md."
+    type: info
+    date: "2026-11-26"
+  - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml), 23 findings (7
+      high). The high set was a red test set, a lease-release ownership bug, a
+      lost-lease derivation path, a production recovery stub, a park without a
+      confirmed terminate, runaway caps, and the missing GH-413 exclusion set.
+      Decisions: budget-only recovery admission (F-5a), terminal-lane-record
+      recoveryRefusal carrier (F-10), keep `dispatch.resume-parked` for the
+      parked interval (F-15), and the pre-session ordering invariant (F-17).
+      @coder executed plan phase 9 (440ab76d, 258ea4de, ba563712); the spec,
+      test plan and TDR-0077/0078 were corrected; the doc-syncer and the
+      planning pages close F-19. Second review pending; no PR."
+    type: info
+    date: "2026-11-26"
+  - text: "Plan phase 10 (Code Review Remediation, iteration 2) complete: commit
+      2f8ad28a. R1: the six red tests are green (dispatch-peak-result's second
+      arm is now the budget-exhaustion arm with the exhaustion record, the typed
+      escalation call and the parked state; the parity admission pin is the
+      DECLARED THIRD lease record with a comment naming the GH-413 withhold
+      renewal; the three production-composition suites inject dispatchDelay).
+      R2: a restart budget of 0 or none refuses the not-preserved recovery
+      terminally as the stall restart does. R3: the withhold steps at the
+      renewal cadence (min(liveness, TTL/2)), with an above-TTL heartbeat-age
+      arm. R4: a lost lease appends no terminal lane record, and a lease lost
+      inside the withhold returns the classified state-unverified result before
+      the derivation. R5: the canonical Z form and the exact millisecond form
+      are accepted; a past or non-canonical end is refused. R6: production
+      escalation raises the delivered typed exhaustion question through the
+      supervision economics write port. R7: a terminate-less harness reads
+      iteration-start-gating even with pausing enabled. R8: the recovery refusal
+      summary names the stuck refs. R9: added
+      tests/behaviour/dispatch-peak-production.test.ts (terminate-less no-watch
+      and unconfirmed-stop no-park through the real composer) and
+      tests/behaviour/dispatch-peak-lease-park.test.ts (a real-store parked
+      renewal through renewDispatchLease). Tests: R1 five files 17 pass / 0
+      fail; R9/peak batch 57 pass / 0 fail across 12 files; checks/docs batch
+      100 pass / 0 fail across 6 files; read-only controls 55 pass / 0 fail
+      across 9 files; the new suites 31 pass. The whole battery was not run by
+      owner instruction; the lifecycle quality_gates runs it once. Residual: the
+      production suite does not yet drive the preserved-park resume, bound-0
+      exhaustion with its typed question, own/foreign stuck markers, or a rule
+      change through the real composer; those arms remain engine- and
+      fixture-level evidence."
+    type: info
+    date: "2026-11-26"
+  - text: "Post-phase-10 doc-sync: 18 pages reconciled for the terminate-less
+      harness precondition (two mode values), the withhold renewal at
+      min(liveness, TTL/2) and the lost-lease return (no terminal lane record),
+      the `dispatch stop --until` canonical-Z and millisecond forms, the
+      exhaustion-only refusal with the typed question, and the stuck-ref naming.
+      No residual doc gap. The doc-syncer found one gate blocker: the
+      error-table-sync S1 recognizer reads `harness.value.kind` in
+      production.ts:3033 as an error code, turning 30 sync tests red; routed to
+      @coder as a false positive, not a new identity."
+    type: info
+    date: "2026-11-26"
+  - text: "Review 3 FAIL (code-review/review-iter-3.yaml; 13 findings: 0 high, 4
+      medium, 8 low, 1 info). The whole bun test battery is green at HEAD
+      (13,039 tests, 0 fail); the failure is test evidence and record. Path to
+      PASS, applied under the owner's full-speed instruction: (1)
+      dispatch-peak-lease-park.test.ts opens the window across at least two TTLs
+      and asserts renewals plus a refused second dispatch; (2)
+      dispatch-peak-production.test.ts injects the composer clock; (3) the
+      test-spec page lists only the two real production tests and drops the
+      phantom between-iterations and no-spawn/resume claims; (4) this record
+      lists each finding's true state; (5) the failed-resume summary no longer
+      says 'resumed at'. Also: the status park fact `recoveryRefusal` write is
+      retired (the non-terminal refusal is retired), and the retired-arm test in
+      dispatch-peak-recovery is removed. Accepted follow-ups, not closed: F-6
+      (evidence tokens), F-7 (citation drift), F-8 (comment nits), F-9 (rule
+      fixtures refused by the production parser), F-12 (renewal append plus
+      ledger scan compaction). Iteration-1 F-14 accepted; F-21(g) follow-up. The
+      review cap is exceeded once under the owner's live full-speed instruction;
+      if review 4 is FAIL, the change is parked and handed back."
+    type: info
+    date: "2026-11-26"
+  - text: "Review-3 evidence-gap fix: commit 7b116ee2. F-1: the parked-interval
+      real-store suite now opens the window across six TTLs, parks into the real
+      store, renews through renewDispatchLease, and asserts a second dispatch is
+      refused dispatch.resume-parked at exit 2 while the park stands. F-2: the
+      production harness composes an injected clock and the unconfirmed-stop arm
+      runs on the harness default 2026-11-08T10:00:00Z deterministically (the
+      window is open through the 60 s after-buffer). F-5: the episode resumedAt
+      is applied only after the next session acquisition succeeds, so a failed
+      resume reports the pause and the failure, never resumed at. F-10: the
+      retired recoveryRefusal carrier and its status/park projection are removed
+      together with the lane-record member and its pins; the terminal exhaustion
+      record and typed question carry the exhaustion. F-11: the fixture-only
+      budget-and-economics non-terminal arm is removed. Tests: 18 peak/lease
+      files 68 pass / 0 fail; contract/status/inventory 56 pass / 0 fail; the
+      four directly affected suites 10 pass / 0 fail; typecheck green. Evidence
+      commits: 7b116ee2 (code/tests/fixtures/docs), da1c8ffe (pm-notes
+      evidence), da05b62e (review-iter-3 record, plan scope, docs)."
+    type: info
+    date: "2026-11-26"
+  - text: "Quality gates, commit-range gate: PASS — 54 commits in range, 0
+      offending, 0 distinct rules hit; base origin/main-tools, merge-base
+      febf3906, head c4917e33; commitlint node_modules/.bin/commitlint
+      (origin=repository-local). The full `TMPDIR=$PWD/tmp/tmpdir pnpm check`
+      result is recorded in the following note."
+    type: info
+    date: "2026-11-26"
+  - text: "Quality gates, full battery: `TMPDIR=$PWD/tmp/tmpdir pnpm check` PASS
+      (exit 0, 17m58s): 13034 pass, 4 skip, 0 fail across 1561 files; lint,
+      format:check, typecheck, boundaries (depcruise, ambient-globals,
+      workspace-entrypoints, secret-read-boundary), allowlist-tripwire,
+      memory-lint, forbidden-literals, new-code-naming, namespace-tree,
+      prompt-conformance, help-guide-coverage and exports-parity all green. Log:
+      tmp/run-logs-runner/2026-11-26/233320-pnpm-check-full-gate.log."
+    type: info
+    date: "2026-11-26"
+  - text: "Plan phase 8 (Finalize and release: declaration only) complete: this
+      phase performs no delivery work. Its documentation-reconciliation
+      obligation was executed in system_spec_update (fc80e81e and the
+      post-phase-10 doc-sync), its pull-request obligation is executed in
+      pr_creation, and the TC-PEAK-029 post-upgrade hand-off and preconditions
+      are recorded above before dod_check. No separate commit belongs to this
+      phase."
+    type: info
+    date: "2026-11-26"
+  - text: "PR CREATED:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/428 — base
+      main-tools, head feat/GH-413/peak-pausing-dispatch-lane at c87102a6, 56
+      commits, 137 files (+15,580/-444), not draft, mergeable, NOT merged. The
+      branch carries two pm-notes record commits after the gate; the gate range
+      was 54 commits at PASS. Full `pnpm check` 13,034 pass / 4 skip / 0 fail;
+      commit-range PASS 54/0; review iteration 4 PASS; readiness iteration 7
+      READY; all ten lifecycle phases complete. CI checks were queued at
+      creation. Merge authority stays with the owner; the lane stops here."
+    type: info
+    date: "2026-11-26"

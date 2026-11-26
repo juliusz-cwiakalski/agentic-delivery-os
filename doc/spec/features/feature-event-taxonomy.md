@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-EVENT-TAXONOMY
 status: Current
 created: 2026-11-12
-last_updated: 2026-11-17
+last_updated: 2026-11-26
 owners: ["engineering"]
 service: delivery-os
 summary: "The published event taxonomy v2 on the resident daemon's subscribe surface and its reference command family: six closed topics (`queue` and `lanes` snapshot topics; `queue.graph`, `dispatch.attempt`, `phase.state`, and `blockers.state` event topics), the eight-field event envelope with its per-topic `lane` and `ref` rule, per-`(topic, lane)` process-scoped `sequence` as the only ordering guarantee with gap-to-repoll, preserved overflow carriage stamped `overflow: \"repoll\"`, the peak-pause kinds `stop`/`parked`/`resumed`/`park-edge` carried by taxonomy v2 as the single spoken version with every v1 kind and payload byte-identical and v1 retired, the watcher's episode frames emitted only over records whose episode frame is complete while operator-shaped parks project the `park-edge` alone, the unknown-topic subscribe refusal, the generated `events list` / `events describe <topic>` surface with its three error identities and `{0, 1, 2}` exits, every declared kind with a producer, and the mount as one prompt-required unit."
 links:
-  related_changes: ["GH-290", "GH-292", "GH-294", "GH-295"]
+  related_changes: ["GH-290", "GH-292", "GH-294", "GH-295", "GH-413"]
   related_decisions: ["TDR-0025", "TDR-0005", "TDR-0029"]
   contracts:
     - "packages/core/src/contracts/taxonomy.ts"
@@ -160,13 +160,25 @@ Three further facts pin the peak-pause episode kinds ([Provider Peak Pausing](fe
   episode frame is complete emits exactly one `stop`, one `parked`, and one
   `park-edge`; a recovered record of a preserved episode emits exactly one
   `resumed`. The shared `episodeId` reconstructs the whole episode from the
-  ledger alone across many supervision ticks.
+  ledger alone across many supervision ticks or dispatch observations. The
+  producers are the composition that owns the lane — the daemon's watch for the
+  lanes it supervises and the dispatch-owned watch for the lane a one-shot
+  invocation started, which is composed only for a harness that declares the
+  terminate operation and therefore emits no episode on a terminate-less harness —
+  and the operator stop `dispatch stop <ref>`, which admits
+  the `peak-window` cause only and writes its complete frame only after a
+  confirmed terminate. Where the nominated profile's windows overlap in effect,
+  each episode is framed separately, so one lane can produce consecutive
+  episodes.
 - **`resumed` is the session-resume transition's event.** Its payload always
   carries a real preserved session-state reference, the same branch, and the
   `reDispatched: false` fact. A `session-state-not-preserved` lane's
   interrupted-lane recovery is a restart admission, not a session resume, and
   emits no `resumed` frame; its episode's ledger truth is exactly one `stop`
-  plus one `parked` carrying the failure classification.
+  plus one `parked` carrying the failure classification. A `preserved` standing
+  park closed by the delivered recovery pass projects one `resumed` frame with an
+  empty `sessionRef` and `branch` under its original episode id, whether or not a
+  session resumed.
 - **`park-edge` carries the park lifecycle edge.** An `owner-hold` park emits
   `park-edge` with `until` as a declared classified absence; an operator-shaped
   `peak-window` park — the release writer stamps only the minimal episode
@@ -174,7 +186,9 @@ Three further facts pin the peak-pause episode kinds ([Provider Peak Pausing](fe
   emits the `park-edge` alone, never a `stop` or `parked` frame; every other
   park cause — the delivered `provider-window`, `provider-quota`, and
   `preempted-for-close-item` causes and the supervised-stall cause
-  `liveness-stall` — emits nothing.
+  `liveness-stall` — emits nothing. The operator release writer keeps its
+  minimal frame and is distinct from `dispatch stop`, which stops a session and
+  therefore writes the complete watcher-shaped frame.
 
 A `dependency-edge` event is emitted only when the folded edge set differs from
 the previous record for the same ref; a rewritten identical record publishes
@@ -182,9 +196,10 @@ nothing, and a `dep remove` of an absent edge publishes nothing. A `queue releas
 --park` writes a separate `queue.park` record: the `release` payload carries no
 park cause, and the park withdrawal a removal appends
 for the same reason publishes nothing. A peak-window or owner-hold park record is
-the durable source of its episode's `park-edge` and — for a watcher-written
-peak-window episode carrying the complete episode frame — its `stop` and
-`parked` frames, so the park lifecycle is observable without any new write path.
+the durable source of its episode's `park-edge` and — for a watcher- or
+`dispatch stop`-written peak-window episode carrying the complete episode frame —
+its `stop` and `parked` frames, so the park lifecycle is observable without any
+new write path.
 
 ## Emission model
 

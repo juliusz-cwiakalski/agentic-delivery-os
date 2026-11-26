@@ -3,12 +3,12 @@ ados_distribution: redistributable
 id: GUIDE-ENGINE-FIRST-OPERATIONS
 status: Current
 created: 2026-11-18
-last_updated: 2026-11-25
+last_updated: 2026-11-26
 owners: ["engineering"]
-summary: "Operating guide for engine-first delivery: the daily routine, the four per-reference inspection queries, how to read the handover gate and the fleet row, how a per-repository flip and its reversal are performed, the typed Mode A loop beside its shell fallback, and the declared residuals."
+summary: "Operating guide for engine-first delivery: the daily routine, the per-reference inspection queries, peak pausing, parking and the operator stop, how to read the handover gate and the fleet row, how a per-repository flip and its reversal are performed, the typed Mode A loop beside its shell fallback, and the declared residuals."
 links:
-  related_changes: ["GH-293", "GH-348", "GH-354", "GH-388", "GH-386", "GH-404"]
-  related_decisions: ["TDR-0031", "TDR-0056", "TDR-0057", "TDR-0058"]
+  related_changes: ["GH-293", "GH-348", "GH-354", "GH-388", "GH-386", "GH-404", "GH-413"]
+  related_decisions: ["TDR-0031", "TDR-0056", "TDR-0057", "TDR-0058", "TDR-0077", "TDR-0078"]
 ---
 
 # Engine-first delivery operations
@@ -81,6 +81,94 @@ authoritative-mode pointer (section 5). The Mode A outer loop is also a typed
 command — `jaiship loop start|stop|status|log|reset` over the delivered supervision
 engine — and `ceo-loop.sh` remains its documented fallback
 ([Loop Supervision](../spec/features/feature-loop-supervision.md)).
+
+### Peak windows, parking, and the operator stop
+
+A dispatch lane is watched for its whole life by the invocation that started it,
+so a window that opens mid-lane is respected without a resident daemon. The watch
+is composed only for a harness that declares the terminate operation, because the
+stop it issues is that operation: a terminate-less harness, the Claude Code
+adapter, composes no watch, so its lanes run through a window and `lanes` reports
+`iteration-start-gating` for it even with pausing enabled. When the
+nominated profile's `peakWindows` rule data declares an open window, the lane is
+stopped with one bounded-grace stop, parked with cause `peak-window` and the
+window's end, and resumed in the same invocation once the end is observed — the
+same session, branch, and worktree, and exactly one `stop`, one `parked`, and, on
+resume, one `resumed`. The invocation returns one result whose summary states that
+the lane was paused and resumed. Between the park and the resume the invocation
+keeps the lane's repository lease live at `min(lane.liveness-interval,
+queue.lease-ttl / 2)`, so a second dispatch while the lane runs is refused
+`queue.single-flight`; while an un-expired standing park holds the ref it is
+refused `dispatch.resume-parked` at exit `2` at resume admission, not
+`queue.single-flight`. `dispatch status <ref>` explains a pause: the lane reads
+`stale=false` and `delivering=true` while its owner is alive, and the additive park
+fact names the cause, the recorded end, the recorded stop instant, and the
+preservation classification, carried from the park record; the fact carries those
+four members and no refusal, and projects no `recoveryRefusal` member. The only
+refusal on the not-preserved path of a dispatch-owned episode is budget exhaustion,
+recorded as the delivered terminal exhaustion record and raised as the delivered
+typed question, so neither the park record nor the park fact carries a refusal
+([Provider Peak Pausing](../spec/features/feature-peak-pausing.md)).
+
+Run it as follows:
+
+- **Expect a long invocation and a delayed answer.** A lane parked inside a window
+  stays in flight for the length of the window; that is the point. Read `dispatch
+  status <ref>`, `lanes`, and `board` for progress rather than elapsed time. A
+  dispatch that supplies the watch also withholds its terminal classification for
+  at least the applied grace plus one observation cadence after the session ends —
+  about 50 s at the defaults — so a session end is reported roughly that much
+  later, with pausing enabled or disabled. The withhold steps at the renewal
+  cadence `min(lane.liveness-interval, queue.lease-ttl / 2)` and renews the lease
+  before each step, so the heartbeat stays below the TTL even when the liveness
+  interval is at or above it; an invocation that loses the lease before or inside
+  the withhold returns the classified `dispatch.state-unverified` result with the
+  park standing, appends no terminal lane record, and derives nothing.
+- **Relax activity-keyed stall detection.** A parked lane is silent by design.
+  `pm-liveness.sh`, `deliver-ticket.sh`, `ceo-loop.sh`, and any operator probe with
+  the same shape must be relaxed or must exclude a parked lane before a lane is
+  dispatched into a window; otherwise the probe kills the waiting invocation and
+  orphans the park.
+- **Only a profile that declares windows, on a harness that declares `terminate`, is
+  pausable.** The shipped
+  `provider.profiles` branch is empty, so a host that declares no `peakWindows`
+  gets no lane pausing. Declare the windows on the profile your lanes are
+  nominated to, and run them on a harness that declares the terminate operation;
+  a terminate-less harness never pauses.
+- **Request the pause yourself with `dispatch stop`.** `dispatch stop <ref>
+  --cause peak-window --until <iso>` sends the same bounded-grace stop to a running
+  lane and parks it at the declared end. It admits the `peak-window` cause only and
+  requires `--until`, accepted in the canonical `Z` form
+  (`2026-11-12T12:00:00Z`) or the exact millisecond form
+  (`2026-11-12T12:00:00.000Z`); another cause, a missing end, a past end, or a
+  non-canonical end is `input.value.rejected` before any read. A lane that is
+  terminal, absent, has no session, is already
+  parked, or whose session cannot be confirmed stopped is refused
+  `queue.precondition.unmet` and nothing is written. The park lands only after a
+  confirmed terminate, and the owning invocation re-reads the park after its
+  collection resolves and waits and resumes, so the stop's answer is not the
+  resume. Because a fresh session's argv carries only the deterministic,
+  non-repository-scoped `ticket-<REF>` title, run at most one lane per work-item
+  ref per host: a separately invoked stop resolves the exact argv identity and
+  could otherwise reach a same-titled session in another repository.
+- **A parked lane whose invocation is gone is visible, not hidden.** `dispatch
+  status` then answers `stale=true` with the park fact and its recorded end; the
+  next invocation, or the delivered operator resume path, recovers the standing
+  park before any new episode and before the invocation's first session, so an
+  unrecoverable park is a refusal that starts no session and names the stuck
+  references the repository-wide recovery pass reports. A resume or re-dispatch
+  while the park has not expired is refused `dispatch.resume-parked` at exit `2`
+  and writes nothing.
+- **One declared residual.** A lane admitted while its nominated profile's window
+  is already open is parked at the first observation, so up to one observation
+  cadence plus the applied grace of billing precedes the park. No billable call
+  follows the park instant.
+- **Turn pausing off deliberately.** `lane.disable-peak-pausing: true` restores
+  admission-gating-only behaviour, composes no watch, and makes `lanes --json`
+  report `peakEnforcement.mode: "iteration-start-gating"`; a harness that declares
+  no terminate operation reads the same value with pausing enabled, because no
+  watch is composed for a harness that cannot stop its session. `dispatch stop`
+  keeps working either way.
 
 ## 2. Inspecting one delivery
 
@@ -260,19 +348,27 @@ unchanged.
 
 ## 6. Declared residuals
 
-Three limits are stated so an operator does not plan around capability that does not
+Four limits are stated so an operator does not plan around capability that does not
 exist:
 
 - **`verify deploy` target resolution** is a declared residual: the command's
   delivered behaviour is unchanged and deploy confidence is not engine-verified.
 - **A declared peak window has no read surface** of its own: the engine exposes the
-  park it causes (`status.laneParks`, the board `PARKED` section, the
-  `peak-window` park record), never a window listing.
+  park it causes (`dispatch status`'s park fact, `status.laneParks`, the board
+  `PARKED` section, the `peak-window` park record), never a window listing.
 - **The `lanes` read is profile-blind**: `QueueLane` carries no `providerProfile`
   and the lanes projection shows none, so a `lanes list` reader cannot attribute a
   running lane to a provider profile. The surfaces that do carry the nomination are
-  the attempt history, the daemon lane records, `status.laneParks`, the board's
-  `PARKED` section, and the window-scoped spend evidence.
+  the attempt history, the daemon and dispatch lane records, the `dispatch status`
+  park fact, `status.laneParks`, the board's `PARKED` section, and the
+  window-scoped spend evidence.
+- **A lane admitted inside an already-open window bills briefly before it parks.**
+  Profile `peakWindows` do not gate admission, so such a lane spawns and is parked
+  at the first observation: one observation cadence (`lane.liveness-interval`,
+  30 000 ms default) plus the applied grace (`coordinator.kill-grace`, 20 000 ms
+  default) at most, and no billable call after the park instant. There is no
+  pre-session park; an unexpected peak charge is read against that bound before
+  anything else is suspected.
 
 The broader suites behind these contracts are specified in
 [Test Specification: Dispatch Engine](../quality/test-specs/test-spec-dispatch-engine.md)

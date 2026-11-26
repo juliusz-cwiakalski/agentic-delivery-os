@@ -35,6 +35,9 @@ export const DISPATCH_FLOW_SURFACE = [
   "packages/core/src/app/dispatch-log-sink.ts",
   "packages/core/src/app/dispatch-log-tail.ts",
   "packages/core/src/app/dispatch-last-message.ts",
+  // GH-413: the dispatch-owned window watch joins the declared surface.
+  "packages/core/src/app/dispatch-peak-pause.ts",
+  "packages/core/src/app/dispatch-stop.ts",
   "packages/core/src/domain/dispatch-message.ts",
   "packages/core/src/domain/dispatch-operator-view.ts",
   "packages/core/src/domain/dispatch-log.ts",

@@ -43,10 +43,11 @@ describe("TC-ADMIT-001 two concurrent same-ref dispatches receive their declared
       expect(loser?.exit).toBe(errorRowExit("queue.single-flight"));
       expect(loser?.holder).toBe("dispatch");
       expect(loser?.text).not.toContain("fallback.internal");
-      // Cardinality: exactly one acquisition (plus its release record) and
+      // Cardinality: one acquisition, its release, and the GH-413
+      // post-collection withhold's own-heartbeat `renewed` record (F-9), then
       // exactly one attempt record; the refusal appended neither.
       expect(observation.leaseAcquisitions).toBe(1);
-      expect(observation.leaseRecords).toBe(2);
+      expect(observation.leaseRecords).toBe(3);
       expect(observation.attempts).toHaveLength(1);
       expect(observation.spawns).toBe(1);
       expect(observation.violations).toEqual([]);

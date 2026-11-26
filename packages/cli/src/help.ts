@@ -525,6 +525,7 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
       "<binary> dispatch log <ref> [--tail <n>] [--json]",
       "<binary> dispatch is-delivering [<ref>] [--json]",
       "<binary> dispatch last-message <ref> [--json]",
+      "<binary> dispatch stop <ref> --cause peak-window --until <iso>",
     ],
     [
       ["--harness <name>", "Harness adapter (opencode, claude-code); default from config"],
@@ -535,6 +536,8 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
       ["--note <text>", "Bounded divergence-resolution note"],
       ["--revert", "Revert a recorded handover to dual-run"],
       ["--tail <n>", "Log tail size, 1..500 (default 50); refused, never clamped"],
+      ["--cause <cause>", "Stop cause; peak-window is the one admitted cause"],
+      ["--until <iso>", "The declared park end; required for peak-window"],
     ],
     [
       "<binary> dispatch GH-242",
@@ -547,7 +550,19 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
       "<binary> dispatch log GH-354 --tail 200",
       "<binary> dispatch is-delivering GH-354",
       "<binary> dispatch last-message GH-354 --json",
+      "<binary> dispatch stop GH-354 --cause peak-window --until 2026-11-12T10:00:00Z",
     ],
+    "dispatch",
+  ),
+  entry(
+    ["dispatch", "stop"],
+    "Stop a running lane with the same bounded-grace stop the window watch sends",
+    ["<binary> dispatch stop <ref> --cause peak-window --until <iso>"],
+    [
+      ["--cause <cause>", "Stop cause; peak-window is the one admitted cause"],
+      ["--until <iso>", "The declared park end; required for peak-window"],
+    ],
+    ["<binary> dispatch stop GH-354 --cause peak-window --until 2026-11-12T10:00:00Z"],
     "dispatch",
   ),
   {

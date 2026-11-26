@@ -104,6 +104,8 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0074](TDR-0074-project-groups-document-operator-local-overlay.md) | TDR | The Project-Groups Document Is an Operator-Local Overlay — The Ceremony Mirror's Cross-Checkout Target Set Is Declaration-Only | Proposed | 2026-11-21 | Juliusz Ćwiąkalski |
 | [TDR-0075](TDR-0075-watch-stale-as-profile-eligibility-blocker.md) | TDR | A Stale Watch Observation Is a Profile-Eligibility Blocker — A Narrowed `watch-stale` Boundary at Zero Acquisition Cost | Proposed | 2026-11-22 | Juliusz Ćwiąkalski |
 | [TDR-0076](TDR-0076-engine-ensure-push-first-remote-write.md) | TDR | The Engine-Side Ensure-Push Is the Dispatch Engine's First Remote-Write Act — One Bounded Fast-Forward Push of the Change Branch Before `pr-open` Derives | Proposed | 2026-11-23 | Juliusz Ćwiąkalski |
+| [TDR-0077](TDR-0077-dispatch-owned-window-watch.md) | TDR | A Lane Is Watched by the Composition That Owns It: The Dispatch Run Path Supplies the Profile-Window Watch for the Lanes It Starts | Proposed | 2026-11-26 | Juliusz Ćwiąkalski |
+| [TDR-0078](TDR-0078-lease-heartbeat-amends-tdr-0050.md) | TDR | A Dispatch Lane Keeps Its Repository Lease Live Through the Run and the Park: The Holding Invocation Renews at a Derived Cadence (TDR-0050 DC-3 Amended) | Proposed | 2026-11-26 | Juliusz Ćwiąkalski |
 
 Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
 acceptance is that change's pull-request review, and their status moves from
@@ -172,3 +174,67 @@ failure-token-mapping row that retains the PR URL, parity evidence rides the bou
 `push:<verdict>` references and an additive optional envelope block, text mode stays
 byte-identical, and session-side conventions, the closed vocabularies, and the shell
 fallback's behavior are unchanged.
+
+Decisions TDR-0077 and TDR-0078 are the binding design of change GH-413 (peak
+pausing for a lane started by dispatch); their owner acceptance is that change's
+pull-request review, and their status moves from `Proposed` there rather than in
+the delivery commits. TDR-0077 supersedes, for lanes started by `dispatch`, the
+statement that without a resident daemon there is no window watcher and no
+mid-flight park: a lane is watched by the composition that owns it, the dispatch
+run path watches the lane it started at every observation from its first session
+to its terminal classification, and a composition that supplies no watch degrades
+to the delivered iteration-start gating. It fixes the rule source (the nominated
+profile's `peakWindows` branch, read from the nomination stored on the durable
+lane record; provider-entry `peak` windows stay admission-only; only a profile
+declaring `peakWindows` is pausable and the shipped defaults declare none), the
+park end (the effective end of the first open window the delivered decision
+returns; overlapping windows yield consecutive exactly-once episodes, never one
+merged park), the single park per reference (DEC-23, occupancy with recovery:
+the watch's already-parked rule is occupancy, any standing `peak-window` park
+whatever its `until`; DEC-22: a resume or re-dispatch of a lane whose standing
+park has not expired is a pre-session refusal under the new
+`dispatch.resume-parked` row at exit 2 (`platform-provider`, transient,
+retryable), naming the cause and `until` and writing nothing; that one row is
+the owner-authorised exception to NG-6 and NFR-8, because the delivered window
+refusal `provider.profile.unavailable` shares the exit but says that no profile
+is eligible; an expired standing park is recovered through the delivered
+mutating park pass, `recoverQueueParks`, before the first stop decision and
+before the first session of a resume, so the pass only ever meets an expired
+park or none; an unrecoverable park refuses the run before any session starts,
+naming the stuck references, because a double park fails every park-reading
+surface for good), the `lanes`
+composition-fact read
+(`peakEnforcement.mode` derives from the reading composition's own effective
+configuration and the selected harness's terminate capability: `window-watch`
+when automatic pausing is enabled and the harness declares `terminate`,
+`iteration-start-gating` when pausing is disabled or the harness declares none,
+so no watch is composed; the one intended change to a no-park payload;
+`parkClaimed` stays record-derived), and the operator stop
+(`dispatch stop <ref>` admits the `peak-window` cause only; another cause or a
+missing `--until` is `input.value.rejected` at the grammar boundary, the missing
+end carrying the delivered `until-required` reason; a lane is running only when
+its newest record is `active`, carries a session identity, and has no open park
+of any cause, so an already-parked lane is refused and never parked twice; the
+command resolves the session identity and the tree root from the lane record,
+sends no signal of its own, writes the park only after a confirmed terminate, and
+reaches the owning invocation through the durable lane and park records; the
+invocation withholds terminal classification for at least the applied grace plus
+one observation cadence, because the terminate call awaits the whole grace, then
+re-reads the park, a result-latency cost of about 50 s at the defaults on every
+session end). A park before the first session is not part of either record: the
+specification's DEC-14 is withdrawn, and a dispatch admitted inside an
+already-open window is parked at its first observation, a declared residual of
+one observation cadence plus the applied grace. TDR-0078 amends TDR-0050 DC-3
+and its restatement in C-4 for the dispatch run path only: the admission claim
+still never renews and its stale same-holder `renewed` arm is unchanged, and the
+invocation that holds the lease renews it at most once per renewal cadence,
+`min(lane.liveness-interval, queue.lease-ttl / 2)`, through the delivered
+`renewed` operation, as a no-op unless the live lease's latest heartbeat is the
+invocation's own last write and without passing the owner-hold gate. A no-op
+renewal surfaces the bounded evidence `lease:not-owned` and extends nothing, and
+an invocation that no longer holds the lease returns one classified result
+instead of resuming as owner, so a second dispatch of a running lane is refused
+`queue.single-flight` on every legal configuration of the two keys and the lease
+is still live when a park ends, while a second dispatch during an un-expired
+standing park is refused `dispatch.resume-parked` at exit 2 at resume admission,
+not by the lease.

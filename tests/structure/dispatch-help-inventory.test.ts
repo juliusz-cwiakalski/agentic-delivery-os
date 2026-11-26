@@ -6,13 +6,13 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-required-commands";
 import {
   allHelpEntries,
   helpEntryFor,
-  renderRootHelp,
   ROOT_HELP,
+  renderRootHelp,
 } from "../../packages/cli/src/help";
+import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-required-commands";
 import { resolveBrandIdentity } from "../../packages/core/src/branding/index";
 
 const ROOT = process.cwd();
@@ -46,8 +46,8 @@ describe("TC-HELP-001 dispatch is registered and documented", () => {
     const help = renderRootHelp(brand);
     expect(help.length).toBeGreaterThan(0);
     // GH-354 §25.1 "Help/reference coverage", DEC-1, TC-CONTRACT-002: the four
-    // operator forms are declared entries, so the family's count moves 5 -> 9.
-    expect(allHelpEntries().filter((entry) => entry.path[0] === "dispatch").length).toBe(9);
+    // operator forms are declared entries, so the family's count moves 5 -> 10.
+    expect(allHelpEntries().filter((entry) => entry.path[0] === "dispatch").length).toBe(10);
     for (const form of [
       ["dispatch", "status"],
       ["dispatch", "log"],
@@ -125,7 +125,7 @@ describe("TC-SPAWN-004 the agent and the title are composition facts, not operat
   test("the dispatch help/grammar lists no --agent, --model, or --title option", () => {
     const entries = allHelpEntries().filter((entry) => entry.path[0] === "dispatch");
     // §25.1: the four operator forms raise the family count 5 -> 9.
-    expect(entries).toHaveLength(9);
+    expect(entries).toHaveLength(10);
     const rendered = entries.map((entry) => JSON.stringify(entry)).join("\n");
     for (const forbidden of ["--agent", "--title", "--model"]) {
       expect(rendered, forbidden).not.toContain(forbidden);

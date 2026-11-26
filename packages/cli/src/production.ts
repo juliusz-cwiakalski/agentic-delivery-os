@@ -142,6 +142,7 @@ import {
   type DaemonComposition,
   type DispatchArtifactFacts,
   type DispatchLedgerFacts,
+  type DispatchPeakWatchPorts,
   type DispatchPreflightError,
   type DispatchPreflightResult,
   type DispatchPrFact,
@@ -157,6 +158,7 @@ import {
   evaluateHarnessModeAvailability,
   evaluateModelExpressibility,
   evaluateRestartBudget,
+  executeDispatchStop,
   foldDispatchHandover,
   type HandoverEvidence,
   type HarnessSettings,
@@ -204,6 +206,7 @@ import {
   projectMemberHealth,
   projectMemberOutcomeOfHealth,
   projectStateRoot,
+  queueParkRecordKey,
   rankBlockerQuestions,
   readDaemonHeartbeat,
   readDaemonInstance,
@@ -212,8 +215,11 @@ import {
   readDispatchHandover,
   readDispatchLanes,
   readQueueEntries,
+  readQueueParks,
+  recoverQueueParks,
   releaseQueueLease,
   renderLogLine,
+  renewDispatchLease,
   reposHandoverGateOf,
   reposListDataOf,
   resolveBinding,
@@ -228,6 +234,7 @@ import {
   resolveOwnerHoldFact,
   resolveProjectGroupMember,
   resolveProjectScope,
+  resolveQueueSettings,
   reversibilityOf,
   runDispatchTrackerLadder,
   type SupervisionEconomicsWritePort,
@@ -330,13 +337,16 @@ import {
   type ProjectGroupValidated,
   type ProjectScopedMemberWork,
   type ProviderClock,
+  type ProviderProfilePeakRules,
   type ProviderSleep,
   type ProviderWorkItemRefResolution,
   type ProviderZoneFacts,
   QUEUE_DEFAULT_NEXT_ACTIONS,
+  QUEUE_PARK_RECORD_KIND,
   QUEUE_REF_PATTERN,
   type QueueDegradationReason,
   type QueueEntryProjection,
+  type QueueParkRecord,
   type QueueTrackerRead,
   type QuotaTransport,
   REPOS_COMMAND_FAMILY,
@@ -344,6 +354,7 @@ import {
   renderPriorIdentityNotice,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
+  type StateJsonValue,
   type StateStorePort,
   type SupervisorPort,
   TELEMETRY_RUN_ID_UNAVAILABLE,
@@ -2998,6 +3009,32 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         : ["daemon-unreachable"];
     };
 
+    /**
+     * The composition fact behind `lanes --json`'s `peakEnforcement.mode`
+     * (GH-413 DEC-6): automatic pausing is on unless this composition's own
+     * effective configuration sets `lane.disable-peak-pausing: true`.
+     */
+    const peakPausingEnabled = (): boolean => {
+      const gitRoot = gitRootForConfig();
+      const acquired = acquireProjectConfiguration(gitRoot);
+      if (!acquired.ok) return false;
+      const resolvedConfig = resolveConfig({ sources: acquired.sources });
+      if (!resolvedConfig.ok) return false;
+      const lane = resolveLaneSettings(resolvedConfig.value.values, resolvedConfig.value.origins);
+      // A configuration that would refuse every dispatch must not claim a
+      // composed watch: the composition fact degrades to iteration-start gating.
+      if (!lane.ok || lane.value.disablePeakPausing === true) return false;
+      // R7: a harness that declares no terminate operation cannot confirm a
+      // stop, so the composition supplies no watch for it.
+      const harness = resolveHarnessSettings(
+        resolvedConfig.value.values,
+        resolvedConfig.value.origins,
+      );
+      if (!harness.ok) return false;
+      const { kind } = harness.value;
+      return harnessFor(kind).terminate !== undefined;
+    };
+
     const queueComposition = withRepositoryBinding(
       {
         store,
@@ -3006,6 +3043,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         nowMs,
         newFenceToken,
         degraded: daemonReachability,
+        // Lazily resolved only when the `lanes` read executes, so a command that
+        // never reads lanes performs no extra configuration acquisition.
+        peakWatchComposed: peakPausingEnabled,
         readyRuntime: createStatusCommandRuntime(statusComposition(), noChain),
         readOwnerHold,
         readPlanMembers,
@@ -4778,11 +4818,64 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       };
     };
 
+    /** A fresh parse of the declared peak rules; used at resume admission. */
+    const readPeakRules = (): ReadonlyMap<string, ProviderProfilePeakRules> => {
+      const rules = new Map<string, ProviderProfilePeakRules>();
+      const gitRoot = gitRootForConfig();
+      const acquired = acquireProjectConfiguration(gitRoot);
+      if (acquired.ok) {
+        const resolvedConfig = resolveConfig({ sources: acquired.sources });
+        if (resolvedConfig.ok) {
+          const providerParsed = parseAndValidateProviderConfiguration(resolvedConfig.value.values);
+          if (providerParsed.ok) {
+            const profileParsed = parseAndValidateProfileConfiguration(
+              resolvedConfig.value.values,
+              providerParsed.config,
+            );
+            if (profileParsed.ok) {
+              for (const [name, fact] of Object.entries(profileParsed.config.profiles)) {
+                if (fact.peakWindows !== undefined) rules.set(name, fact.peakWindows);
+              }
+            }
+          }
+        }
+      }
+      return rules;
+    };
+    let cachedPeakRules: ReadonlyMap<string, ProviderProfilePeakRules> | undefined;
+    /** One parsed rules lookup for the watch, the stop, and the mode. */
+    const peakRulesFor = (profile: string): ProviderProfilePeakRules | undefined => {
+      cachedPeakRules ??= readPeakRules();
+      return cachedPeakRules.get(profile);
+    };
+    /** The nominated profile's declared grace default in milliseconds. */
+    const peakProfileGraceMsFor = (profile: string | undefined): number | undefined => {
+      if (profile === undefined) return undefined;
+      const rules = peakRulesFor(profile);
+      return rules === undefined ? undefined : rules.graceSecondsDefault * 1_000;
+    };
+    /** Append one watcher-shaped park record through the store's own fence. */
+    const appendQueueParkRecord = (record: QueueParkRecord): boolean => {
+      const acquired = store.acquireFence(newFenceToken());
+      if (!acquired.ok) return false;
+      try {
+        const appended = store.append(acquired.value.handle, {
+          kind: QUEUE_PARK_RECORD_KIND,
+          recordKey: queueParkRecordKey(record.ref),
+          payload: record as StateJsonValue,
+        });
+        return appended.ok;
+      } finally {
+        store.releaseFence(acquired.value.handle);
+      }
+    };
+
     const dispatchComposition = (
       settings: HarnessSettings,
       lane: LaneSettings,
       repository: string,
       killGraceMs: number,
+      leaseTtlMs: number,
     ): DispatchComposition => ({
       store,
       stateRoot: stateDirectory,
@@ -4865,10 +4958,192 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           ownerHold: readOwnerHold(),
           delay: dispatchDelay,
         }),
-      releaseLease: (ref) => {
+      renewLease: ({ repository: renewalRepository, ref, expectedHeartbeatAt }) =>
+        renewDispatchLease(store, {
+          repository: renewalRepository,
+          ref,
+          holder: "dispatch",
+          expectedHeartbeatAt,
+          ttlMs: leaseTtlMs,
+          nowIso: nowIso(),
+          nowMs: nowMs(),
+          fenceToken: newFenceToken(),
+        }),
+      leaseTtlMs,
+      peak: (() => {
+        const rulesFor = peakRulesFor;
+        const zonePort = createIntlZonePort();
+        const zoneFactsFor = (zone: string): ProviderZoneFacts | undefined => {
+          const normalised = normaliseZoneName(zone);
+          if (normalised === "UTC") return UTC_ZONE_FACTS;
+          return zonePort.isKnownZone(normalised) ? bindZoneFacts(normalised, zonePort) : undefined;
+        };
+        const parks = (): readonly QueueParkRecord[] => {
+          const read = readQueueParks(store);
+          return read.ok ? read.records : [];
+        };
+        const appendParkRecord = appendQueueParkRecord;
+        const stop: DispatchPeakWatchPorts["stop"] = async ({ handle, graceMs }) => {
+          const sessionPort = harnessFor(settings.kind);
+          const terminate = sessionPort.terminate;
+          if (terminate === undefined || handle === undefined) {
+            return { confirmed: false } as const;
+          }
+          const terminated = await terminate({ handle, graceMs });
+          if (!terminated.ok || !terminated.value.terminated) {
+            return { confirmed: false } as const;
+          }
+          // F-8: a session that survived the grace and was KILLed is not
+          // preserved; a TERM-only stop is.
+          return terminated.value.escalated ? "session-state-not-preserved" : "preserved";
+        };
+        return {
+          // F-6: a harness without a terminate capability cannot confirm a
+          // stop, so it composes no automatic watch.
+          watchEnabled:
+            lane.disablePeakPausing !== true && harnessFor(settings.kind).terminate !== undefined,
+          rulesFor,
+          resumeRulesFor: (profile: string) => readPeakRules().get(profile),
+          zoneFactsFor,
+          parks,
+          recoverParks: () => {
+            const recovered = recoverQueueParks(store, {
+              nowIso: nowIso(),
+              nowMs: nowMs(),
+              context: {
+                providerAvailable: true,
+                leaseHeldRepositories: [repository],
+              },
+              fenceToken: newFenceToken(),
+              ownerHold: readOwnerHold(),
+            });
+            if (!recovered.ok) {
+              return {
+                ok: false,
+                kind: recovered.kind === "state" ? "state" : "queue",
+                code: recovered.code,
+              } as const;
+            }
+            // F-11: the delivered pass reports an unrecoverable park as
+            // `value.stuck`; a stuck marker is a refusal, never a recovery.
+            if (recovered.value.stuck.length > 0) {
+              return {
+                ok: false,
+                kind: "queue",
+                code: "queue.park-condition-stuck",
+                stuck: recovered.value.stuck,
+              } as const;
+            }
+            return { ok: true as const };
+          },
+          unexpiredStandingPark: (ref: string) => {
+            const read = readQueueParks(store);
+            if (!read.ok) return undefined;
+            for (let index = read.records.length - 1; index >= 0; index -= 1) {
+              const park = read.records[index];
+              if (park === undefined || park.ref !== ref || park.cause !== "peak-window") {
+                continue;
+              }
+              if (park.recoveryState !== "parked" && park.recoveryState !== "clear-observed") {
+                return undefined;
+              }
+              const untilMs = park.until === undefined ? undefined : Date.parse(park.until);
+              if (untilMs !== undefined && Number.isFinite(untilMs) && untilMs > nowMs()) {
+                return {
+                  cause: park.cause,
+                  ...(park.until === undefined ? {} : { until: park.until }),
+                };
+              }
+              return undefined;
+            }
+            return undefined;
+          },
+          stop,
+          appendPark: appendParkRecord,
+          appendRecovery: appendParkRecord,
+          holdActive: () => readOwnerHold().active === true,
+          newEpisodeId: (ref: string) => `peak-${ref}-${newFenceToken()}`,
+          branch: () => dispatchBaseBranch,
+          resumeSession: async () => true,
+          reenter: async () => true,
+          restartCount: (ref: string) => {
+            const restarts = readEconomicsRecords(store, ref);
+            return restarts.ok ? restarts.restarts.length : 0;
+          },
+          restartBound: () => lane.restartBudget,
+          economics: () => ({
+            prefillCost: null,
+            uniqueProgress: null,
+          }),
+          recoveryAdmission: "budget-only",
+          escalate: ({ code, ref, restarts }) => {
+            // R6: terminal exhaustion raises the delivered typed question the
+            // supervision economics path already writes; no new kind or id.
+            if (code === "dispatch.restart-budget-exceeded") {
+              createSupervisionEconomicsWritePort({ store, newFenceToken }).raiseQuestion({
+                ref,
+                restarts,
+                askedAt: nowIso(),
+              });
+            }
+          },
+        };
+      })(),
+      stop: {
+        stop: async ({ ref, cause, until }) => {
+          const sessionPort = harnessFor(settings.kind);
+          const termination = sessionPort.terminate;
+          const outcome = await executeDispatchStop(
+            {
+              resolveRepository: (target) =>
+                resolveProductionRepository(schedulerKeyForRef(target), { persist: false }),
+              lanes: () => {
+                const read = readDispatchLanes(store);
+                return read.ok ? read.records : [];
+              },
+              parks: () => {
+                const read = readQueueParks(store);
+                return read.ok ? read.records : [];
+              },
+              terminate: async ({ handle, graceMs }) => {
+                if (termination === undefined) {
+                  return { ok: false, terminated: false };
+                }
+                const result = await termination({ handle, graceMs });
+                return result.ok
+                  ? {
+                      ok: true,
+                      terminated: result.value.terminated,
+                      escalated: result.value.escalated,
+                      reaped: result.value.reaped,
+                    }
+                  : { ok: false, terminated: false };
+              },
+              appendPark: appendQueueParkRecord,
+              newEpisodeId: (target) => `peak-${target}-${newFenceToken()}`,
+              profileGraceMsFor: peakProfileGraceMsFor,
+              killGraceMs,
+              mainCheckout: cwd,
+            },
+            { ref, cause, until, nowIso: nowIso(), nowMs: nowMs() },
+          );
+          return outcome.ok
+            ? { ok: true, data: outcome.data }
+            : {
+                ok: false,
+                error: {
+                  kind: outcome.kind,
+                  code: outcome.code,
+                  ...(outcome.summary === undefined ? {} : { summary: outcome.summary }),
+                },
+              };
+        },
+      },
+      releaseLease: (ref, _cause, expectedHeartbeatAt) => {
         const released = releaseQueueLease(store, {
           ref,
           holder: "dispatch",
+          ...(expectedHeartbeatAt === undefined ? {} : { expectedHeartbeatAt }),
           nowIso: nowIso(),
           nowMs: nowMs(),
           fenceToken: newFenceToken(),
@@ -4975,6 +5250,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           readonly settings: HarnessSettings;
           readonly lane: LaneSettings;
           readonly killGraceMs: number;
+          readonly leaseTtlMs: number;
         }
       | { readonly ok: false; readonly code: string } => {
       const gitRoot = gitRootForConfig();
@@ -4999,13 +5275,16 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         resolved.value.values,
         resolved.value.origins,
       );
+      const queueSettings = resolveQueueSettings(resolved.value.values, resolved.value.origins);
       if (!lane.ok) return { ok: false, code: lane.error.code };
       if (!coordinatorSettings.ok) return { ok: false, code: coordinatorSettings.error.code };
+      if (!queueSettings.ok) return { ok: false, code: queueSettings.error.code };
       return {
         ok: true,
         settings: reconciled,
         lane: lane.value,
         killGraceMs: coordinatorSettings.value.killGraceMs,
+        leaseTtlMs: queueSettings.value.leaseTtlMs,
       };
     };
 
@@ -5069,6 +5348,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
               resolution.lane,
               repository,
               resolution.killGraceMs,
+              resolution.leaseTtlMs,
             ),
           ).run.run(input);
         },

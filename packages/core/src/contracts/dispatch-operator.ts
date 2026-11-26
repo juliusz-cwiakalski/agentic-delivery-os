@@ -137,6 +137,14 @@ export type DispatchOperatorLaneFacts = {
   readonly recordedAt: string;
 };
 
+/** The additive park fact on a `status` answer (GH-413 DM-3). */
+export type DispatchStatusParkFact = {
+  readonly cause: string;
+  readonly until?: string;
+  readonly stoppedAt?: string;
+  readonly preservation?: string;
+};
+
 /** `dispatch status <ref>` (API-1). */
 export type DispatchStatusData = {
   readonly query: "status";
@@ -156,6 +164,8 @@ export type DispatchStatusData = {
    * (DEC-8); no member is minted for a context-less lane.
    */
   readonly worktreePath?: string;
+  /** The open park's additive fact (GH-413 DM-3); absent when no park stands. */
+  readonly park?: DispatchStatusParkFact;
 };
 
 /** `dispatch log <ref> [--tail <n>]` (API-2). */
@@ -191,12 +201,23 @@ export type DispatchLastMessageData = {
   readonly recordedAt: string | null;
 };
 
+/** `dispatch stop <ref> --cause peak-window --until <iso>` (GH-413 DM-8). */
+export type DispatchStopData = {
+  readonly query: "stop";
+  readonly ref: string;
+  readonly cause: "peak-window";
+  readonly until: string;
+  readonly episodeId: string;
+  readonly preservation: "preserved" | "session-state-not-preserved";
+};
+
 /** Any operator answer payload; the `query` member is the only discriminator. */
 export type DispatchOperatorData =
   | DispatchStatusData
   | DispatchLogData
   | DispatchDeliveringData
-  | DispatchLastMessageData;
+  | DispatchLastMessageData
+  | DispatchStopData;
 
 /* ------------------------------------------------------------------------- */
 /* The injected read seams (API-8, API-9, API-10).                            */

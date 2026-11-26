@@ -266,6 +266,11 @@ export type ProductionQueueHarnessOptions = {
     readonly status: number;
     readonly body: Record<string, unknown>;
   };
+  /** A recorder for the post-collection withhold; defaults to a no-op. */
+  readonly dispatchDelay?: (
+    ms: number,
+    reason: "claim-fence" | "tracker-ladder" | "terminate-grace",
+  ) => Promise<void>;
 };
 
 const resolvingCredentials: CredentialPort = {
@@ -324,6 +329,11 @@ export const createProductionQueueHarness = (
     workingName: WORKING_NAME,
     repositoryFacts: {
       ...(options.originUrl === undefined ? {} : { originUrl: options.originUrl }),
+    },
+    dispatchDelay: options.dispatchDelay ?? (async () => {}),
+    clock: options.clock ?? {
+      nowMs: () => Date.parse("2026-11-08T10:00:00.000Z"),
+      nowIso: () => "2026-11-08T10:00:00.000Z",
     },
     harnessSpawnRunner: spawnRunner,
     harnessSpawnStarter: streamStarterFromRunner(spawnRunner),

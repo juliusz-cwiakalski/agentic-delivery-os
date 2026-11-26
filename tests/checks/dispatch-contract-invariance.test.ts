@@ -38,12 +38,13 @@ const exitOf = (token: string): number | undefined => {
 };
 
 describe("TC-TRACKER-004 the ladder adds no configuration key", () => {
-  test("the lane branch carries the delivered keys plus the GH-404 worktree settings", () => {
+  test("the lane branch carries the delivered keys plus the GH-404 worktree settings and the GH-413 peak-pausing setting", () => {
     expect(Object.keys(LANE_BRANCH.fields)).toEqual([
       "liveness-interval",
       "restart-budget",
       "worktree-root",
       "disable-worktrees",
+      "disable-peak-pausing",
     ]);
     for (const forbidden of ["tracker", "ladder", "attempts", "base-ms", "cap-ms"]) {
       expect(Object.keys(LANE_BRANCH.fields)).not.toContain(forbidden);
@@ -116,6 +117,7 @@ describe("TC-CONTRACT-001 the closed dispatch surface is unchanged", () => {
         .sort();
     expect(codes("dispatch.")).toEqual([
       "dispatch.restart-budget-exceeded",
+      "dispatch.resume-parked",
       "dispatch.resume-uneconomical",
       "dispatch.session.spawn-failed",
       "dispatch.state-unverified",
@@ -171,6 +173,7 @@ describe("TC-CONTRACT-001 the closed dispatch surface is unchanged", () => {
       "dispatch.resume-uneconomical": "user-validation",
       "dispatch.session.spawn-failed": "user-validation",
       "dispatch.state-unverified": "platform-provider",
+      "dispatch.resume-parked": "platform-provider",
     });
     expect(projections("queue.single-flight")).toEqual({
       "queue.single-flight": "user-validation",
@@ -245,6 +248,7 @@ describe("GH-386 the closed vocabulary stays closed (TC-FAIL-003)", () => {
         .sort();
     expect(codes("dispatch.")).toEqual([
       "dispatch.restart-budget-exceeded",
+      "dispatch.resume-parked",
       "dispatch.resume-uneconomical",
       "dispatch.session.spawn-failed",
       "dispatch.state-unverified",

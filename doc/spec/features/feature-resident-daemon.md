@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-RESIDENT-DAEMON
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-25
+last_updated: 2026-11-26
 owners: ["engineering"]
 service: delivery-os
 summary: "The resident dispatch daemon: the start/stop/status/install family, composed unconditionally and mounted at the production entrypoint, with a signal-owned foreground lifetime, the composing pid recorded, a brand-derived install identity, and queue/lanes degradation derived from durable state, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix with the published six-topic event taxonomy v2 (two snapshot topics, four event topics with every declared kind emitted including `queue.graph/remove` and the peak-pause kinds `stop`/`parked`/`resumed`/`park-edge`, the eight-field envelope, per-lane sequence, overflow-to-repoll carriage, and the unknown-topic refusal), state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold and per-ref single-flight claim guarantees, the supervision-supplied profile-window watch with bounded-grace in-flight peak parking, classification-routed window-end resume, and the composition-fact peak-enforcement read, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
-  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288", "GH-290", "GH-292", "GH-294", "GH-295", "GH-293", "GH-347", "GH-348", "GH-350", "GH-404"]
+  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288", "GH-290", "GH-292", "GH-294", "GH-295", "GH-293", "GH-347", "GH-348", "GH-350", "GH-404", "GH-413"]
   related_decisions: ["TDR-0025", "TDR-0029", "TDR-0030", "TDR-0049", "ADR-0013", "TDR-0056", "TDR-0057"]
   contracts:
     - "packages/core/src/contracts/daemon.ts"
@@ -413,7 +413,7 @@ resume refuses `queue.precondition.unmet` with reason `owner-hold` before any
 append — the existing park record stays byte-unchanged and resume proceeds
 once the hold clears.
 
-The `lanes` machine read's `peakEnforcement.mode` reflects the composition fact: it is `window-watch` iff the running composition actually supplies the profile-window watcher ports, otherwise `iteration-start-gating` — never an inference from daemon reachability, which says nothing about whether a watcher exists; `parkClaimed` is read from the durable park records (the same rule [Provider Peak Pausing](feature-peak-pausing.md) states). A composition without the watch declares `peakEnforcement: { mode: "iteration-start-gating", parkClaimed: false }`: there is no window watcher and no mid-flight park, behavior is the delivered iteration-start gating at dispatch admission, and no surface claims a park that did not happen.
+The `lanes` machine read's `peakEnforcement.mode` reflects the composition fact from the reading composition's own effective configuration and the selected harness's terminate declaration: it is `window-watch` when automatic pausing is enabled and the harness declares the terminate operation, so the profile-window watch is composed, and `iteration-start-gating` when pausing is disabled, the harness declares no terminate operation, or no watch is composed — never an inference from daemon reachability, which says nothing about whether a watcher exists; `parkClaimed` is read from the durable park records (the same rule [Provider Peak Pausing](feature-peak-pausing.md) states). The mode states which enforcement a composition supplies, not which composition owns a lane: a one-shot dispatch composition with pausing enabled, on a harness that declares the terminate operation, supplies the dispatch-owned watch and reads `window-watch` too, while the daemon owns only the lanes it supervises; a terminate-less harness reads `iteration-start-gating` even with pausing enabled, because no stop could be effected on it. A composition without the watch declares `mode: "iteration-start-gating"` with `parkClaimed` left record-derived: there is no window watcher for its lanes and no mid-flight park, behavior is the delivered iteration-start gating at dispatch admission, and no surface claims a park that did not happen.
 
 ## Watch and degradation
 

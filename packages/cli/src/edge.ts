@@ -6915,7 +6915,7 @@ export type QueueComposition = {
    * Absent means no watch is composed and the delivered iteration-start
    * gating is the whole story.
    */
-  readonly peakWatchComposed?: boolean;
+  readonly peakWatchComposed?: boolean | (() => boolean);
 };
 
 type QueueBuilt =
@@ -7799,7 +7799,10 @@ export const createLanesCommandRuntime = (
     // writer. The already-resolved degradation is reused: no second
     // reachability resolution.
     const degraded = resolveDegraded(composition.degraded);
-    const watchComposed = composition.peakWatchComposed === true;
+    const watchComposed =
+      typeof composition.peakWatchComposed === "function"
+        ? composition.peakWatchComposed()
+        : composition.peakWatchComposed === true;
     const parksRead = readQueueParks(composition.store);
     const parkClaimed =
       parksRead.ok &&
@@ -7923,7 +7926,23 @@ export type DispatchComposition = {
     ref: string,
     repository: string,
   ) => DispatchLeaseClaim | Promise<DispatchLeaseClaim>;
-  readonly releaseLease: (ref: string, cause: "completed" | "aborted") => boolean;
+  /**
+   * The run-path lease renewal (GH-413 DEC-13, DM-9): the delivered same-holder
+   * `renewed` arm keyed on the invocation's own last heartbeat write. Absent
+   * keeps the delivered one-shot no-renewal path.
+   */
+  readonly renewLease?: DispatchPorts["renewLease"];
+  /** The resolved `queue.lease-ttl` the renewal cadence derives from. */
+  readonly leaseTtlMs?: number;
+  /** The dispatch-owned window watch (GH-413 F-1..F-4); absent keeps no watch. */
+  readonly peak?: DispatchPorts["peak"];
+  /** The operator stop surface (GH-413 F-9); absent refuses the command. */
+  readonly stop?: NonNullable<DispatchCommandRuntime["stop"]>;
+  readonly releaseLease: (
+    ref: string,
+    cause: "completed" | "aborted",
+    expectedHeartbeatAt?: string,
+  ) => boolean;
   /**
    * The provision-after-lease binding (GH-404 F-2, F-8; TC-WT-003,
    * TC-REG-002): forwarded to the engine, which invokes it exactly once after
@@ -8396,7 +8415,11 @@ export const createDispatchCommandRuntime = (
           ? {}
           : { appendRestart: composition.appendRestart }),
         claimLease: () => composition.claimLease(input.ref, repository),
-        releaseLease: (cause) => composition.releaseLease(input.ref, cause),
+        ...(composition.renewLease === undefined ? {} : { renewLease: composition.renewLease }),
+        ...(composition.leaseTtlMs === undefined ? {} : { leaseTtlMs: composition.leaseTtlMs }),
+        ...(composition.peak === undefined ? {} : { peak: composition.peak }),
+        releaseLease: (cause, expectedHeartbeatAt) =>
+          composition.releaseLease(input.ref, cause, expectedHeartbeatAt),
         ...(provisionWorktree === undefined
           ? {}
           : { provisionWorktree: () => provisionWorktree(input.ref) }),
@@ -8441,4 +8464,5 @@ export const createDispatchCommandRuntime = (
   ...(composition.operator === undefined
     ? {}
     : createDispatchOperatorRuntime(composition.operator)),
+  ...(composition.stop === undefined ? {} : { stop: composition.stop }),
 });

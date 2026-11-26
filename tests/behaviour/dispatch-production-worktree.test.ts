@@ -67,8 +67,8 @@ import {
   lstatSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   readlinkSync,
   rmSync,
   statSync,
@@ -76,11 +76,11 @@ import {
   truncateSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createGitBranchSeam, createGitMergeSeam } from "../../packages/adapters/src/git/index";
-import { type CliStreams, runCli } from "../../packages/cli/src/index";
 import { createMergeCommandRuntime } from "../../packages/cli/src/edge";
+import { type CliStreams, runCli } from "../../packages/cli/src/index";
 import { createLaneLogSweep, createProductionComposer } from "../../packages/cli/src/production";
 import {
   appendDispatchLane,
@@ -89,6 +89,7 @@ import {
 } from "../../packages/core/src/app/dispatch-ledger";
 import { claimQueueLease } from "../../packages/core/src/app/queue";
 import { resolveBrandIdentity } from "../../packages/core/src/branding/index";
+import { DISPATCH_LANE_PAYLOAD_SCHEMA } from "../../packages/core/src/contracts/dispatch";
 import type {
   BrandIdentity,
   CloseoutData,
@@ -97,9 +98,8 @@ import type {
   HarnessSpawnRunner,
   StateStorePort,
 } from "../../packages/core/src/contracts/index";
-import { DISPATCH_LANE_PAYLOAD_SCHEMA } from "../../packages/core/src/contracts/dispatch";
-import { LANE_LOG_SWEEP_BYTE_CAP } from "../../packages/core/src/domain/lane-worktree-plan";
 import { renderCloseoutHuman } from "../../packages/core/src/domain/closeout";
+import { LANE_LOG_SWEEP_BYTE_CAP } from "../../packages/core/src/domain/lane-worktree-plan";
 import {
   createNodeStateEdge,
   createStateStore,
@@ -251,6 +251,7 @@ const makeHarness = (
     workingName: WORKING_NAME,
     processId: process.pid,
     repositoryFacts: { originUrl: "https://github.com/owner/repo.git" },
+    dispatchDelay: async () => {},
     harnessSpawnRunner: spawnRunner,
     harnessSpawnStarter: streamStarterFromRunner(spawnRunner),
     credentials,
@@ -784,6 +785,7 @@ const makeLifecycleWorld = (
       workingName: WORKING_NAME,
       processId: process.pid,
       repositoryFacts: { originUrl: "https://github.com/owner/repo.git" },
+      dispatchDelay: async () => {},
       harnessSpawnRunner: spawnRunner,
       harnessSpawnStarter: streamStarterFromRunner(spawnRunner),
       credentials,

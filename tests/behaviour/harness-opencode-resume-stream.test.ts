@@ -444,16 +444,43 @@ describe("GH-347 the production adapter terminate implements the declared contra
     expect(tree.signals.length).toBeGreaterThan(signalsAfterFirst);
   });
 
-  test("an unknown or already-exited session is success, never an error", async () => {
+  test("a session matching no live exact identity is success with no signal", async () => {
     const fake = fakeFor({ lines: [stepStart(ROOT_SESSION)] });
     const tree = createTreeDouble();
     const port = makePort(fake, { terminateTree: tree, terminateWait: async () => {} });
-    const unknown = await port.terminate?.({ handle: HANDLE, graceMs: 1_000 });
+    const unknown = await port.terminate?.({
+      handle: { ...HANDLE, sessionId: "ses_absent", workItemRef: "GH-ABSENT" },
+      graceMs: 1_000,
+    });
     expect(unknown?.ok).toBe(true);
     if (unknown?.ok === true) {
-      expect(unknown.value).toEqual({ terminated: true, escalated: false, reaped: false });
+      expect(unknown.value).toEqual({ terminated: false, escalated: false, reaped: false });
     }
     expect(tree.signals).toEqual([]);
+  });
+
+  test("a separately invoked stop resolves the exact identity over the host process table", async () => {
+    const fake = fakeFor({ lines: [stepStart(ROOT_SESSION)] });
+    const tree = createTreeDouble();
+    // No spawn: the stop command's adapter has no in-memory session record.
+    const port = makePort(fake, { terminateTree: tree, terminateWait: async () => {} });
+    const terminated = await port.terminate?.({
+      handle: {
+        harnessKind: "opencode",
+        sessionId: ROOT_SESSION,
+        treeRoot: "/work/repo",
+        workItemRef: "GH-275",
+      },
+      graceMs: 20_000,
+    });
+    expect(terminated?.ok).toBe(true);
+    if (terminated?.ok === true) {
+      expect(terminated.value).toEqual({ terminated: true, escalated: false, reaped: true });
+    }
+    expect(tree.signals).toEqual([
+      { pid: 700, signal: "SIGTERM" },
+      { pid: 701, signal: "SIGTERM" },
+    ]);
   });
 });
 

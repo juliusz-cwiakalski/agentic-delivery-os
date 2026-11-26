@@ -32,9 +32,9 @@ import {
   createStateStore,
   STATE_SCHEMA_VERSION,
 } from "../../../packages/core/src/state/index";
-import { writeProviderProfilesConfig } from "../queue/production/harness";
 import { streamStarterFromRunner } from "../harness/harness-io";
 import { projectScopeFor } from "../projects/state-scope";
+import { writeProviderProfilesConfig } from "../queue/production/harness";
 
 const ROOT = process.cwd();
 const GITHUB_ORIGIN = "https://github.com/owner/repo.git";
@@ -260,6 +260,7 @@ export const createAdmissionHarness = (options: AdmissionHarnessOptions = {}): A
     homeDirectory: home,
     workingName: "delivery-os",
     repositoryFacts: { originUrl: options.originUrl ?? GITHUB_ORIGIN },
+    dispatchDelay: async () => {},
     harnessSpawnRunner: runner,
     harnessSpawnStarter: streamStarterFromRunner(runner),
     credentials: countedCredentials,

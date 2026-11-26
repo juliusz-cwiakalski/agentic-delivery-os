@@ -1070,6 +1070,7 @@ export {
   DISPATCH_CORROBORATION_SUFFICIENCY,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
   DISPATCH_DELAY_REASONS,
+  DISPATCH_DISABLE_PEAK_PAUSING_KEY,
   DISPATCH_DISABLE_WORKTREES_KEY,
   DISPATCH_DIVERGENCE_KEY_PREFIX,
   DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
@@ -1131,6 +1132,7 @@ export {
   type DispatchEnvelopeData,
   type DispatchEnvelopeError,
   type DispatchEnvelopePushBlock,
+  type DispatchEpisodeFact,
   type DispatchEvidenceClass,
   type DispatchEvidenceReference,
   type DispatchExcludedEvidenceClass,
@@ -1208,6 +1210,8 @@ export {
   type DispatchOwnerProbe,
   type DispatchProbeVerdict,
   type DispatchStatusData,
+  type DispatchStatusParkFact,
+  type DispatchStopData,
 } from "./dispatch-operator.js";
 // The `delivery.doctor.v1` vocabulary (GH-224 F-2, DM-1..DM-8): constants and
 // types only; the pure aggregation lives in the core domain tier.

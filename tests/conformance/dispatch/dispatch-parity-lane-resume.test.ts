@@ -34,6 +34,7 @@ const ACTIVE_KEYS = [
   "harnessKind",
   "iterationOrdinal",
   "owner",
+  "providerProfile",
   "recordedAt",
   "ref",
   "repository",
@@ -43,7 +44,11 @@ const ACTIVE_KEYS = [
   "state",
 ].sort();
 
-const TERMINAL_KEYS = [...ACTIVE_KEYS, "lastOutcome", "lastToken"].sort();
+const TERMINAL_KEYS = [
+  ...ACTIVE_KEYS.filter((key) => key !== "providerProfile"),
+  "lastOutcome",
+  "lastToken",
+].sort();
 
 describe("TC-LANE-001 an active lane is appended at acquisition with the full field set", () => {
   test("one active record exists before the attempt, with every DM-1 field", async () => {

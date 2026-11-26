@@ -1,5 +1,5 @@
 /**
- * TC-ERR-003 (phase 1) — the dispatch kind carries exactly four identities: the
+ * TC-ERR-003 (phase 1) — the dispatch kind carries exactly five identities: the
  * two delivered economics rows unchanged, plus `dispatch.session.spawn-failed`
  * and `dispatch.state-unverified`. Exact-code resolution is the only path; a
  * kind-only discriminant never silently picks one row.
@@ -9,8 +9,8 @@ import { classifyDomainKind, resolveAppErrorCode } from "../../packages/cli/src/
 import {
   DOMAIN_KINDS,
   ERROR_TABLE,
-  EXACT_CODE_DOMAIN_KINDS,
   type ErrorTableEntry,
+  EXACT_CODE_DOMAIN_KINDS,
   FALLBACK_INTERNAL_CODE,
 } from "../../packages/core/src/contracts/index";
 
@@ -65,13 +65,24 @@ const NEW_ROWS = [
     projectionClass: "platform-provider",
     summary: "Dispatch truth could not be read, so no verdict was derived.",
   },
+  {
+    code: "dispatch.resume-parked",
+    domainKind: "dispatch",
+    category: "transient",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Resume after the park's recorded `until`; the park stands and nothing was written.",
+    projectionClass: "platform-provider",
+    summary: "A resume was refused because the lane's standing park has not expired.",
+  },
 ] as const;
 
 describe("TC-ERR-003 dispatch error identities", () => {
-  test("dispatch declares exactly four rows in order after the queue kind", () => {
+  test("dispatch declares exactly five rows in order after the queue kind", () => {
     expect(DOMAIN_KINDS).toContain("dispatch");
     const dispatch = entries.filter((entry) => entry.domainKind === "dispatch");
-    expect(dispatch).toHaveLength(4);
+    expect(dispatch).toHaveLength(5);
     expect(dispatch.map((entry) => entry.code)).toEqual([
       ...DELIVERED_ROWS.map((row) => row.code),
       ...NEW_ROWS.map((row) => row.code),
@@ -101,7 +112,7 @@ describe("TC-ERR-003 dispatch error identities", () => {
     expect(() => classifyDomainKind("dispatch", "dispatch.unknown")).toThrow();
   });
 
-  test("kind-only dispatch resolution never picks one of four rows", () => {
+  test("kind-only dispatch resolution never picks one of five rows", () => {
     expect(() => classifyDomainKind("dispatch")).toThrow();
     expect(EXACT_CODE_DOMAIN_KINDS).not.toContain("dispatch");
     expect(FALLBACK_INTERNAL_CODE).toBe("fallback.internal");
@@ -114,6 +125,7 @@ describe("TC-ERR-003 dispatch error identities", () => {
     expect(codes.filter((code) => !DELIVERED_ROWS.some((row) => row.code === code))).toEqual([
       "dispatch.session.spawn-failed",
       "dispatch.state-unverified",
+      "dispatch.resume-parked",
     ]);
   });
 });

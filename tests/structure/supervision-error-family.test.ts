@@ -101,6 +101,8 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
       "merge.request-unresolved",
       "merge.work-item-unresolved",
     ]);
+    // GH-413 adds the one owner-authorised dispatch pre-session refusal row.
+    const NEW_GH413_CODES = new Set(["dispatch.resume-parked"]);
     const baselineCodes = new Set(baseline.rows.map((row) => row[0]));
     const live = entries.filter(
       (entry) =>
@@ -109,7 +111,8 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
         entry.domainKind !== "install" &&
         !NEW_PROVIDER_CODES.has(entry.code) &&
         !NEW_GH349_CODES.has(entry.code) &&
-        !NEW_GH366_CODES.has(entry.code),
+        !NEW_GH366_CODES.has(entry.code) &&
+        !NEW_GH413_CODES.has(entry.code),
     );
     expect(live).toHaveLength(150);
     expect(live.map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));

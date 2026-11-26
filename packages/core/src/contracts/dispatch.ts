@@ -427,6 +427,16 @@ export type DispatchEnvelopeError = CommandResultError & {
   };
 };
 
+/** One additive bounded episode fact on a dispatch result (GH-413 DM-4). */
+export type DispatchEpisodeFact = {
+  readonly episodeId: string;
+  readonly cause: "peak-window";
+  readonly until: string;
+  readonly resumedAt?: string;
+  readonly preservation?: "preserved" | "session-state-not-preserved";
+  readonly refusal?: string;
+};
+
 /** The declared dispatch envelope `data` (DM-5). */
 export type DispatchEnvelopeData = {
   readonly result: DeliveryResultToken;
@@ -448,6 +458,8 @@ export type DispatchEnvelopeData = {
    * carries it.
    */
   readonly push?: DispatchEnvelopePushBlock;
+  /** The additive bounded peak-window episode fact (GH-413 DM-4); absent otherwise. */
+  readonly episode?: DispatchEpisodeFact;
   /** Present only when a bounded field was truncated. */
   readonly truncation?: {
     readonly field: string;
@@ -644,6 +656,13 @@ export const DISPATCH_RESTART_BUDGET_KEY = "lane.restart-budget" as const;
 export const DISPATCH_WORKTREE_ROOT_KEY = "lane.worktree-root" as const;
 export const DISPATCH_DISABLE_WORKTREES_KEY = "lane.disable-worktrees" as const;
 
+/**
+ * The automatic peak-pausing exception key (GH-413 DM-6, DEC-2), additive and
+ * co-located with the delivered `lane.*` keys: unset or false keeps automatic
+ * pausing on, true supplies no in-flight window watch.
+ */
+export const DISPATCH_DISABLE_PEAK_PAUSING_KEY = "lane.disable-peak-pausing" as const;
+
 /* ------------------------------------------------------------------------- */
 /* GH-347 — the dispatch-owned durable lane record, the fresh-spawn title     */
 /* fact, and the injected delay vocabulary. Data and types only.              */
@@ -692,6 +711,13 @@ export type DispatchLaneRecord = {
    * (DEC-8); nothing migrates (spec §19).
    */
   readonly worktreePath?: string;
+  /**
+   * The nominated profile recorded at admission (GH-413 DM-2, DEC-16), written
+   * on every `active` record this invocation appends. Absent on pre-change
+   * records and never fabricated or inferred; a pre-change record is not
+   * window-pausable.
+   */
+  readonly providerProfile?: string;
   readonly recordedAt: string;
 };
 

@@ -3,6 +3,7 @@ import { createGitMergeSeam } from "@delivery-os/adapters/git";
 import { createMergeCommandRuntime } from "../../packages/cli/src/edge";
 import type { ConfigValue } from "../../packages/core/src/contracts/config";
 import {
+  DISPATCH_DISABLE_PEAK_PAUSING_KEY,
   DISPATCH_DISABLE_WORKTREES_KEY,
   DISPATCH_LIVENESS_INTERVAL_KEY,
   DISPATCH_RESTART_BUDGET_KEY,
@@ -226,25 +227,29 @@ describe("TC-REGRESS-006 commit.phaseCommit branch", () => {
 });
 
 describe("TC-CONFIG-GH404 the lane worktree worker settings (DM-3, DM-4)", () => {
-  test("the two additive keys are declared in the catalog under the lane branch", () => {
+  test("the additive keys are declared in the catalog under the lane branch", () => {
     expect(Object.keys(LANE_BRANCH.fields)).toEqual([
       "liveness-interval",
       "restart-budget",
       "worktree-root",
       "disable-worktrees",
+      "disable-peak-pausing",
     ]);
     expect(LANE_BRANCH.fields["worktree-root"]).toMatchObject({ type: "string" });
     expect(LANE_BRANCH.fields["disable-worktrees"]).toMatchObject({ type: "boolean" });
+    expect(LANE_BRANCH.fields["disable-peak-pausing"]).toMatchObject({ type: "boolean" });
     expect(PRODUCTION_SCHEMA).toEqual(generateConfigSchema(PRODUCTION_CATALOG));
   });
 
   test("the contracts key constants name the section-prefixed catalog paths", () => {
     expect(DISPATCH_WORKTREE_ROOT_KEY).toBe("lane.worktree-root");
     expect(DISPATCH_DISABLE_WORKTREES_KEY).toBe("lane.disable-worktrees");
+    expect(DISPATCH_DISABLE_PEAK_PAUSING_KEY).toBe("lane.disable-peak-pausing");
     expect(DISPATCH_LIVENESS_INTERVAL_KEY).toBe("lane.liveness-interval");
     expect(DISPATCH_RESTART_BUDGET_KEY).toBe("lane.restart-budget");
     expect(Object.hasOwn(LANE_BRANCH.fields, "worktree-root")).toBe(true);
     expect(Object.hasOwn(LANE_BRANCH.fields, "disable-worktrees")).toBe(true);
+    expect(Object.hasOwn(LANE_BRANCH.fields, "disable-peak-pausing")).toBe(true);
   });
 
   test("the delivered keys keep their values and origins when the new keys are absent", () => {
