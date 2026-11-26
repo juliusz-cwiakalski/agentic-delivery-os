@@ -93,12 +93,15 @@ same session, branch, and worktree, and exactly one `stop`, one `parked`, and, o
 resume, one `resumed`. The invocation returns one result whose summary states that
 the lane was paused and resumed. Between the park and the resume the invocation
 keeps the lane's repository lease live at `min(lane.liveness-interval,
-queue.lease-ttl / 2)`, so a second dispatch of the same work item is refused
-`queue.single-flight` for the whole pause. `dispatch status <ref>` explains a
-pause: the lane reads `stale=false` and `delivering=true` while its owner is alive,
-and the additive park fact names the cause, the recorded end, the recorded stop
-instant, the preservation classification, and the recovery refusal the park record
-carries when it carries one ([Provider Peak
+queue.lease-ttl / 2)`, so a second dispatch while the lane runs is refused
+`queue.single-flight`; while an un-expired standing park holds the ref it is
+refused `dispatch.resume-parked` at exit `2` at resume admission, not
+`queue.single-flight`. `dispatch status <ref>` explains a pause: the lane reads
+`stale=false` and `delivering=true` while its owner is alive, and the additive park
+fact names the cause, the recorded end, the recorded stop instant, and the
+preservation classification, carried from the park record; a recorded recovery
+refusal is read from the terminal durable lane record in the lane read the surface
+already performs, and the park record carries none ([Provider Peak
 Pausing](../spec/features/feature-peak-pausing.md)).
 
 Run it as follows:
@@ -135,8 +138,10 @@ Run it as follows:
 - **A parked lane whose invocation is gone is visible, not hidden.** `dispatch
   status` then answers `stale=true` with the park fact and its recorded end; the
   next invocation, or the delivered operator resume path, recovers the standing
-  park before any new episode. A resume or re-dispatch while the park has not
-  expired is refused `dispatch.resume-parked` at exit `2` and writes nothing.
+  park before any new episode and before the invocation's first session, so an
+  unrecoverable park is a refusal that starts no session. A resume or re-dispatch
+  while the park has not expired is refused `dispatch.resume-parked` at exit `2`
+  and writes nothing.
 - **One declared residual.** A lane admitted while its nominated profile's window
   is already open is parked at the first observation, so up to one observation
   cadence plus the applied grace of billing precedes the park. No billable call

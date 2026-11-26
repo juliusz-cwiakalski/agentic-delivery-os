@@ -629,3 +629,15 @@ notes:
       doc/00-index.md, and readiness-iter-7.md."
     type: info
     date: "2026-11-26"
+  - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml), 23 findings
+      (7 high). The high set was a red test set, a lease-release ownership bug, a
+      lost-lease derivation path, a production recovery stub, a park without a
+      confirmed terminate, runaway caps, and the missing GH-413 exclusion set.
+      Decisions: budget-only recovery admission (F-5a), terminal-lane-record
+      recoveryRefusal carrier (F-10), keep `dispatch.resume-parked` for the
+      parked interval (F-15), and the pre-session ordering invariant (F-17).
+      @coder executed plan phase 9 (440ab76d, 258ea4de, ba563712); the spec, test
+      plan and TDR-0077/0078 were corrected; the doc-syncer and the planning
+      pages close F-19. Second review pending; no PR."
+    type: info
+    date: "2026-11-26"

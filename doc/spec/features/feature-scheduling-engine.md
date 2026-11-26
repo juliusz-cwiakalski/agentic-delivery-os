@@ -158,7 +158,10 @@ than discovering work by hand.
   `recovered` record is the stuck class: a report-only finding on reads at exit 0
   and a `queue.park-condition-stuck` refusal on a claim at exit 1. A park that was
   simply not evaluated while no process ran carries no marker, is never stuck on
-  the first pass after the gap, and recovers with an incident naming the gap.
+  the first pass after the gap, and recovers with an incident naming the gap. The
+  dispatch run path invokes this pass once before its first session, so an expired
+  standing park the pass cannot recover refuses the run as a classified failure
+  that starts no session ([Dispatch Engine](feature-dispatch-engine.md)).
   `queue release --park provider-window --until <iso>` and
   `queue release --park peak-window --until <iso>` record the supplied
   absolute expiry; `--until` is required for those two causes and refused for
@@ -524,11 +527,22 @@ intents, and every requester/state pair has exactly one outcome:
 | `queue claim` | no live lease | `claimed` | one `acquired` | none |
 | `queue claim` | stale lease | taken over with incident evidence | one `taken-over` | none |
 
-The dispatch family claims with the fixed holder `dispatch` and never renews
-mid-flight, so a live lease that records the requested ref is by definition a
-dispatch that is already running; the second dispatch is refused regardless of
-the live holder identity. The verdict is decided inside the claim, atomically with
-the claim's own append, so a live lease cannot slip between a check and the
+The dispatch family claims with the fixed holder `dispatch`, and the claim itself
+never renews mid-flight, so a live lease that records the requested ref is by
+definition a dispatch that is already running; the second dispatch is refused
+regardless of the live holder identity. Once a one-shot lane holds the lease, its
+run path keeps the lease live for the whole run and park through the delivered
+renewal path at `min(lane.liveness-interval, queue.lease-ttl / 2)`, so a running
+lane stays single-flight across every TTL boundary; a second dispatch of the same
+work item while the lane runs is refused `queue.single-flight` with the live
+holder. While an un-expired standing `peak-window` park holds the ref, a resume or
+re-dispatch is refused `dispatch.resume-parked` at exit 2 at resume admission,
+before the lease claim, and writes nothing ([Dispatch
+Engine](feature-dispatch-engine.md#per-ref-single-flight-admission),
+[TDR-0078](../../decisions/TDR-0078-lease-heartbeat-amends-tdr-0050.md)). After a
+renewal outage longer than the TTL the earlier invocation's next renewal is the
+`lease:not-owned` no-op that takes no owner act. The verdict is decided inside the
+claim, atomically with the claim's own append, so a live lease cannot slip between a check and the
 append; store-fence contention is a transient signal the dispatch claim waits out
 through the injected delay within the queue lease TTL before re-deciding, and a
 fence that never frees returns its typed `state.*` row. `queue claim` is the only

@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-QUEUE-READY
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-25
+last_updated: 2026-11-26
 owners: ["engineering"]
 service: delivery-os
 summary: "The read-only queue-ready ready-set command: the `queue ready` grammar and canonical-ref bounds, the six closed tri-state readiness conditions and their declared sources, the all-six-satisfied ready rule with named blocking conditions, provider-agnostic identity resolution and the numeric suffix bridge, close association and classification by the repository branch convention, deterministic class ranking, the six-group bounded reason vocabulary, the nine provider-derived output caps with the single `value-clamped` marker and deterministic byte-budget reduction, the bounded `delivery.queue-ready.v1` machine payload and human digest, the read-only and credential boundary posture, error-identity reuse, the dispatch claim's in-claim per-ref verdict beside the unchanged sibling `queue claim` renewal and repository exclusivity, and the fixture corpus plus opt-in live-smoke evidence model."
 links:
-  related_changes: ["GH-176", "GH-183", "GH-238", "GH-338", "GH-347", "GH-349", "GH-404"]
+  related_changes: ["GH-176", "GH-183", "GH-238", "GH-338", "GH-347", "GH-349", "GH-404", "GH-413"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "ADR-0007", "ODR-0003", "TDR-0032", "TDR-0050"]
   contracts:
     - "packages/core/src/contracts/queue-ready.ts"
@@ -407,7 +407,11 @@ live lease claims. Store-fence contention (`state.lock.busy`) is transient: the
 claim waits it out within the queue lease TTL and re-decides, and a fence that
 never frees returns its typed `state.*` row rather than a queue relabelling. No
 admission outcome is surfaced as `fallback.internal`, and a refusal appends no
-lease, attempt, lane, or queue record and starts no session.
+lease, attempt, lane, or queue record and starts no session. A resume or
+re-dispatch of a work item whose un-expired standing `peak-window` park holds the
+ref is refused `dispatch.resume-parked` at exit `2` at resume admission, before
+this claim; `queue.single-flight` remains the refusal for a running lane without a
+park.
 
 The sibling `queue claim` is unchanged: it is the only path where renewal
 exists, renewing the caller's own holder's same-ref lease, and it keeps
