@@ -9,7 +9,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-27T14:16:32.382Z }
   delivery_planning: { started: null, completed: 2026-11-27T14:02:43.173Z }
   dor_check: { started: null, completed: 2026-11-27T14:17:09.112Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-27T16:44:43.170Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -379,24 +379,25 @@ notes:
       append and read, and the changeset): commit b4a7609ad. isSafeRef landed in
       packages/core/src/contracts/dispatch.ts and the adapters push seam now
       imports it and PROTECTED_REF_NAMES through the contracts barrel (its
-      private REF_PATTERN/FORBIDDEN_REF/isSafeRef deleted, guards byte-identical,
-      four exported names unchanged); the closeout contract module is untouched.
-      The record kind, payload schema, key prefix and per-ref key builder, the
-      closed eight-token cause set split as one guard-only token and seven
-      recordable causes, the lane-push evidence builders, the push answer
-      contract, the additive optional lanePush status fact, and the ledger
-      validator/read/append landed. The state-additivity baseline gained exactly
-      the three lane-push constants. Exactly one new five-package minor changeset
-      exists. Tests: pnpm typecheck green; the six pin suites 72 pass / 0 fail
-      (event-state-additivity, port-contract-inventory, content-inventory,
-      dispatch-contract, dispatch-contract-invariance,
-      operator-contract-invariance); check:boundaries clean (527 modules);
-      check:no-shell clean (45 surface files) and no-shell-dispatch 14 pass;
-      read-only controls 63 pass / 0 fail (port-neutrality, closeout-contract,
-      dispatch-push-parity, dispatch-push-evidence, dispatch-parity-push,
-      dispatch-push-envelope); dispatch-token-home 7 pass; release suites 19
-      pass / 0 fail; git diff --check clean. Only the declared paths changed;
-      the conditional contracts/push.ts and inventory.json were not needed."
+      private REF_PATTERN/FORBIDDEN_REF/isSafeRef deleted, guards
+      byte-identical, four exported names unchanged); the closeout contract
+      module is untouched. The record kind, payload schema, key prefix and
+      per-ref key builder, the closed eight-token cause set split as one
+      guard-only token and seven recordable causes, the lane-push evidence
+      builders, the push answer contract, the additive optional lanePush status
+      fact, and the ledger validator/read/append landed. The state-additivity
+      baseline gained exactly the three lane-push constants. Exactly one new
+      five-package minor changeset exists. Tests: pnpm typecheck green; the six
+      pin suites 72 pass / 0 fail (event-state-additivity,
+      port-contract-inventory, content-inventory, dispatch-contract,
+      dispatch-contract-invariance, operator-contract-invariance);
+      check:boundaries clean (527 modules); check:no-shell clean (45 surface
+      files) and no-shell-dispatch 14 pass; read-only controls 63 pass / 0 fail
+      (port-neutrality, closeout-contract, dispatch-push-parity,
+      dispatch-push-evidence, dispatch-parity-push, dispatch-push-envelope);
+      dispatch-token-home 7 pass; release suites 19 pass / 0 fail; git diff
+      --check clean. Only the declared paths changed; the conditional
+      contracts/push.ts and inventory.json were not needed."
     type: info
     date: "2026-11-27"
   - text: "Plan phase 2 complete (the push seam's closed refusal cause): commit
@@ -416,20 +417,20 @@ notes:
       exit, comparison, push block identical, no cause in the envelope). The
       existing parity suite gained an additive class table. Tests: typecheck
       green; new suite 16 pass / 0 fail; GH-386 suites 53 pass / 0 fail;
-      check:no-shell clean (45 surface files) and no-shell-dispatch 14 pass;
-      git diff --check clean. Only the declared paths changed."
+      check:no-shell clean (45 surface files) and no-shell-dispatch 14 pass; git
+      diff --check clean. Only the declared paths changed."
     type: info
     date: "2026-11-27"
-  - text: "Plan phase 3 complete (the `push` command and its prompt-required
-      mount): commit 4e90a2e9e. Added the pure rules module
+  - text: "Plan phase 3 complete (the `push` command and its prompt-required mount):
+      commit 4e90a2e9e. Added the pure rules module
       packages/core/src/domain/dispatch-lane-push.ts (structural resolution over
       the delivered selectMatchingBranch, the act-to-verdict/cause mapping, the
       newest-matching-record selection, the evidence builders, and the
       record-to-status projection), the use case
       packages/core/src/app/dispatch-lane-push.ts (resolve, act, append, answer
-      over injected ports; one fast-forward act, act-then-append,
-      recorded:false disclosure), the CLI command packages/cli/src/commands/push.ts
-      and renderer packages/cli/src/output/push-text.ts, and the edge/production
+      over injected ports; one fast-forward act, act-then-append, recorded:false
+      disclosure), the CLI command packages/cli/src/commands/push.ts and
+      renderer packages/cli/src/output/push-text.ts, and the edge/production
       wiring (pushRuntime over the delivered pm-notes/branch/checkout/lane reads
       and the delivered push seam; `push` registered in the composed program).
       The prompt-required set is 29 with push last; the help entry, coverage
@@ -439,16 +440,16 @@ notes:
       install-conformance/provider-mounting/provider-entrypoint/
       event-mount/entrypoint suites, the alias baseline help cell and its
       provenance clause through the deliberate capture path, and the ten
-      declared doc pages plus the doc-conformance GH350 truth rows including
-      the loop-supervision page and its row). New suites: command (12),
-      ticket AC-1/AC-2 fixture over a real temporary checkout and a keyed fake
-      remote (2), resolution (11), record (7), causes command-path arms (24 total
-      in that suite), answer bounds (4). Tests: typecheck green; the six
-      lane-push suites 60 pass / 0 fail; the count movement 106 pass / 0 fail
-      (part 1) and 148 pass / 0 fail (part 2); check:help all covered;
-      check:no-shell clean (48 surface files); no-shell-dispatch/doc-conformance/
-      content-inventory 87 pass; read-only controls 46 pass; dispatch-token-home
-      7 pass; git diff --check clean. Only the declared paths changed."
+      declared doc pages plus the doc-conformance GH350 truth rows including the
+      loop-supervision page and its row). New suites: command (12), ticket
+      AC-1/AC-2 fixture over a real temporary checkout and a keyed fake remote
+      (2), resolution (11), record (7), causes command-path arms (24 total in
+      that suite), answer bounds (4). Tests: typecheck green; the six lane-push
+      suites 60 pass / 0 fail; the count movement 106 pass / 0 fail (part 1) and
+      148 pass / 0 fail (part 2); check:help all covered; check:no-shell clean
+      (48 surface files); no-shell-dispatch/doc-conformance/ content-inventory
+      87 pass; read-only controls 46 pass; dispatch-token-home 7 pass; git diff
+      --check clean. Only the declared paths changed."
     type: info
     date: "2026-11-27"
   - text: "Plan phase 4 complete (the classification fold): commit c30fa06d9.
@@ -495,9 +496,8 @@ notes:
       from two to three; the plan named only TC-STATUS-007, but every count
       assertion that pins the status read had to move with the declared DEC-3
       widening. Tests: typecheck green; status/golden/additive/invariance/
-      content-inventory 61 pass; read-only controls 12 pass;
-      dispatch-text golden 5 pass; dispatch-token-home 7 pass; git diff --check
-      clean."
+      content-inventory 61 pass; read-only controls 12 pass; dispatch-text
+      golden 5 pass; dispatch-token-home 7 pass; git diff --check clean."
     type: info
     date: "2026-11-27"
   - text: "Plan phase 6 complete (the two product surfaces): commit 817196e6d.
@@ -518,15 +518,15 @@ notes:
       freshness 15 pass; git diff --check clean. Observation for phase 8: two
       guides still carry the old phase-11 line
       (doc/guides/opencode-agents-and-commands-guide.md:248 and
-      doc/guides/unified-change-convention-tracker-agnostic-specification.md:279);
-      they are outside every declared scope and are handed to the reconciliation
-      input."
+      doc/guides/unified-change-convention-tracker-agnostic-specification.md:27\
+      9); they are outside every declared scope and are handed to the
+      reconciliation input."
     type: info
     date: "2026-11-27"
-  - text: "Plan phase 7 complete (the companion decision record): commit
-      f10a51c05. TDR-0079-lane-push-amends-tdr-0076.md landed as Proposed with a
-      null decision date, R2, and one index row; TDR-0076 is untouched. The
-      record amends TDR-0076's push ownership in substance: the session-side act
+  - text: "Plan phase 7 complete (the companion decision record): commit f10a51c05.
+      TDR-0079-lane-push-amends-tdr-0076.md landed as Proposed with a null
+      decision date, R2, and one index row; TDR-0076 is untouched. The record
+      amends TDR-0076's push ownership in substance: the session-side act
       becomes the typed prompt-required `push <ref>` product surface while the
       engine's ensure-push stays the backstop and consumes only the outcome; the
       lane's act runs at `pr_creation` after the phase-completion commit; and
@@ -541,25 +541,47 @@ notes:
       doc-conformance 73 pass / 0 fail; git diff --check clean."
     type: info
     date: "2026-11-27"
-  - text: "Plan phase 8 (finalize and release) is declaration-only and authors
-      no files, per the plan: the current-truth pages are handed to @doc-syncer
-      in lifecycle phase 7 and the pull request to @pr-manager in lifecycle
-      phase 11. Handoff input: doc/spec/features/feature-dispatch-engine.md
+  - text: "Plan phase 8 (finalize and release) is declaration-only and authors no
+      files, per the plan: the current-truth pages are handed to @doc-syncer in
+      lifecycle phase 7 and the pull request to @pr-manager in lifecycle phase
+      11. Handoff input: doc/spec/features/feature-dispatch-engine.md
       (derivation arm 8, the attempt evidence including the lane-push refs and
       the reserved block as code truth, the record-kind inventory, the `head`
       source, the seven recordable causes, the guard-only unsafe-branch, the
       operator lane view's lanePush fact and widened read posture, the closure
       note's record-kind sentence), feature-quality-gates-and-pr.md and
       feature-delivery-lifecycle.md (the phase-6 statements plus the wider
-      reconciliation), feature-agents-and-commands.md, feature-cli-entrypoint.md,
-      feature-adapter-ports.md (the contracts subpath note), the engine-first
-      operations guide (the declared divergence and the three places a refusal
-      is read), the dispatch-engine test-spec coverage map, the glossary, the
-      change-lifecycle guide, AGENTS.md's pr_creation row, and the two guides
-      the surfaces review found still carrying the old phase-11 line
-      (doc/guides/opencode-agents-and-commands-guide.md and
+      reconciliation), feature-agents-and-commands.md,
+      feature-cli-entrypoint.md, feature-adapter-ports.md (the contracts subpath
+      note), the engine-first operations guide (the declared divergence and the
+      three places a refusal is read), the dispatch-engine test-spec coverage
+      map, the glossary, the change-lifecycle guide, AGENTS.md's pr_creation
+      row, and the two guides the surfaces review found still carrying the old
+      phase-11 line (doc/guides/opencode-agents-and-commands-guide.md and
       doc/guides/unified-change-convention-tracker-agnostic-specification.md).
       TC-LDOC-002 is the manual content check for that input. The aggregate gate
       runs once at the lifecycle quality_gates phase."
+    type: info
+    date: "2026-11-27"
+  - text: "Plan phase 8 and aggregate gate evidence (authoritative run on a0a52eb36,
+      TMPDIR=$PWD/tmp/tmpdir): `pnpm check` exit 0 in 1223.9 s - lint pass,
+      format:check pass (3244 files), typecheck pass, tests 13136 pass / 4 skip
+      / 0 fail (13140 tests, 1570 files), boundaries 531 modules clean,
+      ambient-globals 266 clean, workspace-entrypoints ok, secret-read-boundary
+      496 clean, allowlist-tripwire ok, memory-lint 0 errors, forbidden-literals
+      7/7 clean, new-code-naming 2557 clean, namespace-tree ok,
+      prompt-conformance 5 clean, help-guide all covered, exports-parity 5
+      publishables pass. `./scripts/lint-commit-range.sh --base
+      origin/main-tools` VERDICT PASS - 26 commits in range, 0 offending.
+      Release invariant: exactly one added changeset for the five fixed-group
+      packages at minor; no package version and no lockfile edited. Decision
+      record TDR-0079 landed as Proposed with its index row. The phase-7
+      documentation reconciliation input is handed over (see the phase 8 note);
+      TC-LDOC-002 remains the manual content check after that phase. One
+      gate-remediation commit a8b4a9c57 (registry entry for the new M4 page,
+      vocabulary commandPages 43, cli-edge declarers, event-taxonomy allowance,
+      credential-shaped test literals removed, pm-notes YAML escape fixed) and
+      one formatting commit a0a52eb36 precede this run; the tree was clean at
+      the gate."
     type: info
     date: "2026-11-27"
