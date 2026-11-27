@@ -13,7 +13,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-27T20:01:59.964Z }
   review_fix: { started: null, completed: 2026-11-27T19:17:58.569Z }
   quality_gates: { started: null, completed: 2026-11-27T19:55:54.138Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-27T20:22:57.930Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Milestone confirmed at intake: the ticket is attached to M4:
@@ -470,6 +470,18 @@ notes:
       repository-local node_modules/.bin. Doc distribution: no drift, 96
       in-scope docs, install set matches the ados_distribution markers. Tree
       clean before and after."
+    type: info
+    date: "2026-11-27"
+  - text: "Final gate re-run at head 302b563e8 after the documentation
+      re-verification (docs changed after the earlier green): pnpm check exit 0,
+      13177 pass, 4 skip, 0 fail, 13181 tests across 1571 files; every stage
+      green (lint, format:check, typecheck, boundaries, ambient-globals,
+      workspace-entrypoints, secret-read, allowlist-tripwire, memory,
+      forbidden-literals, new-code-naming, namespace-tree, prompt-conformance,
+      help-guide coverage, exports-parity). Commit-range gate VERDICT PASS, 37
+      commits, 0 offending, mode none, commitlint from repository-local
+      node_modules/.bin. Doc distribution no drift, 96 in-scope docs. Tree
+      clean."
     type: info
     date: "2026-11-27"
   - text: "Doc-risk inventory for phase 7 (current-truth docs likely to change):
