@@ -6,7 +6,7 @@ delivery_mode: autonomous
 phases:
   clarify_scope: { started: null, completed: 2026-11-27T05:46:12.217Z }
   specification: { started: null, completed: 2026-11-27T17:41:37.971Z }
-  test_planning: { started: null, completed: null }
+  test_planning: { started: null, completed: 2026-11-27T17:41:51.808Z }
   delivery_planning: { started: null, completed: 2026-11-27T14:02:43.173Z }
   dor_check: { started: null, completed: 2026-11-27T14:17:09.112Z }
   delivery: { started: null, completed: 2026-11-27T16:44:43.170Z }
