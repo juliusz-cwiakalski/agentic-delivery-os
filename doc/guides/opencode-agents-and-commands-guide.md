@@ -9,7 +9,7 @@ created: 2026-01-09
 owners: ["engineering"]
 summary: "Comprehensive guide to Opencode AI agents and commands for manual and autopilot workflows."
 links:
-  related_changes: ["GH-185", "GH-226", "GH-242"]
+  related_changes: ["GH-185", "GH-226", "GH-242", "GH-416"]
 ---
 
 # Opencode Agents & Commands Guide
@@ -245,7 +245,7 @@ The `@pm` orchestrates these phases (see `doc/guides/change-lifecycle.md` for de
 8. **review_fix** — Run `@reviewer`; if FAIL, fix and repeat until PASS
 9. **quality_gates** — Run builds/tests via `@runner`; fix via `@fixer` if needed
 10. **dod_check** — PM verifies all phases complete and all AC satisfied
-11. **pr_creation** — Create PR/MR via `@pr-manager`, assign to human, STOP
+11. **pr_creation** — Create PR/MR via `@pr-manager`, record its URL as a pm-notes `notes:` entry, land `phase complete <ref> pr_creation`, run `push <ref>` so the lane's own last evidence commit reaches the remote, report the PR URL and the push outcome, assign to human, STOP
 
 > **Note**: Phases can be reopened. If PM discovers incomplete work in a later phase, PM reopens the relevant phase.
 
@@ -260,7 +260,7 @@ Before creating/updating the PR/MR, `@pm` runs the **dod_check** phase:
 3. Verify all acceptance criteria satisfied.
 4. If any gap is found, reopen the appropriate phase with `phase reopen`.
 
-Then `@pm` creates/updates the PR/MR via `@pr-manager` and stops for user approval and manual merge.
+Then `@pm` creates/updates the PR/MR via `@pr-manager`, records its URL as a pm-notes note, lands the `pr_creation` phase completion, pushes the lane's own last commit with `push <ref>`, reports the PR URL and the push outcome, and stops for user approval and manual merge.
 You review and merge manually.
 
 ---

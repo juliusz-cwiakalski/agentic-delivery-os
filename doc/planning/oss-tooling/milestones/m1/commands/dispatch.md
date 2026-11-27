@@ -240,7 +240,13 @@ carries exactly one `query` discriminator (`status`, `log`, `is-delivering`,
   record's state; no marker file exists on the typed path. `stale` is true only
   for an `active` lane whose recorded owner is confirmed gone; an `unknown`
   probe never asserts staleness, and a stale lane is never rewritten, cleared, or
-  repaired.
+  repaired. The answer also carries the additive optional lane-push fact —
+  `lanePush`, `lanePushBranch`, `lanePushHead`, `lanePushCause` (only on a
+  refusal), and `lanePushRecordedAt` — carried verbatim from the newest
+  `dispatch.lane-push` record whose attempt identity equals the addressed lane's,
+  rendered as additive human lines only when present, and read through one
+  additional bounded record read
+  ([push reference page](../../m4/commands/push.md)).
 - `is-delivering` answers a boolean: `ref` set for the per-ref form (no `refs`
   list), `ref=null` with up to 20 `refs` and one truncation fact for the
   repository-wide form. Exit `0` when in progress and `1` when not; the JSON
@@ -284,7 +290,9 @@ carries exactly one `query` discriminator (`status`, `log`, `is-delivering`,
 
 All four queries are read-only and shell-free: zero ledger appends, zero fence
 acquisitions, zero lane rewrites, zero identity-marker writes, zero process
-starts, zero network reads, and zero deletions inside the artifact family. They
+starts, zero network reads, and zero deletions inside the artifact family; a
+`status` answer takes one bounded lane read, one bounded park-record read, and one
+bounded lane-push-record read. They
 read no shell-owned path, so the shell's marker, PID, stdout, and last-message
 files can never steer a typed answer.
 

@@ -10,7 +10,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-27T14:02:43.173Z }
   dor_check: { started: null, completed: 2026-11-27T14:17:09.112Z }
   delivery: { started: null, completed: 2026-11-27T16:44:43.170Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-27T17:04:22.517Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -358,6 +358,24 @@ notes:
       in the same round. The gate ran four review passes - three full iterations
       and one narrow confirmation - with every blocking finding closed by an
       artifact correction rather than an override."
+    type: decision
+    date: "2026-11-27"
+  - text: "Phase 7 (system_spec_update) outcome: 16 current-truth docs plus
+      AGENTS.md reconciled; focused doc gates green (tests/checks 1679 pass / 0
+      fail, doc-conformance, lane-push-surfaces,
+      engine-first-doc-reconciliation, identity-docs, test-doc-distribution no
+      drift, forbidden-literals 0, git diff --check clean). Truth sources are
+      the delivered contracts and app modules, not the spec's prose. Residual
+      accepted, not deferred: no standalone feature-lane-push page. The
+      capability is specced where it belongs - record, fold and status fact on
+      feature-dispatch-engine.md, the pr_creation tail and refusals on
+      feature-quality-gates-and-pr.md, surfaces on
+      feature-agents-and-commands.md, composition on feature-cli-entrypoint.md,
+      the seam on feature-adapter-ports.md, and the command contract on its
+      reference page - so no modified feature area is left without a spec. A
+      standalone page would need a
+      scripts/checks/forbidden-literals.registry.json corpus row, which is a
+      check input, and it would duplicate five pages."
     type: decision
     date: "2026-11-27"
   - text: "Doc-risk inventory for phase 7 (current-truth docs likely to change):

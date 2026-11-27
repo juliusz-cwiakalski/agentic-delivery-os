@@ -43,7 +43,7 @@ Every change flows through 11 phases. `@pm` orchestrates; phases are gated but c
 | 8. review_fix | `@reviewer` | Audit vs spec/plan; if FAIL → `@coder` remediates → re-review |
 | 9. quality_gates | `@runner` | Build/test/lint; if failures → `@fixer` → re-run |
 | 10. dod_check | `@pm` | Verify all AC met and every declared plan phase complete (per-phase pm-notes `notes:` evidence) |
-| 11. pr_creation | `@pr-manager` | Create PR, record its URL as a pm-notes `notes:` entry, STOP |
+| 11. pr_creation | `@pr-manager`, `@pm` | Create PR/MR, record its URL as a pm-notes `notes:` entry, land `phase complete <ref> pr_creation`, run `push <ref>` for the lane's own last evidence commit, report the PR URL and the push outcome, STOP |
 
 Phase 9 also runs the branch-range commit-message gate, `./scripts/lint-commit-range.sh --base <base>`, as a supplementary pre-PR check of the change branch's own commits against the repository's commitlint configuration. It reports one verdict — `PASS`, `FAIL`, `SKIP` (no commitlint configuration to mirror), or `ERROR` (cannot verify). A `FAIL` is remediated in the mode the gate names and re-run; an unresolved `ERROR` is never recorded as a pass. The verdict is recorded as a pm-notes `notes:` entry. The gate is not part of `pnpm check`, `/check`, or `/check-fix`, which keep their working-tree resolution contract, and CI `ts-commitlint` remains the authority the gate mirrors.
 

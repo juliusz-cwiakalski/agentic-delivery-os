@@ -3,12 +3,12 @@ ados_distribution: redistributable
 id: GUIDE-ENGINE-FIRST-OPERATIONS
 status: Current
 created: 2026-11-18
-last_updated: 2026-11-26
+last_updated: 2026-11-27
 owners: ["engineering"]
-summary: "Operating guide for engine-first delivery: the daily routine, the per-reference inspection queries, peak pausing, parking and the operator stop, how to read the handover gate and the fleet row, how a per-repository flip and its reversal are performed, the typed Mode A loop beside its shell fallback, and the declared residuals."
+summary: "Operating guide for engine-first delivery: the daily routine, the per-reference inspection queries, peak pausing, parking and the operator stop, the lane's own evidence push and where a refused push is read, how to read the handover gate and the fleet row, how a per-repository flip and its reversal are performed, the typed Mode A loop beside its shell fallback, and the declared residuals."
 links:
-  related_changes: ["GH-293", "GH-348", "GH-354", "GH-388", "GH-386", "GH-404", "GH-413"]
-  related_decisions: ["TDR-0031", "TDR-0056", "TDR-0057", "TDR-0058", "TDR-0077", "TDR-0078"]
+  related_changes: ["GH-293", "GH-348", "GH-354", "GH-388", "GH-386", "GH-404", "GH-413", "GH-416"]
+  related_decisions: ["TDR-0031", "TDR-0056", "TDR-0057", "TDR-0058", "TDR-0077", "TDR-0078", "TDR-0079"]
 ---
 
 # Engine-first delivery operations
@@ -185,15 +185,20 @@ dispatch last-message <ref>            # the session's final assistant message
 Each takes the global `--json`. A query that needs repository identity resolves it
 with persistence disabled, so no checkout marker is created, repaired, or
 re-persisted. All four read only typed state: no ledger append, no fence, no
-process start, no deletion, and no read of `tmp/deliver-ticket/**` or
-`.ai/local/delivery/**`.
+process start, no deletion, no network call, and no read of
+`tmp/deliver-ticket/**` or `.ai/local/delivery/**`. One `status` answer costs at
+most one bounded lane read, one bounded park-record read, one bounded
+lane-push-record read, and one bounded artifact or transcript read.
 
 **Inspect a live delivery.** `dispatch status <ref>` reports `delivering`,
 `marker` (`active`, `terminal`, or `absent`), `probe` (`live`, `dead`, `unknown`,
 or `not-applicable`), the owner `pid`, the `sessionId`, the lane facts
 (`attemptId`, `harness`, `iterationOrdinal`, `restartsConsumed`,
 `ownerStartedAt`, `lastToken`, `lastOutcome`, `recordedAt`), and — for a worktree
-lane — `worktreePath`, the directory the lane is working in. Read it as:
+lane — `worktreePath`, the directory the lane is working in. It also carries the
+lane's own push as `lanePush`, `lanePushBranch`, `lanePushHead`,
+`lanePushCause` (only on a refusal), and `lanePushRecordedAt`, rendered only when
+the lane recorded a push. Read it as:
 
 - `marker=active` with `probe=live` is a live delivery; `delivering=true`.
 - `marker=terminal` is a finished lane; `lastToken` and `lastOutcome` carry the
@@ -338,13 +343,40 @@ The shell stack is the documented fallback, not a deprecated path:
 evaluates the `pr-open` parity precondition at its derivation arm — it reads the
 local branch head against the pull request's head, pushes the change branch
 fast-forward exactly once when the heads are unequal, re-reads parity once, and
-classifies an unresolvable push as a typed failure that retains the PR URL. The
-bash fallback gains **no** parity enforcement: its five-key tail, its exits, and
-its session-side push conventions are unchanged, and a fallback `pr-open`
-summary makes no parity claim. An operator who chooses the fallback owns the
-head check the typed lane performs by construction; the divergence is declared,
+classifies an unresolvable push as a typed failure that retains the PR URL.
+
+**The session-side push is a product surface, not a wrapper convention.** The
+prompt-required `push <ref>` command runs at `pr_creation`, after the
+phase-completion commit is landed, and it is reachable from typed and shell lanes
+alike: any lane that runs the `pm` agent with the installed binary is instructed to
+run it, because the `pm` definition's `pr_creation` step and the built
+lifecycle prompt both state the rule. The evidence fold into the attempt record
+(`lane-push:<verdict>`, plus `lane-push-cause:<cause>` on a refusal) and the
+`dispatch status` `lanePush` fact are typed dispatch surfaces only — the bash
+wrappers' own bookkeeping reads neither — and the wrappers' own push behaviour,
+five-key tail, and exits are unchanged. A lane that runs no `pr_creation` step (a
+custom prompt, or a harness running no `pm` agent) performs no session-side push;
+for that lane the merge bar plus the engine's ensure-push remain the backstops. The
+bash fallback gains **no** parity enforcement and no lane-push record: a fallback
+`pr-open` summary makes no parity claim. An operator who chooses the fallback owns
+the head check the typed lane performs by construction; the divergence is declared,
 never silent, and the fallback's documented status and retirement path are
-unchanged.
+unchanged ([push reference page](../planning/oss-tooling/milestones/m4/commands/push.md)).
+
+### Where a refused push is read
+
+A refused lane push has three surfaces with one vocabulary: the lane's final
+message, the attempts digest (`lane-push:failed` beside `lane-push-cause:<cause>`),
+and `dispatch status <ref>`. Diagnosis needs no head comparison and no git command.
+The remedy is unchanged in kind — fix the remote state (a protection, a permission,
+a changed remote address) and re-run or resume the push, or re-dispatch; the
+engine's ensure-push still reconciles a pushable branch by itself.
+
+An absent `lanePush` fact is one answer covering three states it does not
+distinguish: the push never ran, a pre-act resolution refusal appended no record by
+design, and the act landed while its record did not. Read the lane's final message
+for the pre-act arm, and treat the recorded instant as the fact's age: the recorded
+head is the branch head at that instant, not a live remote-equality claim.
 
 ## 6. Declared residuals
 

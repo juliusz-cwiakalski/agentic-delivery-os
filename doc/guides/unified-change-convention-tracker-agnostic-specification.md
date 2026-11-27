@@ -6,7 +6,7 @@ ados_distribution: redistributable
 
 id: CHANGE-CONVENTIONS
 links:
-  related_changes: ["GH-366"]
+  related_changes: ["GH-366", "GH-416"]
 ---
 
 # Unified Change Convention (Tracker-Agnostic) — Specification v1
@@ -276,7 +276,7 @@ The PM agent (`@pm`) orchestrates these phases:
 8. **review_fix** — Review and fix cycle via `@reviewer`
 9. **quality_gates** — Run builds/tests via `@runner`
 10. **dod_check** — Final acceptance gate (PM verifies all phases complete)
-11. **pr_creation** — Create PR/MR via `@pr-manager`; record the PR URL as a pm-notes `notes:` entry; STOP
+11. **pr_creation** — Create PR/MR via `@pr-manager`; record the PR URL as a pm-notes `notes:` entry; land `phase complete <workItemRef> pr_creation`; run `push <workItemRef>` so the lane's own last evidence commit is on the remote; STOP
 
 Phases can be reopened if gaps are discovered in later phases.
 
