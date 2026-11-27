@@ -500,3 +500,26 @@ notes:
       clean."
     type: info
     date: "2026-11-27"
+  - text: "Plan phase 6 complete (the two product surfaces): commit 817196e6d.
+      `.opencode/agent/pm.md` step 10 now orders @pr-manager create/update, the
+      pm-notes URL note, the ticket assignment, `phase complete <ref>
+      pr_creation`, `push <workItemRef>`, the final-message rule, and STOP; the
+      push instruction follows the phase completion; the refusal, unrecorded,
+      no-retry/no-force/no-authored-commit/no-reopen, `no commit`, and pre-act
+      refusal rules are stated; the phase-definition item 11 states the same
+      tail. The edit was delegated to @toolsmith per the repository rule.
+      packages/core/src/domain/dispatch-prompt.ts gained one sentence in the
+      eleven-phase section; the five markers are unchanged. The generated
+      .ados-claude/agents/pm.md was regenerated (second run a no-op). The prompt
+      inventory names `push <workItemRef>` for pm.md; the two feature pages
+      state the same tail. New suite lane-push-surfaces (11 pass, both surfaces
+      asserted separately). Tests: typecheck green; check:prompt 5 clean;
+      doc/prompt conformance 67 pass; GH-386 suites 54 pass; milestone-prompts
+      freshness 15 pass; git diff --check clean. Observation for phase 8: two
+      guides still carry the old phase-11 line
+      (doc/guides/opencode-agents-and-commands-guide.md:248 and
+      doc/guides/unified-change-convention-tracker-agnostic-specification.md:279);
+      they are outside every declared scope and are handed to the reconciliation
+      input."
+    type: info
+    date: "2026-11-27"

@@ -106,6 +106,7 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0076](TDR-0076-engine-ensure-push-first-remote-write.md) | TDR | The Engine-Side Ensure-Push Is the Dispatch Engine's First Remote-Write Act — One Bounded Fast-Forward Push of the Change Branch Before `pr-open` Derives | Proposed | 2026-11-23 | Juliusz Ćwiąkalski |
 | [TDR-0077](TDR-0077-dispatch-owned-window-watch.md) | TDR | A Lane Is Watched by the Composition That Owns It: The Dispatch Run Path Supplies the Profile-Window Watch for the Lanes It Starts | Proposed | 2026-11-26 | Juliusz Ćwiąkalski |
 | [TDR-0078](TDR-0078-lease-heartbeat-amends-tdr-0050.md) | TDR | A Dispatch Lane Keeps Its Repository Lease Live Through the Run and the Park: The Holding Invocation Renews at a Derived Cadence (TDR-0050 DC-3 Amended) | Proposed | 2026-11-26 | Juliusz Ćwiąkalski |
+| [TDR-0079](TDR-0079-lane-push-amends-tdr-0076.md) | TDR | The Lane Pushes Its Own Last Evidence Commit: A Typed `push <ref>` at `pr_creation`, One Durable `dispatch.lane-push` Record, and the Engine's Ensure-Push as the Backstop (TDR-0076 Push Ownership Amended) | Proposed | 2026-11-27 | Juliusz Ćwiąkalski |
 
 Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
 acceptance is that change's pull-request review, and their status moves from
