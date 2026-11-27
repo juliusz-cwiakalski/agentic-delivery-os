@@ -41,7 +41,7 @@ The pack does six things:
 
 ## How to review it
 
-Read in this order:
+Read in this order. If you are resuming after a break, read `HANDOVER-2026-11-28.md` first.
 
 1. `01-analysis.md` for the verdict and the challenges. If you disagree with the challenges,
    the rest of the pack changes.
@@ -132,6 +132,7 @@ Open, with defaults in `09-open-points.md`:
 
 | File | What it holds |
 |---|---|
+| `HANDOVER-2026-11-28.md` | Review handover: what is settled, what is open, how to resume |
 | `01-analysis.md` | The vision, the evidence, where it is right, ten challenges, principles, kill criteria |
 | `02-artifact-model.md` | Facets, ownership, IDs, single source of truth, tiers, budgets, lifecycle |
 | `03-schemas.md` | Field rules and invariants for the six schemas |

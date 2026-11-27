@@ -355,10 +355,9 @@ Priority: **P1**.
 Default: the worktree registry is primary, the branch is a legacy fallback, explicit `--change`
 for CI and the main checkout; fail closed on ambiguity; one lane, one change.
 
-**Owner decision (2026-11-27):** the worktree registry, not the branch name, is the primary
-resolution. The branch is a fallback for a manual or legacy worktree.
-
 Answer:
+
+**Answered (2026-11-27):** The worktree registry is primary; the branch name is a legacy fallback. One lane, one change.
 
 ### Q32. Should the agent be allowed to pass `--change` explicitly?
 
@@ -368,6 +367,8 @@ Default: yes, always; it is the escape hatch and the CI path.
 
 Answer:
 
+**Answered (2026-11-27):** Yes, explicit `--change` for CI and cross-change operations; the default is the current change.
+
 ### Q33. Should `workflow next` be the PM's only navigation command?
 
 Priority: **P1**.
@@ -375,6 +376,8 @@ Priority: **P1**.
 Default: yes for the happy path; the PM uses `pm brief` for exceptions and judgment states.
 
 Answer:
+
+**Answered (2026-11-27):** Yes for the happy path. The PM or CEO selects the workflow template at intake, can add a state with a reason, and uses `pm brief` for exceptions.
 
 ### Q34. Should commit messages be fully deterministic or model-assisted?
 
@@ -385,6 +388,8 @@ pull-request description, not the commit.
 
 Answer:
 
+**Answered (2026-11-27):** Deterministic wherever possible: phase title as the first line, acceptance criteria as the body.
+
 ### Q35. What is the default output format?
 
 Priority: **P1**.
@@ -392,6 +397,8 @@ Priority: **P1**.
 Default: the Markdown envelope; JSON for tools; YAML for debugging.
 
 Answer:
+
+**Partially answered (2026-11-27):** the Markdown envelope with semantic keys; keys that help understanding stay; JSON for tools.
 
 ### Q36. Should the form be the default for complex writes?
 
@@ -407,10 +414,9 @@ Priority: **P1**.
 
 Default: deferred. The first version is stateless full bundles; `--since` is a future option.
 
-**Owner decision (2026-11-27):** deltas are parked; focus on slicing what is provided in the
-context.
-
 Answer:
+
+**Answered (2026-11-27):** Deferred. Focus on slicing what is provided in the context; stateless full bundles first.
 
 ### Q38. What is the acceptable delta error rate?
 
@@ -418,9 +424,9 @@ Priority: **P2**.
 
 Default: deferred with the delta protocol; when it is built, zero false `unchanged`.
 
-**Owner decision (2026-11-27):** deferred.
-
 Answer:
+
+**Answered (2026-11-27):** Deferred with the delta protocol.
 
 ### Q39. Should the push section be built in the first slice or later?
 
@@ -428,9 +434,9 @@ Priority: **P2**.
 
 Default: out of scope for this pack; the messaging system is a separate concept.
 
-**Owner decision (2026-11-27):** out of scope.
-
 Answer:
+
+**Answered (2026-11-27):** Out of scope. The messaging system is a separate concept for loosely coupled coordination.
 
 ### Q40. Should the external researcher be launched now?
 

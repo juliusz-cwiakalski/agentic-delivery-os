@@ -53,6 +53,8 @@ If wrong: cycle time or rigor.
 
 Answer:
 
+**Answered (2026-11-27):** Yes. Slimmer versions for S changes, including collapsed phases where it is safe. The contents of each tier still need review; every tier keeps acceptance criteria, tests, a review, the gates, the DoD, the pull request, and provenance.
+
 ### Q3. Is the specification fully structured or a hybrid?
 
 Priority: **P1**.
@@ -72,6 +74,8 @@ Default: A.
 If wrong: either a form that nobody reads or a 100KB document that nobody parses.
 
 Answer:
+
+**Answered (2026-11-27):** Hybrid: a typed contract plus declared free-text extension fields, used where useful and skipped where not. The backdoor is a declared slot with an audience and a budget.
 
 ## Schemas
 
@@ -133,6 +137,8 @@ Default: A.
 If wrong: readability or parsing complexity.
 
 Answer:
+
+**Partially answered (2026-11-27):** in the same artifact as declared extension fields; no separate prose file by default. A separate rationale file remains an L-tier option.
 
 ### Q7. Should coverage be stored or derived?
 
@@ -273,6 +279,8 @@ If wrong: noise or a lost provenance.
 
 Answer:
 
+**Answered (2026-11-27):** Always commit. The tool commits are the audit trail; the squash merge is the one commit per change.
+
 ### Q14. Should hand-editing be a hard failure from day one?
 
 Priority: **P1**.
@@ -289,12 +297,9 @@ Options:
 Default: A.
 
 If wrong: a blocked lane or a silent hand edit.
-
-
-**Owner decision (2026-11-27):** detection first; deny writes after the pilot. A manual
-edit is attribution, not prohibition; a broken artifact may be repaired through the repair
-path.
 Answer:
+
+**Answered (2026-11-27):** Detection first; deny writes after the pilot. A manual edit is attribution, not prohibition; a broken artifact may be repaired through the repair path.
 
 ### Q15. Does the harness support a path-scoped deny for `edit`, `write`, and `read`?
 
@@ -315,6 +320,8 @@ If wrong: the read path does not change and the token win is lost.
 
 Answer:
 
+**Answered (2026-11-27):** Invisible by default: instruct agents to use the tool, do not share the artifact location, detect bypasses. No hard read deny; add a write deny later if accidental edits show.
+
 ### Q16. Should the tool commit be signed?
 
 Priority: **P2**.
@@ -333,6 +340,8 @@ Default: A, with C if tamper evidence is wanted.
 If wrong: complexity without a real gain.
 
 Answer:
+
+**Answered (2026-11-27):** Not a prerequisite. The commit trailer plus the CI check is enough; signing is optional.
 
 ### Q17. Should a human import be allowed without a waiver?
 
@@ -391,6 +400,8 @@ Default: A.
 If wrong: overhead or a lost context.
 
 Answer:
+
+**Partially answered (2026-11-27):** the handover is the essence. Required when the next phase needs it; default true for M and L, false for S.
 
 ### Q20. Should a review finding that changes the contract reopen the specification?
 
@@ -466,11 +477,9 @@ Options:
 Default: A.
 
 If wrong: friction or a silent drift.
-
-
-**Owner decision (2026-11-27):** record and learn. Fail only a path outside the change's
-scope or a protected area; the merge authority resolves an ordinary conflict.
 Answer:
+
+**Answered (2026-11-27):** Record and learn. Fail only a path outside the change's scope or a protected area; the merge authority resolves an ordinary conflict.
 
 ### Q24. Should read-only contract overlap allow parallel?
 
@@ -509,11 +518,9 @@ Options:
 Default: A.
 
 If wrong: a contract without authority or a bottleneck.
-
-
-**Owner decision (2026-11-27):** deferred. No milestone contract in this epic; the
-specification's `milestone` field is a free-text label.
 Answer:
+
+**Answered (2026-11-27):** Deferred. No milestone contract in this epic; milestones are planned in free text.
 
 ### Q26. Should the milestone verifier be a separate agent?
 
@@ -531,10 +538,9 @@ Options:
 Default: A.
 
 If wrong: a biased verification.
-
-
-**Owner decision (2026-11-27):** deferred with the milestone contract.
 Answer:
+
+**Answered (2026-11-27):** Deferred with the milestone contract.
 
 ## Migration and metrics
 
@@ -610,11 +616,9 @@ Options:
 Default: A.
 
 If wrong: a boil-the-ocean failure or a missed opportunity.
-
-
-**Owner decision (2026-11-27):** one epic, multiple pull requests, one milestone. Slice 0
-and slice 1 first, then slices 2 to 5 tightly sequenced; slice 6 is deferred.
 Answer:
+
+**Partially answered (2026-11-27):** delivery shape is one epic, multiple pull requests, one milestone; slice 0 and slice 1 first, then slices 2 to 5. The budget itself is still open.
 
 ## Part 3 and 4 additions
 
@@ -637,6 +641,8 @@ If wrong: a form with forty textareas, or a specification that cannot explain it
 
 Answer:
 
+**Partially answered (2026-11-27):** declared extension fields with `useIn`; the count and budget still need confirmation. The default is at most three slots per facet and 80 words each.
+
 ### Q42. What should the handover prompt say?
 
 Priority: **P1**.
@@ -656,3 +662,5 @@ Default: A.
 If wrong: a missing handover, a prose dump, or a handover that does not match the evidence.
 
 Answer:
+
+**Partially answered (2026-11-27):** the tool drafts the five fields from the evidence; the coder edits with a three-bullet limit per field. The exact prompt wording is still open.
