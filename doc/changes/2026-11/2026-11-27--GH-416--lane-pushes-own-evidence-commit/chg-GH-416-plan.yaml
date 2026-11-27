@@ -1,17 +1,48 @@
 # ---------------------------------------------------------------------------
 # GH-416: M4-S45: A lane pushes its own last evidence commit before it stops
 #
-# Plan revision v1.1 (2026-11-27): v1.0 was authored from spec v1.1 and test
-# plan v1.1; v1.1 re-checks the plan against their v1.2 corrections.
-# v1.2 re-check: no phase boundary, scope entry, or AC/TC ownership changes.
+# Plan revision v1.3 (2026-11-27): final sync to spec v1.4 and test plan
+# v1.5 (PM rulings R7..R11). v1.2 was the DoR iteration-1 remediation against
+# spec v1.3. v1.0 was authored from spec v1.1 and test plan v1.1, and v1.1
+# re-checked the plan against their v1.2 corrections. Phase ids, order,
+# kinds, and AC/TC ownership are unchanged from v1.0.
+# v1.3 moves one scope entry: phase 2 loses packages/adapters/src/git/index.ts
+# (ruling R10: that module's private predicate copy is out of scope, so no
+# phase may declare an edit to it; the seam's four exported names therefore
+# stay as delivered). The entries below moved in v1.2, each with its reason:
+#   - phase 1 gains packages/core/src/contracts/closeout.ts (the one home of
+#     the safe-ref predicate beside the protected-name set) and
+#     packages/adapters/src/git/push.ts (the seam imports that predicate and
+#     set from core), and gains tests/structure/inventory.json as a
+#     conditional (findings D1 and D4);
+#   - phase 2 and phase 3 gain tests/behaviour/dispatch-push-parity.test.ts
+#     for additive cells only (the test plan v1.4 locates TC-LCAUSE-001's
+#     seam-level class table and TC-LPUSH-002's seam arm there);
+#   - phase 3 loses packages/adapters/src/git/push.ts and
+#     packages/adapters/src/git/index.ts (the unimplementable adapters-export
+#     conditional, finding D1);
+#   - phase 5 loses tests/golden/dispatch-text.test.ts (it holds only
+#     `dispatch <ref>` cells) and gains
+#     tests/golden/dispatch-status-worktree.test.ts and
+#     tests/golden/status-lane-push.txt (finding D4);
+#   - phase 8 gains AGENTS.md (finding D5).
 #
 # Sources, read in full before this plan was authored (the single source of
 # truth for every phase, test case, and path below):
-#   chg-GH-416-spec.md (v1.2: F-1..F-6, DM-1..DM-5, NFR-1..NFR-8, RSK-1..RSK-9,
+#   chg-GH-416-spec.md (v1.4: F-1 "One predicate, two layers, three sources
+#   of refusal", F-3, F-4, section 7.2, section 10, section 12, section 16,
+#   section 22, DM-1, DM-4, DEC-4 to DEC-6, NFR-2, RSK-1..RSK-10,
 #   DEC-1..DEC-7, AC-F1-1..AC-F6-1, Appendices A to E) and
-#   chg-GH-416-test-plan.md (v1.2, 31 cases, section 8.3), this folder;
-#   chg-GH-416-pm-notes.yaml, whose intake decisions, doc-risk inventory, and
-#   owner delivery notes bind the plan.
+#   chg-GH-416-test-plan.md (v1.5 as read in the working tree at 13:28; the
+#   one assumption this plan still makes about it is in the "Test plan
+#   landing" block), 31 cases, this folder;
+#   chg-GH-416-pm-notes.yaml (its DoR rulings R1..R6 bind revision v1.2),
+#   beside its intake decisions, doc-risk inventory, and owner delivery
+#   notes. Rulings R7..R11 reached this revision through the delegation that
+#   requested it and were not yet recorded in the pm-notes when it was
+#   written;
+#   readiness-review/readiness-iter-1.md, whose plan-routed findings are D1,
+#   D4, and D5 below.
 # Precedent plans read for shape and for pinned-surface discipline:
 #   chg-GH-413-plan.yaml (v1.7: the header fences, the per-phase comments, a
 #   planning finalize phase) and chg-GH-350-plan.yaml (phase 8: the
@@ -47,8 +78,12 @@
 #     outcome union is `accepted | rejected | failed | timed-out`.
 #   - packages/adapters/src/git/push.ts:73: PUSH_DEFAULT_TIMEOUT_MS = 60_000.
 #   - packages/core/src/contracts/closeout.ts:146: PROTECTED_REF_NAMES is
-#     `main`, `main-tools`, `HEAD`; packages/core/src/domain/closeout.ts:365
-#     and :1464 publish the same `protected-ref` literal the seam emits.
+#     `main`, `main-tools`, `HEAD`; every consumer (the push seam, the git
+#     index and merge adapters, the closeout domain) imports it through the
+#     package barrel, and its value is pinned at
+#     tests/structure/closeout-contract.test.ts:159;
+#     packages/core/src/domain/closeout.ts:365 and :1464 publish the same
+#     `protected-ref` literal the seam emits.
 #   - packages/core/src/domain/closeout.ts:337-358: `branchConvention` and
 #     `selectMatchingBranch` return `none | unique | ambiguous`.
 #   - packages/adapters/src/git/index.ts:437-451: the git port's `listBranches`
@@ -68,12 +103,38 @@
 #     item 11 inside `<step id="3">`; `<step id="11">` is the stop condition.
 #   - .ados-claude/agents/pm.md: a generated projection of that agent file
 #     (CI fails a stale projection).
+#   - packages/adapters/src/git/push.ts:75-79: `isSafeRef` is module-private,
+#     one of four identical private copies in the adapters git family
+#     (push.ts:78, index.ts:190, merge.ts:125, watchdog.ts:28); core has no
+#     equivalent predicate.
+#   - .dependency-cruiser.cjs:17: the `matrix-core-importer` rule forbids a
+#     core module from importing an adapters module; adapters import core.
+#   - packages/adapters/src/git/index.ts:416-435: the git port's `readCheckout`
+#     is the delivered local checkout/head read (`rev-parse --abbrev-ref HEAD`,
+#     then `rev-parse HEAD`).
+#   - packages/cli/src/production.ts:4275-4281: the engine's parity act
+#     branches on `outcome !== "accepted"` and discards `detail`.
+#   - packages/cli/src/production.ts:3946-3953: the engine resolves its own
+#     branch with `branches[0]`, a first match with no declaration check.
+#   - packages/core/src/domain/commit-staging.ts:4-8 and
+#     packages/core/src/domain/commit-act.ts:94, :255-261: an untracked file
+#     outside the declared scope is reported as `untrackedNotStaged` and never
+#     staged; the commit is blocked only when nothing else is staged.
+#   - tests/golden/dispatch-status-worktree.test.ts:16-17: the status golden
+#     host reads one committed `tests/golden/status-<name>.txt` per cell and
+#     builds the status object inline; tests/golden/dispatch-text.test.ts
+#     holds only `dispatch <ref>` cells.
 #
 # Phase order
 #   1 contracts, the record kind, and the changeset (every later phase
-#     consumes them; the changeset exists before any gate can run);
-#   2 the push seam's closed cause (the only edit to the delivered remote-write
-#     seam; reporting only, nothing branches on it);
+#     consumes them; the changeset exists before any gate can run), plus the
+#     one home of the safe-ref predicate and the protected-name set in the
+#     closeout contract module, with the push seam importing them through the
+#     package barrel;
+#   2 the push seam's closed cause (the seam's remaining edit: the child-act
+#     classification, a server-side protection decline into `protected-ref`
+#     included; its guards run on the shared predicate; reporting only, and
+#     the engine consumes the outcome while discarding the cause);
 #   3 the `push` command and its mount (the ticket's headline claim, and the
 #     only writer of the record the later phases read);
 #   4 the classification fold (reads what the command appended);
@@ -110,16 +171,49 @@
 #   phase 7  none
 #   phase 8  TC-LDOC-002 (manual, after the lifecycle's documentation phase),
 #            TC-LGATE-001 (the gate half)
+# Step numbers are cited by content first and number second, against test
+# plan v1.5.
+#
+# Test plan landing (spec v1.4 is the authority; the test plan was read at
+# v1.5 in the working tree)
+#   Landed in v1.5 and reflected in this plan:
+#   - R7: TC-LCAUSE-001 is written around the seven recordable causes, with
+#     `protected-ref` as one token with two sources and `unsafe-branch`
+#     guard-only; TC-LCAUSE-002, TC-LFOLD-001, and TC-LSTORE-001 carry the
+#     same split.
+#   - R8: NFR-2's six-part count in TC-LBND-002.
+#   - R10: TC-LRES-004 asserts that the three other predicate copies stay
+#     unchanged.
+#   - R11: TC-LSTATUS-002's golden host is
+#     tests/golden/dispatch-status-worktree.test.ts, with the snapshot
+#     tests/golden/status-lane-push.txt.
+#   - And, carried since v1.4: B1 (the single-predicate rule and the
+#     direct-consumer seam layer), B2 (the engine consumes the outcome only),
+#     B3 (TC-LPUSH-001 over a real temporary checkout with a fake remote
+#     keyed by ref), B5 (the M1 page and its phrase row as one unit), the
+#     `no commit` step in TC-LMSG-002, the consolidated Definition of Done,
+#     and the seam-level cells located in tests/behaviour/dispatch-push-parity.test.ts.
+#   Still assumed, because v1.5 is silent: the fake remote of TC-LPUSH-001
+#   lands under tests/fixtures/dispatch/parity/ (the fixture folder its
+#   section 6 names for this change) or inside the suite. A different folder
+#   widens phase 3's `folders` entry.
 #
 # Declaration discipline
 #   - The commit primitive stages an untracked (new) file only inside the
-#     declared scope, so every new file is declared by exact path in the phase
-#     that creates it. A tracked file edited outside the declared scope is
-#     still staged, with its drift disclosed. Read-only pins (the contract
-#     baseline, the `dispatch <ref>` goldens, the delivered GH-386 suites,
+#     declared scope and reports the rest as `untrackedNotStaged`, blocking
+#     only when nothing else is staged. So every new file is declared by exact
+#     path in the phase that creates it: an undeclared golden, fixture, or
+#     module is a locally-green, fresh-checkout-red commit. A tracked file
+#     edited outside the declared scope is still staged, with its drift
+#     disclosed. Read-only pins (the contract baseline, the `dispatch <ref>`
+#     goldens, the delivered cells of the GH-386 suites,
 #     packages/core/src/domain/closeout.ts, packages/core/src/contracts/pm-notes.ts,
-#     packages/cli/src/entrypoint.ts) are deliberately outside every scope: an
-#     edit to one is disclosed, never silent.
+#     packages/cli/src/entrypoint.ts) are never edited: an edit to one is
+#     disclosed, never silent. Three modules are outside every scope by
+#     ruling R10: packages/adapters/src/git/index.ts, merge.ts, and
+#     watchdog.ts keep their private predicate copies.
+#     tests/behaviour/dispatch-push-parity.test.ts is
+#     declared in phases 2 and 3 for additive cells only.
 #   - A pinned surface moves in the same commit as the code it pins (the
 #     GH-413 rule): the inventories, the additivity baseline, the no-shell
 #     surface, the family-count pins, the phrase rows. Each is declared beside
@@ -150,10 +244,40 @@
 #   - AC-F1-2 and NFR-7: a branch is pushed only when exactly one rule resolved
 #     it. A guessed, current-checkout, ambiguous, unsafe, or protected ref is
 #     never pushed.
-#   - The two refusal arms (F-1 "Two refusal arms, one question each", DM-4):
-#     arm (a) is the command's pre-act input refusal (no child, no act, no
-#     record); arm (b) is the seam's own rejection or classification (verdict
-#     `failed`, record appended, closed cause). Neither becomes the other.
+#   - One predicate, two layers, three sources of refusal (F-1, DM-4): the
+#     safe-ref predicate and the protected-name set have one home, the
+#     closeout contract module packages/core/src/contracts/closeout.ts; the
+#     push seam's guards and the command's resolution apply that one
+#     predicate, and no second copy is declared on that path. `unsafe-branch`
+#     is guard-only: always the command's pre-act resolution refusal (a typed
+#     input refusal with no child process, no act, no record, and no
+#     verdict/cause pair), and no lane-push record can carry it.
+#     `protected-ref` is one token with two sources: protected-set membership
+#     is the same pre-act refusal, and a protection or hook decline git
+#     reports is classified from the child act (verdict `failed`, record
+#     appended). The token alone never identifies the source; the layer and
+#     the child count do. So seven causes are recordable, and the command's
+#     recorded `failed` verdicts are exactly those seven.
+#   - R10 (spec section 7.2 and section 12): the predicate is unified for the
+#     push seam and its command only. The identical private copies in
+#     packages/adapters/src/git/index.ts, merge.ts, and watchdog.ts are out
+#     of scope: no phase declares an edit to those modules.
+#   - RSK-10: a pre-act resolution refusal appends no record by design. No
+#     phase asserts a durable fact for it. Phase 3's suites assert the
+#     refusal's answer and that no act, child process, or record followed.
+#   - NFR-2: one lane end costs at most one bounded pm-notes document read
+#     (the change record's `branch:` declaration), one bounded local branch
+#     read, one bounded local checkout/head read (the recorded `head`), one
+#     bounded lane read, one push (60 000 ms at most), and one record append;
+#     classification adds at most one bounded record read; zero added
+#     provider reads.
+#   - NG-3 (the engine consumes the outcome only): the seam returns a cause to
+#     both of its callers; the lane's command surfaces and records it, and the
+#     engine's parity act discards the detail. No engine classification,
+#     envelope, or comparison carries a cause.
+#   - NG-4 and section 12: the engine resolves its own branch (a first-match
+#     read, independent of the command's resolution). This change leaves that
+#     as delivered.
 #   - Act first, append second (RSK-6): a record can never claim a push that
 #     did not happen; a failed append is `recorded: false` on the answer.
 #   - DM-1 and section 20: the record, the answer, the status fact, and the
@@ -178,7 +302,9 @@
 #   - DEC-6: the tail is pull request, URL note, phase completion, `push`, final
 #     message, stop; the push never precedes the phase completion; the lane
 #     never retries, forces, authors a commit, or reopens a phase on a refusal;
-#     the five prompt markers are unchanged.
+#     the five prompt markers are unchanged. The delivered `no commit`
+#     directive suppresses commits, not the push: under it the phase-completion
+#     commit is skipped and the push still runs and still records.
 #   - NFR-3: `dispatch status` makes no network call, starts no process, takes
 #     no fence, appends nothing, deletes nothing, and takes at most one
 #     additional bounded lane-push read.
@@ -192,12 +318,12 @@
 #     A plan phase runs only what it touches. A command that did not run is
 #     never reported as passing.
 #
-# Findings reported to the PM when this plan was authored against v1.1. Each
-# entry records what was reported, what the plan declared meanwhile so
-# delivery was not blocked, and who routes it. Entries marked CLOSED were
-# settled upstream in the direction this plan declared (spec v1.2 for I-6;
-# test plan v1.2 for I-1, I-2, I-3, and I-5) and keep their text as the record;
-# the others stay open with the PM.
+# Findings reported to the PM. Part A holds what this plan reported when it
+# was authored against v1.1; part B holds the plan-routed findings of DoR
+# iteration 1; part C holds what revision v1.2 found. Each entry records what
+# was reported, what the plan declared meanwhile, and who routes it. An entry
+# marked CLOSED keeps its text as the record; the others stay open with the PM.
+# Part A:
 #   I-1 (CLOSED by test plan v1.2) Step numbering in pm.md. The spec says
 #      "step 10" (section 2.1, section 16, DEC-6); the test plan said "step 11
 #      = `pr_creation`" (section 2 and the TC-LMSG-001 preconditions). The
@@ -220,13 +346,13 @@
 #      Declared: mechanical re-pins, each by exactly one; any other delivered
 #      assertion that moves is a defect, as the note intends. Route:
 #      test-plan-writer.
-#   I-4 TC-LDOC-001 step 5 keeps "the M1/M2 page sets byte-unchanged", but
+#   I-4 (CLOSED by PM ruling R5; owned by phase 3) TC-LDOC-001 step 5 kept
+#      "the M1/M2 page sets byte-unchanged", while
 #      doc/planning/oss-tooling/milestones/m1/commands/provider.md:31 calls its
 #      family "the twenty-eighth and last", a phrase-pinned statement that
-#      stops being true. Decision needed: correct the tail and its phrase row
-#      in phase 3 (recommended; GH-350 corrected the previous tail statement the
-#      same way) or declare the page a dated snapshot. The page is conditional
-#      in phase 3. Route: PM.
+#      stops being true. Ruled: the page's tail statement and its
+#      doc-conformance phrase row move together in phase 3, which declares
+#      both paths. Test plan v1.4 exempts that pair in TC-LDOC-001 step 5.
 #   I-5 (CLOSED by test plan v1.2) TC-LDOC-001 named
 #      packages/cli/src/help/index.ts, which does not exist
 #      (the inventory is packages/cli/src/help.ts), and named
@@ -266,6 +392,62 @@
 #      cited above and `tracker:exhausted` rides the slice. The same page's
 #      closure note says the dispatch closure forbids new record kinds. Both
 #      are named in phase 8.
+# Part B, DoR iteration 1 (readiness-review/readiness-iter-1.md), the
+# plan-routed findings:
+#   D1 (review finding 1, B1; CLOSED by PM ruling R1; owned by phases 1, 2,
+#   and 3) The predicate story. The plan said the command's resolution reuses
+#      the seam's own guard predicates with no copy, and made that reuse an
+#      export from the adapters seam. That was unimplementable: resolution
+#      lives in core, the dependency matrix forbids core importing adapters,
+#      and `isSafeRef` is private in the seam. Owned: phase 1 homes `isSafeRef`
+#      beside `PROTECTED_REF_NAMES` in packages/core/src/contracts/closeout.ts
+#      and swaps the seam's private copy for that import; phase 2 keeps the
+#      seam's guards on it; phase 3 applies the same predicate during
+#      resolution and declares no copy.
+#   D4 (review finding 4, B4; CLOSED by PM ruling R4; owned by phase 5) The
+#   status golden. Phase 5 required an additive-lines golden cell but declared
+#      neither the data file nor the host suite the fleet expects. Owned:
+#      phase 5 declares tests/golden/dispatch-status-worktree.test.ts and
+#      tests/golden/status-lane-push.txt; phase 1 declares
+#      tests/structure/inventory.json for its conditional contracts module.
+#   D5 (review finding 5, B5; CLOSED by PM ruling R5; owned by phases 3 and
+#   8) Two routed items. I-4 above is phase 3's. The AGENTS.md `pr_creation`
+#      row of the delivery-process table is phase 8's, declared by path there.
+#   Reflected from the spec and the test plan, not plan-routed: B2, the
+#      engine consumes the outcome only (phase 2); B3, TC-LPUSH-001's fake
+#      remote (phase 3); RSK-10 (phases 3, 5, 6, and 8); the `no commit`
+#      directive (phase 6); the consolidated Definition of Done (phase 8).
+# Part C, found while writing revision v1.2 and closed by PM rulings
+# R7..R11 with spec v1.4 and test plan v1.5, each with the phase that owns
+# it. The text records what was found; the ruling is the last sentence:
+#   I-11 (CLOSED by ruling R7; owned by phases 2 and 3) Spec Appendix E's
+#      `protected-ref` row named "a protection or hook decline git reports"
+#      as a source of that token, while v1.3's operative text made the token
+#      guard-only. Ruled: the split is one guard-only token (`unsafe-branch`)
+#      and seven recordable causes. Phase 2 classifies a server-side decline
+#      into `protected-ref`; the pre-act protected-set refusal is phase 3's.
+#   I-12 (CLOSED by ruling R11; owned by phase 5) Test plan v1.4 still
+#      located TC-LSTATUS-002's golden cell in
+#      tests/golden/dispatch-text.test.ts. Ruled: v1.5 names
+#      tests/golden/dispatch-status-worktree.test.ts with the snapshot
+#      tests/golden/status-lane-push.txt, exactly as phase 5 declares.
+#   I-13 (CLOSED by ruling R9; owned by phase 1) Spec section 16 listed the
+#      predicate's home under its "Dispatch contracts" row. Ruled: v1.4
+#      files it under the closeout contract module,
+#      packages/core/src/contracts/closeout.ts, where phase 1 homes it.
+#   I-14 (CLOSED by ruling R10; no phase owns an edit) Three identical
+#      private copies of `isSafeRef` remain in the git index, merge, and
+#      watchdog adapters. Ruled: the predicate is unified for the push seam
+#      and its command only; those modules are out of scope (spec section
+#      7.2 and section 12), and phase 2's conditional on
+#      packages/adapters/src/git/index.ts is withdrawn.
+#   I-15 (CLOSED by ruling R8; owned by phase 3) NFR-2's count omitted the
+#      change-record (pm-notes) read the command performs for the `branch:`
+#      declaration. Ruled: v1.4 counts it, and phase 3 declares the six-part
+#      count.
+# Still open with the PM: I-7 (reach the artifacts do not name), I-8 (the
+# companion record's id is a declared expectation), and I-9 (the naming
+# lock).
 # ---------------------------------------------------------------------------
 schemaVersion: delivery.plan.v1
 workItemRef: GH-416
@@ -274,7 +456,10 @@ tier:
   escalationTriggers:
     - "A force flag, `--force-with-lease`, a second refspec, a repository argument, a retry, or a shell invocation appears in the command's act path or in the push seam (NG-1, NG-8, NFR-1, NFR-6, TC-LBND-001): stop and report; the act is the delivered seam's fixed argv, once."
     - "A push is performed for a branch that exactly one rule did not resolve: a guessed, current-checkout, ambiguous, unsafe, or protected ref (AC-F1-2, NFR-7, TC-LRES-001 to TC-LRES-004): stop and report; this is the worst outcome of the change."
-    - "The two refusal arms collapse: a pre-act resolution refusal starts a child or appends a record, or a seam rejection appends none (F-1, DM-4, TC-LRES-004, TC-LCAUSE-001): stop and report."
+    - "The two layers drift: the command's resolution and the push seam's guard stop applying the one shared predicate, a second copy of the predicate appears on that path, a pre-act resolution refusal starts a child or appends a record, `unsafe-branch` reaches the command's answer or a lane-push record, or a `protected-ref` record is written for a protected-set name instead of a server-side decline (F-1, DM-4, TC-LRES-004, TC-LCAUSE-001): stop and report."
+    - "A phase edits the private safe-ref predicate copies in packages/adapters/src/git/index.ts, merge.ts, or watchdog.ts, or any other adapters module adopts the shared predicate (R10, spec section 7.2): stop and report; the predicate is unified for the push seam and its command only."
+    - "A suite or a phase asserts a durable fact (a record, a status fact, a folded reference) for a pre-act resolution refusal (RSK-10, AC-F1-2, TC-LRES-004): stop and report."
+    - "A new golden, fixture, or module lands outside the declared scope, so a commit is green locally and would be red on a fresh checkout (the staging rule of packages/core/src/domain/commit-staging.ts): stop and declare it before committing."
     - "The record append precedes the act, a record claims a push that did not happen, the payload exceeds 512 UTF-8 bytes, or git's failure text, a remote URL, or a credential-shaped fragment reaches the record, the answer, the status fact, or the evidence (DM-1, TC-LSTORE-001, TC-LCMD-002, TC-LCAUSE-002): stop and report."
     - "A third lane-push reference joins the reserved block, the block exceeds seven of sixteen, or a new result token, error identity, error-table row, comparison reason, corroboration source, derivation arm, read-failure source, or attempt-record field appears (NG-2, DEC-5, NFR-5, TC-LFOLD-001): stop and report."
     - "The fold fabricates a lane push (a foreign attempt, an absent record, or an unreadable store yields a reference), or a recorded `lane-push:failed` turns a truthful `pr-open` into a failure or suppresses the delivered `push-parity-unmet` row (AC-F3-1, DEC-5, TC-LFOLD-003, TC-LFOLD-004): stop and report."
@@ -291,38 +476,86 @@ defaultLeases:
 defaultWeightClass: standard
 phases:
   - id: 1
-    title: "Contracts, the `dispatch.lane-push` record kind with its append and read, and the changeset"
+    title: "Contracts: the closeout contract module as the predicate's one home, the `dispatch.lane-push` record kind with its append and read, and the changeset"
     kind: delivery
-    summary: "declare the contracts every later phase consumes and add the changeset first: the `dispatch.lane-push` record kind with its bounded identifier-only payload, the closed eight-member refusal-cause vocabulary, the `lane-push:` evidence builders, the `push` answer contract, the additive optional `lanePush` status fact, and the record's validator, read, and append in the delivered dispatch ledger."
+    summary: "declare the contracts every later phase consumes and add the changeset first: one home in the closeout contract module, packages/core/src/contracts/closeout.ts, for the safe-ref predicate beside the protected-name set, which the adapters push seam imports through the package barrel, then the `dispatch.lane-push` record kind with its bounded identifier-only payload, the closed eight-token refusal-cause vocabulary (one guard-only token, seven recordable causes), the `lane-push:` evidence builders, the `push` answer contract, the additive optional `lanePush` status fact, and the record's validator, read, and append in the delivered dispatch ledger."
     # AC: AC-F3-1 and AC-F5-1 (contract basis: DM-1, DM-2, DM-3), AC-F4-1
-    # (contract basis: DM-4), AC-F1-1 (contract basis: DM-5).
+    # (contract basis: DM-4), AC-F1-1 (contract basis: DM-5), AC-F1-2
+    # (contract basis: the one predicate and set of F-1).
     # TC ownership: TC-LGATE-001 (the changeset half; its release-suite half
     # is the lifecycle gate's, named in phase 8). The record's behaviour
     # coverage (TC-LSTORE-001, TC-LSTORE-002) rides phase 3, its first real
     # writer: an unused read and append keep this boundary green without a
     # suite of their own (the GH-404 phase 1 pattern).
-    # Scope: spec F-3 "The record", F-4 (the cause vocabulary), F-5 (the fact
-    # shape), DM-1, DM-2, DM-3, DM-4, DM-5, NFR-5 (the payload bound), NG-9,
-    # NG-11, section 18, Appendix B, Appendix C, Appendix E; test plan section
-    # 3.2 and TC-LGATE-001.
+    # Scope: spec F-1 "One predicate, two layers, three sources of refusal"
+    # (the home and the seam's import), F-3 "The record", F-4 (the cause
+    # vocabulary), F-5 (the fact shape), DM-1, DM-2, DM-3, DM-4, DM-5, NFR-5
+    # (the payload bound), NG-9, NG-11, section 7.1, section 7.2, section 12,
+    # section 13, section 16, section 18, section 21, Appendix B, Appendix C,
+    # Appendix E; test plan section 3.2 and TC-LGATE-001.
+    #
+    # The predicate's one home (PM rulings R1 and R9, finding D1): the
+    # closeout contract module, packages/core/src/contracts/closeout.ts, not
+    # a dispatch contract. The two contract symbols, by name:
+    #   - `isSafeRef`: the safe-ref predicate, the seam's module-private
+    #     function lifted unchanged (its pattern and its forbidden-character
+    #     rule), declared in packages/core/src/contracts/closeout.ts.
+    #   - `PROTECTED_REF_NAMES`: the protected-name set, already published
+    #     from that module. It is neither moved nor re-exported: its name, its
+    #     value, and its module stay as delivered, so every consumer (the push
+    #     seam, the git index and merge adapters, the closeout domain, all
+    #     through the package barrel) is untouched, the value pin of
+    #     tests/structure/closeout-contract.test.ts holds without edit, and
+    #     the closeout ref guard's `protected-ref` reason literal in
+    #     packages/core/src/domain/closeout.ts is not edited.
+    #   So packages/core/src/contracts/closeout.ts is the one home the
+    #   predicate and the set share, as spec section 16 files it under its
+    #   Closeout contracts row; the command's resolution (phase 3) and the
+    #   push seam's guard import the same two symbols. The shape was chosen
+    #   for the least movement: a move or a re-export would relocate the set
+    #   and move three inventory lists to keep its name published.
+    # The seam (packages/adapters/src/git/push.ts), in this phase: it imports
+    # `isSafeRef` and `PROTECTED_REF_NAMES` from `@delivery-os/core/contracts`
+    # (adapters import core; the dependency matrix forbids only the reverse)
+    # and deletes its own `REF_PATTERN`, `FORBIDDEN_REF`, and `isSafeRef`.
+    # Both guards stay byte-identical in behaviour, literals, and order: the
+    # unsafe-name check, then the protected-name check, both before any child.
+    # Its four exported names stay as delivered (`createGitPushSeam`,
+    # `GitPushOutcome`, `GitPushSeam`, `GitPushSeamOptions`), because the
+    # module that re-exports them is out of scope (below). This phase touches
+    # nothing else in the seam; the `detail` classification is phase 2's.
+    # The predicate is unified for the push seam and its command only (PM
+    # ruling R10, spec section 7.2 and section 12). The identical private
+    # copies in packages/adapters/src/git/index.ts, merge.ts, and watchdog.ts
+    # are declared out of scope: those modules stay as delivered, no phase
+    # declares an edit to them, and their unification is separate work.
     #
     # The contracts (packages/core/src/contracts/dispatch.ts):
     #   - the record kind `dispatch.lane-push`, payload schema
     #     `delivery.dispatch.lane-push.v1`, and key prefix
     #     `dispatch.lane-pushes:` (keyed per work-item reference), with the
     #     payload of Appendix B in its declaration order: schema, ref,
-    #     repository, branch, head (full-hex), verdict over `pushed | failed`,
-    #     cause present exactly when the verdict is `failed`, attemptId and
+    #     repository, branch, head (full-hex; the invocation checkout's `HEAD`
+    #     read at act time, DM-1), verdict over `pushed | failed`, cause
+    #     present exactly when the verdict is `failed`, attemptId and
     #     sessionId present exactly when a lane record was readable at push
     #     time, recordedAt. Identifiers and SHAs only, single-line members, the
     #     whole payload at most 512 UTF-8 bytes.
     #   - the closed refusal-cause vocabulary of DM-4 as ONE constant with
-    #     exactly eight members: `protected-ref`, `non-fast-forward`,
-    #     `auth-rejected`, `remote-unavailable`, `spawn-failed`, `timed-out`,
-    #     `unsafe-branch`, `unclassified`. `protected-ref` is the delivered
-    #     literal; no `protected-branch` alias, mapping, or second spelling is
-    #     declared anywhere. The seam (phase 2), the command (phase 3), the
-    #     record validator, and every pin import this one constant.
+    #     exactly eight members (the set is unchanged), declared with the
+    #     split DM-4 states so a pin can assert it: one guard-only token
+    #     (`unsafe-branch`), which no lane-push record can carry, and seven
+    #     recordable child-act causes (`non-fast-forward`, `auth-rejected`,
+    #     `remote-unavailable`, `spawn-failed`, `timed-out`, `protected-ref`,
+    #     `unclassified`). `protected-ref` is the one token with two sources:
+    #     protected-set membership, the command's pre-act refusal (no child,
+    #     no record), and a protection or hook decline git reports, classified
+    #     from the child act (verdict `failed`, record appended). The token
+    #     alone never identifies the source; the layer and the child count
+    #     do. `protected-ref` is the delivered literal; no `protected-branch`
+    #     alias, mapping, or second spelling is declared anywhere. The seam
+    #     (phase 2), the command (phase 3), the record validator, and every
+    #     pin import this one constant.
     #   - the evidence-reference builders `lane-push:<verdict>` and
     #     `lane-push-cause:<cause>` (DM-2): identifiers only, never git text.
     #   - the `push` answer contract of DM-5 and section 8.1: the data keys
@@ -335,6 +568,9 @@ phases:
     #     addition in the spec-named `contracts/dispatch.ts`, and the record
     #     and the vocabularies stay there whichever way the answer contract
     #     goes.
+    #   - tests/structure/inventory.json, when that conditional module is
+    #     created: a new source file joins the committed inventory in the same
+    #     commit. Otherwise the file is untouched in this phase.
     # The status fact (packages/core/src/contracts/dispatch-operator.ts): the
     # additive optional `lanePush` member on `DispatchStatusData` (DM-3):
     # verdict, branch, head, recordedAt, and cause when the verdict is `failed`.
@@ -356,19 +592,24 @@ phases:
     #     tests/structure/event-state-additivity.test.ts is the proof.
     #   - tests/fixtures/ports/v1-contract-inventory.json and
     #     tests/structure/content-inventory.test.ts register the new exports
-    #     and the ledger's two new functions.
+    #     and the ledger's two new functions, and `isSafeRef` joins the
+    #     `closeout.ts` and `index.ts` lists with its export allowance.
     #   - tests/checks/dispatch-contract-invariance.test.ts gains the cause-set
-    #     pin of TC-LCAUSE-002 (the eight members, `protected-ref` the
-    #     delivered literal) and keeps every delivered closure assertion
-    #     byte-identical: the eleven tokens, the closed dispatch and queue error
-    #     rows, the three-member push-verdict union, and the comparison-reason,
-    #     corroboration, and read-failure vocabularies.
+    #     pin of TC-LCAUSE-002 and TC-LCAUSE-001's vocabulary pin (the eight
+    #     members, `protected-ref` the delivered literal, split into one
+    #     guard-only token and seven recordable causes) and keeps every
+    #     delivered closure assertion byte-identical: the eleven tokens, the
+    #     closed dispatch and queue error rows, the three-member push-verdict
+    #     union, and the comparison-reason, corroboration, and read-failure
+    #     vocabularies.
     # Read-only controls proving nothing else grew (never edited):
-    # tests/fixtures/dispatch/operator/contract-baseline.ts and
-    # tests/checks/operator-contract-invariance.test.ts. The attempt-record key
-    # set, the lane-record key set, the error-row count, the configuration-key
-    # count, and the token list stay byte-unchanged: no attempt field, no error
-    # identity, no configuration key.
+    # tests/fixtures/dispatch/operator/contract-baseline.ts,
+    # tests/checks/operator-contract-invariance.test.ts, and
+    # tests/structure/closeout-contract.test.ts. The attempt-record key set,
+    # the lane-record key set, the error-row count, the configuration-key
+    # count, the token list, and the protected-name set's value stay
+    # byte-unchanged: no attempt field, no error identity, no configuration
+    # key.
     # The changeset (TC-LGATE-001, TC-RELEASE-001): exactly one new file naming
     # the five fixed-group packages (@delivery-os/core, @delivery-os/adapters,
     # @delivery-os/cli, @delivery-os/mcp, @delivery-os/opencode) at minor,
@@ -377,22 +618,37 @@ phases:
     # `pr_creation` through the `push` command as the twenty-ninth
     # prompt-required command, the durable lane-push record and its folded
     # evidence, the `dispatch status` fact, the closed cause vocabulary the
-    # push seam's `detail` carries (a contract change for both of its
-    # consumers), the engine's ensure-push unchanged as the backstop, and the
-    # amendment of TDR-0076's push ownership. The body names TDR-0076 and does
+    # push seam's `detail` carries (a contract change for the lane's surfaces;
+    # the engine's parity act consumes the outcome only), the shared home of
+    # the safe-ref predicate and the protected-name set, the engine's
+    # ensure-push unchanged as the backstop, and the amendment of TDR-0076's
+    # push ownership. The body names TDR-0076 and does
     # not cite the companion record's id, so authoring that record (phase 7)
     # never re-opens the changeset.
     # Verify: TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/event-state-additivity.test.ts tests/structure/port-contract-inventory.test.ts tests/structure/content-inventory.test.ts tests/structure/dispatch-contract.test.ts tests/checks/dispatch-contract-invariance.test.ts tests/checks/operator-contract-invariance.test.ts
+    # Verify (the seam's import swap keeps the seam under the same regime):
+    # TMPDIR=$PWD/tmp/tmpdir pnpm check:boundaries
+    # TMPDIR=$PWD/tmp/tmpdir pnpm check:no-shell
+    # TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/no-shell-dispatch.test.ts
+    # Verify (read-only controls in this phase, not edited here; the seam's
+    # guard behaviour is unchanged by the import swap):
+    # TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/closeout-contract.test.ts tests/behaviour/dispatch-push-parity.test.ts tests/behaviour/dispatch-push-evidence.test.ts tests/conformance/dispatch/dispatch-parity-push.test.ts tests/structure/dispatch-push-envelope.test.ts
     # Verify (the two release suites, run early and never edited):
     # TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/privacy-release.test.ts tests/structure/changeset-additivity.test.ts
     # Verify: git diff --check
     # Exit criteria:
     #   - every verify line exits 0;
+    #   - the seam imports `isSafeRef` and `PROTECTED_REF_NAMES` from core and
+    #     declares no predicate of its own; its two guards keep their order,
+    #     their literals, and their behaviour, its four exported names are
+    #     unchanged, and the dependency check is green;
+    #   - `PROTECTED_REF_NAMES` keeps its name, its value, and its module;
     #   - the state-additivity baseline differs from its delivered self by
     #     exactly the three lane-push constants;
-    #   - the cause set is exactly the eight members with `protected-ref` as
-    #     the delivered literal, and the cause-set pin is green;
+    #   - the cause set is exactly the eight members, pinned as one guard-only
+    #     token and seven recordable causes, with `protected-ref` as the
+    #     delivered literal;
     #   - the contract baseline, the error table, the configuration catalog,
     #     and the attempt-record key set are byte-unchanged;
     #   - exactly one changeset exists for the change, five packages, all
@@ -401,8 +657,10 @@ phases:
     scope:
       files:
         - .changeset/gh-416-lane-pushes-own-evidence-commit-minor.md
+        - packages/adapters/src/git/push.ts
         - packages/core/src/app/dispatch-ledger.ts
         - packages/core/src/app/index.ts
+        - packages/core/src/contracts/closeout.ts
         - packages/core/src/contracts/dispatch.ts
         - packages/core/src/contracts/dispatch-operator.ts
         - packages/core/src/contracts/index.ts
@@ -412,7 +670,14 @@ phases:
         - tests/fixtures/events/state-additivity-baseline.json
         - tests/fixtures/ports/v1-contract-inventory.json
         - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
     interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/closeout.ts
+        role: producer
+      - kind: contract-file
+        target: packages/adapters/src/git/push.ts
+        role: consumer
       - kind: contract-file
         target: packages/core/src/contracts/dispatch.ts
         role: producer
@@ -426,56 +691,94 @@ phases:
   - id: 2
     title: "The push seam's closed refusal cause: `detail` names why, and git's text stays inside"
     kind: delivery
-    summary: "make the delivered push seam name a refusal: `detail` becomes one token of the closed cause vocabulary instead of an exit-code string, both guard literals stay byte-unchanged, git's failure text is classified inside the seam and never leaves it, and the argv, the spawn, the budget, the single attempt, and the outcome union stay exactly as delivered."
-    # AC: AC-F4-1 and AC-F3-1 (the cause half: DM-4).
-    # TC ownership: the seam-level arms of TC-LCAUSE-001 (steps 1, 2, and 8,
-    # and the seam-ordering half of its step 4: zero child invocations for the
-    # two guard-shaped causes, exactly one child invocation attempt for every
-    # cause the child act produces) and TC-LCAUSE-002 (steps 1, 3, 4, and 5).
-    # Phase 3 completes both cases with their command-path arms and is their
-    # owner.
-    # Scope: spec DM-4, DEC-4, F-4 "The cause vocabulary is closed", NFR-1,
-    # NFR-6, section 13 (the seam reused unchanged except for `detail`),
-    # section 20, section 21, Appendix A, Appendix E.
+    summary: "make the delivered push seam name a refusal: `detail` becomes one token of the closed cause vocabulary instead of an exit-code string, a protection or hook decline git reports classifies `protected-ref`, the guards run unchanged on the shared predicate and set, git's failure text is classified inside the seam and never leaves it, and the argv, the spawn, the budget, the single attempt, the four exported names, and the outcome union stay exactly as delivered."
+    # AC: AC-F4-1 and AC-F3-1 (the cause half: DM-4); AC-F1-2 (the seam's
+    # layer of the one predicate).
+    # TC ownership: the seam-level arms of TC-LCAUSE-001 (its vocabulary pin;
+    # its guard-only `unsafe-branch` step, a direct seam call refused before
+    # the child; the server-side-decline half of its two-source step; the
+    # seam-`detail` and child-count halves of its mapping and accounting
+    # steps; the engine-consumes-the-outcome-only half of its engine step;
+    # and its outcome mapping; v1.5 steps 1 to 5, 7, and 8) and of
+    # TC-LCAUSE-002 (v1.5 steps 1, 3, 4, 5, 6, and 7). The direct-consumer
+    # step of TC-LRES-004 makes the same direct-seam assertion as
+    # TC-LCAUSE-001's guard-only step. Phase 3 completes both cases with
+    # their command-path arms and is their owner.
+    # Scope: spec F-1 "One predicate, two layers, three sources of refusal"
+    # (the seam's layer and the child-act classification), DM-4, DEC-4, F-4
+    # "The cause vocabulary is closed", NFR-1, NFR-6, NG-3, section 10,
+    # section 13 (the seam reused unchanged except for `detail` and the
+    # shared predicate home), section 20, section 21, section 22, Appendix A,
+    # Appendix E.
     #
-    # What moves in packages/adapters/src/git/push.ts:
+    # What moves in packages/adapters/src/git/push.ts (its remaining edit;
+    # the import of the shared predicate landed in phase 1):
     #   - the last return, today `rejected` with the detail
     #     `git-exit-<status>`, classifies git's own bounded failure text into
     #     `non-fast-forward`, `auth-rejected`, `remote-unavailable`,
-    #     `protected-ref` (a protection or hook decline git reports), or the
-    #     honest fallback `unclassified`. The classification patterns live in
-    #     this one module; the tokens are imported from the contracts constant
-    #     of phase 1, never re-typed.
+    #     `protected-ref` (a branch protection or hook decline git reports),
+    #     or the honest fallback `unclassified`. The classification patterns
+    #     live in this one module; the tokens are imported from the contracts
+    #     constant of phase 1, never re-typed. A protection or hook decline
+    #     is named `protected-ref` and nothing else (PM ruling R7).
     # What does not move:
     #   - the guard literals `unsafe-branch` and `protected-ref` (the delivered
     #     literal the closeout ref guard also publishes) and the `spawn-failed`
     #     detail;
-    #   - the outcome union `accepted | rejected | failed | timed-out`;
+    #   - the outcome union `accepted | rejected | failed | timed-out`, and
+    #     the four exported names (`createGitPushSeam`, `GitPushOutcome`,
+    #     `GitPushSeam`, `GitPushSeamOptions`), because
+    #     packages/adapters/src/git/index.ts re-exports them and is out of
+    #     scope (PM ruling R10);
     #   - the fixed argv `git push --ff-only HEAD:refs/heads/<branch>`, the
     #     literal non-shell spawn with `shell: false`, the 60 000 ms injectable
     #     default with no configuration key, one attempt with no retry, and the
     #     fast-forward-only rule;
-    #   - the guard order: both guards return before any child starts.
+    #   - the guard order: both guards return before any child starts, now on
+    #     the shared predicate and set.
+    # One predicate, two layers, three sources of refusal (F-1). The seam's
+    # guard is the layer a direct consumer meets, and the engine's ensure-push
+    # is that consumer: an unsafe or protected name is `rejected` with
+    # `unsafe-branch` or `protected-ref` before any child, and the engine
+    # records it as the delivered `push:failed` parity evidence on its own
+    # attempt. The three sources of refusal: an unsafe name is guard-only,
+    # always the command's pre-act resolution refusal, and no lane-push
+    # record can carry `unsafe-branch`; a protected-set name is the same
+    # pre-act refusal (no child, no record); a protection or hook decline git
+    # reports is observed only through the invocation and is classified from
+    # the child act into `protected-ref` (verdict `failed`, record appended).
+    # The token alone never identifies the source; the layer and the child
+    # count do.
     # The `timed-out` outcome keeps its delivered member-less shape (the union
     # is unchanged, DM-4); its cause token is the outcome's own name, which the
     # command of phase 3 records.
     # No raw text leaves the seam: its return type carries no stdout or stderr
-    # and classification discards git's text. The cause is reporting only:
-    # nothing branches on it, and the engine's ensure-push, the seam's other
-    # consumer, ignores `detail`, so its behaviour is unchanged.
+    # and classification discards git's text. The seam returns a closed cause
+    # to both of its callers; only the lane's command (phase 3) surfaces and
+    # records it. The engine's parity act consumes the outcome only
+    # (`accepted` or not) and discards the detail, so its behaviour and its
+    # envelope are unchanged and no engine surface carries a cause (NG-3).
     # The suite tests/behaviour/dispatch-lane-push-causes.test.ts is created
-    # here for the seam-level arms over the injected child runner: one scripted
-    # result per class, a locale-flavoured text, an unclassifiable text, and a
-    # stderr carrying a URL and a token-shaped fragment.
+    # here for the seam-level arms over the injected child runner: one
+    # scripted result for each of the seven recordable outcomes (a protection
+    # or hook decline included), a locale-flavoured text, an
+    # unclassifiable text, and a stderr carrying a URL and a token-shaped
+    # fragment; plus the guard layer by direct seam call, and the engine
+    # step's classification arm (two different rejection causes leave the
+    # engine's verdict, evidence, token, outcome, exit, and comparison
+    # identical). The seam-level class table TC-LCAUSE-001's location names
+    # lands in the delivered tests/behaviour/dispatch-push-parity.test.ts,
+    # which this phase declares for additive cells only: every delivered cell
+    # is never edited (TC-LPUSH-004 step 1).
     # Conditional, ONLY IF the named change happens:
-    #   - packages/adapters/src/git/index.ts and
-    #     tests/structure/content-inventory.test.ts, when the seam's exported
-    #     type surface or its export allowance changes.
-    # Read-only controls (never edited): the delivered GH-386 suites
-    # tests/behaviour/dispatch-push-parity.test.ts,
-    # tests/behaviour/dispatch-push-evidence.test.ts,
+    #   - tests/structure/content-inventory.test.ts, when an edited module's
+    #     export allowance changes. The seam's exported names stay as
+    #     delivered, so no re-export moves.
+    # Read-only controls in this phase (not edited here): the delivered GH-386
+    # suites tests/behaviour/dispatch-push-evidence.test.ts,
     # tests/conformance/dispatch/dispatch-parity-push.test.ts, and
-    # tests/structure/dispatch-push-envelope.test.ts hold without edit.
+    # tests/structure/dispatch-push-envelope.test.ts, and the delivered cells
+    # of tests/behaviour/dispatch-push-parity.test.ts.
     # Verify: TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-lane-push-causes.test.ts
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-push-parity.test.ts tests/behaviour/dispatch-push-evidence.test.ts tests/conformance/dispatch/dispatch-parity-push.test.ts tests/structure/dispatch-push-envelope.test.ts
@@ -487,17 +790,25 @@ phases:
     #   - `detail` is always one closed token and never `git-exit-<n>`, an
     #     exit-code string, or raw text; an unclassifiable rejection is
     #     `rejected` with `unclassified`;
-    #   - the token set the suite asserts is exactly the eight declared members
-    #     and the outcome union is unchanged;
-    #   - the guard order is intact (zero child invocations on a guard refusal)
-    #     and the static no-shell check is green;
-    #   - the delivered GH-386 suites are green without edit;
+    #   - the token set is exactly the eight members, pinned as one guard-only
+    #     token and seven recordable causes, and the outcome union and the
+    #     four exported names are unchanged;
+    #   - a direct seam call with an unsafe or a protected name is `rejected`
+    #     with its guard token before any child (zero child invocations), and
+    #     every child-act outcome names one of the seven recordable causes
+    #     with exactly one child invocation attempt; a protection or hook
+    #     decline classifies `protected-ref` and nothing else;
+    #   - two different rejection causes leave the engine's verdict, evidence,
+    #     token, outcome, exit, and comparison identical, with no cause member
+    #     in the envelope;
+    #   - the static no-shell check is green;
+    #   - every delivered cell of the GH-386 suites is green without edit;
     #   - only the declared paths changed.
     scope:
       files:
-        - packages/adapters/src/git/index.ts
         - packages/adapters/src/git/push.ts
         - tests/behaviour/dispatch-lane-push-causes.test.ts
+        - tests/behaviour/dispatch-push-parity.test.ts
         - tests/structure/content-inventory.test.ts
     interactions:
       - kind: contract-file
@@ -510,50 +821,78 @@ phases:
     summary: "add the lane's own act as the twenty-ninth prompt-required command: one structural branch resolution that refuses instead of guessing, one fast-forward push over the delivered seam with nothing authored, one durable record appended after the act, one bounded answer with exit 0 exactly when pushed, and the command composed, helped, counted, documented, and carried through the count-and-tail movement its listing forces."
     # AC: AC-F1-1, AC-F1-2, AC-F4-1 (the command's answer), AC-F2-1 (the
     # repeat act), AC-F6-1 (the composition half: the command is a product
-    # surface); DM-1, DM-4 (the recorded-rejection arm), DM-5, NFR-1, NFR-2
-    # (the lane end), NFR-4 (the command's own bounds), NFR-6, NFR-7.
+    # surface); DM-1 (the `head` source), DM-4 (the seven recordable causes
+    # the command records), DM-5, NFR-1, NFR-2 (the lane end), NFR-4 (the
+    # command's own bounds), NFR-6, NFR-7.
     # TC ownership: TC-LCMD-001, TC-LCMD-002, TC-LPUSH-001, TC-LPUSH-002,
     # TC-LRES-001, TC-LRES-002, TC-LRES-003, TC-LRES-004, TC-LRES-005,
     # TC-LSTORE-001, TC-LSTORE-002, TC-LCAUSE-001, TC-LCAUSE-002 (the
     # command-path arms; the seam-level arms landed in phase 2), TC-LOUT-002,
     # TC-LDOC-001, TC-LBND-001, TC-LBND-002 (the lane-end half; its
     # classification half is phase 4's).
-    # Scope: spec F-1, F-2 (the lane half), F-3 "The record", F-4 "The
-    # command's answer", DEC-1, DEC-4, DM-1, DM-4, DM-5, NFR-1, NFR-2, NFR-4,
-    # NFR-6, NFR-7, RSK-1, RSK-6, RSK-7, RSK-9, section 8.1, section 8.2,
-    # Appendix B, Appendix D step 4, Appendix E; flows 1, 3, and 5.
+    # Scope: spec F-1 ("Branch resolution", "One predicate, two layers, three
+    # sources of refusal": the command's layer, the pre-act refusals), F-2
+    # (the lane half), F-3 "The record", F-4 "The command's answer", DEC-1,
+    # DEC-4, DM-1, DM-4, DM-5, NFR-1, NFR-2, NFR-4, NFR-6, NFR-7, RSK-1,
+    # RSK-6, RSK-7, RSK-9, RSK-10, section 7.2, section 8.1, section 8.2,
+    # section 12, Appendix B, Appendix D step 4, Appendix E; flows 1, 3, and 5.
     #
     # The command, in its declared order.
     # 1. Grammar: exactly one positional, the work-item reference. A missing,
     #    empty, or malformed reference is the delivered `input.value.rejected`
     #    before any branch read, act, or append; an undeclared flag is the
     #    delivered `fallback.invocation`. No new error identity exists.
-    # 2. Resolution (NFR-7, AC-F1-2), over three delivered reads reused
-    #    unchanged: the change record's opaque `branch:` value, the git port's
-    #    `listBranches`, and `selectMatchingBranch` over that read with no
-    #    merged head. Exactly one rule: a unique convention match that agrees
-    #    with the declaration, when a declaration exists, is the resolution (a
-    #    record without a declaration resolves on the convention read alone).
-    #    Everything else is a typed pre-act input refusal naming the observed
-    #    state: a disagreement (both values named), no match (never a
-    #    current-checkout fallback), more than one match (the bounded candidate
-    #    list), a resolved name that fails the seam's safe-ref guard, or a
-    #    resolved name in the delivered protected set. The last two reuse the
-    #    seam's own guard predicates and the delivered `PROTECTED_REF_NAMES`;
-    #    no copy of either is declared.
-    # 3. Arm (a), the pre-act refusal: no child process, no act, no record,
-    #    and an answer that is an input refusal carrying neither a verdict nor
-    #    a `cause` (F-1 "Two refusal arms, one question each").
+    # 2. Resolution (NFR-7, AC-F1-2), over two delivered reads reused
+    #    unchanged and one delivered pure selection: the change record's
+    #    opaque `branch:` value (one bounded pm-notes document read), the git
+    #    port's `listBranches` (one bounded local branch read), and
+    #    `selectMatchingBranch` over that read with no merged head. Exactly
+    #    one rule: a unique convention match that agrees with the declaration,
+    #    when a declaration exists, is the resolution (a record without a
+    #    declaration resolves on the convention read alone). Everything else
+    #    is a typed pre-act input refusal naming the observed state: a
+    #    disagreement (both values named), no match (never a current-checkout
+    #    fallback), more than one match (the bounded candidate list), a
+    #    resolved name that fails the safe-ref predicate, or a resolved name
+    #    in the protected-name set. The last two apply the one predicate
+    #    phase 1 homed in the closeout contract module (`isSafeRef` beside
+    #    `PROTECTED_REF_NAMES`), before any act (F-1 "One predicate, two
+    #    layers, three sources of refusal"). The command declares no copy of
+    #    either, and it never asks the seam for a name its resolution refused,
+    #    so the seam's guard is unreachable from here. The identical private
+    #    predicate copies in the git index, merge, and watchdog adapters stay
+    #    as delivered (PM ruling R10): the predicate is unified for the push
+    #    seam and its command only.
+    # 3. The pre-act resolution refusal: no child process, no act, no record,
+    #    and an answer that is a typed input refusal carrying neither a verdict
+    #    nor a `cause`. It covers an unsafe name and a protected-set name
+    #    alike. A protected-set name therefore writes no record here, although
+    #    the same token `protected-ref` is recordable from its other source, a
+    #    server-side decline (phase 2); the token alone never identifies the
+    #    source. The refusal leaves no durable fact by design (RSK-10): the
+    #    suites assert the refusal's answer and that no act, child process, or
+    #    record followed, and nothing asserts a durable fact for it.
     # 4. The act: exactly one call of the delivered seam's `pushChangeBranch`
     #    for the resolved branch, in the invocation's own checkout (for a
     #    dispatch-provisioned lane, its worktree). The command stages, commits,
     #    amends, resets, and rewrites nothing: it pushes the head that exists.
-    #    No second git path, no shell, no force-capable variant, no retry.
+    #    No second git path, no shell, no force-capable variant, no retry. At
+    #    act time the command reads the invocation checkout's `HEAD` through
+    #    the delivered local checkout/head read (the git port's `readCheckout`):
+    #    that value is the record's and the answer's `head`, never a value the
+    #    transport reports, because the transport returns an outcome and
+    #    nothing else (DM-1). The read's checkout-state member is not a refusal
+    #    input: resolution refuses a ref, never a checkout state (RSK-9).
     # 5. The verdict: the seam's `accepted` (git exit 0, an already up-to-date
-    #    branch included) is `pushed`; `rejected`, `timed-out`, and `failed`
-    #    are `failed` with the seam's cause. Arm (b), the seam's own rejection
-    #    or classification: verdict `failed`, the record appended, the cause
-    #    carried into the answer.
+    #    branch included) is `pushed`. The seven recordable causes are
+    #    `failed` with the seam's cause, recorded and carried into the answer:
+    #    a rejection classified `non-fast-forward`, `auth-rejected`,
+    #    `remote-unavailable`, `protected-ref` (a protection or hook decline
+    #    git reports), or `unclassified`, a timeout (`timed-out`), and a
+    #    spawn-level failure (`spawn-failed`). `unsafe-branch` is guard-only
+    #    and never reaches the command, and a protected-set name is refused
+    #    before any act, so no path turns a pre-act refusal into a recorded
+    #    rejection (F-1, DM-4).
     # 6. The record: one append of the phase 1 record under the store fence,
     #    bound to the attempt and session identity of the newest readable lane
     #    record. With no readable lane record (a manual run outside any
@@ -568,13 +907,21 @@ phases:
     #    never suppresses an act, and a past refusal is never a licence to
     #    force.
     # 8. The answer (DM-5, section 8.1): `ref`, `repository`, and one bounded
-    #    `lanePush` object (verdict, branch, full-hex head, cause exactly when
-    #    `failed`, `recorded`, `recordedAt` exactly when recorded). Human: one
+    #    `lanePush` object (verdict, branch, the full-hex head read at act
+    #    time, one of the seven recordable causes exactly when `failed`,
+    #    `recorded`, `recordedAt` exactly when recorded). Human: one
     #    key=value block in the declared key order, at most 16 lines and 2 KiB,
     #    `cause` and `recordedAt` only when present. Exit 0 exactly when the
     #    verdict is `pushed`; exit 1 for a refused act as a data-bearing answer
     #    with no top-level error identity. Redaction rides the delivered
     #    serialization chokepoint unchanged.
+    # The lane end's reads and writes, mirroring NFR-2 (PM ruling R8): at
+    # most one bounded pm-notes document read (the `branch:` declaration), one
+    # bounded local branch read, one bounded local checkout/head read (the
+    # recorded `head`), one bounded lane read (the attempt and session
+    # identity), one push (60 000 ms at most), and one record append. Each
+    # read happens once per invocation, never per step, and no provider read
+    # is added.
     #
     # Expected new files, declared by exact path because the commit primitive
     # stages an untracked file only inside the declared scope. The names follow
@@ -596,7 +943,8 @@ phases:
     #     their own domain module; they may stay pure helpers of the app module.
     # The binding chain: packages/cli/src/production.ts (the act bound over
     # the delivered seam, the store and fence token, the clock, the branch
-    # read, the change-record read, the command's registration) and
+    # read, the checkout/head read, the change-record read, the command's
+    # registration) and
     # packages/cli/src/edge.ts (the runtime assembly, in the pattern of the
     # operator status runtime). The index files are declared for the exports.
     #
@@ -649,21 +997,24 @@ phases:
     #     feature-provider-engine.md, doc/planning/oss-tooling/cli-command-registry.md
     #     (the `push` family row and the inventory statement), and
     #     doc/planning/oss-tooling/milestones/m4/flip-plan.md.
-    #   - doc/planning/oss-tooling/milestones/m1/commands/provider.md,
-    #     CONDITIONAL on finding I-4: its line 31 calls the family "the
-    #     twenty-eighth and last". This plan recommends correcting the tail and
-    #     its phrase row in this commit; the PM decides.
+    #   - doc/planning/oss-tooling/milestones/m1/commands/provider.md: its
+    #     line 31 calls the family "the twenty-eighth and last". PM ruling R5
+    #     (finding I-4): the page's tail statement and its doc-conformance
+    #     phrase row move together in this commit, to the twenty-ninth tail
+    #     (`push` last). The phrase row may only move with the page: a row
+    #     that lists the old phrase as stale while the page still carries it
+    #     fails, and a corrected page with the old required phrase fails too.
     #   - never edited: the decision records that state a family's ordinal,
     #     doc/quality/test-specs/test-spec-loop-supervision.md, and every
     #     pre-existing changeset. doc/planning/oss-tooling/milestones/m4/backlog.md
     #     keeps its true statement and is not touched.
     #
     # Conditional, ONLY IF the named change happens:
-    #   - packages/adapters/src/git/push.ts and packages/adapters/src/git/index.ts,
-    #     when the seam's safe-ref predicate must be exported for the command's
-    #     resolution to reuse it (the predicate is module-private today); its
-    #     export allowance in tests/structure/content-inventory.test.ts moves
-    #     with it.
+    #   - tests/behaviour/dispatch-push-parity.test.ts, only for the additive
+    #     seam arm of TC-LPUSH-002 its location names there (an equal branch
+    #     through the delivered seam is `accepted`); the file is also phase
+    #     2's for the seam-level class table, and every delivered cell is
+    #     never edited.
     #   - tests/checks/dispatch-contract-invariance.test.ts, when the
     #     command-path closure arms (TC-LCMD-001 step 6: the refusal path
     #     reports identities drawn from the delivered table only; TC-LCAUSE-002
@@ -671,10 +1022,21 @@ phases:
     #   - tests/checks/install-conformance-mutants.test.ts and
     #     tests/checks/help-guide-coverage.test.ts, when their mutant arms or
     #     literal lists need the new family.
+    # The command declares no guard duplication and no adapters edit: the
+    # predicate's home and the seam's import are phase 1's.
     # Fixtures (test plan section 6) land under the parity fixture folder the
     # test plan names: a lane-push record builder and a resolved-branch builder,
     # beside the harness and the guarded process runner. The folder prefix is
     # declared so a sibling fixture is in scope.
+    # The ticket's AC-1 fixture (TC-LPUSH-001, PM ruling R3): it drives the
+    # real command path over a real temporary checkout with a fake remote
+    # keyed by ref that records the ref it was asked to push to, resolves
+    # `HEAD` against the checkout at call time, stores the head per ref, and
+    # applies the fast-forward rule. The head equality is measured, never
+    # stipulated, and the record's `head` equals the head the fake remote
+    # resolved. The fake remote is assumed to land under the declared parity
+    # fixture folder or inside the suite; a different folder widens this
+    # phase's `folders` entry before delivery.
     #
     # Verify: TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-lane-push-command.test.ts tests/behaviour/dispatch-lane-push.test.ts tests/behaviour/dispatch-lane-push-resolution.test.ts tests/behaviour/dispatch-lane-push-record.test.ts tests/behaviour/dispatch-lane-push-causes.test.ts tests/structure/lane-push-answer.test.ts
@@ -690,12 +1052,20 @@ phases:
     # Verify: git diff --check
     # Exit criteria:
     #   - every verify line exits 0;
-    #   - the ticket's three fixtures are green: AC-1 (one act, the transport's
-    #     head equals the branch head at session end, zero commits authored or
-    #     amended, no wrapper), AC-2's no-op half (a repeat push of an equal
-    #     head is `pushed` at exit 0 with no error identity and no cause);
+    #   - the ticket's fixtures are green: AC-1 (exactly one act for the
+    #     resolved branch; the fake remote's stored head equals the checkout's
+    #     branch head after the phase-completion commit, and the record's
+    #     `head` equals that value; zero commits authored or amended; no
+    #     wrapper), AC-2's no-op half (a repeat push of an equal head is
+    #     `pushed` at exit 0 with no error identity and no cause);
     #   - every resolution refusal performs no act, starts no child, and
-    #     appends no record, and no guessed ref is ever pushed;
+    #     appends no record; its suites assert the refusal's answer and nothing
+    #     asserts a durable fact for it (RSK-10); no guessed ref is ever
+    #     pushed, and no record or answer carries `unsafe-branch`;
+    #   - one lane end costs at most one bounded pm-notes document read, one
+    #     bounded local branch read, one bounded local checkout/head read, one
+    #     bounded lane read, one push, and one record append (NFR-2), each
+    #     read once per invocation, with zero added provider reads;
     #   - the act is observed before the append, a fence fault yields
     #     `recorded: false` with one act only, and no record carries git text;
     #   - the answer obeys its bounds (human at most 16 lines and 2 KiB) and
@@ -720,8 +1090,6 @@ phases:
         - doc/spec/features/feature-install-lifecycle.md
         - doc/spec/features/feature-metrics.md
         - doc/spec/features/feature-provider-engine.md
-        - packages/adapters/src/git/index.ts
-        - packages/adapters/src/git/push.ts
         - packages/cli/src/commands/index.ts
         - packages/cli/src/commands/push.ts
         - packages/cli/src/edge.ts
@@ -744,6 +1112,7 @@ phases:
         - tests/behaviour/dispatch-lane-push-record.test.ts
         - tests/behaviour/dispatch-lane-push-resolution.test.ts
         - tests/behaviour/dispatch-lane-push.test.ts
+        - tests/behaviour/dispatch-push-parity.test.ts
         - tests/behaviour/entrypoint-composition.test.ts
         - tests/behaviour/entrypoint-help-coverage.test.ts
         - tests/behaviour/entrypoint-two-bins.test.ts
@@ -822,9 +1191,14 @@ phases:
     #     another attempt each contribute nothing, fabricate nothing, and never
     #     block classification. No `state.*` identity replaces the derived
     #     token, and no read-failure source is added.
+    #   - The engine's own branch (NG-4, section 12): the engine resolves the
+    #     branch it pushes independently of the command, by a first-match
+    #     read. The fold reads the lane-push record for the attempt whatever
+    #     branch each of them resolved, and it compares no branches.
     #   - The references: `lane-push:pushed` for an accepted act; for a refusal
     #     `lane-push:failed` together with `lane-push-cause:<cause>`, the cause
-    #     carried verbatim (no paraphrase, no truncation of the token). Each
+    #     carried verbatim (no paraphrase, no truncation of the token), over
+    #     the seven recordable causes a lane-push record can carry. Each
     #     appears exactly once.
     #   - The reservation: the references join the reserved block ahead of the
     #     16-slice, beside the five delivered disclosures. The block grows by
@@ -838,7 +1212,8 @@ phases:
     #     attempt record's key set is byte-identical; only `evidenceRefs`
     #     changes. The `dispatch <ref>` machine envelope and its four-key text
     #     are untouched: the GH-386 `push` block stays the parity block and
-    #     carries no lane-push member (NG-3).
+    #     carries neither a lane-push member nor a cause member, because the
+    #     engine consumes the seam's outcome only (NG-3).
     #   - A disclosure, not a claim: a recorded `lane-push:failed` beside parity
     #     that holds leaves the truthful `pr-open` untouched; parity that does
     #     not hold fires the delivered lifecycle push-failure row exactly as
@@ -851,7 +1226,12 @@ phases:
     # Proof, with records the command of phase 3 appends and with seeded
     # records:
     #   - tests/behaviour/dispatch-lane-push-fold.test.ts (new) carries the four
-    #     fold cases, including the disclosure-stress slice;
+    #     fold cases, including the disclosure-stress slice and, for
+    #     TC-LFOLD-001, the seven recordable causes. It also completes the one
+    #     clause of TC-LCAUSE-001's engine step that names the folded
+    #     reference: the cause reaches the attempt only as
+    #     `lane-push-cause:<cause>`, while the engine's verdict and evidence
+    #     stay identical for two different causes;
     #   - tests/behaviour/dispatch-lane-push.test.ts gains the TC-LPUSH-003 arm
     #     (a seeded `pushed` record, equal heads, zero engine push invocations,
     #     `push:clean` and `lane-push:pushed` each exactly once);
@@ -860,8 +1240,9 @@ phases:
     #     seam) and tests/conformance/dispatch/dispatch-parity-push.test.ts.
     # Pins that move with the fold:
     #   - tests/structure/dispatch-push-envelope.test.ts gains the assertion
-    #     that no lane-push member exists on the `dispatch <ref>` envelope
-    #     (TC-LOUT-001 step 2);
+    #     that no cause member appears anywhere on the `dispatch <ref>`
+    #     envelope: neither a lane-push member, verdict, or head, nor a
+    #     `cause` field under any name (TC-LOUT-001 step 2, NG-3);
     #   - tests/checks/dispatch-contract-invariance.test.ts is the closure
     #     proof (the sibling structural pin of TC-LFOLD-003): its delivered
     #     assertions are re-run and none is edited.
@@ -872,16 +1253,16 @@ phases:
     #     may create;
     #   - tests/behaviour/dispatch-push-evidence.test.ts, only to add a
     #     lane-push disclosure-stress arm; its delivered cells are never edited.
-    # Read-only controls (never edited): the `dispatch <ref>` goldens under
-    # tests/golden (TC-LOUT-001 step 4: no golden is regenerated for this
-    # change; a golden that must change is escalated, never accepted), the
-    # delivered GH-386 suites, and
+    # Read-only controls in this phase (not edited here): the `dispatch <ref>`
+    # goldens under tests/golden (TC-LOUT-001 step 4: no golden is regenerated
+    # for this change; a golden that must change is escalated, never
+    # accepted), the delivered cells of the GH-386 suites, and
     # tests/fixtures/dispatch/operator/contract-baseline.ts.
     # Verify: TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-lane-push-fold.test.ts tests/behaviour/dispatch-lane-push.test.ts tests/conformance/dispatch/dispatch-parity-push.test.ts tests/structure/dispatch-push-envelope.test.ts
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/dispatch
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/dispatch-contract-invariance.test.ts tests/structure/dispatch-contract.test.ts tests/checks/operator-contract-invariance.test.ts tests/structure/event-state-additivity.test.ts
-    # Verify (read-only controls, never edited):
+    # Verify (read-only controls in this phase: delivered cells never edited):
     # TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-push-parity.test.ts tests/behaviour/dispatch-push-evidence.test.ts tests/golden
     # Verify: git diff --check
     # Exit criteria:
@@ -927,7 +1308,8 @@ phases:
     summary: "carry the lane's own push to the operator: `dispatch status` gains the additive optional `lanePush` fact from at most one more bounded record read, rendered as additive lines only when present and byte-identical when absent, with no network call, process start, fence, append, or deletion."
     # AC: AC-F5-1; DM-3, NFR-3, NFR-4.
     # TC ownership: TC-LSTATUS-001, TC-LSTATUS-002, TC-LSTATUS-003.
-    # Scope: spec F-5, DEC-3, DM-3, NFR-3, NFR-4, RSK-2, section 8.5; flow 4.
+    # Scope: spec F-5, DEC-3, DM-3, NFR-3, NFR-4, RSK-2, RSK-10, section 8.5,
+    # section 22; flow 4.
     #
     # The chain, each link the `park` fact's precedent (GH-413 DM-3):
     #   - packages/core/src/app/dispatch-lane-view.ts: `readOperatorStatus`
@@ -945,7 +1327,10 @@ phases:
     # stands for the attempt, the addressed reference has no lane, the record
     # belongs to another attempt, or the record carries no identity. Every
     # delivered member and line is byte-identical in that case, and the machine
-    # and human forms agree about presence.
+    # and human forms agree about presence. An absent fact is one answer
+    # covering three states (RSK-10): the push never ran, a pre-act resolution
+    # refusal (which appends no record), and a record that did not land. The
+    # fact does not distinguish them and no suite asserts that it does.
     # A recorded snapshot, never a live equality (DEC-3): the fact names the
     # head the lane pushed and the instant it was recorded. No code path
     # compares it with a local head and no member claims equality.
@@ -956,10 +1341,24 @@ phases:
     # TC-STATUS-007 in tests/conformance/dispatch/dispatch-operator-status.test.ts
     # moves from exactly two bounded reads to two plus exactly one lane-push
     # read. Every other delivered status assertion stays as delivered.
-    # Goldens: tests/golden/dispatch-text.test.ts gains ONE additive-lines cell
-    # for the fact present, created by the explicit regeneration path only. The
-    # delivered cells are unchanged, and the `dispatch <ref>` goldens are never
-    # regenerated.
+    # Goldens (PM rulings R4 and R11, finding D4). The host is
+    # tests/golden/dispatch-status-worktree.test.ts, the delivered
+    # status-golden suite: it reads one committed tests/golden/status-<name>.txt
+    # per cell and builds the status object inline, so the new cell needs no
+    # other snapshot fixture. It gains ONE cell for the fact present, reading
+    # the new tests/golden/status-lane-push.txt (the additive human lines),
+    # created once for that cell through the explicit capture path, never by
+    # a blanket rewrite, and never regenerated afterwards. The two delivered
+    # status goldens are unchanged. tests/golden/dispatch-text.test.ts holds
+    # only `dispatch <ref>` cells: it is not edited, it is outside this
+    # phase's scope, and no `dispatch <ref>` golden is regenerated for this
+    # change (TC-LOUT-001). Test plan v1.5 names the same host and the same
+    # snapshot (TC-LSTATUS-002, its section 6 golden note, and its section 7
+    # row), so nothing here is assumed.
+    # The commit primitive stages an untracked file only inside the declared
+    # scope and blocks only when nothing else is staged, so an undeclared
+    # golden means a locally-green, fresh-checkout-red commit: the new golden
+    # file and its host cell are declared here and land in the same commit.
     # Conditional, ONLY IF the named change happens:
     #   - packages/cli/src/edge.ts, when the status runtime's assembly needs
     #     the lane-push read passed explicitly (the store is already injected);
@@ -967,9 +1366,7 @@ phases:
     #     packages/core/src/domain/index.ts, when the record-to-fact projection
     #     lives in the domain module phase 3 may create;
     #   - tests/structure/content-inventory.test.ts, when an edited module's
-    #     export allowance changes;
-    #   - a golden data file under tests/golden, only for the one additive
-    #     cell; the folder's other files are outside every scope.
+    #     export allowance changes.
     # Read-only controls (never edited):
     # tests/fixtures/dispatch/operator/contract-baseline.ts,
     # tests/behaviour/dispatch-status-park.test.ts,
@@ -977,10 +1374,12 @@ phases:
     # tests/behaviour/dispatch-operator-latency.test.ts, and
     # tests/checks/dispatch-doc-conformance.test.ts.
     # Verify: TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
-    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/dispatch/dispatch-operator-status.test.ts tests/conformance/dispatch/dispatch-operator-posture.test.ts tests/behaviour/dispatch-status-lane-push.test.ts tests/behaviour/dispatch-additive-stability.test.ts tests/golden/dispatch-text.test.ts
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/dispatch/dispatch-operator-status.test.ts tests/conformance/dispatch/dispatch-operator-posture.test.ts tests/behaviour/dispatch-status-lane-push.test.ts tests/behaviour/dispatch-additive-stability.test.ts tests/golden/dispatch-status-worktree.test.ts
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/operator-contract-invariance.test.ts tests/structure/content-inventory.test.ts
-    # Verify (read-only controls, never edited):
+    # Verify (read-only controls, never edited; the last line proves the
+    # `dispatch <ref>` goldens are byte-unchanged):
     # TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-status-park.test.ts tests/behaviour/dispatch-peak-byte-identical.test.ts tests/behaviour/dispatch-operator-latency.test.ts tests/checks/dispatch-doc-conformance.test.ts
+    # TMPDIR=$PWD/tmp/tmpdir bun test tests/golden/dispatch-text.test.ts
     # Verify: git diff --check
     # Exit criteria:
     #   - every verify line exits 0;
@@ -994,6 +1393,7 @@ phases:
     #     starts, network calls, and deletions;
     #   - the contract baseline is byte-unchanged and no `dispatch <ref>`
     #     golden changed;
+    #   - the new golden file and its host cell land in one commit;
     #   - only the declared paths changed.
     scope:
       files:
@@ -1009,7 +1409,8 @@ phases:
         - tests/behaviour/dispatch-status-lane-push.test.ts
         - tests/conformance/dispatch/dispatch-operator-posture.test.ts
         - tests/conformance/dispatch/dispatch-operator-status.test.ts
-        - tests/golden/dispatch-text.test.ts
+        - tests/golden/dispatch-status-worktree.test.ts
+        - tests/golden/status-lane-push.txt
         - tests/structure/content-inventory.test.ts
     interactions:
       - kind: contract-file
@@ -1030,9 +1431,9 @@ phases:
     # AC-F2-1 (the delivered push landscape intact), AC-F6-1 (the declared
     # divergence's product surface).
     # TC ownership: TC-LMSG-001, TC-LMSG-002, TC-LPUSH-004.
-    # Scope: spec F-4 "The lane's final message", F-6, DEC-6, RSK-5, NG-4,
-    # NG-5, NG-10, section 16, Appendix D; test plan section 8.3's coverage
-    # boundary CB-1.
+    # Scope: spec F-4 "The lane's final message", F-6, DEC-6 (including its
+    # `no commit` sentence), RSK-5, RSK-10, NG-4, NG-5, NG-10, section 16,
+    # Appendix D; test plan section 8.3's coverage boundary CB-1.
     #
     # The ordered tail (DEC-6, Appendix D), identical on both surfaces:
     #   1. `@pr-manager` creates or updates the pull request (its own pre-PR
@@ -1051,6 +1452,15 @@ phases:
     # unrecorded, the message says the push landed and its record did not. The
     # lane does not retry, force, author a commit to make the push succeed, or
     # reopen a phase: a transport refusal is not a workflow regression.
+    # RSK-10: a pre-act resolution refusal leaves no durable fact, so the
+    # lane's final message is its only immediate disclosure. Both surfaces
+    # therefore instruct the lane to name a refused resolution as a refused
+    # push (the observed state), never as a pushed branch.
+    # The `no commit` directive (DEC-6): the delivered directive suppresses
+    # commits, not the push. The tail states that under it the
+    # phase-completion commit is skipped and the push step still runs, still
+    # records, and is still named by the final message; the push instruction
+    # is not conditioned on the directive (TC-LMSG-002 step 5).
     # Surface 1, .opencode/agent/pm.md: the element `<step id="10">` ("PR/MR
     # creation (phase 11)") gains the `push` step and the final-message rule
     # after its `phase complete` instruction and keeps its delivered members
@@ -1095,7 +1505,8 @@ phases:
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/lane-push-surfaces.test.ts
     # Verify: TMPDIR=$PWD/tmp/tmpdir pnpm check:prompt
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/doc-conformance.test.ts tests/checks/prompt-conformance.test.ts
-    # Verify (TC-LPUSH-004 step 1, read-only controls, never edited):
+    # Verify (TC-LPUSH-004 step 1; the delivered GH-386 suites, their delivered
+    # cells unchanged and none edited in this phase):
     # TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-push-parity.test.ts tests/behaviour/dispatch-push-evidence.test.ts tests/conformance/dispatch/dispatch-parity-push.test.ts tests/structure/dispatch-push-envelope.test.ts
     # Verify (the projection is current): ./scripts/build-claude-plugin.sh, then
     # `git status --short` shows only .ados-claude/agents/pm.md changed under
@@ -1109,10 +1520,14 @@ phases:
     #   - the push instruction follows the phase-completion instruction, and no
     #     instruction tells the lane to retry, force, author a commit, or
     #     reopen a phase on a refusal;
+    #   - under the `no commit` directive only the phase-completion commit is
+    #     skipped: the tail states that the push still runs and still records;
+    #   - both surfaces name a refused resolution as a refused push (RSK-10);
     #   - the five prompt markers are byte-identical, `pnpm check:prompt` is
     #     green, and the prompt inventory names `push` for pm.md;
     #   - the generated projection is current;
-    #   - the delivered GH-386 suites are green without edit;
+    #   - the delivered GH-386 suites are green with their delivered cells
+    #     unedited;
     #   - only the declared paths changed.
     scope:
       files:
@@ -1201,10 +1616,15 @@ phases:
     #     seven of sixteen); the record-kind inventory (`dispatch.lane-push`,
     #     its schema, key prefix, writer, and fold rule); the run-order step
     #     that appends the attempt; the closure note's record-kind sentence
-    #     (one declared record kind); the operator lane view's `lanePush` fact
-    #     and its read posture in DEC-3's exact words (one lane read plus at
-    #     most two additional record reads, park and lane-push, with the
-    #     unchanged zero-posture). Finding I-10 applies to this page.
+    #     (one declared record kind); the record's `head` source (the
+    #     invocation checkout's `HEAD` read at act time); the seven
+    #     recordable causes a lane-push record can carry, the guard-only
+    #     `unsafe-branch`, and the two sources of `protected-ref`; the
+    #     engine's outcome-only consumption of the seam (no engine surface
+    #     carries a cause); the operator lane view's `lanePush` fact and its
+    #     read posture in DEC-3's exact words (one lane read plus at most two
+    #     additional record reads, park and lane-push, with the unchanged
+    #     zero-posture). Finding I-10 applies to this page.
     #   - doc/spec/features/feature-quality-gates-and-pr.md: the `pr_creation`
     #     tail, beyond the statements phase 6 lands.
     #   - doc/spec/features/feature-delivery-lifecycle.md: `pr_creation`,
@@ -1219,7 +1639,9 @@ phases:
     #     the wrappers' behaviour and the engine's backstop are unchanged; a
     #     lane running no `pr_creation` step keeps the merge bar plus the
     #     ensure-push as its backstops (RSK-5); the three places an operator
-    #     reads a refused push and the remedy (section 22).
+    #     reads a refused push and the remedy (section 22); what an absent
+    #     `lanePush` fact covers (the push never ran, a pre-act resolution
+    #     refusal, a record that did not land; RSK-10).
     #   - doc/quality/test-specs/test-spec-dispatch-engine.md: the coverage-map
     #     rows for the lane-push, cause, fold, status-fact, and
     #     resolution-refusal classes, naming their suites.
@@ -1237,9 +1659,10 @@ phases:
     #   - doc/planning/oss-tooling/milestones/m1/commands/dispatch.md, when the
     #     `status` section documents the new fact on the reference page;
     #   - doc/00-index.md, for index rows that follow a reconciled page.
-    #     AGENTS.md's delivery-process table carries a `pr_creation` row that
-    #     the tail outgrows; it is named here for the PM's decision and is not
-    #     in scope.
+    # AGENTS.md (PM ruling R5, finding D5): its delivery-process table's
+    # `pr_creation` row is current-truth guidance for the eleven-phase table,
+    # so phase 7's reconciliation brings the row to the delivered tail; the
+    # file is declared by path for that edit.
     # TC-LDOC-002 is a manual content check (traceability review, markdown and
     # link review, `git diff --check`) whose result is recorded as a pm-notes
     # `notes:` entry.
@@ -1256,20 +1679,39 @@ phases:
     # for review; merge authority stays with the owner; no repository flip, no
     # handover record, and no merge-authority change. Post-merge, the next
     # lanes' pull-request heads are observed equal to their branch heads with
-    # no manual push, and a refusal there surfaces in the lane's message, the
-    # attempt record, and `dispatch status`; the observation is recorded in the
-    # delivering lane's pm-notes.
-    # Exit criteria (declared obligations, verified at dod_check):
-    #   - every page named above states the delivered truth and nothing else,
-    #     and `@doc-syncer` reports no unresolved documentation gap;
-    #   - the companion decision record is present;
-    #   - the manual divergence check is recorded;
-    #   - `pnpm check` and the commit-range gate are green with every suite
-    #     executed, and their evidence is recorded;
-    #   - the pull request against `main-tools` exists and carries the release
-    #     note.
+    # no manual push, and a refusal there surfaces in the lane's message and,
+    # for a post-resolution refusal, in the attempt record and `dispatch
+    # status` (RSK-10); the observation is recorded in the delivering lane's
+    # pm-notes.
+    # Exit criteria: the consolidated Definition of Done (advisory 9). What
+    # dod_check verifies, each from evidence rather than assertion:
+    #   - all seven ACs are proven by their mapped cases (the test plan's
+    #     section 3.1); AC-F4-1's final-message clause is judged through the
+    #     two product surfaces (CB-1), never by reading a transcript;
+    #   - every plan phase is complete with its pm-notes `notes:` evidence;
+    #   - the decision record has landed: the companion record amending
+    #     TDR-0076 exists as Proposed with its index row (phase 7);
+    #   - the changeset is present: exactly one new lockstep changeset, five
+    #     packages, all minor, added before the first gate run (phase 1);
+    #   - the gate battery is green with every suite executed:
+    #     TMPDIR=$PWD/tmp/tmpdir pnpm check;
+    #   - the commit-range gate returned PASS (the gate's SKIP verdict, with
+    #     its reason recorded, is its one documented alternative):
+    #     TMPDIR=$PWD/tmp/tmpdir ./scripts/lint-commit-range.sh
+    #     --base origin/main-tools;
+    #   - the phase 7 documentation reconciliation input has been handed over
+    #     and is complete: every page named above is current, the test-spec
+    #     coverage map included, and `@doc-syncer` reports no unresolved gap;
+    #   - the manual divergence check (TC-LDOC-002) is recorded.
+    # What follows dod_check, at pr_creation: the pull request against
+    # `main-tools` is open and carries the release note with the declared
+    # residuals (CB-1, RSK-5, RSK-10), and merge authority stays human. This
+    # change's own pull request is the first to run the new tail: its
+    # `push <ref>` step is the act that puts its evidence commits on the
+    # remote.
     scope:
       files:
+        - AGENTS.md
         - doc/00-index.md
         - doc/guides/change-lifecycle.md
         - doc/guides/engine-first-operations.md
