@@ -19,7 +19,7 @@ it was made by the tool. Phase handovers would let a fresh coder continue withou
 the whole change. Affected paths in the plan would let the scheduler decide parallel versus
 serial before any code exists.
 
-The pack does four things:
+The pack does six things:
 
 1. It **challenges** the vision where it is over-optimistic, with measurements from real
    changes (section 01).
@@ -32,6 +32,12 @@ The pack does four things:
    Definition of Ready, a review finding, a spec gap found in test planning, a peak park and
    resume, two lanes that touch the same file, and milestone-level goal verification
    (sections 06 and 07).
+5. **Part 2** draws the line between the deterministic tool and the judgment of an agent:
+   change auto-discovery from the worktree, a lifecycle state machine with a `next` command,
+   and commit messages derived from the artifacts without a model call (section 12).
+6. **Part 2** designs the delivery of context: a projection envelope instead of raw YAML,
+   flags for facts and generated forms for facets, a `--since` delta protocol, and an
+   artifact-centric push model (section 13).
 
 ## How to review it
 
@@ -47,6 +53,10 @@ Read in this order:
 7. `09-open-points.md` to answer inline. Each question has a default, so the design can
    proceed without a meeting; your answer overrides the default.
 8. `10-evidence.md` for the measurements behind the claims and their caveats.
+9. `12-deterministic-core.md` for what the tool should own: change resolution, the state
+   machine, and deterministic commit messages.
+10. `13-context-delivery.md` for the output envelope, the input forms, the delta protocol, and
+    the research plan. Its open points are Q31 to Q40, answered in the same file.
 
 Answer inline in `09-open-points.md`: each question ends with `Answer:` on its own line.
 If you prefer to comment on a pull request instead, the pack is on the branch
@@ -103,6 +113,10 @@ Open, with defaults in `09-open-points.md`:
 - The context bundle budgets and the acceptable miss rate.
 - Who owns the milestone contract.
 - Whether the retrospective log lives in the repository or outside it.
+- Part 2: change resolution from the registry or the branch (Q31), whether `workflow next`
+  becomes the PM's only navigation command (Q33), deterministic versus model-assisted commit
+  messages (Q34), the default output format (Q35), stateless versus stateful deltas (Q37),
+  and whether to launch the external researcher now (Q40).
 
 ## File index
 
@@ -125,6 +139,8 @@ Open, with defaults in `09-open-points.md`:
 | `09-open-points.md` | Numbered questions with defaults and inline answer space |
 | `10-evidence.md` | Measurements from GH-416 and GH-413, method, caveats, success metrics |
 | `11-glossary.md` | Terms used consistently across the pack |
+| `12-deterministic-core.md` | Part 2: the deterministic inventory, change auto-discovery, the lifecycle state machine, commit messages without a model call |
+| `13-context-delivery.md` | Part 2: the projection envelope, flags and forms, the `--since` delta protocol, the push model, the research plan, Q31 to Q40 |
 
 ## Related concepts and work items
 
