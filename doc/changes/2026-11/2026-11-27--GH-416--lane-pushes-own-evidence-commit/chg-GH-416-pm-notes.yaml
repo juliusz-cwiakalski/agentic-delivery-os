@@ -14,7 +14,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-27T19:17:58.569Z }
   quality_gates: { started: null, completed: 2026-11-27T19:55:54.138Z }
   dod_check: { started: null, completed: 2026-11-27T20:22:57.930Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-27T20:25:08.820Z }
 decisions:
   - text: "Milestone confirmed at intake: the ticket is attached to M4:
       Jaiship-native delivery (milestone 5). No milestone change proposed."
@@ -482,6 +482,14 @@ notes:
       commits, 0 offending, mode none, commitlint from repository-local
       node_modules/.bin. Doc distribution no drift, 96 in-scope docs. Tree
       clean."
+    type: info
+    date: "2026-11-27"
+  - text: "Pull request created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/429 (number
+      429, base main-tools, head feat/GH-416/lane-pushes-own-evidence-commit at
+      c0175b415). Title feat(GH-416): a lane pushes its own last evidence
+      commit. Merge authority stays with the owner; the lane does not merge,
+      enable auto-merge, or reopen a phase."
     type: info
     date: "2026-11-27"
   - text: "Doc-risk inventory for phase 7 (current-truth docs likely to change):
