@@ -8,7 +8,7 @@
  * invocation and refuses a requested shell by name.
  */
 import { describe, expect, test } from "bun:test";
-import type { GitPushRunnerResult } from "../../packages/adapters/src/git/index";
+import { createGitPushSeam, type GitPushRunnerResult } from "../../packages/adapters/src/git/index";
 import {
   createParityHarness,
   type ParityObservation,
@@ -564,4 +564,70 @@ describe("TC-BND-002 the guarded runner covers the push seam (behaviour half)", 
     ).rejects.toThrow(/script path recorded/u);
     expect(guarded.violations.length).toBeGreaterThanOrEqual(2);
   });
+});
+
+/* ------------------------------------------------------------------------- */
+/* GH-416 (additive) — the seam-level class table: one closed cause per       */
+/* rejection class, read from the contracts vocabulary, never an exit code.   */
+/* ------------------------------------------------------------------------- */
+
+describe("GH-416 the seam's rejection detail is the closed cause token (TC-LCAUSE-001)", () => {
+  const BRANCH_UNDER_TEST = "feat/GH-416/lane-pushes-own-evidence-commit";
+  const classTable: readonly {
+    readonly label: string;
+    readonly result: GitPushRunnerResult;
+    readonly cause: string;
+  }[] = [
+    {
+      label: "non-fast-forward",
+      result: { stdout: "", stderr: "! [rejected] (non-fast-forward)", status: 1, timedOut: false },
+      cause: "non-fast-forward",
+    },
+    {
+      label: "auth-rejected",
+      result: { stdout: "", stderr: "fatal: Authentication failed", status: 128, timedOut: false },
+      cause: "auth-rejected",
+    },
+    {
+      label: "remote-unavailable",
+      result: {
+        stdout: "",
+        stderr: "fatal: unable to access: Could not resolve host",
+        status: 128,
+        timedOut: false,
+      },
+      cause: "remote-unavailable",
+    },
+    {
+      label: "protected-ref (server-side decline)",
+      result: {
+        stdout: "",
+        stderr: "remote rejected (protected branch hook declined)",
+        status: 1,
+        timedOut: false,
+      },
+      cause: "protected-ref",
+    },
+    {
+      label: "unclassified",
+      result: { stdout: "", stderr: "unrecognised text", status: 1, timedOut: false },
+      cause: "unclassified",
+    },
+  ];
+
+  for (const entry of classTable) {
+    test(`${entry.label} is \`rejected\` with cause ${entry.cause}`, async () => {
+      let calls = 0;
+      const seam = createGitPushSeam({
+        childRunner: async () => {
+          calls += 1;
+          return entry.result;
+        },
+      });
+      const result = await seam.pushChangeBranch({ branch: BRANCH_UNDER_TEST });
+      expect(result).toEqual({ outcome: "rejected", detail: entry.cause });
+      expect(JSON.stringify(result)).not.toContain("git-exit-");
+      expect(calls).toBe(1);
+    });
+  }
 });

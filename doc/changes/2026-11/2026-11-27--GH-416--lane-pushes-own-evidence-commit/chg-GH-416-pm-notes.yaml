@@ -374,3 +374,28 @@ notes:
       required before the first gate run."
     type: info
     date: "2026-11-27"
+  - text: "Plan phase 1 complete (contracts: the safe-ref predicate's home in the
+      dispatch contract module, the dispatch.lane-push record kind with its
+      append and read, and the changeset): commit b4a7609ad. isSafeRef landed in
+      packages/core/src/contracts/dispatch.ts and the adapters push seam now
+      imports it and PROTECTED_REF_NAMES through the contracts barrel (its
+      private REF_PATTERN/FORBIDDEN_REF/isSafeRef deleted, guards byte-identical,
+      four exported names unchanged); the closeout contract module is untouched.
+      The record kind, payload schema, key prefix and per-ref key builder, the
+      closed eight-token cause set split as one guard-only token and seven
+      recordable causes, the lane-push evidence builders, the push answer
+      contract, the additive optional lanePush status fact, and the ledger
+      validator/read/append landed. The state-additivity baseline gained exactly
+      the three lane-push constants. Exactly one new five-package minor changeset
+      exists. Tests: pnpm typecheck green; the six pin suites 72 pass / 0 fail
+      (event-state-additivity, port-contract-inventory, content-inventory,
+      dispatch-contract, dispatch-contract-invariance,
+      operator-contract-invariance); check:boundaries clean (527 modules);
+      check:no-shell clean (45 surface files) and no-shell-dispatch 14 pass;
+      read-only controls 63 pass / 0 fail (port-neutrality, closeout-contract,
+      dispatch-push-parity, dispatch-push-evidence, dispatch-parity-push,
+      dispatch-push-envelope); dispatch-token-home 7 pass; release suites 19
+      pass / 0 fail; git diff --check clean. Only the declared paths changed;
+      the conditional contracts/push.ts and inventory.json were not needed."
+    type: info
+    date: "2026-11-27"

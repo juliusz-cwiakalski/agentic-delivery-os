@@ -10,7 +10,12 @@
  * retry — the next dispatch or an operator resume resolves a failed act.
  */
 import { spawn } from "node:child_process";
-import { isSafeRef, PROTECTED_REF_NAMES } from "@delivery-os/core/contracts";
+import {
+  DISPATCH_PUSH_RECORDABLE_CAUSES,
+  type DispatchPushRecordableCause,
+  isSafeRef,
+  PROTECTED_REF_NAMES,
+} from "@delivery-os/core/contracts";
 
 /** One child-runner result; a non-zero exit is data, not a throw. */
 export type GitPushRunnerResult = {
@@ -73,6 +78,65 @@ export type GitPushSeam = {
 export const PUSH_DEFAULT_TIMEOUT_MS = 60_000;
 
 const MAX_OUTPUT_BYTES = 8 * 1024 * 1024;
+
+/**
+ * The closed cause vocabulary read from the contracts home (DM-4), never
+ * re-typed: the classification table below is the one place that maps git's
+ * bounded failure text onto these tokens.
+ */
+const [
+  NON_FAST_FORWARD,
+  AUTH_REJECTED,
+  REMOTE_UNAVAILABLE,
+  ,
+  ,
+  PROTECTED_REF,
+  UNCLASSIFIED,
+] = DISPATCH_PUSH_RECORDABLE_CAUSES;
+
+/**
+ * The declared rejection classification table (DM-4, DEC-4). The patterns live
+ * in this one module; the tokens are the imported closed-cause members. A
+ * protection or hook decline git reports is `protected-ref` and nothing else;
+ * an unrecognised rejection is the honest `unclassified` fallback.
+ */
+const REJECTION_CLASSES: readonly {
+  readonly cause: DispatchPushRecordableCause;
+  readonly pattern: RegExp;
+}[] = [
+  {
+    cause: NON_FAST_FORWARD,
+    pattern:
+      /non-fast-forward|fetch first|updates were rejected because the (tip|remote contains work)|tip of your current branch is behind/i,
+  },
+  {
+    cause: AUTH_REJECTED,
+    pattern:
+      /authentication failed|permission denied|could not read (username|password)|permission to .* denied|access denied|403 forbidden|invalid username or password/i,
+  },
+  {
+    cause: REMOTE_UNAVAILABLE,
+    pattern:
+      /could not resolve host|unable to access|connection (refused|timed out|reset)|network is unreachable|could not read from remote repository|repository not found|host key verification failed/i,
+  },
+  {
+    cause: PROTECTED_REF,
+    pattern:
+      /protected branch|hook declined|refusing to update checked out branch|pre-receive hook|policy prohibits/i,
+  },
+];
+
+/**
+ * Classify git's own bounded failure text into one closed cause token. The raw
+ * text never leaves the seam: the outcome carries the token and nothing else.
+ */
+const classifyRejection = (result: GitPushRunnerResult): DispatchPushRecordableCause => {
+  const text = `${result.stdout}\n${result.stderr}`;
+  for (const rule of REJECTION_CLASSES) {
+    if (rule.pattern.test(text)) return rule.cause;
+  }
+  return UNCLASSIFIED;
+};
 
 /**
  * The production default runner: a literal non-shell child process with the
@@ -151,7 +215,7 @@ export const createGitPushSeam = (options: GitPushSeamOptions = {}): GitPushSeam
       if (result.timedOut) return { outcome: "timed-out" };
       if (result.spawnFailed === true) return { outcome: "failed", detail: "spawn-failed" };
       if (result.status === 0) return { outcome: "accepted" };
-      return { outcome: "rejected", detail: `git-exit-${result.status}` };
+      return { outcome: "rejected", detail: classifyRejection(result) };
     },
   };
 };
