@@ -17,7 +17,7 @@
  * suite so no host setting decides an outcome.
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
+import { appendFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import {
   createGitPushSeam,
@@ -164,6 +164,21 @@ describe("GH-416 TC-LGIT-001 the guards refuse before any child", () => {
           detail: "remote-unavailable",
         });
         expect(calls).toBe(0);
+        // Both guards still run before the configuration read: on a checkout
+        // with no destination, an unsafe name and each protected name answer
+        // their own guard instead of `remote-unavailable`, and start no child.
+        // A read moved above the guards would answer `remote-unavailable`.
+        expect(await seam.pushChangeBranch({ branch: "bad~name" })).toEqual({
+          outcome: "rejected",
+          detail: "unsafe-branch",
+        });
+        for (const name of PROTECTED_REF_NAMES) {
+          expect(await seam.pushChangeBranch({ branch: name }), name).toEqual({
+            outcome: "rejected",
+            detail: "protected-ref",
+          });
+        }
+        expect(calls).toBe(0);
       } finally {
         bare.dispose();
       }
@@ -249,6 +264,29 @@ describe("GH-416 TC-LGIT-001 the push-remote precedence against real git configu
       });
     });
   }
+
+  test("an annotated section header resolves the push remote git itself resolves", async () => {
+    await withFixture({ label: "annotated-header" }, async (fixture) => {
+      const origin = fixture.createBareRemote("origin");
+      const pushed = fixture.createBareRemote("pushed");
+      fixture.addRemote("origin", origin);
+      fixture.addRemote("pushed", pushed);
+      // git never writes an annotation itself, so the header is written raw: git
+      // reads the trailing text as a comment and keeps the key in the section.
+      appendFileSync(
+        join(fixture.checkout, ".git", "config"),
+        `[branch "${BRANCH}"] # hand-annotated header\n\tpushRemote = pushed\n`,
+      );
+      expect(fixture.run(["config", "--local", "--get", `branch.${BRANCH}.pushRemote`])).toBe(
+        "pushed",
+      );
+      const seam = createGitPushSeam({ cwd: fixture.checkout });
+      expect(await seam.pushChangeBranch({ branch: BRANCH })).toEqual({ outcome: "accepted" });
+      // git's own reading is the oracle: the annotation must not divert the act.
+      expect(fixture.remoteHead("pushed", `refs/heads/${BRANCH}`)).toBe(fixture.head());
+      expect(fixture.remoteRefs("origin")).toEqual([]);
+    });
+  });
 
   test("every configured remote is a local path, so no arm can reach a network", async () => {
     await withFixture({ label: "no-network" }, async (fixture) => {

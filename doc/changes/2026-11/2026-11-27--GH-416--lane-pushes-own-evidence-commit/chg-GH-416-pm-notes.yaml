@@ -764,3 +764,57 @@ notes:
       F-5, F-7, F-8, F-10 (the two test arms), F-12, F-13."
     type: info
     date: "2026-11-27"
+  - text: "Code-review iteration 2 (verdict PASS) advisories F-14 to F-22 closed by
+      the remediation commit that carries this note, on top of 75cc3f880 on
+      branch feat/GH-416/lane-pushes-own-evidence-commit; plan phase 9 is the
+      phase whose declared scope this rides, and no phase, task or
+      declared-scope list is added. F-14 (the configuration parser dropped a
+      section header git tolerates and re-attributed its keys): the header
+      grammar now tolerates arbitrary trailing text after the closing bracket,
+      exactly as git 2.53.0 does (probed with `git config --local --get-all`),
+      and a `[`-starting line the grammar still cannot parse makes the whole
+      parse undefined, so the destination is `remote-unavailable` instead of
+      being taken from the previous section. Tested at both layers: five
+      injected-runner shapes in dispatch-lane-push-resolution (annotated branch
+      header above pushRemote, trailing text after it, annotated bare `[remote]`
+      above pushDefault, branch.remote under an annotated header, annotated
+      `[remote \"origin\"]`), an unterminated header refusing despite a declared
+      origin, and one real-git oracle in dispatch-lane-push-real-git where
+      `git config --local --get branch.<b>.pushRemote` and the seam both resolve
+      `pushed` and only that bare remote receives the ref. F-15 (silent
+      truncation at 64 KiB): the configuration read is now exact - one byte past
+      the cap is read, and a larger file is unresolvable - tested by a
+      >64 KiB config whose pushRemote sits past the cap (refused, zero children)
+      beside the same declaration inside the bound (accepted, argv names
+      `pushed`). F-16: the accepted alphabet `[A-Za-z0-9._/-]` with no leading
+      `-` is documented where REMOTE_NAME_PATTERN lives, including the git-legal
+      names the seam refuses (`fork+oss`, `user@fork`, `a%b`, `a=b`, non-ASCII);
+      the alphabet is not widened. F-17: the real-git ordering probe gains the
+      guards-before-read arm - on a checkout with no configured destination an
+      unsafe name answers `unsafe-branch` and each protected name
+      `protected-ref`, with zero children. F-18: the changeset now names the argv
+      correction and the engine's first real push, and no longer says the
+      ensure-push stays unchanged. F-19: TDR-0079's four pre-phase-9 `push.ts`
+      line ranges cite the module instead, and the executed rows read the
+      phase-9 suite set (fifteen suites, 187 pass, 0 fail, 2026-11-27). F-20:
+      derivation arm 8 says the act targets the push remote the seam resolves
+      and names the pre-child `remote-unavailable` refusal among the
+      non-successful outcomes. F-21: the unrecorded disclosure is conditioned on
+      the act outcome in the `pm` agent definition (routed through @toolsmith,
+      with the Claude projection regenerated), spec F-4 and AC-F4-1, and the
+      quality-gates/PR page sentence that carried the same unconditioned form.
+      F-22: the missing-destination and HTTP-403 wordings now run through
+      `push <ref>` on the command path, and the test plan names the delivered
+      fixture tests/fixtures/dispatch/parity/temp-repo.ts. Verification:
+      TMPDIR=$PWD/tmp/tmpdir, targeted battery 281 pass / 0 fail across 19 files
+      (the fifteen TDR suites plus doc-conformance, lane-push-surfaces,
+      dispatch-token-home and no-shell-dispatch); pnpm typecheck green; biome
+      lint/format clean on the four touched TypeScript files; check:prompt 5
+      prompts clean; check:no-shell clean (48 surface files); `jaiship plan
+      validate GH-416` verdict=valid; git diff --check clean. Mutation-checked:
+      the old skip-the-header grammar fails 4 resolution cases and the real-git
+      annotated case, the lenient 64 KiB read fails the oversize case, and the
+      destination read moved above both guards fails the ordering probe.
+      Untouched by declaration: F-9, F-10, F-23, F-24, F-25."
+    type: info
+    date: "2026-11-27"

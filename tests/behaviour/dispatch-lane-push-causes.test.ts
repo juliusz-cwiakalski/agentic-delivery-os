@@ -471,4 +471,47 @@ describe("GH-416 the corrected act's two classification boundaries (TC-LCAUSE-00
       expect(JSON.stringify(outcome)).not.toContain("unclassified");
     }
   });
+
+  // The same two wordings through the command path: the seam's classification and
+  // the command's answer/record are one contract, so the combined case runs at
+  // both layers rather than being composed from two separate proofs.
+  const commandPathWordings: readonly {
+    readonly label: string;
+    readonly stderr: string;
+    readonly status: number;
+    readonly cause: string;
+  }[] = [
+    {
+      label: "a missing push destination",
+      stderr:
+        "fatal: No configured push destination.\nEither specify the URL from the command-line",
+      status: 128,
+      cause: "remote-unavailable",
+    },
+    {
+      label: "an HTTPS 403",
+      stderr:
+        "fatal: unable to access 'https://example.invalid/repo.git/': The requested URL returned error: 403",
+      status: 128,
+      cause: "auth-rejected",
+    },
+  ];
+
+  for (const wording of commandPathWordings) {
+    test(`${wording.label} wording answers and records \`${wording.cause}\` through \`push <ref>\``, async () => {
+      const run = await runCommandPush(() => ({
+        stdout: "",
+        stderr: wording.stderr,
+        status: wording.status,
+        timedOut: false,
+      }));
+      expect(run.exit).toBe(1);
+      expect(run.lanePush.verdict).toBe("failed");
+      expect(run.lanePush.cause).toBe(wording.cause);
+      expect(run.lanePush.recorded).toBe(true);
+      expect(run.pushes).toBe(1);
+      expect(run.records).toHaveLength(1);
+      expect((run.records[0] as { readonly cause?: string }).cause).toBe(wording.cause);
+    });
+  }
 });

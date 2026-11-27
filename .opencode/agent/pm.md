@@ -410,7 +410,7 @@ When the delegation request or command invocation contains the bare-string `"no 
 - In the final message, name the PR/MR URL and the push outcome:
   - On acceptance, the branch head is pushed; name the head when the answer names it
   - On a refusal, name the cause and never state or imply the branch is on the remote
-  - When the record did not land, say the push landed and its record did not
+  - When the record did not land, report what landed and the missing record together: on acceptance, the push landed and its record did not; on a refusal, the act was refused with its cause and its record did not land
   - Do not retry, force, author a commit to make the push succeed, or reopen a phase: the remedy is the engine's reconciliation, an operator, or the next dispatch
 - The `"no commit"` directive suppresses commits, not the push: under it the phase-completion commit is skipped and the `push` step still runs, still records, and is still named by the final message
 - A pre-act resolution refusal (declaration/convention disagreement, no match, more than one match, or an unsafe name) appends no durable record, so the final message names it as a refused push (the observed state), never as a pushed branch

@@ -713,11 +713,13 @@ only to a clean completion:
 8. An open pull request whose URL resolves is `pr-open` only under the parity
    precondition (GH-386): the composed ensure-push capability reads the local
    branch head against the pull request's head (the verify-gates `push-parity`
-   definition, both full-hex), pushes the change branch fast-forward to its
-   configured upstream exactly once when the heads are unequal, and re-reads
-   parity once. `pr-open` derives only from a readable equality with a
-   non-failed act verdict; a readable inequality and every non-successful act
-   outcome — rejected, failed, timed out, or a spawn-level act failure —
+   definition, both full-hex), pushes the change branch fast-forward to the push
+   remote resolved by the seam's one bounded configuration read exactly once
+   when the heads are unequal, and re-reads parity once. `pr-open` derives only
+   from a readable equality with a non-failed act verdict; a readable inequality
+   and every non-successful act outcome — rejected, failed, timed out, or a
+   spawn-level act failure, including the `remote-unavailable` refusal the seam
+   returns before any child when the destination is missing or ambiguous —
    classify the lifecycle push failure row below. An unreadable parity read is
    the delivered undecidable-truth semantics (`state-unverified` at exit `2`),
    never the push-failure row. The act is post-session and pre-classification,

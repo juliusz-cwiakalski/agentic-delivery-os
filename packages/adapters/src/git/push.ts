@@ -7,7 +7,11 @@
  * resolved by one bounded local configuration read, in the declared order
  * (`branch.<branch>.pushRemote`, `remote.pushDefault`, `branch.<branch>.remote`,
  * then `origin`); a missing or ambiguous destination is a typed
- * `remote-unavailable` refusal that starts no child, never a guess. Fixed argv,
+ * `remote-unavailable` refusal that starts no child, never a guess. The read is
+ * bounded and total: a configuration file larger than 64 KiB, or a section header
+ * the grammar cannot parse, makes the destination unresolvable rather than
+ * partially read, and a header carrying trailing text git tolerates keeps its
+ * keys. Fixed argv,
  * a literal non-shell child process over an injectable child runner, and a
  * 60 000 ms default timeout injectable through the seam options with no new
  * configuration key. Fast-forward-only semantics are git's own default for a
@@ -89,16 +93,25 @@ export const PUSH_DEFAULT_TIMEOUT_MS = 60_000;
 
 const MAX_OUTPUT_BYTES = 8 * 1024 * 1024;
 
-/** The bounded size of the one local configuration read (NFR-1, NFR-2). */
+/**
+ * The bounded size of the one local configuration read (NFR-1, NFR-2). A larger
+ * file is treated as unresolvable, so a key written past the bound can never
+ * resolve from a lower-precedence position.
+ */
 const MAX_CONFIG_BYTES = 64 * 1024;
 /** The bounded size of a `.git` pointer file or a `commondir` file. */
 const MAX_POINTER_BYTES = 4 * 1024;
 /** The bounded upward search for the checkout's git directory. */
 const MAX_SEARCH_DEPTH = 64;
 /**
- * A remote name the seam will pass as the repository argument. A value outside
- * this shape (a URL, a blank, or anything that could read as an option) is a
- * missing destination, never a guess.
+ * A remote name the seam will pass as the repository argument. The accepted
+ * alphabet is `[A-Za-z0-9._/-]` with no leading `-`: everything git itself
+ * resolves as a remote nickname by repository path, plus the nested
+ * `origin/main`-shaped spelling. Names git also accepts but this seam refuses
+ * are `fork+oss`, `user@fork`, `a%b`, `a=b`, and non-ASCII names; a checkout
+ * whose push remote is one of those is refused `remote-unavailable`, never
+ * guessed at. A value outside this shape (a URL, a blank, or anything that could
+ * read as an option) is a missing destination.
  */
 const REMOTE_NAME_PATTERN = /^[A-Za-z0-9._/-]+$/u;
 
@@ -165,7 +178,14 @@ type GitConfigEntry = {
   readonly value: string;
 };
 
-const SECTION_HEADER = /^\[\s*([A-Za-z0-9.-]+)\s*(?:"((?:[^"\\]|\\.)*)")?\s*\]$/u;
+/**
+ * One section-header line. The closing bracket ends the grammar, and git
+ * tolerates arbitrary text after it (an annotation such as `[branch "x"] # lane`,
+ * probed against git 2.53.0), so this grammar tolerates it too and the keys
+ * below the header stay in that section. A `[`-starting line that does not match
+ * is a parse failure, never a silent continuation of the previous section.
+ */
+const SECTION_HEADER = /^\[\s*([A-Za-z0-9.-]+)\s*(?:"((?:[^"\\]|\\.)*)")?\s*\].*$/u;
 
 /** Strip the quoting and the trailing comment git allows on one value. */
 const unquoted = (value: string): string => {
@@ -179,12 +199,15 @@ const unquoted = (value: string): string => {
 
 /**
  * Parse the subset of the git configuration grammar the resolution needs:
- * section headers (with an optional quoted subsection), `key = value` pairs,
- * comments, and quoting. Keys and section names fold to lower case, as git's
- * own configuration reader does; a subsection (the branch or remote name) stays
- * case sensitive.
+ * section headers (with an optional quoted subsection and git's tolerated
+ * trailing text), `key = value` pairs, comments, and quoting. Keys and section
+ * names fold to lower case, as git's own configuration reader does; a subsection
+ * (the branch or remote name) stays case sensitive. Returns `undefined` when a
+ * line starts a section header this grammar cannot parse: an unparsed header
+ * would otherwise hand its keys to the previous section, so the whole read fails
+ * closed instead.
  */
-const parseGitConfig = (text: string): readonly GitConfigEntry[] => {
+const parseGitConfig = (text: string): readonly GitConfigEntry[] | undefined => {
   const entries: GitConfigEntry[] = [];
   let section = "";
   let subsection: string | undefined;
@@ -193,7 +216,7 @@ const parseGitConfig = (text: string): readonly GitConfigEntry[] => {
     if (line.length === 0 || line.startsWith("#") || line.startsWith(";")) continue;
     if (line.startsWith("[")) {
       const header = SECTION_HEADER.exec(line);
-      if (header === null) continue;
+      if (header === null) return undefined;
       section = (header[1] ?? "").toLowerCase();
       const name = header[2];
       subsection = name === undefined ? undefined : name.replace(/\\(.)/gu, "$1");
@@ -302,6 +325,37 @@ const readBoundedText = (path: string, cap: number): string | undefined => {
   }
 };
 
+/**
+ * Read a file that must fit inside `cap` bytes. One byte past the cap is read so
+ * an oversized file is `undefined` instead of a silent prefix: a partially read
+ * configuration would answer from the wrong precedence position.
+ */
+const readBoundedTextExact = (path: string, cap: number): string | undefined => {
+  let descriptor: number | undefined;
+  try {
+    descriptor = openSync(path, "r");
+    const buffer = new Uint8Array(cap + 1);
+    let total = 0;
+    while (total < cap + 1) {
+      const bytes = readSync(descriptor, buffer, total, cap + 1 - total, total);
+      if (bytes <= 0) break;
+      total += bytes;
+    }
+    if (total > cap) return undefined;
+    return new TextDecoder().decode(buffer.subarray(0, total));
+  } catch {
+    return undefined;
+  } finally {
+    if (descriptor !== undefined) {
+      try {
+        closeSync(descriptor);
+      } catch {
+        // The descriptor is already closed; absence of a read is the answer.
+      }
+    }
+  }
+};
+
 /** The filesystem kind of one path, without throwing on absence. */
 const kindOf = (path: string): "file" | "directory" | undefined => {
   try {
@@ -354,14 +408,17 @@ const gitDirectoryOf = (start: string): string | undefined => {
  * The one bounded local configuration read (NFR-2): resolve the change branch's
  * push remote, or report the destination missing. It runs no child process and
  * never consults a global or system configuration, so the destination is a
- * property of the checkout alone.
+ * property of the checkout alone. The bound is 64 KiB: a larger configuration
+ * file, or a header the parser cannot read, is a missing destination.
  */
 const resolvePushRemoteFor = (branch: string, cwd: string | undefined): string | undefined => {
   const gitDirectory = gitDirectoryOf(cwd ?? process.cwd());
   if (gitDirectory === undefined) return undefined;
-  const text = readBoundedText(join(gitDirectory, "config"), MAX_CONFIG_BYTES);
+  const text = readBoundedTextExact(join(gitDirectory, "config"), MAX_CONFIG_BYTES);
   if (text === undefined) return undefined;
-  const resolution = resolvePushRemote(parseGitConfig(text), branch);
+  const entries = parseGitConfig(text);
+  if (entries === undefined) return undefined;
+  const resolution = resolvePushRemote(entries, branch);
   return resolution.ok ? resolution.remote : undefined;
 };
 
