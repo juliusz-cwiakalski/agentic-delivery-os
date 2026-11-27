@@ -1,0 +1,29 @@
+schemaVersion: pm.context.v1
+changeRef: GH-416
+revision: 7
+status: validated
+generatedBy: jaiship pm loop add@0.1.0
+phase: delivery
+
+openLoops: []
+
+nextActions:
+  - id: ACT-1
+    action: Wait for the coder's P3 handover, then run the review bundle.
+    owner: pm
+    blocking: true
+  - id: ACT-2
+    action: Confirm the changeset is present before the first full gate run.
+    owner: pm
+    blocking: false
+
+blockers: []
+
+decisions: [DEC-1, DEC-2]
+
+risks: [RSK-1, RSK-2]
+
+handovers: [P1, P2]
+
+sizeBudget:
+  bytes: 8192

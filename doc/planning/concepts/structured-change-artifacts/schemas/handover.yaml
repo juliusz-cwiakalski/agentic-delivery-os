@@ -1,0 +1,36 @@
+schemaVersion: delivery.handover.v1
+changeRef: GH-416
+phase: P2
+revision: 1
+status: validated
+generatedBy: jaiship handover record@0.1.0
+completedAt: 2026-11-27T14:40:00Z
+
+done:
+  - The push use case resolves, acts, appends, and answers over injected ports.
+  - The domain rules select the branch and map the cause without transport or store imports.
+  - The targeted behaviour suite passes (16 cases).
+
+deviations:
+  - The append is attempted after the act even when the act fails, so the record carries the
+    refusal; the plan said act then append, which is what was implemented.
+
+openRisks:
+  - The fence refusal path has no test for a concurrent append; it is covered by the existing
+    store suite, not by a new case.
+
+nextInputs:
+  - The command phase can assume `resolve`, `act`, `append`, and `answer` are exported from
+    the use case module.
+  - The renderer must not add a new error identity for a refusal.
+
+evidence:
+  - kind: test
+    ref: TC-LCMD-002
+    result: pass
+  - kind: test
+    ref: TC-LCMD-004
+    result: pass
+
+sizeBudget:
+  bytes: 1024

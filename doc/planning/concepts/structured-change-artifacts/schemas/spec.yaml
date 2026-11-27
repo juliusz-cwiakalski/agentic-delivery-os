@@ -1,0 +1,117 @@
+schemaVersion: change.spec.v1
+changeRef: GH-416
+revision: 3
+status: validated
+generatedBy: jaiship spec set@0.1.0
+tier: L
+milestone: M4
+goals: [M4-G3]
+title: A lane pushes its own last evidence commit before it stops
+
+problem: |-
+  A dispatch-started lane can stop before its last evidence commit reaches the remote, so the
+  pull request is created from a head that is not the head the lane verified. The push is
+  currently the engine's backstop, not a typed act the lane owns.
+
+scope:
+  in:
+    - A typed `push <ref>` command that pushes the lane branch once, fast-forward only.
+    - A `dispatch.lane-push` record kind with a bounded payload and a closed cause vocabulary.
+    - An additive `lanePush` fact on the dispatch status answer.
+  out:
+    - A force push, a retry loop, or a second push act.
+    - A change to the merge path or to branch protection.
+
+acceptanceCriteria:
+  - id: AC-1
+    statement: |-
+      Running `push <ref>` on a lane with a local branch ahead of the remote pushes exactly
+      once and reports `verdict: pushed` with the full remote head.
+    evidence: test
+    tests: [TC-LCMD-001, TC-LCMD-005]
+  - id: AC-2
+    statement: |-
+      A refused transport is reported as a data-bearing answer with a cause from the closed
+      vocabulary, exit 1, and no new error identity.
+    evidence: test
+    tests: [TC-LCMD-002, TC-LCMD-004]
+  - id: AC-3
+    statement: |-
+      The `dispatch status` answer carries the additive `lanePush` fact without changing any
+      existing field.
+    evidence: test
+    tests: [TC-LCMD-000, TC-LCMD-003]
+
+decisions:
+  - id: DEC-1
+    question: Who owns the push act?
+    choice: The lane owns it through a typed prompt-required command; the engine's ensure-push
+      stays the backstop and consumes only the outcome.
+    alternatives:
+      - Keep the push in the engine and expose only a flag.
+      - Let the session run `git push` directly.
+    consequences:
+      - One new command family and one new record kind.
+      - The PM definition gains a prompt-required step.
+    status: accepted
+    record: TDR-0079
+  - id: DEC-2
+    question: What is recorded when the push is refused?
+    choice: Record the act with a closed cause token; never record a free-text reason.
+    alternatives:
+      - Record nothing on refusal.
+      - Record the transport's stderr.
+    consequences:
+      - The payload has a 512-byte bound and a seven-of-sixteen reserved maximum.
+    status: accepted
+
+interfaces:
+  - id: API-1
+    kind: cli
+    surface: jaiship push <ref>
+    change: added
+    contract: |-
+      Positional ref, optional `--json`, exit 0 on `pushed`, exit 1 on a refused act, the
+      standard envelope on a grammar refusal.
+  - id: API-2
+    kind: contract
+    surface: packages/core/src/contracts/push.ts
+    change: modified
+    contract: |-
+      The push answer carries `ref`, `repository`, `lanePush`, and `cause` only when present.
+
+affectedPaths:
+  - path: packages/cli/src/commands/push.ts
+    kind: add
+    reason: The command entry and its grammar.
+  - path: packages/core/src/contracts/push.ts
+    kind: modify
+    reason: The answer contract.
+
+risks:
+  - id: RSK-1
+    statement: A lane pushes a branch that is behind the remote and the fast-forward is refused.
+    mitigation: The command reports the refusal as a cause; it never forces and never retries.
+    severity: high
+  - id: RSK-2
+    statement: The new record kind grows the event schema and breaks a pinned count.
+    mitigation: Update the pinned inventories in the same phase and run the structure suites.
+    severity: medium
+
+openQuestions: []
+nonGoals:
+  - id: NG-1
+    statement: This change does not change branch protection or the merge path.
+
+prose:
+  context: |-
+    The lane stops at a peak window or a budget stop. Before this change the last evidence
+    commit could remain local, and the pull request was created from a head that the lane had
+    not pushed. The engine's ensure-push covered the merge path but not the lane's own act.
+  rationale: |-
+    A typed command is preferred over a flag because the act needs a recorded outcome and a
+    closed cause vocabulary. A direct `git push` from the session would bypass the record and
+    the status fact.
+
+sizeBudget:
+  proseWords: 1200

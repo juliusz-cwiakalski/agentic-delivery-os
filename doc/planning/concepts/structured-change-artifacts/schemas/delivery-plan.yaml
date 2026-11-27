@@ -1,0 +1,169 @@
+schemaVersion: delivery.plan.v2
+changeRef: GH-416
+revision: 4
+status: validated
+generatedBy: jaiship plan phase add@0.1.0
+base: main-tools
+tier: L
+
+phases:
+  - id: P1
+    title: Contracts and changeset
+    goal: Declare the push answer contract, the record kind, and the changeset before any
+      consumer is written.
+    acceptance: [AC-3]
+    tests: [TC-LCMD-000]
+    affectedPaths:
+      - path: packages/core/src/contracts/push.ts
+        kind: modify
+        role: producer
+      - path: packages/core/src/contracts/dispatch.ts
+        kind: modify
+        role: producer
+      - path: .changeset/gh-416-lane-pushes-own-evidence-commit-minor.md
+        kind: add
+        role: producer
+    steps:
+      - id: P1-S1
+        action: Add the lanePush answer fields and the closed cause vocabulary.
+        detail: Keep the existing fields unchanged; the new fields are optional and additive.
+      - id: P1-S2
+        action: Add the dispatch.lane-push record kind and its validator.
+        detail: Bounded identifier-only payload; seven recordable causes and one guard-only token.
+      - id: P1-S3
+        action: Add the changeset.
+        detail: TC-RELEASE-001 fails a packages edit without one.
+    verify:
+      - cmd: pnpm typecheck
+        cwd: .
+        expect: exit 0
+    dependsOn: []
+    handover:
+      required: true
+      nextInputs: [API-1, API-2]
+
+  - id: P2
+    title: The push use case and the record append
+    goal: Implement the act, the record, and the status projection behind injected ports.
+    acceptance: [AC-2]
+    tests: [TC-LCMD-002, TC-LCMD-004]
+    affectedPaths:
+      - path: packages/core/src/app/dispatch-lane-push.ts
+        kind: add
+        role: producer
+      - path: packages/core/src/domain/dispatch-lane-push.ts
+        kind: add
+        role: producer
+      - path: packages/core/src/app/dispatch-ledger.ts
+        kind: modify
+        role: consumer
+    steps:
+      - id: P2-S1
+        action: Implement resolve, act, append, and answer over the injected ports.
+        detail: One fast-forward act; act then append; recorded false disclosure.
+      - id: P2-S2
+        action: Implement the pure rules for branch selection and cause mapping.
+        detail: No transport and no store in the domain module.
+    verify:
+      - cmd: pnpm typecheck
+        cwd: .
+        expect: exit 0
+      - cmd: pnpm test tests/behaviour/dispatch-lane-push-command.test.ts
+        cwd: .
+        expect: exit 0
+    dependsOn: [P1]
+    handover:
+      required: true
+      nextInputs: [API-1]
+
+  - id: P3
+    title: The command, the renderer, and the edge wiring
+    goal: Expose `push <ref>` as a prompt-required command and wire it into the composed
+      program.
+    acceptance: [AC-1, AC-2, AC-3]
+    tests: [TC-LCMD-001, TC-LCMD-003]
+    affectedPaths:
+      - path: packages/cli/src/commands/push.ts
+        kind: add
+        role: producer
+      - path: packages/cli/src/output/push-text.ts
+        kind: add
+        role: producer
+      - path: packages/cli/src/production.ts
+        kind: modify
+        role: consumer
+      - path: packages/cli/src/help.ts
+        kind: modify
+        role: consumer
+    steps:
+      - id: P3-S1
+        action: Add the command, the grammar, and the renderer.
+        detail: The refusal path returns the standard envelope, never a new error identity.
+      - id: P3-S2
+        action: Register the command in the composed program and the help inventory.
+        detail: The prompt-required set grows by one; update the pinned counts.
+    verify:
+      - cmd: pnpm typecheck
+        cwd: .
+        expect: exit 0
+      - cmd: pnpm test tests/behaviour/dispatch-lane-push-command.test.ts
+        cwd: .
+        expect: exit 0
+    dependsOn: [P2]
+    handover:
+      required: true
+      nextInputs: [API-1]
+
+  - id: P4
+    title: Surfaces, prompts, and docs
+    goal: Update the PM definition, the prompt inventory, the current-truth pages, and the
+      decision record.
+    acceptance: [AC-1]
+    tests: [TC-LCMD-005]
+    affectedPaths:
+      - path: .opencode/agent/pm.md
+        kind: modify
+        role: consumer
+      - path: doc/spec/features/feature-dispatch-engine.md
+        kind: modify
+        role: consumer
+      - path: doc/decisions/TDR-0079-lane-push-amends-tdr-0076.md
+        kind: add
+        role: producer
+    steps:
+      - id: P4-S1
+        action: Add the prompt-required push step to both PM definitions through the toolsmith.
+        detail: The step names `push <ref>` and the refusal cause.
+      - id: P4-S2
+        action: Reconcile the current-truth pages and the decision record.
+        detail: The decision record amends the push ownership; it does not restate the feature.
+    verify:
+      - cmd: pnpm test tests/checks/doc-conformance.test.ts
+        cwd: .
+        expect: exit 0
+    dependsOn: [P3]
+    handover:
+      required: false
+      nextInputs: []
+
+affectedPaths:
+  - packages/core/src/contracts/push.ts
+  - packages/core/src/contracts/dispatch.ts
+  - packages/core/src/app/dispatch-lane-push.ts
+  - packages/core/src/domain/dispatch-lane-push.ts
+  - packages/core/src/app/dispatch-ledger.ts
+  - packages/cli/src/commands/push.ts
+  - packages/cli/src/output/push-text.ts
+  - packages/cli/src/production.ts
+  - packages/cli/src/help.ts
+  - .opencode/agent/pm.md
+  - doc/spec/features/feature-dispatch-engine.md
+  - doc/decisions/TDR-0079-lane-push-amends-tdr-0076.md
+  - .changeset/gh-416-lane-pushes-own-evidence-commit-minor.md
+
+conflicts:
+  serializeWith: []
+
+sizeBudget:
+  bytes: 35000
+  commentShareMax: 0.2

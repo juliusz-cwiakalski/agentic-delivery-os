@@ -1,0 +1,123 @@
+schemaVersion: change.test-plan.v1
+changeRef: GH-416
+revision: 2
+status: validated
+generatedBy: jaiship test case add@0.1.0
+
+preconditions:
+  - id: PRE-1
+    text: A composed program carrying the `push` command, with an injected transport and a
+      change record whose declared branch is the only matching branch.
+    shared: true
+  - id: PRE-2
+    text: A store whose fence can be scripted to refuse an append.
+    shared: true
+
+cases:
+  - id: TC-LCMD-000
+    title: The push answer contract carries the additive fields
+    acceptance: [AC-3]
+    phase: P1
+    layer: structure
+    path: tests/structure/push-contract.test.ts
+    priority: high
+    automation: automated
+    preconditions: [PRE-1]
+    steps:
+      - Assert the contract type exports the lanePush fields and the closed cause vocabulary.
+    expected:
+      - The type compiles and the cause set has eight tokens.
+    evidence: typecheck and the structure suite
+
+  - id: TC-LCMD-001
+    title: The `push <ref>` grammar pushes once and reports the remote head
+    acceptance: [AC-1]
+    phase: P3
+    layer: behaviour
+    path: tests/behaviour/dispatch-lane-push-command.test.ts
+    priority: high
+    automation: automated
+    preconditions: [PRE-1]
+    steps:
+      - Run `push GH-416 --json` with the transport scripted to return status 0.
+      - Assert the recorded runner shows exactly one invocation with the delivered argv.
+      - Assert `data.lanePush` carries `verdict`, `branch`, `head`, `recorded`, and `recordedAt`.
+    expected:
+      - Exit 0 and `verdict: pushed`.
+      - "`head` is a full-hex SHA equal to the scripted remote head."
+    evidence: test output and the recorded runner argv
+
+  - id: TC-LCMD-002
+    title: A refused transport is a data-bearing answer with a closed cause
+    acceptance: [AC-2]
+    phase: P2
+    layer: behaviour
+    path: tests/behaviour/dispatch-lane-push-command.test.ts
+    priority: high
+    automation: automated
+    preconditions: [PRE-1, PRE-2]
+    steps:
+      - Run `push GH-416 --json` with the transport scripted to reject.
+      - Assert the answer has `verdict: failed` and a `cause` from the closed vocabulary.
+      - Assert exit 1 and no top-level error identity.
+    expected:
+      - One act, no retry, no second act.
+      - The record is appended when the fence allows it and `recorded: false` when it does not.
+    evidence: test output and the store's append count
+
+  - id: TC-LCMD-003
+    title: The dispatch status answer carries the additive lanePush fact
+    acceptance: [AC-3]
+    phase: P3
+    layer: behaviour
+    path: tests/behaviour/dispatch-status-lane-push.test.ts
+    priority: high
+    automation: automated
+    preconditions: [PRE-1]
+    steps:
+      - Run `dispatch status GH-416 --json` after one recorded push.
+      - Assert every pre-existing field is unchanged and `lanePush` is present.
+    expected:
+      - The answer is additive; no field is removed or renamed.
+    evidence: golden answer comparison
+
+  - id: TC-LCMD-004
+    title: A malformed ref is refused before any branch read or act
+    acceptance: [AC-2]
+    phase: P2
+    layer: behaviour
+    path: tests/behaviour/dispatch-lane-push-command.test.ts
+    priority: medium
+    automation: automated
+    preconditions: [PRE-1]
+    steps:
+      - Run `push` with a missing, empty, and malformed positional.
+    expected:
+      - "`input.value.rejected` with zero runner invocations and zero appends."
+    evidence: test output
+
+  - id: TC-LCMD-005
+    title: The prompt inventory carries the push step
+    acceptance: [AC-1]
+    phase: P4
+    layer: structure
+    path: tests/structure/lane-push-surfaces.test.ts
+    priority: medium
+    automation: automated
+    preconditions: [PRE-1]
+    steps:
+      - Assert the PM definition's prompt-required set includes push and the inventory count is updated.
+    expected:
+      - The inventory matches the delivered prompt set.
+    evidence: the structure suite
+
+coverage:
+  - acceptance: AC-1
+    cases: [TC-LCMD-001, TC-LCMD-005]
+  - acceptance: AC-2
+    cases: [TC-LCMD-002, TC-LCMD-004]
+  - acceptance: AC-3
+    cases: [TC-LCMD-000, TC-LCMD-003]
+
+sizeBudget:
+  bytes: 40960
