@@ -606,12 +606,5 @@ export const appendDispatchLanePush = (
   if (!isDispatchLanePushRecord(record)) {
     return { ok: false, code: "state.write.failed", path: recordKey };
   }
-  return appendLedger(
-    store,
-    fenceToken,
-    DISPATCH_LANE_PUSH_RECORD_KIND,
-    recordKey,
-    record,
-    false,
-  );
+  return appendLedger(store, fenceToken, DISPATCH_LANE_PUSH_RECORD_KIND, recordKey, record, false);
 };

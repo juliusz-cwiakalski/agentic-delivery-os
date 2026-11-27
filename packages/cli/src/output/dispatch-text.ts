@@ -220,9 +220,7 @@ export const renderDispatchStatusText = (data: DispatchStatusData): string => {
           `lanePush=${data.lanePush.verdict}`,
           `lanePushBranch=${data.lanePush.branch}`,
           `lanePushHead=${data.lanePush.head}`,
-          ...(data.lanePush.cause === undefined
-            ? []
-            : [`lanePushCause=${data.lanePush.cause}`]),
+          ...(data.lanePush.cause === undefined ? [] : [`lanePushCause=${data.lanePush.cause}`]),
           `lanePushRecordedAt=${data.lanePush.recordedAt}`,
         ]),
   ];

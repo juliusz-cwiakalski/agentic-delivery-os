@@ -90,9 +90,7 @@ describe("TC-INST-104 each conformance gate fails by name on an injected fixture
     expect(familyViolations([...PROMPT_REQUIRED_COMMANDS, "doctor"])).toContain(
       "undeclared doctor",
     );
-    expect(familyViolations([...PROMPT_REQUIRED_COMMANDS].reverse())).toContain(
-      "tail is not push",
-    );
+    expect(familyViolations([...PROMPT_REQUIRED_COMMANDS].reverse())).toContain("tail is not push");
     // The `loop` removal control keeps its named failure (DOD-8) at the merged
     // count, and the `provider` removal control keeps its own.
     const withoutLoop = PROMPT_REQUIRED_COMMANDS.filter((name) => name !== "loop");

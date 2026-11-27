@@ -121,7 +121,8 @@ describe("GH-416 TC-LSTORE-001 the record is bounded and identifier-only", () =>
   test("transport text never reaches the record", async () => {
     const secret = "https://example.invalid/repo.git";
     const { records } = await runAndReadRecords({
-      push: () => rejected(`fatal: Authentication failed for '${secret}' (token tok_live_abcdefghijklmnop)`),
+      push: () =>
+        rejected(`fatal: Authentication failed for '${secret}' (token tok_live_abcdefghijklmnop)`),
     });
     const serialized = JSON.stringify(records[0]);
     expect(serialized).not.toContain("http");

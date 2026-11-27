@@ -15,47 +15,25 @@
     {
       "path": ".opencode/agent/coder.md",
       "kind": "lifecycle",
-      "required": [
-        "commit",
-        "phase complete",
-        "blockers publish",
-        "pm-notes"
-      ]
+      "required": ["commit", "phase complete", "blockers publish", "pm-notes"]
     },
     {
       "path": ".opencode/agent/committer.md",
       "kind": "lifecycle",
-      "required": [
-        "commit",
-        "never stage"
-      ],
-      "forbidden": [
-        "git add",
-        "git commit"
-      ]
+      "required": ["commit", "never stage"],
+      "forbidden": ["git add", "git commit"]
     },
     {
       "path": ".opencode/command/commit.md",
       "kind": "lifecycle",
-      "required": [
-        "commit"
-      ]
+      "required": ["commit"]
     },
     {
       "path": ".opencode/command/run-plan.md",
       "kind": "lifecycle",
-      "required": [
-        "commit",
-        "phase complete",
-        "pm-notes"
-      ],
-      "forbidden": [
-        "commit per task"
-      ]
+      "required": ["commit", "phase complete", "pm-notes"],
+      "forbidden": ["commit per task"]
     }
   ],
-  "scanRoots": [
-    ".opencode/agent",
-    ".opencode/command"
-  ]
+  "scanRoots": [".opencode/agent", ".opencode/command"]
 }

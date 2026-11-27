@@ -148,7 +148,10 @@ describe("GH-416 git's raw failure text never leaves the seam (TC-LCAUSE-002)", 
   test("a URL carrying user info and a token-shaped fragment is classified away", async () => {
     const secret = "https://example.invalid/repo.git";
     const { outcome } = await seamResult(
-      rejection(`fatal: Authentication failed for '${secret}' (token tok_live_abcdefghijklmnop)`, 128),
+      rejection(
+        `fatal: Authentication failed for '${secret}' (token tok_live_abcdefghijklmnop)`,
+        128,
+      ),
     );
     expect(outcome).toEqual({ outcome: "rejected", detail: "auth-rejected" });
     const serialized = JSON.stringify(outcome);
