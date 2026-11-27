@@ -10,14 +10,12 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  createGitPushSeam,
-  type GitPushRunnerResult,
-} from "../../packages/adapters/src/git/index";
+import { createGitPushSeam, type GitPushRunnerResult } from "../../packages/adapters/src/git/index";
 import {
   type HarnessSpawnRunnerResult,
+  isSafeRef,
+  PROTECTED_REF_NAMES,
 } from "../../packages/core/src/contracts/index";
-import { PROTECTED_REF_NAMES, isSafeRef } from "../../packages/core/src/contracts/index";
 import { createParityHarness, readableParityTransport } from "../fixtures/dispatch/parity/harness";
 import { createGuardedRunner } from "../fixtures/dispatch/parity/process-runner";
 
@@ -26,7 +24,12 @@ const REF = "GH-347";
 const BRANCH = "feat/GH-347/parity";
 const HEAD = "0123456789abcdef0123456789abcdef01234567";
 
-const accepted = (): GitPushRunnerResult => ({ stdout: "", stderr: "", status: 0, timedOut: false });
+const accepted = (): GitPushRunnerResult => ({
+  stdout: "",
+  stderr: "",
+  status: 0,
+  timedOut: false,
+});
 
 const branchGit =
   (branches: readonly string[]) =>
@@ -34,7 +37,8 @@ const branchGit =
     const [verb, sub] = args;
     if (verb === "for-each-ref") {
       return {
-        stdout: branches.map((name) => `${name} ${HEAD}`).join("\n") + (branches.length > 0 ? "\n" : ""),
+        stdout:
+          branches.map((name) => `${name} ${HEAD}`).join("\n") + (branches.length > 0 ? "\n" : ""),
         stderr: "",
         status: 0,
         timedOut: false,
@@ -175,7 +179,7 @@ describe("GH-416 TC-LRES-004 the shared predicate and the protected set", () => 
     expect(source).toContain("isSafeRef");
     expect(source).toContain("PROTECTED_REF_NAMES");
     expect(source).not.toContain("const isSafeRef");
-    expect(source).not.toContain('PROTECTED_REF_NAMES = [');
+    expect(source).not.toContain("PROTECTED_REF_NAMES = [");
     expect(source).not.toContain("REF_PATTERN");
   });
 

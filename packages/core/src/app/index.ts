@@ -117,6 +117,20 @@ export {
   type DispatchLaneResolutionInput,
   resolveDispatchLane,
 } from "./dispatch-lane.js";
+/**
+ * The lane's own evidence push (GH-416 F-1..F-4): resolve, act, append, answer
+ * over injected ports; one fast-forward act, one durable record, nothing
+ * authored.
+ */
+export {
+  type DispatchLanePushAnswered,
+  type DispatchLanePushPorts,
+  type DispatchLanePushRefusal,
+  type DispatchLanePushResult,
+  type LanePushBranchFact,
+  type LanePushIdentity,
+  runDispatchLanePush,
+} from "./dispatch-lane-push.js";
 export {
   newestDispatchLaneWorktreePaths,
   type OperatorDeliveringRead,
@@ -417,17 +431,3 @@ export {
   type WatchRead,
   watchLines,
 } from "./watch.js";
-/**
- * The lane's own evidence push (GH-416 F-1..F-4): resolve, act, append, answer
- * over injected ports; one fast-forward act, one durable record, nothing
- * authored.
- */
-export {
-  type DispatchLanePushAnswered,
-  type DispatchLanePushPorts,
-  type DispatchLanePushRefusal,
-  type DispatchLanePushResult,
-  type LanePushBranchFact,
-  type LanePushIdentity,
-  runDispatchLanePush,
-} from "./dispatch-lane-push.js";

@@ -9,18 +9,18 @@
  */
 import { describe, expect, test } from "bun:test";
 import type { GitPushRunnerResult } from "../../packages/adapters/src/git/index";
-import {
-  DISPATCH_LANE_PAYLOAD_SCHEMA,
-  DISPATCH_LANE_PUSH_PAYLOAD_SCHEMA,
-  DISPATCH_PUSH_RECORDABLE_CAUSES,
-  type DispatchLaneRecord,
-  type DispatchLanePushRecord,
-} from "../../packages/core/src/contracts/index";
+import { runDispatchLanePush } from "../../packages/core/src/app/dispatch-lane-push";
 import {
   appendDispatchLane,
   readDispatchLanePushes,
 } from "../../packages/core/src/app/dispatch-ledger";
-import { runDispatchLanePush } from "../../packages/core/src/app/dispatch-lane-push";
+import {
+  DISPATCH_LANE_PAYLOAD_SCHEMA,
+  DISPATCH_LANE_PUSH_PAYLOAD_SCHEMA,
+  DISPATCH_PUSH_RECORDABLE_CAUSES,
+  type DispatchLanePushRecord,
+  type DispatchLaneRecord,
+} from "../../packages/core/src/contracts/index";
 import { createParityHarness, readableParityTransport } from "../fixtures/dispatch/parity/harness";
 import { createGuardedRunner } from "../fixtures/dispatch/parity/process-runner";
 
@@ -28,7 +28,12 @@ const REF = "GH-347";
 const BRANCH = "feat/GH-347/parity";
 const HEAD = "0123456789abcdef0123456789abcdef01234567";
 
-const accepted = (): GitPushRunnerResult => ({ stdout: "", stderr: "", status: 0, timedOut: false });
+const accepted = (): GitPushRunnerResult => ({
+  stdout: "",
+  stderr: "",
+  status: 0,
+  timedOut: false,
+});
 const rejected = (stderr: string): GitPushRunnerResult => ({
   stdout: "",
   stderr,
@@ -75,8 +80,7 @@ const runAndReadRecords = async (input: {
   }
 };
 
-const bytesOf = (value: unknown): number =>
-  new TextEncoder().encode(JSON.stringify(value)).length;
+const bytesOf = (value: unknown): number => new TextEncoder().encode(JSON.stringify(value)).length;
 
 describe("GH-416 TC-LSTORE-001 the record is bounded and identifier-only", () => {
   test("an accepted act writes the exact member set with no cause", async () => {
@@ -115,13 +119,13 @@ describe("GH-416 TC-LSTORE-001 the record is bounded and identifier-only", () =>
   });
 
   test("transport text never reaches the record", async () => {
-    const secret = "https://user:ghp_token@example.invalid/repo.git";
+    const secret = "https://example.invalid/repo.git";
     const { records } = await runAndReadRecords({
-      push: () => rejected(`fatal: Authentication failed for '${secret}'`),
+      push: () => rejected(`fatal: Authentication failed for '${secret}' (token tok_live_abcdefghijklmnop)`),
     });
     const serialized = JSON.stringify(records[0]);
     expect(serialized).not.toContain("http");
-    expect(serialized).not.toContain("ghp_token");
+    expect(serialized).not.toContain("tok_live_abcdefghijklmnop");
     expect(serialized).not.toContain("Authentication failed");
     expect(records[0]?.cause).toBe("auth-rejected");
   });

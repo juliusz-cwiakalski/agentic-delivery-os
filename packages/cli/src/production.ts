@@ -237,8 +237,8 @@ import {
   resolveProjectScope,
   resolveQueueSettings,
   reversibilityOf,
-  runDispatchTrackerLadder,
   runDispatchLanePush,
+  runDispatchTrackerLadder,
   type SupervisionEconomicsWritePort,
   type SupervisionRestartAdmission,
   selectDaemonReachability,
@@ -399,8 +399,8 @@ import type {
   ProjectGroupWorkRead,
   ProjectsRuntimeRead,
 } from "./commands/projects.js";
-import type { ReposRuntimeRead } from "./commands/repos.js";
 import type { PushCommandRuntime } from "./commands/push.js";
+import type { ReposRuntimeRead } from "./commands/repos.js";
 import { createDaemonCommandRuntime, resolveProjectDaemonSettings } from "./daemon-compose.js";
 import {
   type ConfigProgramOptions,
@@ -6905,8 +6905,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           {
             repository: resolveProductionRepository(undefined, { persist: false }) ?? "",
             readBranchDeclaration: readChangeBranchDeclaration,
-            listBranches: (input) =>
-              gitBranches.listBranches({ workItemRef: input.workItemRef }),
+            listBranches: (input) => gitBranches.listBranches({ workItemRef: input.workItemRef }),
             readCheckoutHead: async (branch) => {
               const checkout = await gitBranches.readCheckout({
                 baseRef: CLOSEOUT_INTEGRATION_BASE,

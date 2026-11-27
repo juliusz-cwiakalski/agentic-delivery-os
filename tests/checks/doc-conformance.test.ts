@@ -2355,7 +2355,9 @@ const GH350_TRUTH_ROWS: readonly GH350Row[] = [
       "the prompt-required set at 27 families with `loop` last",
       "the prompt-required set at 28 families with `provider` last and `loop` 27th",
     ],
-    required: ["the prompt-required set at 29 families with `push` last, `provider` 28th, and `loop` 27th"],
+    required: [
+      "the prompt-required set at 29 families with `push` last, `provider` 28th, and `loop` 27th",
+    ],
   },
 ];
 

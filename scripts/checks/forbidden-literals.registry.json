@@ -7,7 +7,10 @@
     },
     {
       "id": "rootManifests",
-      "files": ["package.json", "pnpm-lock.yaml"]
+      "files": [
+        "package.json",
+        "pnpm-lock.yaml"
+      ]
     },
     {
       "id": "rootWorkspaceFiles",
@@ -25,7 +28,9 @@
     },
     {
       "id": "ignoreRules",
-      "files": [".gitignore"]
+      "files": [
+        ".gitignore"
+      ]
     },
     {
       "id": "promptSurface",
@@ -33,15 +38,27 @@
     },
     {
       "id": "scriptSurface",
-      "roots": ["scripts", "tools"]
+      "roots": [
+        "scripts",
+        "tools"
+      ]
     },
     {
       "id": "userFacingDocs",
-      "roots": ["doc"],
-      "excludedPrefixes": ["doc/changes/", "doc/decisions/"]
+      "roots": [
+        "doc"
+      ],
+      "excludedPrefixes": [
+        "doc/changes/",
+        "doc/decisions/"
+      ]
     }
   ],
-  "seedLiterals": ["ados", "ADOS_", "~/.ados"],
+  "seedLiterals": [
+    "ados",
+    "ADOS_",
+    "~/.ados"
+  ],
   "allowlist": [
     {
       "id": "branding-subpath",
@@ -66,7 +83,12 @@
     {
       "id": "source-headers",
       "kind": "line",
-      "patterns": ["Copyright", "source:", "Apache-2.0", "ados_distribution:"]
+      "patterns": [
+        "Copyright",
+        "source:",
+        "Apache-2.0",
+        "ados_distribution:"
+      ]
     }
   ],
   "registered": [
@@ -191,6 +213,7 @@
     "doc/planning/oss-tooling/milestones/m4/backlog.md",
     "doc/planning/oss-tooling/milestones/m4/commands/install.md",
     "doc/planning/oss-tooling/milestones/m4/commands/loop.md",
+    "doc/planning/oss-tooling/milestones/m4/commands/push.md",
     "doc/planning/oss-tooling/milestones/m4/flip-plan.md",
     "doc/planning/oss-tooling/milestones/m4/install-model.md",
     "doc/planning/oss-tooling/milestones/m4/ranking.md",
@@ -298,8 +321,12 @@
         "id": "prior-executable",
         "literal": "delivery-os",
         "match": "delimited",
-        "excludePrecededBy": ["@"],
-        "excludeWithin": ["agentic-delivery-os"],
+        "excludePrecededBy": [
+          "@"
+        ],
+        "excludeWithin": [
+          "agentic-delivery-os"
+        ],
         "scopeClasses": [
           "packageTree",
           "rootManifests",
@@ -310,13 +337,31 @@
       }
     ],
     "scopeSelection": {
-      "packageTree": ["seedLiterals", "priorNamespace"],
-      "rootManifests": ["seedLiterals", "priorNamespace"],
-      "rootWorkspaceFiles": ["seedLiterals"],
-      "ignoreRules": ["seedLiterals", "priorNamespace"],
-      "promptSurface": ["priorNamespace"],
-      "scriptSurface": ["priorNamespace"],
-      "userFacingDocs": ["seedLiterals", "priorNamespace"]
+      "packageTree": [
+        "seedLiterals",
+        "priorNamespace"
+      ],
+      "rootManifests": [
+        "seedLiterals",
+        "priorNamespace"
+      ],
+      "rootWorkspaceFiles": [
+        "seedLiterals"
+      ],
+      "ignoreRules": [
+        "seedLiterals",
+        "priorNamespace"
+      ],
+      "promptSurface": [
+        "priorNamespace"
+      ],
+      "scriptSurface": [
+        "priorNamespace"
+      ],
+      "userFacingDocs": [
+        "seedLiterals",
+        "priorNamespace"
+      ]
     },
     "neutralSites": [
       {

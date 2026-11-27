@@ -84,15 +84,8 @@ const MAX_OUTPUT_BYTES = 8 * 1024 * 1024;
  * re-typed: the classification table below is the one place that maps git's
  * bounded failure text onto these tokens.
  */
-const [
-  NON_FAST_FORWARD,
-  AUTH_REJECTED,
-  REMOTE_UNAVAILABLE,
-  ,
-  ,
-  PROTECTED_REF,
-  UNCLASSIFIED,
-] = DISPATCH_PUSH_RECORDABLE_CAUSES;
+const [NON_FAST_FORWARD, AUTH_REJECTED, REMOTE_UNAVAILABLE, , , PROTECTED_REF, UNCLASSIFIED] =
+  DISPATCH_PUSH_RECORDABLE_CAUSES;
 
 /**
  * The declared rejection classification table (DM-4, DEC-4). The patterns live

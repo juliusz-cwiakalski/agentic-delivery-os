@@ -12,9 +12,9 @@ import {
   DISPATCH_LANE_PUSH_PAYLOAD_SCHEMA,
   type DispatchLanePushActOutcome,
   type DispatchLanePushRecord,
-  type PushCommandData,
   isSafeRef,
   PROTECTED_REF_NAMES,
+  type PushCommandData,
 } from "#contracts";
 import { selectMatchingBranch } from "../domain/closeout.js";
 import {

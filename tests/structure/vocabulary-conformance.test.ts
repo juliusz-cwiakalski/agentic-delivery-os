@@ -222,7 +222,7 @@ describe("TC-DPKCONF-001 the clean tree passes the narrowed sweep", () => {
   test("every declared documentation surface is clean and the full commands glob is walked", () => {
     const outcome = scanTreeDocs(ROOT);
     expect(outcome.findings).toEqual([]);
-    expect(outcome.commandPages).toBe(42);
+    expect(outcome.commandPages).toBe(43);
     expect(outcome.filesScanned).toBeGreaterThan(42);
   });
 

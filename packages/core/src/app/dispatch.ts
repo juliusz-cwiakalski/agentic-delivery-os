@@ -60,6 +60,7 @@ import {
   dispatchFamilyOf,
   unreadableCorroborationSources,
 } from "../domain/dispatch-comparison.js";
+import { lanePushEvidenceRefsOf, newestLanePushForAttempt } from "../domain/dispatch-lane-push.js";
 import {
   type DispatchLivenessReading,
   type DispatchLivenessVerdict,
@@ -75,10 +76,6 @@ import {
   deriveDispatchResult,
 } from "../domain/dispatch-result.js";
 import { admissionRefusalPair, admitDispatchRestart } from "../domain/dispatch-resume.js";
-import {
-  lanePushEvidenceRefsOf,
-  newestLanePushForAttempt,
-} from "../domain/dispatch-lane-push.js";
 import {
   appendDispatchAttempt,
   appendDispatchDivergence,

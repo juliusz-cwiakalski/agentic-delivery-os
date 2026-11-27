@@ -84,6 +84,8 @@ describe("GH-416 TC-LOUT-002 the push answer bounds", () => {
   test("malformed data renders nothing (the generic fallback answers)", () => {
     expect(renderPushText({ ref: "GH-416" })).toBeUndefined();
     expect(renderPushText(null)).toBeUndefined();
-    expect(renderPushText({ ref: "GH-416", repository: "r", lanePush: { verdict: "pushed" } })).toBeUndefined();
+    expect(
+      renderPushText({ ref: "GH-416", repository: "r", lanePush: { verdict: "pushed" } }),
+    ).toBeUndefined();
   });
 });

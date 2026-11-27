@@ -15,8 +15,8 @@
 import { describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type {
   DispatchLanePushActOutcome,
   DispatchLanePushPorts,

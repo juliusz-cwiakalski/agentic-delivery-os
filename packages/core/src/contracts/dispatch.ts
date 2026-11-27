@@ -894,6 +894,4 @@ const SAFE_REF_FORBIDDEN = /(\.\.|~|\^|:|\?|\*|\[|\\|\s)/;
  * which is why the protected-name membership check is a separate second guard.
  */
 export const isSafeRef = (value: string): boolean =>
-  SAFE_REF_PATTERN.test(value) &&
-  !SAFE_REF_FORBIDDEN.test(value) &&
-  !value.startsWith("-");
+  SAFE_REF_PATTERN.test(value) && !SAFE_REF_FORBIDDEN.test(value) && !value.startsWith("-");

@@ -53,7 +53,10 @@ const handle: HarnessSessionHandle = {
 const harnessPort = (): HarnessSessionPort => ({
   spawn: async () => ({ ok: true, value: handle }),
   resume: async () => ({ ok: true, value: handle }),
-  collect: async (): Promise<HarnessResult<HarnessEvidence>> => ({ ok: true, value: completeEvidence }),
+  collect: async (): Promise<HarnessResult<HarnessEvidence>> => ({
+    ok: true,
+    value: completeEvidence,
+  }),
   classify: (input) => classifyHarnessEvidence(input),
   liveness: async () => ({
     ok: true,
@@ -107,12 +110,14 @@ const seedRecord = (
 
 type Classification = {
   readonly token: string | undefined;
-  readonly attempt: {
-    readonly evidenceRefs: readonly string[];
-    readonly token: string;
-    readonly outcome: string;
-    readonly comparison: unknown;
-  } | undefined;
+  readonly attempt:
+    | {
+        readonly evidenceRefs: readonly string[];
+        readonly token: string;
+        readonly outcome: string;
+        readonly comparison: unknown;
+      }
+    | undefined;
 };
 
 const classify = async (input: {
@@ -305,7 +310,10 @@ describe("GH-416 TC-LFOLD-004 a disclosure is not a claim", () => {
         parity: parity("clean", true),
       });
       expect(result.token).toBe("pr-open");
-      expect(result.attempt?.comparison).toMatchObject({ class: "tracker-truth", outcome: "match" });
+      expect(result.attempt?.comparison).toMatchObject({
+        class: "tracker-truth",
+        outcome: "match",
+      });
       expect(result.attempt?.evidenceRefs).toContain("lane-push:failed");
     } finally {
       state.dispose();
@@ -359,7 +367,7 @@ describe("GH-416 TC-LPUSH-003 a classification after an accepted lane push", () 
     const state = createDispatchState("lane-push-003");
     try {
       seedRecord(state.store, state.fenceToken);
-      let pushActs = 0;
+      const pushActs = 0;
       const result = await runDispatch({
         store: state.store,
         fenceToken: state.fenceToken,

@@ -22,7 +22,12 @@ const REF = "GH-347";
 const BRANCH = "feat/GH-347/parity";
 const HEAD = "0123456789abcdef0123456789abcdef01234567";
 
-const accepted = (): GitPushRunnerResult => ({ stdout: "", stderr: "", status: 0, timedOut: false });
+const accepted = (): GitPushRunnerResult => ({
+  stdout: "",
+  stderr: "",
+  status: 0,
+  timedOut: false,
+});
 const rejected = (stderr: string): GitPushRunnerResult => ({
   stdout: "",
   stderr,
@@ -121,11 +126,7 @@ describe("GH-416 TC-LCMD-001 the push answer and exits", () => {
   test("exactly one push invocation carries the delivered argv shape", async () => {
     const run = await runPush({ push: accepted });
     expect(run.pushInvocations).toHaveLength(1);
-    expect(run.pushInvocations[0]).toEqual([
-      "push",
-      "--ff-only",
-      `HEAD:refs/heads/${BRANCH}`,
-    ]);
+    expect(run.pushInvocations[0]).toEqual(["push", "--ff-only", `HEAD:refs/heads/${BRANCH}`]);
     expect(run.observation.violations).toEqual([]);
   });
 

@@ -541,7 +541,6 @@ import {
   createCommitCommandDefinition,
   planPhaseForLifecycle,
 } from "./commands/commit.js";
-import { createPushCommandDefinition, type PushCommandRuntime } from "./commands/push.js";
 import {
   type ConfigCommandRuntime,
   type ConfigResolvedSnapshot,
@@ -596,6 +595,7 @@ import {
   createProviderCommandDefinition,
   type ProviderCommandRuntime,
 } from "./commands/provider.js";
+import { createPushCommandDefinition, type PushCommandRuntime } from "./commands/push.js";
 import {
   createQueueCommandDefinition,
   createQueueReadyCommandDefinition,

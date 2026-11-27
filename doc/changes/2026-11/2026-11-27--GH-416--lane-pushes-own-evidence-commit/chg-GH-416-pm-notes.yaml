@@ -431,7 +431,7 @@ notes:
       recorded:false disclosure), the CLI command packages/cli/src/commands/push.ts
       and renderer packages/cli/src/output/push-text.ts, and the edge/production
       wiring (pushRuntime over the delivered pm-notes/branch/checkout/lane reads
-      and the delivered push seam; \`push\` registered in the composed program).
+      and the delivered push seam; `push` registered in the composed program).
       The prompt-required set is 29 with push last; the help entry, coverage
       inventory, M4 reference page, and both pageFor arms landed. The
       count-and-tail movement moved every pinned family count to 29 and every
@@ -521,5 +521,45 @@ notes:
       doc/guides/unified-change-convention-tracker-agnostic-specification.md:279);
       they are outside every declared scope and are handed to the reconciliation
       input."
+    type: info
+    date: "2026-11-27"
+  - text: "Plan phase 7 complete (the companion decision record): commit
+      f10a51c05. TDR-0079-lane-push-amends-tdr-0076.md landed as Proposed with a
+      null decision date, R2, and one index row; TDR-0076 is untouched. The
+      record amends TDR-0076's push ownership in substance: the session-side act
+      becomes the typed prompt-required `push <ref>` product surface while the
+      engine's ensure-push stays the backstop and consumes only the outcome; the
+      lane's act runs at `pr_creation` after the phase-completion commit; and
+      exactly one durable record kind is added, `dispatch.lane-push`, folded as
+      `lane-push:<verdict>`/`lane-push-cause:<cause>` with the additive status
+      fact. It records the closed eight-token cause vocabulary, the 512-byte
+      payload bound, the seven-of-sixteen reserved maximum, and the rejected
+      alternatives. Owner acceptance stays at pull-request review. Note: this
+      repo's decision-record suite is the only gate (the jcw-docs lint is not
+      vendored); no `amends:` frontmatter key exists and the TDR-0078 pattern
+      (links.decisions + title + D7) is followed. Tests: decision-record and
+      doc-conformance 73 pass / 0 fail; git diff --check clean."
+    type: info
+    date: "2026-11-27"
+  - text: "Plan phase 8 (finalize and release) is declaration-only and authors
+      no files, per the plan: the current-truth pages are handed to @doc-syncer
+      in lifecycle phase 7 and the pull request to @pr-manager in lifecycle
+      phase 11. Handoff input: doc/spec/features/feature-dispatch-engine.md
+      (derivation arm 8, the attempt evidence including the lane-push refs and
+      the reserved block as code truth, the record-kind inventory, the `head`
+      source, the seven recordable causes, the guard-only unsafe-branch, the
+      operator lane view's lanePush fact and widened read posture, the closure
+      note's record-kind sentence), feature-quality-gates-and-pr.md and
+      feature-delivery-lifecycle.md (the phase-6 statements plus the wider
+      reconciliation), feature-agents-and-commands.md, feature-cli-entrypoint.md,
+      feature-adapter-ports.md (the contracts subpath note), the engine-first
+      operations guide (the declared divergence and the three places a refusal
+      is read), the dispatch-engine test-spec coverage map, the glossary, the
+      change-lifecycle guide, AGENTS.md's pr_creation row, and the two guides
+      the surfaces review found still carrying the old phase-11 line
+      (doc/guides/opencode-agents-and-commands-guide.md and
+      doc/guides/unified-change-convention-tracker-agnostic-specification.md).
+      TC-LDOC-002 is the manual content check for that input. The aggregate gate
+      runs once at the lifecycle quality_gates phase."
     type: info
     date: "2026-11-27"

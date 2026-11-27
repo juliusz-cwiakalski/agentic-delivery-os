@@ -57,9 +57,7 @@ export const renderPushText = (data: unknown): string | undefined => {
     `head=${singleLine(lanePush.head)}`,
     ...(lanePush.cause === undefined ? [] : [`cause=${singleLine(lanePush.cause)}`]),
     `recorded=${lanePush.recorded ? "true" : "false"}`,
-    ...(lanePush.recordedAt === undefined
-      ? []
-      : [`recordedAt=${singleLine(lanePush.recordedAt)}`]),
+    ...(lanePush.recordedAt === undefined ? [] : [`recordedAt=${singleLine(lanePush.recordedAt)}`]),
   ];
   return `${lines.join("\n")}\n`;
 };

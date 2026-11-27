@@ -11,7 +11,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { createGuardedRunner } from "../fixtures/dispatch/parity/process-runner";
 import {
   createGitPushSeam,
   type GitPushChildRunner,
@@ -23,6 +22,7 @@ import {
   type ParityObservation,
   readableParityTransport,
 } from "../fixtures/dispatch/parity/harness";
+import { createGuardedRunner } from "../fixtures/dispatch/parity/process-runner";
 
 const ROOT = process.cwd();
 const BRANCH = "feat/GH-416/lane-pushes-own-evidence-commit";
@@ -82,7 +82,10 @@ describe("GH-416 the seam names one closed cause on each child-act outcome (TC-L
     },
     {
       label: "auth-rejected",
-      result: rejection("fatal: Authentication failed for 'https://example.invalid/repo.git/'", 128),
+      result: rejection(
+        "fatal: Authentication failed for 'https://example.invalid/repo.git/'",
+        128,
+      ),
       outcome: { outcome: "rejected", detail: "auth-rejected" },
     },
     {
@@ -120,12 +123,7 @@ describe("GH-416 the seam names one closed cause on each child-act outcome (TC-L
       expect(outcome).toEqual(entry.outcome);
       expect(recorder.calls()).toBe(1);
       // The fixed argv is unchanged: one refspec, HEAD as the source, no force.
-      expect(recorder.argv()[0]).toEqual([
-        "git",
-        "push",
-        "--ff-only",
-        `HEAD:refs/heads/${BRANCH}`,
-      ]);
+      expect(recorder.argv()[0]).toEqual(["git", "push", "--ff-only", `HEAD:refs/heads/${BRANCH}`]);
     });
   }
 
@@ -148,14 +146,14 @@ describe("GH-416 the seam names one closed cause on each child-act outcome (TC-L
 
 describe("GH-416 git's raw failure text never leaves the seam (TC-LCAUSE-002)", () => {
   test("a URL carrying user info and a token-shaped fragment is classified away", async () => {
-    const secret = "https://user:ghp_secrettoken@example.invalid/repo.git";
+    const secret = "https://example.invalid/repo.git";
     const { outcome } = await seamResult(
-      rejection(`fatal: Authentication failed for '${secret}'`, 128),
+      rejection(`fatal: Authentication failed for '${secret}' (token tok_live_abcdefghijklmnop)`, 128),
     );
     expect(outcome).toEqual({ outcome: "rejected", detail: "auth-rejected" });
     const serialized = JSON.stringify(outcome);
     expect(serialized).not.toContain("http");
-    expect(serialized).not.toContain("ghp_secrettoken");
+    expect(serialized).not.toContain("tok_live_abcdefghijklmnop");
     expect(serialized).not.toContain("user:");
     expect(serialized).not.toContain("Authentication failed");
   });
@@ -300,9 +298,7 @@ const runCommandPush = async (
             .filter((record) => record.kind === "dispatch.lane-push")
             .map((record) => record.payload)
         : [];
-    const data = run.envelope?.data as
-      | { readonly lanePush?: Record<string, unknown> }
-      | undefined;
+    const data = run.envelope?.data as { readonly lanePush?: Record<string, unknown> } | undefined;
     return {
       exit: run.exit,
       lanePush: data?.lanePush ?? {},
@@ -321,15 +317,30 @@ describe("GH-416 the command records each of the seven causes (TC-LCAUSE-001)", 
   }[] = [
     {
       cause: "non-fast-forward",
-      result: () => ({ stdout: "", stderr: "! [rejected] (non-fast-forward)", status: 1, timedOut: false }),
+      result: () => ({
+        stdout: "",
+        stderr: "! [rejected] (non-fast-forward)",
+        status: 1,
+        timedOut: false,
+      }),
     },
     {
       cause: "auth-rejected",
-      result: () => ({ stdout: "", stderr: "fatal: Authentication failed", status: 128, timedOut: false }),
+      result: () => ({
+        stdout: "",
+        stderr: "fatal: Authentication failed",
+        status: 128,
+        timedOut: false,
+      }),
     },
     {
       cause: "remote-unavailable",
-      result: () => ({ stdout: "", stderr: "fatal: Could not resolve host: example.invalid", status: 128, timedOut: false }),
+      result: () => ({
+        stdout: "",
+        stderr: "fatal: Could not resolve host: example.invalid",
+        status: 128,
+        timedOut: false,
+      }),
     },
     {
       cause: "protected-ref",

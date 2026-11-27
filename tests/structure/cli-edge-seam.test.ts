@@ -631,6 +631,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
       `${CLI_DIR}/commands/plan.ts`,
       `${CLI_DIR}/commands/projects.ts`,
       `${CLI_DIR}/commands/provider.ts`,
+      `${CLI_DIR}/commands/push.ts`,
       `${CLI_DIR}/commands/queue.ts`,
       `${CLI_DIR}/commands/repos.ts`,
       `${CLI_DIR}/commands/retro.ts`,

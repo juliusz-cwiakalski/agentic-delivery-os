@@ -160,9 +160,13 @@ export const writePmNotesFixture = (
   writeFileSync(
     file,
     kind === "complete"
-      ? (branch === undefined ? COMPLETE_PM_NOTES : pmNotesDocument("2026-11-19T12:00:00.000Z", branch))
+      ? branch === undefined
+        ? COMPLETE_PM_NOTES
+        : pmNotesDocument("2026-11-19T12:00:00.000Z", branch)
       : kind === "incomplete"
-        ? (branch === undefined ? INCOMPLETE_PM_NOTES : pmNotesDocument(null, branch))
+        ? branch === undefined
+          ? INCOMPLETE_PM_NOTES
+          : pmNotesDocument(null, branch)
         : MALFORMED_PM_NOTES,
   );
   return file;

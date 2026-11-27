@@ -22,6 +22,7 @@ import type {
   QueueParkRecord,
   StateStorePort,
 } from "#contracts";
+import { lanePushFactOf, newestLanePushForAttempt } from "../domain/dispatch-lane-push.js";
 import {
   buildRefDeliveringData,
   buildRepositoryDeliveringData,
@@ -29,7 +30,6 @@ import {
   operatorLaneFor,
   operatorLanesInRepository,
 } from "../domain/dispatch-operator-view.js";
-import { lanePushFactOf, newestLanePushForAttempt } from "../domain/dispatch-lane-push.js";
 import { readDispatchLanePushes, readDispatchLanes } from "./dispatch-ledger.js";
 import { readQueueParks } from "./queue.js";
 

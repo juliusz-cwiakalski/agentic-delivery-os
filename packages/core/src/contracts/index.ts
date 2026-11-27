@@ -1117,7 +1117,6 @@ export {
   DISPATCH_SPAWN_TITLE_PREFIX,
   DISPATCH_WINDOW_START_REASONS,
   DISPATCH_WORKTREE_ROOT_KEY,
-  isSafeRef,
   type DispatchAttemptRecord,
   type DispatchAttemptsData,
   type DispatchAttemptsTruncation,
@@ -1172,8 +1171,6 @@ export {
   type DispatchSummaryData,
   type DispatchUnmetCondition,
   type DispatchWindowStartReason,
-  type PushCommandData,
-  type PushLanePushFact,
   dispatchAttemptRecordKey,
   dispatchDivergenceRecordKey,
   dispatchHandoverRecordKey,
@@ -1182,6 +1179,9 @@ export {
   dispatchLanePushRecordKey,
   dispatchLaneRecordKey,
   dispatchPushEvidenceRef,
+  isSafeRef,
+  type PushCommandData,
+  type PushLanePushFact,
 } from "./dispatch.js";
 // The typed dispatch operator surface (GH-354 F-1..F-7, API-1..API-12,
 // DM-1..DM-7): the four query discriminators, the closed probe/marker/reason
