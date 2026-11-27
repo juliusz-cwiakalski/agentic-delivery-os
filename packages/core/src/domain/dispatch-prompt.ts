@@ -55,7 +55,7 @@ export const buildLifecyclePrompt = (input: DispatchLifecyclePromptInput): strin
     "",
     "## Delivery lifecycle (eleven phases)",
     "Run the eleven phases in order — clarify scope, specification, test planning, delivery planning, DoR, delivery, system spec update, review fix, quality gates, DoD, pull request — and never skip a gate.",
-    "At the pull request phase, after the pull request is created or updated and its URL is recorded as a pm-notes note, `phase complete <ref> pr_creation` lands the phase completion commit and `push <ref>` puts that last commit on the remote: the final message names the pull request URL and the push outcome, names the cause on a refusal and never claims the branch is on the remote, and the lane never retries, forces, authors a commit to make the push succeed, or reopens a phase.",
+    "At the pull request phase, after the pull request is created or updated and its URL is recorded as a pm-notes note, `phase complete <ref> pr_creation` lands the phase completion commit and `push <ref>` pushes that last commit and reports the outcome: the final message names the pull request URL and the push outcome, names the cause on a refusal and never claims the branch is on the remote, and the lane never retries, forces, authors a commit to make the push succeed, or reopens a phase.",
     "",
     "## Merge authority",
     `Merge authority stays with the human owner. Target ${base} and leave the pull request open for review unless the owner decides otherwise.`,

@@ -8,7 +8,7 @@
  * text leave; the guards stay before any child; the engine's parity act
  * consumes the outcome only (NG-3).
  */
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -23,11 +23,31 @@ import {
   readableParityTransport,
 } from "../fixtures/dispatch/parity/harness";
 import { createGuardedRunner } from "../fixtures/dispatch/parity/process-runner";
+import {
+  type ConfiguredCheckout,
+  createConfiguredCheckout,
+} from "../fixtures/dispatch/parity/temp-repo";
 
 const ROOT = process.cwd();
 const BRANCH = "feat/GH-416/lane-pushes-own-evidence-commit";
 const PARITY_BRANCH = "feat/GH-347/parity";
 const REMOTE_HEAD = "fedcba9876543210";
+/** The push remote the seam's one configuration read resolves for these arms. */
+const REMOTE_NAME = "origin";
+
+/** A configuration-only checkout declaring that one remote, for the seam arms. */
+let seamCheckout: ConfiguredCheckout;
+
+beforeAll(() => {
+  seamCheckout = createConfiguredCheckout({
+    label: "lane-push-causes-remote",
+    remotes: [REMOTE_NAME],
+  });
+});
+
+afterAll(() => {
+  seamCheckout.dispose();
+});
 
 type RecordingRunner = {
   readonly childRunner: GitPushChildRunner;
@@ -60,7 +80,13 @@ const seamResult = async (
   result: GitPushRunnerResult,
 ): Promise<{ readonly outcome: unknown; readonly recorder: RecordingRunner }> => {
   const recorder = recordingRunner(result);
-  const seam = createGitPushSeam({ childRunner: recorder.childRunner });
+  // The seam resolves its push remote from one bounded configuration read, so
+  // this arm declares the destination in a fixture checkout: the argv assertion
+  // then names the value the read yields instead of depending on the host.
+  const seam = createGitPushSeam({
+    cwd: seamCheckout.directory,
+    childRunner: recorder.childRunner,
+  });
   const outcome = await seam.pushChangeBranch({ branch: BRANCH });
   return { outcome, recorder };
 };
@@ -122,8 +148,9 @@ describe("GH-416 the seam names one closed cause on each child-act outcome (TC-L
       const { outcome, recorder } = await seamResult(entry.result);
       expect(outcome).toEqual(entry.outcome);
       expect(recorder.calls()).toBe(1);
-      // The fixed argv is unchanged: one refspec, HEAD as the source, no force.
-      expect(recorder.argv()[0]).toEqual(["git", "push", "--ff-only", `HEAD:refs/heads/${BRANCH}`]);
+      // The corrected argv: one repository argument (the remote the one
+      // configuration read resolved), one refspec, no force, no `--ff-only`.
+      expect(recorder.argv()[0]).toEqual(["git", "push", REMOTE_NAME, `HEAD:refs/heads/${BRANCH}`]);
     });
   }
 
@@ -380,11 +407,68 @@ describe("GH-416 the command records each of the seven causes (TC-LCAUSE-001)", 
       expect((run.records[0] as { readonly cause?: string }).cause).toBe(entry.cause);
     });
   }
+});
 
-  test("`unsafe-branch` is never a record's cause", async () => {
-    for (const entry of cases) {
-      const run = await runCommandPush(entry.result);
-      expect((run.records[0] as { readonly cause?: string }).cause).not.toBe("unsafe-branch");
+/* ------------------------------------------------------------------------- */
+/* The two classification boundaries spec v1.6 DM-4 states with the corrected  */
+/* act: a missing destination and a non-repository path are `remote-unavailable`*/
+/* and an HTTPS 403 is `auth-rejected`, never `remote-unavailable`.            */
+/* ------------------------------------------------------------------------- */
+
+describe("GH-416 the corrected act's two classification boundaries (TC-LCAUSE-001)", () => {
+  const boundaries: readonly {
+    readonly label: string;
+    readonly stderr: string;
+    readonly status: number;
+    readonly cause: string;
+  }[] = [
+    {
+      label: "a checkout with no configured push destination",
+      stderr:
+        "fatal: No configured push destination.\nEither specify the URL from the command-line",
+      status: 128,
+      cause: "remote-unavailable",
+    },
+    {
+      label: "a remote path that is no repository",
+      stderr:
+        "fatal: '/tmp/gone/remote.git' does not appear to be a git repository\nfatal: Could not read from remote repository.",
+      status: 128,
+      cause: "remote-unavailable",
+    },
+    {
+      label: "an HTTPS 403 on the request",
+      stderr:
+        "fatal: unable to access 'https://example.invalid/repo.git/': The requested URL returned error: 403",
+      status: 128,
+      cause: "auth-rejected",
+    },
+    {
+      label: "a not-granted write",
+      stderr:
+        "remote: Write access to repository not granted.\nfatal: unable to access the repository",
+      status: 128,
+      cause: "auth-rejected",
+    },
+  ];
+
+  for (const boundary of boundaries) {
+    test(`${boundary.label} is \`${boundary.cause}\``, async () => {
+      const { outcome, recorder } = await seamResult(rejection(boundary.stderr, boundary.status));
+      expect(outcome).toEqual({ outcome: "rejected", detail: boundary.cause });
+      expect(recorder.calls()).toBe(1);
+    });
+  }
+
+  test("a 403 never falls through to `remote-unavailable` or `unclassified`", async () => {
+    for (const text of [
+      "fatal: unable to access 'https://example.invalid/r.git/': The requested URL returned error: 403",
+      "remote: Write access to repository not granted.",
+    ]) {
+      const { outcome } = await seamResult(rejection(text, 128));
+      expect(outcome).toEqual({ outcome: "rejected", detail: "auth-rejected" });
+      expect(JSON.stringify(outcome)).not.toContain("remote-unavailable");
+      expect(JSON.stringify(outcome)).not.toContain("unclassified");
     }
   });
 });

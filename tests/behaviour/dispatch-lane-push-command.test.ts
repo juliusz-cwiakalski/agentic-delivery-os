@@ -20,6 +20,8 @@ import { createGuardedRunner } from "../fixtures/dispatch/parity/process-runner"
 
 const REF = "GH-347";
 const BRANCH = "feat/GH-347/parity";
+/** The push remote the harness checkout declares (`[remote "origin"]`). */
+const REMOTE_NAME = "origin";
 const HEAD = "0123456789abcdef0123456789abcdef01234567";
 
 const accepted = (): GitPushRunnerResult => ({
@@ -50,12 +52,14 @@ type PushRun = {
 const runPush = async (input: {
   readonly argv?: readonly string[];
   readonly push?: () => GitPushRunnerResult;
+  readonly branch?: string;
   readonly pmNotesBranch?: string;
   readonly storeWrap?: (store: StateStorePort) => StateStorePort;
   readonly order?: string[];
 }): Promise<PushRun> => {
   const guarded = createGuardedRunner({
     head: HEAD,
+    ...(input.branch === undefined ? {} : { branch: input.branch }),
     ...(input.push === undefined
       ? {}
       : {
@@ -126,7 +130,7 @@ describe("GH-416 TC-LCMD-001 the push answer and exits", () => {
   test("exactly one push invocation carries the delivered argv shape", async () => {
     const run = await runPush({ push: accepted });
     expect(run.pushInvocations).toHaveLength(1);
-    expect(run.pushInvocations[0]).toEqual(["push", "--ff-only", `HEAD:refs/heads/${BRANCH}`]);
+    expect(run.pushInvocations[0]).toEqual(["push", REMOTE_NAME, `HEAD:refs/heads/${BRANCH}`]);
     expect(run.observation.violations).toEqual([]);
   });
 
@@ -199,6 +203,25 @@ describe("GH-416 TC-LCMD-002 act first, append second", () => {
     expect(lanePush.recordedAt).toBeUndefined();
     expect(lanePush.branch).toBe(BRANCH);
     expect(lanePush.head).toBe(HEAD);
+    // The answer keeps its declared members when the record did not land: no
+    // `recordedAt`, no cause, and no second act or retry after the failure.
+    expect(Object.keys(lanePush).sort()).toEqual(["branch", "head", "recorded", "verdict"]);
+    expect(run.pushInvocations).toHaveLength(1);
+    expect(run.lanePushRecords).toHaveLength(0);
+  });
+
+  test("an oversize record is refused by the validator and disclosed, never written", async () => {
+    // The production payload measures 439 of the 512-byte bound with a
+    // 65-character attempt id; a long branch name crosses it. The act still
+    // lands, so the answer is `pushed` with `recorded: false`.
+    const longBranch = `feat/GH-347/${"x".repeat(420)}`;
+    const run = await runPush({ push: accepted, branch: longBranch });
+    expect(run.exit).toBe(0);
+    const lanePush = lanePushOf(run.data);
+    expect(lanePush.verdict).toBe("pushed");
+    expect(lanePush.branch).toBe(longBranch);
+    expect(lanePush.recorded).toBe(false);
+    expect(lanePush.recordedAt).toBeUndefined();
     expect(run.pushInvocations).toHaveLength(1);
     expect(run.lanePushRecords).toHaveLength(0);
   });
@@ -260,7 +283,7 @@ describe("GH-416 TC-LBND-001 the act is bounded and non-shell", () => {
       expect(run.exit).toBe(0);
       const pushRecords = harness.guarded.records.filter((record) => record.seam === "push");
       expect(pushRecords).toHaveLength(1);
-      expect(pushRecords[0]?.args).toEqual(["push", "--ff-only", `HEAD:refs/heads/${BRANCH}`]);
+      expect(pushRecords[0]?.args).toEqual(["push", REMOTE_NAME, `HEAD:refs/heads/${BRANCH}`]);
       expect(pushRecords[0]?.timeout).toBe(60_000);
       expect(harness.guarded.violations).toEqual([]);
       expect(harness.guarded.realChildStarts).toBe(0);

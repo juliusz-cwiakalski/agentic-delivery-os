@@ -432,11 +432,11 @@ flowchart TD
 - `@pm` records the PR/MR URL as a pm-notes `notes:` entry, landed by the commit primitive.
 - `@pm` assigns the ticket to a human reviewer in the tracker.
 - `@pm` runs `phase complete <workItemRef> pr_creation`, which lands the phase-completion commit.
-- `@pm` runs `push <workItemRef>`: one fast-forward push of the change branch's head — the phase-completion commit just landed — through the delivered push seam, followed by one durable `dispatch.lane-push` record. A refused push is a data-bearing answer at exit `1` with one closed cause; the lane does not retry, force, author a commit to make it succeed, or reopen a phase. The engine's ensure-push reconciles a pushable branch at the next classification ([push reference page](../planning/oss-tooling/milestones/m4/commands/push.md)).
+- `@pm` runs `push <workItemRef>`: one non-force push of the change branch's head — the phase-completion commit just landed — to the checkout's configured push remote through the delivered push seam, followed by one durable `dispatch.lane-push` record. A refused push is a data-bearing answer at exit `1` with one closed cause; the lane does not retry, force, author a commit to make it succeed, or reopen a phase. The engine's ensure-push reconciles a pushable branch at the next classification ([push reference page](../planning/oss-tooling/milestones/m4/commands/push.md)).
 - `@pm` states the final message: the PR/MR URL and the push outcome, naming the cause on a refusal and never claiming the branch is on the remote.
 - **STOP**: Do not start another ticket automatically.
 
-**Outcome**: PR/MR is ready for human review, the lane's own last commit is on the remote, and the ticket is assigned.
+**Outcome**: PR/MR is ready for human review, the lane's own last commit is pushed (or the refusal is named with its cause), and the ticket is assigned.
 
 **Exit criteria**:
 

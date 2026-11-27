@@ -12,6 +12,7 @@ import type { GitPushRunnerResult } from "../../packages/adapters/src/git/index"
 import { runDispatchLanePush } from "../../packages/core/src/app/dispatch-lane-push";
 import {
   appendDispatchLane,
+  appendDispatchLanePush,
   readDispatchLanePushes,
 } from "../../packages/core/src/app/dispatch-ledger";
 import {
@@ -21,6 +22,7 @@ import {
   type DispatchLanePushRecord,
   type DispatchLaneRecord,
 } from "../../packages/core/src/contracts/index";
+import { createDispatchState } from "../fixtures/dispatch/harness";
 import { createParityHarness, readableParityTransport } from "../fixtures/dispatch/parity/harness";
 import { createGuardedRunner } from "../fixtures/dispatch/parity/process-runner";
 
@@ -156,6 +158,106 @@ describe("GH-416 TC-LSTORE-001 the record is bounded and identifier-only", () =>
       expect(read.ok && read.records).toHaveLength(2);
     } finally {
       harness.dispose();
+    }
+  });
+});
+
+describe("GH-416 TC-LSTORE-001 the record validator refuses every malformed shape", () => {
+  /** The accepted record every refusal arm starts from. */
+  const wellFormed = (overrides: Partial<DispatchLanePushRecord> = {}): DispatchLanePushRecord => ({
+    schema: DISPATCH_LANE_PUSH_PAYLOAD_SCHEMA,
+    ref: REF,
+    repository: "github.com/owner/repo",
+    branch: BRANCH,
+    head: HEAD,
+    verdict: "pushed",
+    recordedAt: "2026-11-27T00:00:00.000Z",
+    ...overrides,
+  });
+
+  /**
+   * The production-shaped payload, measured against the 512-byte bound: the
+   * production attempt id is a 65-character identifier and a dispatch lane
+   * carries an equally long session id, so a well-formed record already spends
+   * most of the budget before the branch name.
+   */
+  const productionShaped = (): DispatchLanePushRecord =>
+    wellFormed({
+      attemptId: `${"a".repeat(64)}1`,
+      sessionId: `${"b".repeat(64)}2`,
+    });
+
+  test("the production-shaped record fits the 512-byte bound", () => {
+    const bytes = bytesOf(productionShaped());
+    // Measured on 2026-11-27: a production attempt id (65 characters) and one
+    // dispatch session id already spend most of the bound, which is why a long
+    // branch name crosses it.
+    expect(bytes).toBeGreaterThan(380);
+    expect(bytes).toBeLessThanOrEqual(512);
+  });
+
+  const refusals: readonly {
+    readonly label: string;
+    readonly record: () => DispatchLanePushRecord;
+  }[] = [
+    {
+      label: "a guard-only cause (`unsafe-branch`)",
+      record: () => wellFormed({ verdict: "failed", cause: "unsafe-branch" }),
+    },
+    {
+      label: "a ninth, undeclared cause token",
+      record: () => wellFormed({ verdict: "failed", cause: "not-a-declared-cause" }),
+    },
+    {
+      label: "a cause on the accepted verdict",
+      record: () => wellFormed({ cause: "non-fast-forward" }),
+    },
+    {
+      label: "a short head",
+      record: () => wellFormed({ head: "abc123" }),
+    },
+    {
+      label: "an empty head",
+      record: () => wellFormed({ head: "" }),
+    },
+    {
+      label: "an oversize payload (a long branch name)",
+      record: () => wellFormed({ branch: `feat/GH-347/${"x".repeat(420)}` }),
+    },
+  ];
+
+  for (const refusal of refusals) {
+    test(`${refusal.label} is refused with no record written`, () => {
+      const state = createDispatchState("lane-push-validator");
+      try {
+        const refused = appendDispatchLanePush(
+          state.store,
+          state.fenceToken,
+          refusal.record() as unknown as DispatchLanePushRecord,
+        );
+        expect(refused).toEqual({
+          ok: false,
+          code: "state.write.failed",
+          path: `dispatch.lane-pushes:${REF}`,
+        });
+        const read = readDispatchLanePushes(state.store);
+        expect(read.ok && read.records).toEqual([]);
+      } finally {
+        state.dispose();
+      }
+    });
+  }
+
+  test("the well-formed record beside them is accepted", () => {
+    const state = createDispatchState("lane-push-validator-accept");
+    try {
+      expect(appendDispatchLanePush(state.store, state.fenceToken, productionShaped()).ok).toBe(
+        true,
+      );
+      const read = readDispatchLanePushes(state.store);
+      expect(read.ok && read.records).toHaveLength(1);
+    } finally {
+      state.dispose();
     }
   });
 });

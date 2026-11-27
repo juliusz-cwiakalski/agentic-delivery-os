@@ -15,11 +15,18 @@ import {
   readableParityTransport,
 } from "../fixtures/dispatch/parity/harness";
 import { createGuardedRunner } from "../fixtures/dispatch/parity/process-runner";
+import { createConfiguredCheckout } from "../fixtures/dispatch/parity/temp-repo";
 
 /** The deterministic full-hex head facts (fixture literals, committed). */
 const LOCAL_HEAD = "0123456789abcdef";
 const REMOTE_HEAD = "fedcba9876543210";
 const BRANCH = "feat/GH-347/parity";
+/**
+ * The push remote the parity checkout declares. The harness checkout carries one
+ * `[remote "origin"]` section, so the seam's one bounded configuration read
+ * resolves `origin` and the act names it as the repository argument.
+ */
+const REMOTE_NAME = "origin";
 
 /** One scripted open pull whose head the parity read compares against. */
 const openPull = (sha: string): unknown => ({
@@ -141,7 +148,7 @@ describe("TC-PUSH-002 local ahead: one push, one re-read, pr-open with push:push
     expect(observation.token).toBe("pr-open");
     const pushes = pushInvocationsOf(observation);
     expect(pushes).toHaveLength(1);
-    expect(pushes[0]?.args).toEqual(["push", "--ff-only", `HEAD:refs/heads/${BRANCH}`]);
+    expect(pushes[0]?.args).toEqual(["push", REMOTE_NAME, `HEAD:refs/heads/${BRANCH}`]);
     const attempt = attemptOf(observation);
     expect(attempt?.evidenceRefs).toContain("push:pushed");
     const data = observation.envelopes[0]?.data;
@@ -257,7 +264,7 @@ describe("TC-PUSH-008 remote ahead type-fails; the act never widens its scope", 
     for (const element of argv) {
       expect(element.startsWith("-f") || element.startsWith("--force"), element).toBe(false);
     }
-    expect(argv).toEqual(["push", "--ff-only", `HEAD:refs/heads/${BRANCH}`]);
+    expect(argv).toEqual(["push", REMOTE_NAME, `HEAD:refs/heads/${BRANCH}`]);
   });
 });
 
@@ -316,7 +323,7 @@ describe("TC-PUSH-012 the act contract: bounded, fixed-argv, non-shell, injectab
     const pushes = pushInvocationsOf(observation);
     expect(pushes).toHaveLength(1);
     expect(pushes[0]?.file).toBe("git");
-    expect(pushes[0]?.args).toEqual(["push", "--ff-only", `HEAD:refs/heads/${BRANCH}`]);
+    expect(pushes[0]?.args).toEqual(["push", REMOTE_NAME, `HEAD:refs/heads/${BRANCH}`]);
     // The 60 000 ms production default is injectable through the seam options;
     // no new configuration key exists on any path.
     expect(pushes[0]?.timeout).toBe(500);
@@ -551,7 +558,7 @@ describe("TC-BND-002 the guarded runner covers the push seam (behaviour half)", 
   test("the recording runner refuses a requested shell or script path by name", async () => {
     const guarded = createGuardedRunner();
     await expect(
-      guarded.pushRunner("bash", ["push", "--ff-only", "HEAD"], {
+      guarded.pushRunner("bash", ["push", REMOTE_NAME, "HEAD"], {
         timeout: 1,
         killSignal: "SIGKILL",
       }),
@@ -618,16 +625,25 @@ describe("GH-416 the seam's rejection detail is the closed cause token (TC-LCAUS
   for (const entry of classTable) {
     test(`${entry.label} is \`rejected\` with cause ${entry.cause}`, async () => {
       let calls = 0;
-      const seam = createGitPushSeam({
-        childRunner: async () => {
-          calls += 1;
-          return entry.result;
-        },
-      });
-      const result = await seam.pushChangeBranch({ branch: BRANCH_UNDER_TEST });
-      expect(result).toEqual({ outcome: "rejected", detail: entry.cause });
-      expect(JSON.stringify(result)).not.toContain("git-exit-");
-      expect(calls).toBe(1);
+      // The seam resolves its destination from one bounded configuration read,
+      // so this arm declares that destination itself rather than inheriting the
+      // host checkout's remotes.
+      const checkout = createConfiguredCheckout({ label: "push-class-table" });
+      try {
+        const seam = createGitPushSeam({
+          cwd: checkout.directory,
+          childRunner: async () => {
+            calls += 1;
+            return entry.result;
+          },
+        });
+        const result = await seam.pushChangeBranch({ branch: BRANCH_UNDER_TEST });
+        expect(result).toEqual({ outcome: "rejected", detail: entry.cause });
+        expect(JSON.stringify(result)).not.toContain("git-exit-");
+        expect(calls).toBe(1);
+      } finally {
+        checkout.dispose();
+      }
     });
   }
 });

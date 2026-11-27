@@ -3,11 +3,12 @@ ados_distribution: redistributable
 ---
 # `push` — the lane's own evidence push
 
-`push <ref>` is the lane-side act that puts the lifecycle's last evidence commit on
-the remote. It performs exactly one fast-forward push of the change branch through
-the delivered push seam, appends one durable `dispatch.lane-push` record, and
-answers the verdict, branch, head, refusal cause, and whether the record landed. It
-authors nothing: no stage, commit, amend, reset, or history rewrite.
+`push <ref>` is the lane-side act that pushes the lifecycle's last evidence commit
+to the remote. It performs exactly one non-force push of the change branch to the
+checkout's configured push remote through the delivered push seam, appends one
+durable `dispatch.lane-push` record, and answers the verdict, branch, head,
+refusal cause, and whether the record landed. It authors nothing: no stage,
+commit, amend, reset, or history rewrite.
 
 At `pr_creation` the act runs after `phase complete <ref> pr_creation` has landed
 the phase-completion commit, so the commit pushed is the lane's actual last commit.
@@ -59,14 +60,20 @@ membership check is retained for the seam's direct consumers.
 
 ## The act
 
-One call of the delivered fast-forward seam: fixed argv
-`git push --ff-only HEAD:refs/heads/<branch>`, a literal non-shell child process,
-the 60 000 ms injectable budget with no configuration key, one attempt with no
-retry, and no force-capable variant. The act runs in the invocation's own checkout;
-for a dispatch-provisioned lane that is the lane's worktree. At act time the
-command reads the checkout's `HEAD` through the delivered local checkout/head
-read; that value is the record's and the answer's `head`, never a value the
-transport reports.
+One call of the delivered push seam: fixed argv
+`git push <resolved push remote> HEAD:refs/heads/<branch>`, a literal non-shell
+child process, the 60 000 ms injectable budget with no configuration key, one
+attempt with no retry, and no force-capable variant. The push remote is resolved
+by one bounded local configuration read in this order —
+`branch.<branch>.pushRemote`, `remote.pushDefault`, `branch.<branch>.remote`,
+then `origin` — and a missing or ambiguous destination is a typed
+`remote-unavailable` refusal that starts no child, never a guess. No `--ff-only`
+exists for `git push`: fast-forward-only semantics are git's own default for a
+non-force push, so the act passes no flag and no `+` prefix and can never force.
+The act runs in the invocation's own checkout; for a dispatch-provisioned lane
+that is the lane's worktree. At act time the command reads the checkout's `HEAD`
+through the delivered local checkout/head read; that value is the record's and
+the answer's `head`, never a value the transport reports.
 
 ## The record
 

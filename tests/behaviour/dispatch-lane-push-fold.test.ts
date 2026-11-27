@@ -27,6 +27,8 @@ import {
 import { classifyHarnessEvidence } from "../../packages/core/src/domain/harness-classify";
 import { readsFrom } from "../fixtures/dispatch/golden/harness";
 import { createDispatchState } from "../fixtures/dispatch/harness";
+import { createParityHarness, readableParityTransport } from "../fixtures/dispatch/parity/harness";
+import { createGuardedRunner } from "../fixtures/dispatch/parity/process-runner";
 
 const REF = "GH-301";
 const REPOSITORY = "github.com/owner/repo";
@@ -108,6 +110,52 @@ const seedRecord = (
   expect(appended.ok).toBe(true);
 };
 
+/**
+ * One scripted port whose `collect` reports a harness timeout for the declared
+ * call count, so the engine's restart ladder carries one liveness reference per
+ * iteration and the terminal evidence slice genuinely overflows the delivered
+ * 16-reference budget (the `dispatch-push-evidence.test.ts` technique).
+ */
+const stallLadderPort = (timedOutCollects: number): HarnessSessionPort => {
+  let collects = 0;
+  return {
+    spawn: async () => ({ ok: true, value: handle }),
+    resume: async () => ({ ok: true, value: handle }),
+    collect: async (): Promise<HarnessResult<HarnessEvidence>> => {
+      collects += 1;
+      return {
+        ok: true,
+        value:
+          collects <= timedOutCollects
+            ? {
+                completionMarker: false,
+                exitStatus: null,
+                timedOut: true,
+                spawnRefused: false,
+                failureReported: false,
+                toolFailure: false,
+              }
+            : completeEvidence,
+      };
+    },
+    classify: (input) => classifyHarnessEvidence(input),
+    liveness: async () => ({
+      ok: true,
+      value: {
+        readings: [
+          {
+            kind: "session-traffic",
+            status: "sourced",
+            value: 1,
+            observedAt: "2026-11-08T10:00:00.000Z",
+          },
+        ],
+      },
+    }),
+    listSessions: async () => ({ ok: true, value: { handles: [handle] } }),
+  };
+};
+
 type Classification = {
   readonly token: string | undefined;
   readonly attempt:
@@ -165,22 +213,91 @@ const classify = async (input: {
 };
 
 describe("GH-416 TC-LFOLD-001 the refusal fold reserves both references", () => {
-  test("each of the seven recordable causes folds lane-push:failed plus its cause", () => {
-    const state = createDispatchState("fold-causes");
-    try {
-      for (const [index, cause] of DISPATCH_PUSH_RECORDABLE_CAUSES.entries()) {
-        seedRecord(state.store, state.fenceToken, {
-          verdict: "failed",
-          cause,
-          attemptId: `attempt-cause-${index}`,
+  test("each of the seven recordable causes folds lane-push:failed plus its own cause", async () => {
+    for (const [index, cause] of DISPATCH_PUSH_RECORDABLE_CAUSES.entries()) {
+      const state = createDispatchState(`fold-cause-${index}`);
+      try {
+        seedRecord(state.store, state.fenceToken, { verdict: "failed", cause });
+        // One full classification per cause, through the real engine: the fold
+        // is observed on the attempt record, not by calling the helper.
+        const result = await classify({
+          store: state.store,
+          fenceToken: state.fenceToken,
+          parity: parity("clean", true),
         });
-        const refs = lanePushEvidenceRefsForAttempt(
-          state.store,
-          REPOSITORY,
-          `attempt-cause-${index}`,
-        );
-        expect(refs).toEqual(["lane-push:failed", `lane-push-cause:${cause}`]);
+        expect(result.token, cause).toBe("pr-open");
+        const refs = result.attempt?.evidenceRefs ?? [];
+        expect(
+          refs.filter((ref) => ref === "lane-push:failed"),
+          cause,
+        ).toHaveLength(1);
+        expect(
+          refs.filter((ref) => ref.startsWith("lane-push-cause:")),
+          cause,
+        ).toEqual([`lane-push-cause:${cause}`]);
+      } finally {
+        state.dispose();
       }
+    }
+  });
+
+  test("the two references survive a genuinely overflowing 16-reference slice", async () => {
+    const state = createDispatchState("fold-overflow");
+    try {
+      seedRecord(state.store, state.fenceToken, {
+        verdict: "failed",
+        cause: "non-fast-forward",
+      });
+      // Seventeen stalled iterations carry seventeen liveness references, so the
+      // terminal classification's slice overflows; the reserved block must still
+      // hold the disclosure and its cause.
+      let truthCalls = 0;
+      const result = await runDispatch({
+        store: state.store,
+        fenceToken: state.fenceToken,
+        harness: stallLadderPort(17),
+        harnessKind: "opencode",
+        descriptor: { kind: "host", workDirectory: "/tmp/ses-fold", environment: [] },
+        prompt: `deliver ${REF}`,
+        ref: REF,
+        evidenceClass: "pilot",
+        repository: REPOSITORY,
+        handoverState: "dual-run",
+        nowIso: () => "2026-11-08T10:00:00.000Z",
+        newAttemptId: () => ATTEMPT,
+        newDivergenceId: () => "DIV-fold-overflow",
+        readTruth: async () => {
+          truthCalls += 1;
+          return truthCalls <= 17
+            ? readsFrom({
+                artifacts: {
+                  ok: true,
+                  value: {
+                    branchCommits: 2,
+                    pr: { state: "none", url: null, mergeReady: false },
+                    pmNotes: "complete",
+                  },
+                },
+              })
+            : readsFrom();
+        },
+        claimLease: () => ({ ok: true, leaseId: "lease-fold-overflow" }),
+        releaseLease: () => true,
+        phaseLedger: { completed: 3, total: 9, variant: "full" },
+        restartBudget: 24,
+        pushParity: async () => parity("clean", true),
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.result).toBe("pr-open");
+      const refs = result.attempt.evidenceRefs;
+      expect(refs).toHaveLength(16);
+      expect(refs).toContain("lane-push:failed");
+      expect(refs).toContain("lane-push-cause:non-fast-forward");
+      // The disclosure sits ahead of the sliced evidence, never at its mercy.
+      expect(refs.indexOf("lane-push:failed")).toBeLessThan(
+        refs.findIndex((ref) => ref.startsWith("liveness:")),
+      );
     } finally {
       state.dispose();
     }
@@ -363,38 +480,54 @@ describe("GH-416 TC-LFOLD-004 a disclosure is not a claim", () => {
 });
 
 describe("GH-416 TC-LPUSH-003 a classification after an accepted lane push", () => {
-  test("equal heads: zero engine push acts, push:clean and lane-push:pushed once each", async () => {
+  test("equal heads: a live recording runner counts zero engine push acts", async () => {
+    // The production composition, not a stub: the guarded push runner is a LIVE
+    // counter on the push seam, so this assertion fails the moment an engine act
+    // fires (the delivered defect pin).
+    const guarded = createGuardedRunner({ head: HEAD });
+    const harness = createParityHarness({
+      label: "lane-push-003-count",
+      localHead: HEAD,
+      guarded,
+      transport: readableParityTransport({
+        openPulls: [
+          {
+            number: 501,
+            state: "open",
+            head: { ref: "feat/GH-347/parity", sha: HEAD },
+            base: { ref: "main-tools" },
+            mergeable: true,
+            mergeable_state: "clean",
+            changed_files: 2,
+          },
+        ],
+      }),
+    });
+    try {
+      const run = await harness.run(["dispatch", "GH-347", "--json"]);
+      expect(run.exit).toBe(0);
+      const observation = harness.observe();
+      expect(observation.token).toBe("pr-open");
+      expect(observation.attempts).toHaveLength(1);
+      expect(observation.attempts[0]?.evidenceRefs).toContain("push:clean");
+      expect(observation.invocations.filter((entry) => entry.seam === "push")).toHaveLength(0);
+      expect(guarded.pushes).toBe(0);
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("a seeded accepted record folds lane-push:pushed once beside push:clean", async () => {
     const state = createDispatchState("lane-push-003");
     try {
       seedRecord(state.store, state.fenceToken);
-      const pushActs = 0;
-      const result = await runDispatch({
+      const result = await classify({
         store: state.store,
         fenceToken: state.fenceToken,
-        harness: harnessPort(),
-        harnessKind: "opencode",
-        descriptor: { kind: "host", workDirectory: "/tmp/ses-fold", environment: [] },
-        prompt: `deliver ${REF}`,
-        ref: REF,
-        evidenceClass: "pilot",
-        repository: REPOSITORY,
-        handoverState: "dual-run",
-        nowIso: () => "2026-11-08T10:00:00.000Z",
-        newAttemptId: () => ATTEMPT,
-        newDivergenceId: () => "DIV-lpush-003",
-        readTruth: async () => readsFrom(),
-        claimLease: () => ({ ok: true, leaseId: "lease-lpush-003" }),
-        releaseLease: () => true,
-        phaseLedger: { completed: 3, total: 9, variant: "full" },
-        restartBudget: 24,
-        // Equal heads: the parity port answers clean and performs no act.
-        pushParity: async () => parity("clean", true),
+        parity: parity("clean", true),
       });
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-      expect(result.data.result).toBe("pr-open");
-      expect(pushActs).toBe(0);
-      const refs = result.attempt.evidenceRefs;
+      expect(result.token).toBe("pr-open");
+      const refs = result.attempt?.evidenceRefs ?? [];
       expect(refs.filter((ref) => ref === "push:clean")).toHaveLength(1);
       expect(refs.filter((ref) => ref === "lane-push:pushed")).toHaveLength(1);
       // The two families never collapse.
