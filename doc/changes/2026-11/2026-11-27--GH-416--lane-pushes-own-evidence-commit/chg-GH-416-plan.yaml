@@ -1,12 +1,19 @@
 # ---------------------------------------------------------------------------
 # GH-416: M4-S45: A lane pushes its own last evidence commit before it stops
 #
-# Plan revision v1.3 (2026-11-27): final sync to spec v1.4 and test plan
-# v1.5 (PM rulings R7..R11). v1.2 was the DoR iteration-1 remediation against
-# spec v1.3. v1.0 was authored from spec v1.1 and test plan v1.1, and v1.1
-# re-checked the plan against their v1.2 corrections. Phase ids, order,
-# kinds, and AC/TC ownership are unchanged from v1.0.
-# v1.3 moves one scope entry: phase 2 loses packages/adapters/src/git/index.ts
+# Plan revision v1.4 (2026-11-27): DoR iteration-2 remediation against spec
+# v1.5 and test plan v1.6 (PM rulings R12..R15). v1.3 was the final sync to
+# spec v1.4 and test plan v1.5 (rulings R7..R11); v1.2 was the DoR iteration-1
+# remediation against spec v1.3; v1.0 was authored from spec v1.1 and test
+# plan v1.1, and v1.1 re-checked the plan against their v1.2 corrections.
+# Phase ids, order, kinds, and AC/TC ownership are unchanged from v1.0.
+# v1.4 moves two scope entries:
+#   - phase 1 loses packages/core/src/contracts/closeout.ts (ruling R12: the
+#     safe-ref predicate's home is the dispatch contract module, and the
+#     closeout contract module stays untouched and declaration-only);
+#   - phase 3 gains tests/checks/provider-alias-baseline.test.ts (ruling R14:
+#     the phase regenerates the alias baseline this suite pins).
+# v1.3 moved one scope entry: phase 2 lost packages/adapters/src/git/index.ts
 # (ruling R10: that module's private predicate copy is out of scope, so no
 # phase may declare an edit to it; the seam's four exported names therefore
 # stay as delivered). The entries below moved in v1.2, each with its reason:
@@ -29,20 +36,18 @@
 #
 # Sources, read in full before this plan was authored (the single source of
 # truth for every phase, test case, and path below):
-#   chg-GH-416-spec.md (v1.4: F-1 "One predicate, two layers, three sources
-#   of refusal", F-3, F-4, section 7.2, section 10, section 12, section 16,
-#   section 22, DM-1, DM-4, DEC-4 to DEC-6, NFR-2, RSK-1..RSK-10,
-#   DEC-1..DEC-7, AC-F1-1..AC-F6-1, Appendices A to E) and
-#   chg-GH-416-test-plan.md (v1.5 as read in the working tree at 13:28; the
+#   chg-GH-416-spec.md (v1.5: F-1 "One predicate, two layers, three refusal
+#   conditions", F-3, F-4, section 7.1, section 7.2, section 10, section 12,
+#   section 13, section 16, section 21, section 22, DM-1, DM-4, DEC-4 to
+#   DEC-6, NFR-2, RSK-1..RSK-10, DEC-1..DEC-7, AC-F1-1..AC-F6-1, Appendices A
+#   to E) and
+#   chg-GH-416-test-plan.md (v1.6 as read in the working tree at 14:13; the
 #   one assumption this plan still makes about it is in the "Test plan
 #   landing" block), 31 cases, this folder;
-#   chg-GH-416-pm-notes.yaml (its DoR rulings R1..R6 bind revision v1.2),
-#   beside its intake decisions, doc-risk inventory, and owner delivery
-#   notes. Rulings R7..R11 reached this revision through the delegation that
-#   requested it and were not yet recorded in the pm-notes when it was
-#   written;
-#   readiness-review/readiness-iter-1.md, whose plan-routed findings are D1,
-#   D4, and D5 below.
+#   chg-GH-416-pm-notes.yaml, whose DoR rulings R1..R15 bind this plan, beside
+#   its intake decisions, doc-risk inventory, and owner delivery notes;
+#   readiness-review/readiness-iter-1.md and readiness-iter-2.md, whose
+#   plan-routed findings are D1, D4, D5, 2-B1, 2-B2, and 2-B3 below.
 # Precedent plans read for shape and for pinned-surface discipline:
 #   chg-GH-413-plan.yaml (v1.7: the header fences, the per-phase comments, a
 #   planning finalize phase) and chg-GH-350-plan.yaml (phase 8: the
@@ -84,6 +89,27 @@
 #     tests/structure/closeout-contract.test.ts:159;
 #     packages/core/src/domain/closeout.ts:365 and :1464 publish the same
 #     `protected-ref` literal the seam emits.
+#   - packages/core/src/contracts/closeout.ts is pinned "declarations plus
+#     `as const` data" by tests/structure/closeout-contract.test.ts:210-213
+#     and tests/structure/port-neutrality.test.ts:17-23, :88-99; the rule at
+#     tests/structure/closeout-contract.test.ts:71-110 names every top-level
+#     function and every variable without an `as const` initializer, so no
+#     form of a predicate fits there.
+#   - packages/core/src/contracts/dispatch.ts:54, :60, :97, :725: the module
+#     already exports functions (`dispatchAttemptRecordKey`,
+#     `dispatchHandoverRecordKey`, `dispatchPushEvidenceRef`,
+#     `dispatchLaneRecordKey`) and no suite pins it declaration-only.
+#   - packages/core/src/contracts/projects.ts:70-72: an unpinned contracts
+#     module carries a top-level `new RegExp` built from an `as const` string
+#     pattern, the precedent for the predicate's form in its new home; the
+#     only directory-wide guard over the contracts tier
+#     (tests/structure/port-neutrality.test.ts:83) is the ambient one.
+#   - packages/core/src/domain/closeout.ts:337-338: `branchConvention` is
+#     `^[a-z][a-z0-9-]*/<ref>/.+$`, so a convention match always contains a
+#     slash and no member of PROTECTED_REF_NAMES is convention-shaped.
+#   - tests/checks/provider-alias-baseline.test.ts:186-209: the alias baseline
+#     is pinned at 28 Commands rows and 27 non-install rows with `provider`
+#     last, and its provenance note at exactly the GH-350 clause.
 #   - packages/core/src/domain/closeout.ts:337-358: `branchConvention` and
 #     `selectMatchingBranch` return `none | unique | ambiguous`.
 #   - packages/adapters/src/git/index.ts:437-451: the git port's `listBranches`
@@ -128,9 +154,9 @@
 # Phase order
 #   1 contracts, the record kind, and the changeset (every later phase
 #     consumes them; the changeset exists before any gate can run), plus the
-#     one home of the safe-ref predicate and the protected-name set in the
-#     closeout contract module, with the push seam importing them through the
-#     package barrel;
+#     safe-ref predicate's home in the dispatch contract module, the
+#     protected-name set staying in the closeout contract module, and the push
+#     seam importing both through the package barrel;
 #   2 the push seam's closed cause (the seam's remaining edit: the child-act
 #     classification, a server-side protection decline into `protected-ref`
 #     included; its guards run on the shared predicate; reporting only, and
@@ -174,27 +200,36 @@
 # Step numbers are cited by content first and number second, against test
 # plan v1.5.
 #
-# Test plan landing (spec v1.4 is the authority; the test plan was read at
-# v1.5 in the working tree)
-#   Landed in v1.5 and reflected in this plan:
-#   - R7: TC-LCAUSE-001 is written around the seven recordable causes, with
-#     `protected-ref` as one token with two sources and `unsafe-branch`
-#     guard-only; TC-LCAUSE-002, TC-LFOLD-001, and TC-LSTORE-001 carry the
-#     same split.
-#   - R8: NFR-2's six-part count in TC-LBND-002.
-#   - R10: TC-LRES-004 asserts that the three other predicate copies stay
-#     unchanged.
-#   - R11: TC-LSTATUS-002's golden host is
-#     tests/golden/dispatch-status-worktree.test.ts, with the snapshot
-#     tests/golden/status-lane-push.txt.
-#   - And, carried since v1.4: B1 (the single-predicate rule and the
+# Test plan landing (spec v1.5 is the authority; the test plan was read at
+# v1.6 in the working tree)
+#   Landed in v1.6 and reflected in this plan:
+#   - R12: the predicate's home is packages/core/src/contracts/dispatch.ts
+#     (TC-LRES-004's target and preconditions; section 1.1);
+#   - R13: TC-LRES-004 keeps the safe-ref refusal as the one command-path
+#     guard arm (arm a1), proves the protected set by a predicate-level unit
+#     cell (step 5) and a structural unreachability pin (step 6), and keeps
+#     the seam's direct-consumer layer (step 7); TC-LCAUSE-001 step 3 states
+#     that `protected-ref` source (a) is defence in depth and source (b), a
+#     server-side decline, is the recordable one;
+#   - R15: TC-LBND-002 step 3 (a second invocation repeats all six parts once
+#     more and reads the standing lane-push record on no write path), and
+#     TC-LPUSH-001's process claim scoped to the act under test.
+#   - Carried since v1.5: R7 (seven recordable causes, `unsafe-branch`
+#     guard-only), R8 (NFR-2's six-part count), R10 (the three other
+#     predicate copies asserted unchanged), R11 (the status golden host
+#     tests/golden/dispatch-status-worktree.test.ts with the snapshot
+#     tests/golden/status-lane-push.txt).
+#   - Carried since v1.4: B1 (the single-predicate rule and the
 #     direct-consumer seam layer), B2 (the engine consumes the outcome only),
 #     B3 (TC-LPUSH-001 over a real temporary checkout with a fake remote
 #     keyed by ref), B5 (the M1 page and its phrase row as one unit), the
 #     `no commit` step in TC-LMSG-002, the consolidated Definition of Done,
-#     and the seam-level cells located in tests/behaviour/dispatch-push-parity.test.ts.
-#   Still assumed, because v1.5 is silent: the fake remote of TC-LPUSH-001
-#   lands under tests/fixtures/dispatch/parity/ (the fixture folder its
+#     and the seam-level cells located in
+#     tests/behaviour/dispatch-push-parity.test.ts.
+#   Still assumed, because v1.6 is silent on the point: the fake remote of
+#   TC-LPUSH-001, and the temporary-checkout helper it needs (the delivered
+#   tests/fixtures/closeout/temp-git.ts is hard-coded to another change),
+#   land under tests/fixtures/dispatch/parity/ (the fixture folder its
 #   section 6 names for this change) or inside the suite. A different folder
 #   widens phase 3's `folders` entry.
 #
@@ -211,9 +246,11 @@
 #     packages/cli/src/entrypoint.ts) are never edited: an edit to one is
 #     disclosed, never silent. Three modules are outside every scope by
 #     ruling R10: packages/adapters/src/git/index.ts, merge.ts, and
-#     watchdog.ts keep their private predicate copies.
-#     tests/behaviour/dispatch-push-parity.test.ts is
-#     declared in phases 2 and 3 for additive cells only.
+#     watchdog.ts keep their private predicate copies. The closeout contract
+#     module, packages/core/src/contracts/closeout.ts, is outside every scope
+#     by ruling R12: it is pinned declaration-only and is not edited.
+#     tests/behaviour/dispatch-push-parity.test.ts is declared in phases 2
+#     and 3 for additive cells only.
 #   - A pinned surface moves in the same commit as the code it pins (the
 #     GH-413 rule): the inventories, the additivity baseline, the no-shell
 #     surface, the family-count pins, the phrase rows. Each is declared beside
@@ -244,20 +281,29 @@
 #   - AC-F1-2 and NFR-7: a branch is pushed only when exactly one rule resolved
 #     it. A guessed, current-checkout, ambiguous, unsafe, or protected ref is
 #     never pushed.
-#   - One predicate, two layers, three sources of refusal (F-1, DM-4): the
-#     safe-ref predicate and the protected-name set have one home, the
-#     closeout contract module packages/core/src/contracts/closeout.ts; the
-#     push seam's guards and the command's resolution apply that one
-#     predicate, and no second copy is declared on that path. `unsafe-branch`
-#     is guard-only: always the command's pre-act resolution refusal (a typed
-#     input refusal with no child process, no act, no record, and no
-#     verdict/cause pair), and no lane-push record can carry it.
-#     `protected-ref` is one token with two sources: protected-set membership
-#     is the same pre-act refusal, and a protection or hook decline git
-#     reports is classified from the child act (verdict `failed`, record
-#     appended). The token alone never identifies the source; the layer and
-#     the child count do. So seven causes are recordable, and the command's
-#     recorded `failed` verdicts are exactly those seven.
+#   - One predicate, two layers, three refusal conditions (F-1, DM-4): the
+#     safe-ref predicate lives in the dispatch contract module,
+#     packages/core/src/contracts/dispatch.ts, which already carries
+#     functions; the protected-name set stays in the closeout contract module
+#     as `as const` data. The push seam's guards and the command's resolution
+#     import both through the `@delivery-os/core/contracts` barrel and apply
+#     that one predicate: no second copy on that path, no new module, and no
+#     pinned invariant relaxed (R12). The command's pre-act guard is the
+#     safe-ref predicate: `unsafe-branch` is guard-only, always the command's
+#     pre-act resolution refusal (a typed input refusal with no child
+#     process, no act, no record, and no verdict/cause pair), and no
+#     lane-push record can carry it. The protected-set check is defence in
+#     depth on both layers and structurally unreachable from a resolved
+#     branch: resolution only ever yields a convention match, which always
+#     contains a slash, and no member of PROTECTED_REF_NAMES is
+#     convention-shaped. It is proven by a direct call of the predicate,
+#     never by faking a selection (R13). `protected-ref` is one token with
+#     two sources, of which only a protection or hook decline git reports is
+#     command-reachable: that one is classified from the child act (verdict
+#     `failed`, record appended). The token alone never identifies the
+#     source; the layer and the child count do. So seven causes are
+#     recordable, and the command's recorded `failed` verdicts are exactly
+#     those seven.
 #   - R10 (spec section 7.2 and section 12): the predicate is unified for the
 #     push seam and its command only. The identical private copies in
 #     packages/adapters/src/git/index.ts, merge.ts, and watchdog.ts are out
@@ -320,7 +366,9 @@
 #
 # Findings reported to the PM. Part A holds what this plan reported when it
 # was authored against v1.1; part B holds the plan-routed findings of DoR
-# iteration 1; part C holds what revision v1.2 found. Each entry records what
+# iteration 1; part C holds what revision v1.2 found; part D holds the
+# plan-routed findings of DoR iteration 2; part E holds what revision v1.4
+# found. Each entry records what
 # was reported, what the plan declared meanwhile, and who routes it. An entry
 # marked CLOSED keeps its text as the record; the others stay open with the PM.
 # Part A:
@@ -394,14 +442,17 @@
 #      are named in phase 8.
 # Part B, DoR iteration 1 (readiness-review/readiness-iter-1.md), the
 # plan-routed findings:
-#   D1 (review finding 1, B1; CLOSED by PM ruling R1; owned by phases 1, 2,
-#   and 3) The predicate story. The plan said the command's resolution reuses
-#      the seam's own guard predicates with no copy, and made that reuse an
+#   D1 (iteration-1 finding 1; CLOSED by PM rulings R1 and R12, the second
+#   after iteration 2 reopened its home; owned by phases 1, 2, and 3) The
+#      predicate story. The plan said the command's resolution reuses the
+#      seam's own guard predicates with no copy, and made that reuse an
 #      export from the adapters seam. That was unimplementable: resolution
 #      lives in core, the dependency matrix forbids core importing adapters,
-#      and `isSafeRef` is private in the seam. Owned: phase 1 homes `isSafeRef`
-#      beside `PROTECTED_REF_NAMES` in packages/core/src/contracts/closeout.ts
-#      and swaps the seam's private copy for that import; phase 2 keeps the
+#      and `isSafeRef` is private in the seam. R1 and R9 first homed the
+#      predicate beside `PROTECTED_REF_NAMES` in the closeout contract
+#      module, which is pinned declaration-only (2-B1 below). Owned: phase 1
+#      declares `isSafeRef` in packages/core/src/contracts/dispatch.ts and
+#      swaps the seam's private copy for a barrel import; phase 2 keeps the
 #      seam's guards on it; phase 3 applies the same predicate during
 #      resolution and declares no copy.
 #   D4 (review finding 4, B4; CLOSED by PM ruling R4; owned by phase 5) The
@@ -431,10 +482,11 @@
 #      tests/golden/dispatch-text.test.ts. Ruled: v1.5 names
 #      tests/golden/dispatch-status-worktree.test.ts with the snapshot
 #      tests/golden/status-lane-push.txt, exactly as phase 5 declares.
-#   I-13 (CLOSED by ruling R9; owned by phase 1) Spec section 16 listed the
-#      predicate's home under its "Dispatch contracts" row. Ruled: v1.4
-#      files it under the closeout contract module,
-#      packages/core/src/contracts/closeout.ts, where phase 1 homes it.
+#   I-13 (SUPERSEDED by rulings R9 then R12; owned by phase 1) Spec section
+#      16 listed the predicate's home under its "Dispatch contracts" row.
+#      R9 first filed it under the closeout contract module, which iteration
+#      2 showed to be pinned declaration-only; R12 moves the predicate back
+#      to the dispatch contract module, and spec v1.5 files it there.
 #   I-14 (CLOSED by ruling R10; no phase owns an edit) Three identical
 #      private copies of `isSafeRef` remain in the git index, merge, and
 #      watchdog adapters. Ruled: the predicate is unified for the push seam
@@ -445,6 +497,42 @@
 #      change-record (pm-notes) read the command performs for the `branch:`
 #      declaration. Ruled: v1.4 counts it, and phase 3 declares the six-part
 #      count.
+# Part D, DoR iteration 2 (readiness-review/readiness-iter-2.md), the
+# plan-routed findings:
+#   2-B1 (review finding 1; CLOSED by PM ruling R12; owned by phase 1) The
+#      predicate's home. R1 and R9 put it in packages/core/src/contracts/
+#      closeout.ts, which two delivered suites pin "declarations plus
+#      `as const` data"; a function or a regex there is a named violation,
+#      and phase 1 ran one of those suites as a control it called "never
+#      edited". Owned: phase 1 declares `isSafeRef` in
+#      packages/core/src/contracts/dispatch.ts, leaves the closeout contract
+#      module untouched and outside every scope, and runs both pins as
+#      read-only controls.
+#   2-B2 (review finding 2; CLOSED by PM ruling R13; owned by phase 3) The
+#      protected-set refusal on the command path. A resolved name is always
+#      a convention match and contains a slash, and no protected member
+#      does, so that refusal cannot be triggered, and a real-command-path
+#      test of it would pass for the wrong reason. Owned: phase 3 declares
+#      the safe-ref predicate as the one pre-act guard, keeps the
+#      protected-set check as defence in depth proven by a direct call and a
+#      structural pin, and requires no exercisable protected-set refusal;
+#      phase 2 keeps the server-side decline classified `protected-ref`.
+#   2-B3 (review finding 3; CLOSED by PM ruling R14; owned by phase 3) The
+#      alias-baseline suite. Phase 3 regenerates the baseline that
+#      tests/checks/provider-alias-baseline.test.ts pins at 28 rows and runs
+#      the suite, but did not declare the file. Owned: phase 3 declares it.
+#   Advisories reflected (PM ruling R15):
+#      doc/spec/features/feature-adapter-ports.md joins phase 8's
+#      reconciliation list, and phase 3's AC-1 fixture paragraph scopes the
+#      process claim to the act under test.
+# Part E, found while writing revision v1.4 (open with the PM):
+#   I-16 Test plan TC-LRES-004's preconditions say names containing `..` are
+#      "not constructible here: the convention read would not match them".
+#      The convention's final segment is `.+`, so `feat/GH-416/a..b` is a
+#      convention match that the safe-ref predicate refuses; only the
+#      leading-dash example is unconstructible. This plan cites no `..`
+#      example, so nothing in it depends on the sentence. Route:
+#      test-plan-writer.
 # Still open with the PM: I-7 (reach the artifacts do not name), I-8 (the
 # companion record's id is a declared expectation), and I-9 (the naming
 # lock).
@@ -458,6 +546,8 @@ tier:
     - "A push is performed for a branch that exactly one rule did not resolve: a guessed, current-checkout, ambiguous, unsafe, or protected ref (AC-F1-2, NFR-7, TC-LRES-001 to TC-LRES-004): stop and report; this is the worst outcome of the change."
     - "The two layers drift: the command's resolution and the push seam's guard stop applying the one shared predicate, a second copy of the predicate appears on that path, a pre-act resolution refusal starts a child or appends a record, `unsafe-branch` reaches the command's answer or a lane-push record, or a `protected-ref` record is written for a protected-set name instead of a server-side decline (F-1, DM-4, TC-LRES-004, TC-LCAUSE-001): stop and report."
     - "A phase edits the private safe-ref predicate copies in packages/adapters/src/git/index.ts, merge.ts, or watchdog.ts, or any other adapters module adopts the shared predicate (R10, spec section 7.2): stop and report; the predicate is unified for the push seam and its command only."
+    - "The safe-ref predicate lands in a contracts module pinned declaration-only (packages/core/src/contracts/closeout.ts is one), a function or a regex is added to such a module, or a declaration-only pin (tests/structure/closeout-contract.test.ts, tests/structure/port-neutrality.test.ts) is relaxed to admit it (R12): stop and report; the predicate's home is packages/core/src/contracts/dispatch.ts."
+    - "A suite fakes a branch selection, or injects `main`, `main-tools`, or `HEAD` as a resolved branch, to produce a protected-set refusal on the command path (R13, AC-F1-2, TC-LRES-004): stop and report; that check is structurally unreachable from a resolved branch and is proven by a direct call of the predicate."
     - "A suite or a phase asserts a durable fact (a record, a status fact, a folded reference) for a pre-act resolution refusal (RSK-10, AC-F1-2, TC-LRES-004): stop and report."
     - "A new golden, fixture, or module lands outside the declared scope, so a commit is green locally and would be red on a fresh checkout (the staging rule of packages/core/src/domain/commit-staging.ts): stop and declare it before committing."
     - "The record append precedes the act, a record claims a push that did not happen, the payload exceeds 512 UTF-8 bytes, or git's failure text, a remote URL, or a credential-shaped fragment reaches the record, the answer, the status fact, or the evidence (DM-1, TC-LSTORE-001, TC-LCMD-002, TC-LCAUSE-002): stop and report."
@@ -476,9 +566,9 @@ defaultLeases:
 defaultWeightClass: standard
 phases:
   - id: 1
-    title: "Contracts: the closeout contract module as the predicate's one home, the `dispatch.lane-push` record kind with its append and read, and the changeset"
+    title: "Contracts: the safe-ref predicate's home in the dispatch contract module, the `dispatch.lane-push` record kind with its append and read, and the changeset"
     kind: delivery
-    summary: "declare the contracts every later phase consumes and add the changeset first: one home in the closeout contract module, packages/core/src/contracts/closeout.ts, for the safe-ref predicate beside the protected-name set, which the adapters push seam imports through the package barrel, then the `dispatch.lane-push` record kind with its bounded identifier-only payload, the closed eight-token refusal-cause vocabulary (one guard-only token, seven recordable causes), the `lane-push:` evidence builders, the `push` answer contract, the additive optional `lanePush` status fact, and the record's validator, read, and append in the delivered dispatch ledger."
+    summary: "declare the contracts every later phase consumes and add the changeset first: the safe-ref predicate in the dispatch contract module, packages/core/src/contracts/dispatch.ts, which already carries functions, with the protected-name set staying as delivered in the closeout contract module and the adapters push seam importing both through the package barrel, then the `dispatch.lane-push` record kind with its bounded identifier-only payload, the closed eight-token refusal-cause vocabulary (one guard-only token, seven recordable causes), the `lane-push:` evidence builders, the `push` answer contract, the additive optional `lanePush` status fact, and the record's validator, read, and append in the delivered dispatch ledger."
     # AC: AC-F3-1 and AC-F5-1 (contract basis: DM-1, DM-2, DM-3), AC-F4-1
     # (contract basis: DM-4), AC-F1-1 (contract basis: DM-5), AC-F1-2
     # (contract basis: the one predicate and set of F-1).
@@ -487,33 +577,51 @@ phases:
     # coverage (TC-LSTORE-001, TC-LSTORE-002) rides phase 3, its first real
     # writer: an unused read and append keep this boundary green without a
     # suite of their own (the GH-404 phase 1 pattern).
-    # Scope: spec F-1 "One predicate, two layers, three sources of refusal"
-    # (the home and the seam's import), F-3 "The record", F-4 (the cause
+    # Scope: spec F-1 "One predicate, two layers, three refusal conditions"
+    # (the homes and the seam's import), F-3 "The record", F-4 (the cause
     # vocabulary), F-5 (the fact shape), DM-1, DM-2, DM-3, DM-4, DM-5, NFR-5
     # (the payload bound), NG-9, NG-11, section 7.1, section 7.2, section 12,
-    # section 13, section 16, section 18, section 21, Appendix B, Appendix C,
-    # Appendix E; test plan section 3.2 and TC-LGATE-001.
+    # section 13, section 16, section 18, section 21, Appendix A, Appendix B,
+    # Appendix C, Appendix E; test plan section 3.2 and TC-LGATE-001.
     #
-    # The predicate's one home (PM rulings R1 and R9, finding D1): the
-    # closeout contract module, packages/core/src/contracts/closeout.ts, not
-    # a dispatch contract. The two contract symbols, by name:
+    # The predicate's home (PM rulings R1 and R12, findings D1 and 2-B1). The
+    # two contract symbols, by name:
     #   - `isSafeRef`: the safe-ref predicate, the seam's module-private
-    #     function lifted unchanged (its pattern and its forbidden-character
-    #     rule), declared in packages/core/src/contracts/closeout.ts.
-    #   - `PROTECTED_REF_NAMES`: the protected-name set, already published
-    #     from that module. It is neither moved nor re-exported: its name, its
-    #     value, and its module stay as delivered, so every consumer (the push
+    #     function lifted unchanged in behaviour (its alphabet and its
+    #     forbidden-character rule), declared in
+    #     packages/core/src/contracts/dispatch.ts. That module already
+    #     carries functions (`dispatchAttemptRecordKey`,
+    #     `dispatchPushEvidenceRef`, `dispatchLaneRecordKey`) and string
+    #     patterns, and no suite pins it declaration-only. Its form is
+    #     admitted too: an unpinned contracts module already carries a
+    #     top-level `new RegExp` built from an `as const` string pattern
+    #     (`DECLARED_PRODUCT_KEY_REGEX`,
+    #     packages/core/src/contracts/projects.ts:72), and the directory-wide
+    #     guard over the contracts tier is the ambient one, which a pure
+    #     predicate does not trip.
+    #   - `PROTECTED_REF_NAMES`: the protected-name set, which stays where it
+    #     is published, packages/core/src/contracts/closeout.ts, untouched,
+    #     as the `as const` data it already is. Every consumer (the push
     #     seam, the git index and merge adapters, the closeout domain, all
     #     through the package barrel) is untouched, the value pin of
     #     tests/structure/closeout-contract.test.ts holds without edit, and
     #     the closeout ref guard's `protected-ref` reason literal in
     #     packages/core/src/domain/closeout.ts is not edited.
-    #   So packages/core/src/contracts/closeout.ts is the one home the
-    #   predicate and the set share, as spec section 16 files it under its
-    #   Closeout contracts row; the command's resolution (phase 3) and the
-    #   push seam's guard import the same two symbols. The shape was chosen
-    #   for the least movement: a move or a re-export would relocate the set
-    #   and move three inventory lists to keep its name published.
+    #   So the predicate has its home in the dispatch contract module and the
+    #   set keeps its home in the closeout contract module; the push seam
+    #   (this phase) and the command's resolution (phase 3) import both
+    #   through the `@delivery-os/core/contracts` barrel. No new module is
+    #   created. Spec section 16 files it the same way, in three rows.
+    # Why the predicate is not homed in the closeout contract module (its
+    # home until this plan's revision v1.3): two delivered suites pin that
+    # module "declarations plus `as const` data",
+    # tests/structure/closeout-contract.test.ts:210-213 and
+    # tests/structure/port-neutrality.test.ts:17-23, :88-99. The rule names
+    # every top-level function an executable declaration and every variable
+    # without an `as const` initializer a non-as-const data declaration, and
+    # a regex literal cannot take `as const`, so no form of the predicate
+    # fits there. The pins are not relaxed (PM ruling R12): the module is
+    # outside every scope and both suites run below as read-only controls.
     # The seam (packages/adapters/src/git/push.ts), in this phase: it imports
     # `isSafeRef` and `PROTECTED_REF_NAMES` from `@delivery-os/core/contracts`
     # (adapters import core; the dependency matrix forbids only the reverse)
@@ -593,7 +701,8 @@ phases:
     #   - tests/fixtures/ports/v1-contract-inventory.json and
     #     tests/structure/content-inventory.test.ts register the new exports
     #     and the ledger's two new functions, and `isSafeRef` joins the
-    #     `closeout.ts` and `index.ts` lists with its export allowance.
+    #     `dispatch.ts` and `index.ts` lists of the contract inventory and
+    #     the export allowance of `core/src/contracts/dispatch.ts`.
     #   - tests/checks/dispatch-contract-invariance.test.ts gains the cause-set
     #     pin of TC-LCAUSE-002 and TC-LCAUSE-001's vocabulary pin (the eight
     #     members, `protected-ref` the delivered literal, split into one
@@ -604,8 +713,10 @@ phases:
     #     vocabularies.
     # Read-only controls proving nothing else grew (never edited):
     # tests/fixtures/dispatch/operator/contract-baseline.ts,
-    # tests/checks/operator-contract-invariance.test.ts, and
-    # tests/structure/closeout-contract.test.ts. The attempt-record key set,
+    # tests/checks/operator-contract-invariance.test.ts, and the two
+    # declaration-only pins of the closeout contract module,
+    # tests/structure/closeout-contract.test.ts and
+    # tests/structure/port-neutrality.test.ts. The attempt-record key set,
     # the lane-record key set, the error-row count, the configuration-key
     # count, the token list, and the protected-name set's value stay
     # byte-unchanged: no attempt field, no error identity, no configuration
@@ -631,9 +742,10 @@ phases:
     # TMPDIR=$PWD/tmp/tmpdir pnpm check:boundaries
     # TMPDIR=$PWD/tmp/tmpdir pnpm check:no-shell
     # TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/no-shell-dispatch.test.ts
-    # Verify (read-only controls in this phase, not edited here; the seam's
-    # guard behaviour is unchanged by the import swap):
-    # TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/closeout-contract.test.ts tests/behaviour/dispatch-push-parity.test.ts tests/behaviour/dispatch-push-evidence.test.ts tests/conformance/dispatch/dispatch-parity-push.test.ts tests/structure/dispatch-push-envelope.test.ts
+    # Verify (read-only controls in this phase, not edited here; the two
+    # declaration-only pins stay green at the predicate's home, and the
+    # seam's guard behaviour is unchanged by the import swap):
+    # TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/port-neutrality.test.ts tests/structure/closeout-contract.test.ts tests/behaviour/dispatch-push-parity.test.ts tests/behaviour/dispatch-push-evidence.test.ts tests/conformance/dispatch/dispatch-parity-push.test.ts tests/structure/dispatch-push-envelope.test.ts
     # Verify (the two release suites, run early and never edited):
     # TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/privacy-release.test.ts tests/structure/changeset-additivity.test.ts
     # Verify: git diff --check
@@ -643,7 +755,9 @@ phases:
     #     declares no predicate of its own; its two guards keep their order,
     #     their literals, and their behaviour, its four exported names are
     #     unchanged, and the dependency check is green;
-    #   - `PROTECTED_REF_NAMES` keeps its name, its value, and its module;
+    #   - `PROTECTED_REF_NAMES` keeps its name, its value, and its module, the
+    #     closeout contract module is untouched, and both declaration-only
+    #     pins are green;
     #   - the state-additivity baseline differs from its delivered self by
     #     exactly the three lane-push constants;
     #   - the cause set is exactly the eight members, pinned as one guard-only
@@ -660,7 +774,6 @@ phases:
         - packages/adapters/src/git/push.ts
         - packages/core/src/app/dispatch-ledger.ts
         - packages/core/src/app/index.ts
-        - packages/core/src/contracts/closeout.ts
         - packages/core/src/contracts/dispatch.ts
         - packages/core/src/contracts/dispatch-operator.ts
         - packages/core/src/contracts/index.ts
@@ -672,9 +785,6 @@ phases:
         - tests/structure/content-inventory.test.ts
         - tests/structure/inventory.json
     interactions:
-      - kind: contract-file
-        target: packages/core/src/contracts/closeout.ts
-        role: producer
       - kind: contract-file
         target: packages/adapters/src/git/push.ts
         role: consumer
@@ -699,12 +809,13 @@ phases:
     # the child; the server-side-decline half of its two-source step; the
     # seam-`detail` and child-count halves of its mapping and accounting
     # steps; the engine-consumes-the-outcome-only half of its engine step;
-    # and its outcome mapping; v1.5 steps 1 to 5, 7, and 8) and of
-    # TC-LCAUSE-002 (v1.5 steps 1, 3, 4, 5, 6, and 7). The direct-consumer
-    # step of TC-LRES-004 makes the same direct-seam assertion as
-    # TC-LCAUSE-001's guard-only step. Phase 3 completes both cases with
-    # their command-path arms and is their owner.
-    # Scope: spec F-1 "One predicate, two layers, three sources of refusal"
+    # and its outcome mapping; v1.6 steps 1 to 5, 7, and 8) and of
+    # TC-LCAUSE-002 (v1.6 steps 1, 3, 4, 5, 6, and 7). The direct-consumer
+    # step of TC-LRES-004 (its step 7) makes the same direct-seam assertion
+    # with an unsafe name and with each protected member. Phase 3 completes
+    # both cases with their command-path arms and is their owner; TC-LRES-004
+    # is phase 3's in full.
+    # Scope: spec F-1 "One predicate, two layers, three refusal conditions"
     # (the seam's layer and the child-act classification), DM-4, DEC-4, F-4
     # "The cause vocabulary is closed", NFR-1, NFR-6, NG-3, section 10,
     # section 13 (the seam reused unchanged except for `detail` and the
@@ -736,19 +847,23 @@ phases:
     #     fast-forward-only rule;
     #   - the guard order: both guards return before any child starts, now on
     #     the shared predicate and set.
-    # One predicate, two layers, three sources of refusal (F-1). The seam's
+    # One predicate, two layers, three refusal conditions (F-1). The seam's
     # guard is the layer a direct consumer meets, and the engine's ensure-push
     # is that consumer: an unsafe or protected name is `rejected` with
     # `unsafe-branch` or `protected-ref` before any child, and the engine
     # records it as the delivered `push:failed` parity evidence on its own
-    # attempt. The three sources of refusal: an unsafe name is guard-only,
+    # attempt. The three refusal conditions: an unsafe name is guard-only,
     # always the command's pre-act resolution refusal, and no lane-push
-    # record can carry `unsafe-branch`; a protected-set name is the same
-    # pre-act refusal (no child, no record); a protection or hook decline git
-    # reports is observed only through the invocation and is classified from
-    # the child act into `protected-ref` (verdict `failed`, record appended).
-    # The token alone never identifies the source; the layer and the child
-    # count do.
+    # record can carry `unsafe-branch`; the protected-set check is defence in
+    # depth on both layers, structurally unreachable from a resolved branch
+    # (a resolved name is always a convention match and contains a slash; no
+    # protected member is convention-shaped), so on the command path no input
+    # triggers it while the seam's own guard still refuses a protected name
+    # for a direct consumer; a protection or hook decline git reports is
+    # observed only through the invocation and is classified from the child
+    # act into `protected-ref` (verdict `failed`, record appended), the one
+    # command-reachable source of that token. The token alone never
+    # identifies the source; the layer and the child count do.
     # The `timed-out` outcome keeps its delivered member-less shape (the union
     # is unchanged, DM-4); its cause token is the outcome's own name, which the
     # command of phase 3 records.
@@ -831,11 +946,12 @@ phases:
     # TC-LDOC-001, TC-LBND-001, TC-LBND-002 (the lane-end half; its
     # classification half is phase 4's).
     # Scope: spec F-1 ("Branch resolution", "One predicate, two layers, three
-    # sources of refusal": the command's layer, the pre-act refusals), F-2
-    # (the lane half), F-3 "The record", F-4 "The command's answer", DEC-1,
-    # DEC-4, DM-1, DM-4, DM-5, NFR-1, NFR-2, NFR-4, NFR-6, NFR-7, RSK-1,
-    # RSK-6, RSK-7, RSK-9, RSK-10, section 7.2, section 8.1, section 8.2,
-    # section 12, Appendix B, Appendix D step 4, Appendix E; flows 1, 3, and 5.
+    # refusal conditions": the command's layer, the pre-act refusal, and the
+    # reachability of the protected-set check), AC-F1-2's Given, F-2 (the
+    # lane half), F-3 "The record", F-4 "The command's answer", DEC-1, DEC-4,
+    # DM-1, DM-4, DM-5, NFR-1, NFR-2, NFR-4, NFR-6, NFR-7, RSK-1, RSK-6,
+    # RSK-7, RSK-9, RSK-10, section 7.2, section 8.1, section 8.2, section 12,
+    # section 21, Appendix B, Appendix D step 4, Appendix E; flows 1, 3, and 5.
     #
     # The command, in its declared order.
     # 1. Grammar: exactly one positional, the work-item reference. A missing,
@@ -852,26 +968,39 @@ phases:
     #    declaration resolves on the convention read alone). Everything else
     #    is a typed pre-act input refusal naming the observed state: a
     #    disagreement (both values named), no match (never a current-checkout
-    #    fallback), more than one match (the bounded candidate list), a
-    #    resolved name that fails the safe-ref predicate, or a resolved name
-    #    in the protected-name set. The last two apply the one predicate
-    #    phase 1 homed in the closeout contract module (`isSafeRef` beside
-    #    `PROTECTED_REF_NAMES`), before any act (F-1 "One predicate, two
-    #    layers, three sources of refusal"). The command declares no copy of
-    #    either, and it never asks the seam for a name its resolution refused,
-    #    so the seam's guard is unreachable from here. The identical private
-    #    predicate copies in the git index, merge, and watchdog adapters stay
-    #    as delivered (PM ruling R10): the predicate is unified for the push
-    #    seam and its command only.
+    #    fallback), more than one match (the bounded candidate list), or a
+    #    resolved name that fails the safe-ref predicate. The command imports
+    #    that predicate and the protected-name set from phase 1's two contract
+    #    homes through the `@delivery-os/core/contracts` barrel, declares no
+    #    copy of either, and never asks the seam for a name its resolution
+    #    refused, so the seam's guard is unreachable from here (F-1 "One
+    #    predicate, two layers, three refusal conditions").
+    #    The safe-ref predicate is the command's one pre-act guard, and it is
+    #    exercisable: the convention's final segment is `.+`, so a real
+    #    convention match can carry a character the predicate forbids.
+    #    The protected-set check stays in the command as defence in depth and
+    #    is structurally unreachable (PM ruling R13): resolution only ever
+    #    yields a convention match, `^[a-z][a-z0-9-]*/<ref>/.+$`, which always
+    #    contains a slash, and no member of `PROTECTED_REF_NAMES` (`main`,
+    #    `main-tools`, `HEAD`) is convention-shaped, so no command-path input
+    #    can trigger it. It is proven by a direct call of the shared predicate
+    #    with each protected member and by a structural pin of that shape
+    #    rule, never by faking a branch selection (TC-LRES-004 steps 5 and 6).
+    #    The identical private predicate copies in the git index, merge, and
+    #    watchdog adapters stay as delivered (PM ruling R10): the predicate is
+    #    unified for the push seam and its command only.
     # 3. The pre-act resolution refusal: no child process, no act, no record,
     #    and an answer that is a typed input refusal carrying neither a verdict
-    #    nor a `cause`. It covers an unsafe name and a protected-set name
-    #    alike. A protected-set name therefore writes no record here, although
-    #    the same token `protected-ref` is recordable from its other source, a
-    #    server-side decline (phase 2); the token alone never identifies the
-    #    source. The refusal leaves no durable fact by design (RSK-10): the
-    #    suites assert the refusal's answer and that no act, child process, or
-    #    record followed, and nothing asserts a durable fact for it.
+    #    nor a `cause`. Its one exercisable guard arm is the safe-ref refusal
+    #    (TC-LRES-004 arm a1: a convention-resolved name carrying a character
+    #    the predicate forbids, injected as a branch fact). `unsafe-branch` is
+    #    therefore the only guard token a command-path refusal can concern,
+    #    and `protected-ref` reaches a record from one command-reachable
+    #    source only, a server-side decline (phase 2); the token alone never
+    #    identifies the source. The refusal leaves no durable fact by design
+    #    (RSK-10): the suites assert the refusal's answer and that no act,
+    #    child process, or record followed, and nothing asserts a durable
+    #    fact for it.
     # 4. The act: exactly one call of the delivered seam's `pushChangeBranch`
     #    for the resolved branch, in the invocation's own checkout (for a
     #    dispatch-provisioned lane, its worktree). The command stages, commits,
@@ -890,9 +1019,9 @@ phases:
     #    `remote-unavailable`, `protected-ref` (a protection or hook decline
     #    git reports), or `unclassified`, a timeout (`timed-out`), and a
     #    spawn-level failure (`spawn-failed`). `unsafe-branch` is guard-only
-    #    and never reaches the command, and a protected-set name is refused
-    #    before any act, so no path turns a pre-act refusal into a recorded
-    #    rejection (F-1, DM-4).
+    #    and never reaches the command, and a protected-set name can never be
+    #    a resolved branch (PM ruling R13), so no path turns a pre-act refusal
+    #    into a recorded rejection (F-1, DM-4).
     # 6. The record: one append of the phase 1 record under the store fence,
     #    bound to the attempt and session identity of the newest readable lane
     #    record. With no readable lane record (a manual run outside any
@@ -920,8 +1049,10 @@ phases:
     # bounded local branch read, one bounded local checkout/head read (the
     # recorded `head`), one bounded lane read (the attempt and session
     # identity), one push (60 000 ms at most), and one record append. Each
-    # read happens once per invocation, never per step, and no provider read
-    # is added.
+    # read happens once per invocation, never per step; a re-invocation
+    # repeats all six parts once more, because each invocation is a fresh
+    # process, and reads the standing lane-push record on no write path
+    # (TC-LBND-002 step 3); and no provider read is added.
     #
     # Expected new files, declared by exact path because the commit primitive
     # stages an untracked file only inside the declared scope. The names follow
@@ -986,8 +1117,12 @@ phases:
     #     regeneration through the explicit capture path, never a blanket
     #     rewrite. The help cell's Commands list gains the `push` line and the
     #     provenance note gains one sentence; `capturedFrom` and
-    #     `capturedFromOriginal` stay byte-unchanged (the alias-baseline suite
-    #     pins `capturedFrom`) and every other cell is byte-unchanged.
+    #     `capturedFromOriginal` stay byte-unchanged and every other cell is
+    #     byte-unchanged.
+    #     tests/checks/provider-alias-baseline.test.ts pins that baseline and
+    #     is declared with it (PM ruling R14): its 28 Commands rows become
+    #     29, its 27 non-install rows become 28, its last row becomes `push`,
+    #     and its provenance expectation gains the added clause.
     #   - the pages that state the family's size or its last member, with the
     #     phrase rows of tests/checks/doc-conformance.test.ts in the same
     #     commit (a required phrase that stops being true moves with its page,
@@ -1034,7 +1169,12 @@ phases:
     # `HEAD` against the checkout at call time, stores the head per ref, and
     # applies the fast-forward rule. The head equality is measured, never
     # stipulated, and the record's `head` equals the head the fake remote
-    # resolved. The fake remote is assumed to land under the declared parity
+    # resolved. Process claims are scoped to the act under test (PM ruling
+    # R15): the pushed act never spawns git, because the fake remote is the
+    # transport and starts no child process; the fixture's setup (creating
+    # the repository and its commits) and its `HEAD` resolution may run git
+    # against the temporary checkout through a temporary-git helper. The fake
+    # remote and that helper are assumed to land under the declared parity
     # fixture folder or inside the suite; a different folder widens this
     # phase's `folders` entry before delivery.
     #
@@ -1062,6 +1202,10 @@ phases:
     #     appends no record; its suites assert the refusal's answer and nothing
     #     asserts a durable fact for it (RSK-10); no guessed ref is ever
     #     pushed, and no record or answer carries `unsafe-branch`;
+    #   - the shared predicate refuses each protected member by direct call,
+    #     the structural pin holds that no resolved name can equal one, and no
+    #     suite fakes a branch selection to reach the command's protected-set
+    #     check (R13);
     #   - one lane end costs at most one bounded pm-notes document read, one
     #     bounded local branch read, one bounded local checkout/head read, one
     #     bounded lane read, one push, and one record append (NFR-2), each
@@ -1127,6 +1271,7 @@ phases:
         - tests/checks/install-conformance-mutants.test.ts
         - tests/checks/install-migration-retirement.test.ts
         - tests/checks/no-shell-dispatch.test.ts
+        - tests/checks/provider-alias-baseline.test.ts
         - tests/checks/provider-coverage-mount.test.ts
         - tests/checks/provider-entrypoint-reachability.test.ts
         - tests/checks/reference-page-parity.test.ts
@@ -1633,6 +1778,13 @@ phases:
     #     as a prompt-required product surface, and the `pm` agent's step.
     #   - doc/spec/features/feature-cli-entrypoint.md: the help surface's
     #     `push` entry, beyond the count statement phase 3 moves.
+    #   - doc/spec/features/feature-adapter-ports.md (PM ruling R15): the
+    #     page describes the `@delivery-os/core/contracts` subpath as types
+    #     and `as const` data and tabulates the closeout contract module as
+    #     such; the reconciliation states that the safe-ref predicate, a
+    #     function, lives in the dispatch contract module of that subpath,
+    #     which already carried functions, while the closeout contract module
+    #     row stays true because that module is untouched (R12).
     #   - doc/guides/engine-first-operations.md: the declared divergence (F-6):
     #     the session-side push is reachable from typed and shell lanes; the
     #     evidence fold and the status fact are typed dispatch surfaces only;
@@ -1663,6 +1815,9 @@ phases:
     # `pr_creation` row is current-truth guidance for the eleven-phase table,
     # so phase 7's reconciliation brings the row to the delivered tail; the
     # file is declared by path for that edit.
+    # doc/spec/features/feature-closeout.md needs no edit: its contract-module
+    # row describes the closeout contract module, which ruling R12 leaves
+    # untouched.
     # TC-LDOC-002 is a manual content check (traceability review, markdown and
     # link review, `git diff --check`) whose result is recorded as a pm-notes
     # `notes:` entry.
@@ -1718,6 +1873,7 @@ phases:
         - doc/overview/glossary.md
         - doc/planning/oss-tooling/milestones/m1/commands/dispatch.md
         - doc/quality/test-specs/test-spec-dispatch-engine.md
+        - doc/spec/features/feature-adapter-ports.md
         - doc/spec/features/feature-agents-and-commands.md
         - doc/spec/features/feature-cli-entrypoint.md
         - doc/spec/features/feature-delivery-lifecycle.md
