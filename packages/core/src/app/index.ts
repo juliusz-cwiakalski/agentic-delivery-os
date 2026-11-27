@@ -93,6 +93,7 @@ export {
   type DispatchTruthReads,
   type DispatchWorktreeProvisioning,
   dispatchRenewalCadenceMs,
+  lanePushEvidenceRefsForAttempt,
   runDispatch,
 } from "./dispatch.js";
 export {

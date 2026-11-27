@@ -76,11 +76,16 @@ import {
 } from "../domain/dispatch-result.js";
 import { admissionRefusalPair, admitDispatchRestart } from "../domain/dispatch-resume.js";
 import {
+  lanePushEvidenceRefsOf,
+  newestLanePushForAttempt,
+} from "../domain/dispatch-lane-push.js";
+import {
   appendDispatchAttempt,
   appendDispatchDivergence,
   appendDispatchLane,
   foldDispatchDivergences,
   readDispatchDivergences,
+  readDispatchLanePushes,
 } from "./dispatch-ledger.js";
 import {
   type DispatchPeakObservation,
@@ -97,6 +102,24 @@ const O_FAILED = HARNESS_OUTCOMES[2];
 
 /** A local short alias: keeps the payload field type recognizable. */
 type DispatchToken = DeliveryResultToken;
+
+/**
+ * The lane-push reserved references for one attempt (GH-416 F-3, DM-2): one
+ * bounded read of the lane-push family per classification, filtered to the
+ * resolved repository first and matched on the exact attempt identity. An
+ * unreadable store, no record, a foreign attempt, and a record without identity
+ * each contribute nothing; the fold never fabricates a lane push.
+ */
+export const lanePushEvidenceRefsForAttempt = (
+  store: StateStorePort,
+  repository: string,
+  attemptId: string,
+): readonly string[] => {
+  const read = readDispatchLanePushes(store);
+  if (!read.ok) return [];
+  const record = newestLanePushForAttempt(read.records, repository, attemptId);
+  return record === undefined ? [] : lanePushEvidenceRefsOf(record);
+};
 
 /** One lease claim outcome through the scheduling engine. */
 export type DispatchLeaseClaim =
@@ -1113,6 +1136,10 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         ...(leaseRenewalFailure === undefined ? [] : ["lease:renewal-failed"]),
         ...(peakRecoveryAppendFailed ? ["park:recovery-append-failed"] : []),
         ...(input.pushRef === undefined ? [] : [input.pushRef]),
+        // GH-416: the lane's own act joins the reservation beside the five
+        // delivered disclosures; at most two references, so the block's
+        // maximum is seven of the sixteen-reference budget.
+        ...lanePushEvidenceRefsForAttempt(ports.store, ports.repository, attemptId),
         ...input.evidenceRefs,
       ].slice(0, DISPATCH_MAX_EVIDENCE_REFS);
       const attempt: DispatchAttemptRecord = {

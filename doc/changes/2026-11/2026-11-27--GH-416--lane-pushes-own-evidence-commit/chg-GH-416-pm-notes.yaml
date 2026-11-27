@@ -420,3 +420,34 @@ notes:
       git diff --check clean. Only the declared paths changed."
     type: info
     date: "2026-11-27"
+  - text: "Plan phase 3 complete (the `push` command and its prompt-required
+      mount): commit 4e90a2e9e. Added the pure rules module
+      packages/core/src/domain/dispatch-lane-push.ts (structural resolution over
+      the delivered selectMatchingBranch, the act-to-verdict/cause mapping, the
+      newest-matching-record selection, the evidence builders, and the
+      record-to-status projection), the use case
+      packages/core/src/app/dispatch-lane-push.ts (resolve, act, append, answer
+      over injected ports; one fast-forward act, act-then-append,
+      recorded:false disclosure), the CLI command packages/cli/src/commands/push.ts
+      and renderer packages/cli/src/output/push-text.ts, and the edge/production
+      wiring (pushRuntime over the delivered pm-notes/branch/checkout/lane reads
+      and the delivered push seam; \`push\` registered in the composed program).
+      The prompt-required set is 29 with push last; the help entry, coverage
+      inventory, M4 reference page, and both pageFor arms landed. The
+      count-and-tail movement moved every pinned family count to 29 and every
+      tail to push (the 17 pinning suites, the two mounting fixtures, the
+      install-conformance/provider-mounting/provider-entrypoint/
+      event-mount/entrypoint suites, the alias baseline help cell and its
+      provenance clause through the deliberate capture path, and the ten
+      declared doc pages plus the doc-conformance GH350 truth rows including
+      the loop-supervision page and its row). New suites: command (12),
+      ticket AC-1/AC-2 fixture over a real temporary checkout and a keyed fake
+      remote (2), resolution (11), record (7), causes command-path arms (24 total
+      in that suite), answer bounds (4). Tests: typecheck green; the six
+      lane-push suites 60 pass / 0 fail; the count movement 106 pass / 0 fail
+      (part 1) and 148 pass / 0 fail (part 2); check:help all covered;
+      check:no-shell clean (48 surface files); no-shell-dispatch/doc-conformance/
+      content-inventory 87 pass; read-only controls 46 pass; dispatch-token-home
+      7 pass; git diff --check clean. Only the declared paths changed."
+    type: info
+    date: "2026-11-27"

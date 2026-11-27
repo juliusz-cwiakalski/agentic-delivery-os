@@ -226,6 +226,26 @@ describe("TC-PUSH-015 the push block is present exactly when the precondition ev
   });
 });
 
+describe("GH-416 the dispatch envelope carries no lane-push member or cause", () => {
+  test("the failed parity envelope has no lane-push member, verdict, head, or cause", async () => {
+    const { data } = await invoke(
+      composedRuntime({ label: "lane-push-envelope", pushParity: failedParity }),
+      ["dispatch", "GH-301", "--json"],
+    );
+    const serialized = JSON.stringify(data ?? {});
+    expect(serialized).not.toContain("lane-push");
+    expect(serialized.toLowerCase()).not.toContain("cause");
+    expect(Object.keys(data ?? {})).not.toContain("lanePush");
+    // The GH-386 parity block keeps exactly its four keys.
+    expect(Object.keys((data?.push as Record<string, unknown> | undefined) ?? {}).sort()).toEqual([
+      "localHead",
+      "parity",
+      "remoteHead",
+      "verdict",
+    ]);
+  });
+});
+
 describe("TC-PUSH-016 the push block is bounded, closed, and secret-free", () => {
   test("members are closed, heads are full-hex, and the whole block fits the bound", async () => {
     const cells: readonly DispatchPushParityReading[] = [cleanParity, pushedParity, failedParity];
