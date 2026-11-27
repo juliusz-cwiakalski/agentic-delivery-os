@@ -17,7 +17,13 @@ import {
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
   DISPATCH_COMPARISON_REASONS,
   DISPATCH_CORROBORATION_SOURCES,
+  DISPATCH_LANE_PUSH_VERDICTS,
+  DISPATCH_PUSH_CAUSES,
+  DISPATCH_PUSH_GUARD_ONLY_CAUSES,
+  DISPATCH_PUSH_RECORDABLE_CAUSES,
   DISPATCH_PUSH_VERDICTS,
+  dispatchLanePushCauseEvidenceRef,
+  dispatchLanePushEvidenceRef,
   dispatchPushEvidenceRef,
   ERROR_TABLE,
 } from "../../packages/core/src/contracts/index";
@@ -257,5 +263,67 @@ describe("GH-386 the closed vocabulary stays closed (TC-FAIL-003)", () => {
     expect(DISPATCH_ATTEMPT_PAYLOAD_SCHEMA).toBe("delivery.dispatch.attempt.v1");
     expect([...DISPATCH_CORROBORATION_SOURCES]).toEqual(["pm-notes", "tracker", "ci"]);
     expect([...DISPATCH_READ_FAILURE_SOURCES]).toEqual(["ledger", "tracker", "artifact", "state"]);
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* GH-416 — the lane-push refusal-cause vocabulary is closed (TC-LCAUSE-001's */
+/* vocabulary pin and TC-LCAUSE-002's cause-set pin). The eight-token set is   */
+/* unchanged; the split is one guard-only token and seven recordable causes.   */
+/* ------------------------------------------------------------------------- */
+
+describe("GH-416 the lane-push cause set is closed", () => {
+  test("the closed set is exactly the eight declared members, in declared order", () => {
+    expect([...DISPATCH_PUSH_CAUSES]).toEqual([
+      "protected-ref",
+      "non-fast-forward",
+      "auth-rejected",
+      "remote-unavailable",
+      "spawn-failed",
+      "timed-out",
+      "unsafe-branch",
+      "unclassified",
+    ]);
+  });
+
+  test("one guard-only token: `unsafe-branch` and nothing else", () => {
+    expect([...DISPATCH_PUSH_GUARD_ONLY_CAUSES]).toEqual(["unsafe-branch"]);
+  });
+
+  test("seven recordable causes, with `protected-ref` as the delivered literal", () => {
+    expect([...DISPATCH_PUSH_RECORDABLE_CAUSES]).toEqual([
+      "non-fast-forward",
+      "auth-rejected",
+      "remote-unavailable",
+      "spawn-failed",
+      "timed-out",
+      "protected-ref",
+      "unclassified",
+    ]);
+    expect(DISPATCH_PUSH_RECORDABLE_CAUSES).toContain("protected-ref");
+  });
+
+  test("the two segments partition the closed set: disjoint and complete", () => {
+    const guardOnly: readonly string[] = DISPATCH_PUSH_GUARD_ONLY_CAUSES;
+    const recordable: readonly string[] = DISPATCH_PUSH_RECORDABLE_CAUSES;
+    expect(guardOnly.some((token) => recordable.includes(token))).toBe(false);
+    expect(new Set([...guardOnly, ...recordable]).size).toBe(DISPATCH_PUSH_CAUSES.length);
+    expect([...DISPATCH_PUSH_CAUSES].sort()).toEqual([...guardOnly, ...recordable].sort());
+  });
+
+  test("the lane-push verdicts are the closed pair and the evidence builders are distinct", () => {
+    expect([...DISPATCH_LANE_PUSH_VERDICTS]).toEqual(["pushed", "failed"]);
+    expect(dispatchLanePushEvidenceRef("pushed")).toBe("lane-push:pushed");
+    expect(dispatchLanePushEvidenceRef("failed")).toBe("lane-push:failed");
+    expect(dispatchLanePushCauseEvidenceRef("non-fast-forward")).toBe(
+      "lane-push-cause:non-fast-forward",
+    );
+    // The two prefix families never collapse.
+    expect(dispatchLanePushEvidenceRef("failed").startsWith("push:")).toBe(false);
+    expect(dispatchPushEvidenceRef("failed").startsWith("lane-push:")).toBe(false);
+  });
+
+  test("the old spelling `protected-branch` is not a token", () => {
+    expect(DISPATCH_PUSH_CAUSES).not.toContain("protected-branch");
   });
 });

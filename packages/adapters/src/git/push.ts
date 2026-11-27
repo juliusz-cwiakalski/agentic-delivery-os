@@ -10,7 +10,7 @@
  * retry — the next dispatch or an operator resume resolves a failed act.
  */
 import { spawn } from "node:child_process";
-import { PROTECTED_REF_NAMES } from "@delivery-os/core/contracts";
+import { isSafeRef, PROTECTED_REF_NAMES } from "@delivery-os/core/contracts";
 
 /** One child-runner result; a non-zero exit is data, not a throw. */
 export type GitPushRunnerResult = {
@@ -71,12 +71,6 @@ export type GitPushSeam = {
 
 /** The declared default act budget (NFR-1); injectable through the seam options. */
 export const PUSH_DEFAULT_TIMEOUT_MS = 60_000;
-
-const REF_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
-const FORBIDDEN_REF = /(\.\.|~|\^|:|\?|\*|\[|\\|\s)/;
-
-const isSafeRef = (value: string): boolean =>
-  REF_PATTERN.test(value) && !FORBIDDEN_REF.test(value) && !value.startsWith("-");
 
 const MAX_OUTPUT_BYTES = 8 * 1024 * 1024;
 
