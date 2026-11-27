@@ -5,8 +5,8 @@ branch: feat/GH-416/lane-pushes-own-evidence-commit
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: null, completed: 2026-11-27T05:46:12.217Z }
-  specification: { started: null, completed: 2026-11-27T13:30:27.396Z }
-  test_planning: { started: null, completed: 2026-11-27T14:16:32.382Z }
+  specification: { started: null, completed: 2026-11-27T17:41:37.971Z }
+  test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: 2026-11-27T14:02:43.173Z }
   dor_check: { started: null, completed: 2026-11-27T14:17:09.112Z }
   delivery: { started: null, completed: 2026-11-27T16:44:43.170Z }
@@ -384,25 +384,25 @@ notes:
       because push has no --ff-only, and the lone refspec is parsed as the
       repository argument. Verified independently on git 2.53.0. The defect is
       inherited from GH-386, but GH-416 adds a second consumer, the pm
-      instruction, the command and TDR-0079 on top of it, so ticket requirement 1
-      cannot be delivered without fixing it. The host ledger corroborates: 18
+      instruction, the command and TDR-0079 on top of it, so ticket requirement
+      1 cannot be delivered without fixing it. The host ledger corroborates: 18
       attempts, only push:clean ever recorded, never push:pushed or push:failed.
       High: no test runs the seam's default runner against real git, so the
       battery is green on an act that cannot succeed."
     type: decision
     date: "2026-11-27"
-  - text: "Ruling R17 (absorbed scope). The argv correction belongs to GH-416, not
-      a follow-up: fix the seam to a valid non-force push of HEAD to
+  - text: "Ruling R17 (absorbed scope). The argv correction belongs to GH-416, not a
+      follow-up: fix the seam to a valid non-force push of HEAD to
       refs/heads/<branch> on the checkout's configured push remote, resolved by
       one bounded local config read (branch.<branch>.pushRemote, then
-      remote.pushDefault, then branch.<branch>.remote, then origin), with no force
-      flag so a non-fast-forward is still refused by git itself. Add one
+      remote.pushDefault, then branch.<branch>.remote, then origin), with no
+      force flag so a non-fast-forward is still refused by git itself. Add one
       deterministic real-git suite (temp checkout plus local bare remote, no
       network; the closeout and pilot temp-repo fixtures are the precedent) and
       move every argv pin. Corrected obligations: spec F-1/§16 (the seam is no
       longer 'unchanged'), the push reference page and TDR-0079. Advisories 1-6
-      and 8-11 are also in scope for plan phase 9 (vacuous TC-LPUSH-003 arm,
-      the overflowing-slice fold arm, validator-level cause cases, the eight
+      and 8-11 are also in scope for plan phase 9 (vacuous TC-LPUSH-003 arm, the
+      overflowing-slice fold arm, validator-level cause cases, the eight
       undisclosed scope entries, classification of a missing destination and a
       403 permission failure, unconditional success claims in the prompt and a
       guide, the append-failure diagnostic and oversize test, the spec §14
@@ -410,9 +410,9 @@ notes:
       shared home' sentence)."
     type: decision
     date: "2026-11-27"
-  - text: "retro: a shipped seam had an argv git has never accepted, and every
-      test around it injected a runner that returned scripted text, so 13 136
-      passing tests certified an act that always failed. The defect came from the
+  - text: "retro: a shipped seam had an argv git has never accepted, and every test
+      around it injected a runner that returned scripted text, so 13 136 passing
+      tests certified an act that always failed. The defect came from the
       feature that introduced the seam and survived its review. Lesson: a seam
       whose whole job is to spawn a binary needs at least one deterministic
       real-binary test; an injected double proves the caller, never the argv."

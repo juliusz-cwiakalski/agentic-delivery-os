@@ -1,15 +1,25 @@
 # ---------------------------------------------------------------------------
 # GH-416: M4-S45: A lane pushes its own last evidence commit before it stops
 #
+# Plan revision v1.7 (2026-11-27): code-review iteration 1 finalised under
+# PM ruling R17 (spec v1.6, test plan v1.8). Phase 9, "Code review
+# remediation (iteration 1)", is rewritten from the reviewer's draft into a
+# scoped, committable phase: its items move out of the summary into the
+# phase comment, its scope names every file it touches, and its suite name
+# follows test plan v1.8 (TC-LGIT-001). The eight paths the delivery changed
+# outside every declared phase scope are declared in the phases that touched
+# them (phase 3: four, phase 5: one, phase 8: three), each with its cause;
+# no other scope entry of phases 1 to 8 moves. The first escalation trigger
+# no longer forbids the one repository argument the corrected argv carries.
+# Phase ids, order, kinds, and the AC/TC ownership of phases 1 to 8 are
+# unchanged. Phase 9 owns TC-LGIT-001, the one case test plan v1.8 adds, and
+# otherwise re-proves arms of cases owned by phases 3 to 6.
+#
 # Plan revision v1.6 (2026-11-27): code-review iteration 1 (FAIL) remediation.
-# Appends phase 9, "Code Review Remediation (Iteration 1)", the reviewer's
-# remediation phase for code-review/review-iter-1.yaml. Phase ids, order,
-# kinds, and the AC/TC ownership of phases 1 to 8 are unchanged and those
-# phases stay complete. The blocking finding is outside the spec's declared
-# scope as written (the push seam's argv is called unchanged), so phase 9
-# carries a PM-ruling precondition before its first edit. The eight paths the
-# diff changed outside every declared phase scope are not yet in the phase 3,
-# 5 and 8 scope lists; recording them there is item (4) of phase 9.
+# Appended phase 9, the reviewer's remediation phase for
+# code-review/review-iter-1.yaml, with a PM-ruling precondition before its
+# first edit, because the blocking finding (the push seam's argv) was outside
+# the spec's declared scope as written. Ruling R17 is that ruling.
 #
 # Plan revision v1.5 (2026-11-27): DoR iteration-3 correction against spec
 # v1.5 and test plan v1.6 (PM ruling R16 and its three wording items). v1.4
@@ -51,19 +61,21 @@
 #
 # Sources, read in full before this plan was authored (the single source of
 # truth for every phase, test case, and path below):
-#   chg-GH-416-spec.md (v1.5: F-1 "One predicate, two layers, three refusal
-#   conditions", F-3, F-4, section 7.1, section 7.2, section 10, section 12,
-#   section 13, section 16, section 21, section 22, DM-1, DM-4, DEC-4 to
-#   DEC-6, NFR-2, RSK-1..RSK-10, DEC-1..DEC-7, AC-F1-1..AC-F6-1, Appendices A
-#   to E) and
-#   chg-GH-416-test-plan.md (v1.6 as read in the working tree at 14:13; the
+#   chg-GH-416-spec.md (v1.6: F-1 "One predicate, two layers, three refusal
+#   conditions" with the corrected act, F-3, F-4, section 7.1, section 7.2,
+#   section 10, section 12, section 13, section 14, section 16, section 21,
+#   section 22, DM-1, DM-4, DEC-4 to DEC-6, NFR-1, NFR-2, RSK-1..RSK-10,
+#   DEC-1..DEC-7, AC-F1-1..AC-F6-1, Appendices A to E) and
+#   chg-GH-416-test-plan.md (v1.8 as read in the working tree at 18:29; the
 #   one assumption this plan still makes about it is in the "Test plan
-#   landing" block), 31 cases, this folder;
-#   chg-GH-416-pm-notes.yaml, whose DoR rulings R1..R16 bind this plan, beside
-#   its intake decisions, doc-risk inventory, and owner delivery notes;
+#   landing" block), 32 cases, this folder;
+#   chg-GH-416-pm-notes.yaml, whose rulings R1..R17 bind this plan, beside its
+#   intake decisions, doc-risk inventory, and owner delivery notes;
 #   readiness-review/readiness-iter-1.md, readiness-iter-2.md, and
 #   readiness-iter-3.md, whose plan-routed findings are D1, D4, D5, 2-B1,
-#   2-B2, 2-B3, and 3-B1 below.
+#   2-B2, 2-B3, and 3-B1 below;
+#   code-review/review-iter-1.yaml (FAIL on 13 findings), the authority for
+#   phase 9 and for part G of the findings.
 # Precedent plans read for shape and for pinned-surface discipline:
 #   chg-GH-413-plan.yaml (v1.7: the header fences, the per-phase comments, a
 #   planning finalize phase) and chg-GH-350-plan.yaml (phase 8: the
@@ -138,6 +150,26 @@
 #   - tests/structure/dispatch-token-home.test.ts:66-85: the token-literal
 #     scanner covers every dispatch-named module outside the contracts home
 #     and forbids the literal `failed` there.
+#   - packages/adapters/src/git/push.ts:203: the delivered argv is
+#     `git push --ff-only HEAD:refs/heads/<branch>`; git has no `--ff-only`
+#     option for push and reads a lone refspec as the repository argument, so
+#     the seam refuses every real push (code review F-1, probed on git 2.53.0
+#     against a local bare remote). The guards run at :196-199, before the
+#     runner; the classification table sits at :96-115 with no pattern for a
+#     missing destination or an HTTP 403.
+#   - packages/cli/src/production.ts:4234 (the engine's ensure-push, its act
+#     at :4278) and :6890 (the lane command's act, called at :6924) both
+#     compose the seam with its default runner; the append wiring at :6925
+#     returns `{ ok }` only.
+#   - The six argv pins: tests/behaviour/dispatch-lane-push-command.test.ts
+#     :129 and :263, tests/behaviour/dispatch-lane-push-causes.test.ts :126,
+#     tests/behaviour/dispatch-push-parity.test.ts :144, :260 and :319. The
+#     `--ff-only` at dispatch-push-parity.test.ts:554 is a planted call in the
+#     guarded runner's shell-refusal arm, not a pin of the seam's argv.
+#   - tests/fixtures/closeout/temp-git.ts and tests/fixtures/pilot/repo.ts:
+#     the delivered temporary-repository helpers, each hard-coded to another
+#     change (the closeout helper's branch constants; the pilot helper's
+#     `https` origin).
 #   - packages/core/src/domain/closeout.ts:337-358: `branchConvention` and
 #     `selectMatchingBranch` return `none | unique | ambiguous`.
 #   - packages/adapters/src/git/index.ts:437-451: the git port's `listBranches`
@@ -196,7 +228,9 @@
 #   6 the two product surfaces (the instruction that makes a lane invoke the
 #     command; it lands after the command it names is composed);
 #   7 the companion decision record;
-#   8 the release and reconciliation declaration.
+#   8 the release and reconciliation declaration;
+#   9 the code-review remediation of iteration 1 (appended after the review
+#     failed: it corrects the seam's argv and closes the review's test gaps).
 # The command precedes its readers, the reverse of a pure contracts-then-readers
 # order, for two reasons: the test plan's risk ranking (section 7.2) puts the
 # command's cases first, and with the command first the fold and status suites
@@ -205,12 +239,12 @@
 # entrypoint selects exactly the prompt-required set and drops every unlisted
 # registration, so the command's program-path proofs exist only once it is
 # listed, and the help, coverage, parity, and count pins move with the listing
-# or the boundary is red. No code-review phase is declared: the lifecycle's
-# review_fix phase appends remediation phases to this plan when a review fails
-# (the GH-413 pattern), and an empty phase is omitted.
+# or the boundary is red. No code-review phase is declared up front: the
+# lifecycle's review_fix phase appends one when a review fails (the GH-413
+# pattern), and phase 9 is the first such phase.
 #
 # Test plan alignment: the plan is the authority for phase numbering. Each of
-# the 31 cases is owned by exactly one phase; a case whose steps span two
+# the 32 cases is owned by exactly one phase; a case whose steps span two
 # phases names the phase that completes it as its owner:
 #   phase 1  TC-LGATE-001 (the changeset half)
 #   phase 2  (the seam-level arms of TC-LCAUSE-001 and TC-LCAUSE-002)
@@ -225,12 +259,23 @@
 #   phase 7  none
 #   phase 8  TC-LDOC-002 (manual, after the lifecycle's documentation phase),
 #            TC-LGATE-001 (the gate half)
+#   phase 9  TC-LGIT-001 (added by test plan v1.8); it also re-proves arms of
+#            cases owned by phases 3 to 6 without taking their ownership
 # Step numbers are cited by content first and number second, against test
-# plan v1.5.
+# plan v1.8.
 #
-# Test plan landing (spec v1.5 is the authority; the test plan was read at
-# v1.6 in the working tree)
-#   Landed in v1.6 and reflected in this plan:
+# Test plan landing (spec v1.6 is the authority; the test plan was read at
+# v1.8 in the working tree)
+#   Landed in v1.8 (code-review iteration 1, ruling R17) and reflected in
+#   phase 9: every argv expectation is the corrected form; TC-LGIT-001 is new
+#   (the seam's default runner against a local bare remote); TC-LPUSH-003
+#   counts real push acts; TC-LFOLD-001 drives one classification per cause
+#   and gains the overflow arm; TC-LSTORE-001 gains the validator refusals;
+#   TC-LCMD-002 gains the append-failure and oversize arms; TC-LMSG-001/002
+#   pin the prohibition sentence; TC-LCAUSE-001 gains the missing-destination
+#   and HTTP-403 instances; TC-LBND-001 and TC-LBND-002 carry the corrected
+#   argv and the seven-part count.
+#   Landed in v1.6 and reflected in phases 1 to 8:
 #   - R12: the predicate's home is packages/core/src/contracts/dispatch.ts
 #     (TC-LRES-004's target and preconditions; section 1.1);
 #   - R13: TC-LRES-004 keeps the safe-ref refusal as the one command-path
@@ -303,9 +348,16 @@
 #     (with tmp/tmpdir present); commits go through the commit primitive; the
 #     pull request targets `main-tools` and stays open.
 #   - NG-1 and NFR-1: no force push, no history rewrite, no ref but the change
-#     branch's configured upstream. The act is the delivered seam's fixed argv,
-#     its literal non-shell child, its 60 000 ms injectable budget, one attempt,
-#     no retry; no second git path and no new configuration key.
+#     branch's configured upstream. The act is the push seam's fixed argv
+#     (`git push <resolved push remote> HEAD:refs/heads/<branch>`: no
+#     `--ff-only`, no force flag, no `+` prefix, one repository argument, one
+#     refspec; corrected in phase 9 by ruling R17), its literal non-shell
+#     child, its 60 000 ms injectable budget, one attempt, no retry; no
+#     second git path and no new configuration key. The push remote is
+#     resolved by one bounded local configuration read, in the order
+#     `branch.<branch>.pushRemote`, `remote.pushDefault`,
+#     `branch.<branch>.remote`, `origin`; a missing or ambiguous destination
+#     is a typed failure naming `remote-unavailable`, never a guess.
 #   - AC-F1-2 and NFR-7: a branch is pushed only when exactly one rule resolved
 #     it. A guessed, current-checkout, ambiguous, unsafe, or protected ref is
 #     never pushed.
@@ -345,9 +397,10 @@
 #   - NFR-2: one lane end costs at most one bounded pm-notes document read
 #     (the change record's `branch:` declaration), one bounded local branch
 #     read, one bounded local checkout/head read (the recorded `head`), one
-#     bounded lane read, one push (60 000 ms at most), and one record append;
-#     classification adds at most one bounded record read; zero added
-#     provider reads.
+#     bounded local configuration read (the push remote; phase 9, ruling
+#     R17), one bounded lane read, one push (60 000 ms at most), and one
+#     record append; classification adds at most one bounded record read;
+#     zero added provider reads.
 #   - NG-3 (the engine consumes the outcome only): the seam returns a cause to
 #     both of its callers; the lane's command surfaces and records it, and the
 #     engine's parity act discards the detail. No engine classification,
@@ -399,7 +452,8 @@
 # was authored against v1.1; part B holds the plan-routed findings of DoR
 # iteration 1; part C holds what revision v1.2 found; part D holds the
 # plan-routed findings of DoR iteration 2; part E holds what revision v1.4
-# found; part F holds the plan-routed finding of DoR iteration 3. Each
+# found; part F holds the plan-routed finding of DoR iteration 3; part G
+# holds the findings of code review iteration 1. Each
 # entry records what
 # was reported, what the plan declared meanwhile, and who routes it. An entry
 # marked CLOSED keeps its text as the record; the others stay open with the PM.
@@ -582,16 +636,42 @@
 #      longer calls protected-set membership the command's pre-act refusal;
 #      tests/structure/dispatch-token-home.test.ts runs as a read-only
 #      control in phases 1, 3, 4, and 5.
+# Part G, code review iteration 1 (code-review/review-iter-1.yaml, FAIL on
+# 13 findings), under PM ruling R17; owned by phase 9 unless stated:
+#   CR-1 (F-1, critical; CLOSED by ruling R17, absorbed scope) The argv. The
+#      seam's `git push --ff-only HEAD:refs/heads/<branch>` is not a valid
+#      git invocation, so the lane's push could not reach a remote. Phase 9
+#      corrects the argv and adds the push-remote resolution.
+#   CR-2 (F-2, high) The real-git proof: phase 9's
+#      tests/behaviour/dispatch-lane-push-real-git.test.ts (TC-LGIT-001).
+#   CR-3 to CR-5 (F-3, F-4, F-5) The vacuous and missing test arms: phase 9.
+#   CR-6 (F-6; CLOSED in revision v1.7) The eight undeclared paths: declared
+#      in phases 3 (four), 5 (one) and 8 (three), each with its cause.
+#   CR-7 (F-7) The classification of a missing destination and an HTTP 403:
+#      phase 9.
+#   CR-8 (F-8) The unconditional success claims: phase 9.
+#   CR-9 (F-9) NOT in phase 9 by ruling R17 (advisory 7 is excluded): the
+#      cause tokens are bound to the closed array by position at
+#      packages/adapters/src/git/push.ts:87-88 and
+#      packages/core/src/domain/dispatch-lane-push.ts:23-26, and
+#      `spawn-failed` is re-typed in the seam. Open with the PM as a
+#      follow-up candidate.
+#   CR-10 (F-10) The append-failure diagnostic and the oversize test:
+#      phase 9.
+#   CR-11 (F-11; CLOSED by spec v1.6) The fold wording: the fold happens at
+#      the classifying invocation's own classification.
+#   CR-12 (F-12) The word-presence prompt pins: phase 9.
+#   CR-13 (F-13) The changeset's "one shared home" sentence: phase 9.
 # Still open with the PM: I-7 (reach the artifacts do not name), I-8 (the
-# companion record's id is a declared expectation), and I-9 (the naming
-# lock).
+# companion record's id is a declared expectation), I-9 (the naming
+# lock), and CR-9.
 # ---------------------------------------------------------------------------
 schemaVersion: delivery.plan.v1
 workItemRef: GH-416
 tier:
   name: full
   escalationTriggers:
-    - "A force flag, `--force-with-lease`, a second refspec, a repository argument, a retry, or a shell invocation appears in the command's act path or in the push seam (NG-1, NG-8, NFR-1, NFR-6, TC-LBND-001): stop and report; the act is the delivered seam's fixed argv, once."
+    - "A force flag or `+` refspec prefix, `--force-with-lease`, `--ff-only`, a second refspec, a repository argument other than the one resolved push remote, a second configuration read, a retry, or a shell invocation appears in the command's act path or in the push seam (NG-1, NG-8, NFR-1, NFR-6, TC-LBND-001, TC-LGIT-001): stop and report; the act is one non-force push of the checkout's HEAD to the change branch on the resolved push remote, once, after one bounded local configuration read."
     - "A push is performed for a branch that exactly one rule did not resolve: a guessed, current-checkout, ambiguous, unsafe, or protected ref (AC-F1-2, NFR-7, TC-LRES-001 to TC-LRES-004): stop and report; this is the worst outcome of the change."
     - "The two layers drift: the command's resolution and the push seam's guard stop applying the one shared predicate, a second copy of the predicate appears on that path, a pre-act resolution refusal starts a child or appends a record, `unsafe-branch` reaches the command's answer or a lane-push record, or a `protected-ref` record is written for a protected-set name instead of a server-side decline (F-1, DM-4, TC-LRES-004, TC-LCAUSE-001): stop and report."
     - "A phase edits the private safe-ref predicate copies in packages/adapters/src/git/index.ts, merge.ts, or watchdog.ts, or any other adapters module adopts the shared predicate (R10, spec section 7.2): stop and report; the predicate is unified for the push seam and its command only."
@@ -895,10 +975,11 @@ phases:
     #     `GitPushSeam`, `GitPushSeamOptions`), because
     #     packages/adapters/src/git/index.ts re-exports them and is out of
     #     scope (PM ruling R10);
-    #   - the fixed argv `git push --ff-only HEAD:refs/heads/<branch>`, the
-    #     literal non-shell spawn with `shell: false`, the 60 000 ms injectable
-    #     default with no configuration key, one attempt with no retry, and the
-    #     fast-forward-only rule;
+    #   - the fixed argv as phases 1 to 8 delivered it,
+    #     `git push --ff-only HEAD:refs/heads/<branch>` (phase 9 corrects it
+    #     by ruling R17), the literal non-shell spawn with `shell: false`, the
+    #     60 000 ms injectable default with no configuration key, one attempt
+    #     with no retry, and the fast-forward-only rule;
     #   - the guard order: both guards return before any child starts, now on
     #     the shared predicate and set.
     # One predicate, two layers, three refusal conditions (F-1). The seam's
@@ -1104,7 +1185,9 @@ phases:
     # most one bounded pm-notes document read (the `branch:` declaration), one
     # bounded local branch read, one bounded local checkout/head read (the
     # recorded `head`), one bounded lane read (the attempt and session
-    # identity), one push (60 000 ms at most), and one record append. Each
+    # identity), one push (60 000 ms at most), and one record append; phase 9
+    # adds a seventh part by ruling R17, one bounded local configuration read
+    # for the push remote. Each
     # read happens once per invocation, never per step; a re-invocation
     # repeats all six parts once more, because each invocation is a fresh
     # process, and reads the standing lane-push record on no write path
@@ -1207,6 +1290,20 @@ phases:
     #     and every pre-existing changeset.
     #     doc/planning/oss-tooling/milestones/m4/backlog.md
     #     keeps its true statement and is not touched.
+    #
+    # Declared after delivery (code review iteration 1, F-6; ruling R17): four
+    # files the phase's gate-remediation commits a0a52eb36 and a8b4a9c57
+    # edited outside the declared scope, each with its cause:
+    #   - scripts/checks/forbidden-literals.registry.json: the new reference
+    #     page push.md registers in the forbidden-literals docs scope;
+    #   - tests/structure/cli-edge-seam.test.ts: the CLI module inventory
+    #     gains packages/cli/src/commands/push.ts;
+    #   - tests/structure/event-taxonomy-single-source.test.ts: a
+    #     non-taxonomy allowance for the `kind: "refused"` structural
+    #     resolution discriminant in
+    #     packages/core/src/domain/dispatch-lane-push.ts;
+    #   - tests/structure/vocabulary-conformance.test.ts: the command-page
+    #     count moves from 42 to 43.
     #
     # Conditional, ONLY IF the named change happens:
     #   - tests/behaviour/dispatch-push-parity.test.ts, only for the additive
@@ -1318,6 +1415,7 @@ phases:
         - packages/core/src/domain/dispatch-lane-push.ts
         - packages/core/src/domain/index.ts
         - packages/core/src/index.ts
+        - scripts/checks/forbidden-literals.registry.json
         - scripts/checks/help-guide-coverage.ts
         - scripts/checks/no-shell-dispatch.ts
         - tests/behaviour/board-help.test.ts
@@ -1351,10 +1449,12 @@ phases:
         - tests/fixtures/metrics/mounting.ts
         - tests/fixtures/supervise/mounting.ts
         - tests/structure/board-mounting.test.ts
+        - tests/structure/cli-edge-seam.test.ts
         - tests/structure/content-inventory.test.ts
         - tests/structure/daemon-production-composition.test.ts
         - tests/structure/dispatch-attempts-composition.test.ts
         - tests/structure/entrypoint-bin.test.ts
+        - tests/structure/event-taxonomy-single-source.test.ts
         - tests/structure/events-production-composition.test.ts
         - tests/structure/install-conformance.test.ts
         - tests/structure/inventory.json
@@ -1365,6 +1465,7 @@ phases:
         - tests/structure/provider-mounting.test.ts
         - tests/structure/steer-mounting.test.ts
         - tests/structure/supervision-mounting.test.ts
+        - tests/structure/vocabulary-conformance.test.ts
       folders:
         - tests/fixtures/dispatch/parity
     interactions:
@@ -1588,16 +1689,20 @@ phases:
     #     export allowance changes.
     # Read-only controls (never edited):
     # tests/fixtures/dispatch/operator/contract-baseline.ts,
-    # tests/behaviour/dispatch-status-park.test.ts,
     # tests/behaviour/dispatch-peak-byte-identical.test.ts,
     # tests/behaviour/dispatch-operator-latency.test.ts, and
     # tests/checks/dispatch-doc-conformance.test.ts.
+    # Declared after delivery (code review iteration 1, F-6; ruling R17):
+    # tests/behaviour/dispatch-status-park.test.ts, which this phase's commit
+    # 4c64266ea edited outside the declared scope. Its read-count pin moved
+    # from two bounded reads to three (one lane read, one park read, and the
+    # lane-push read), the one delivered status assertion DEC-3 says may move.
     # Verify: TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
-    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/dispatch/dispatch-operator-status.test.ts tests/conformance/dispatch/dispatch-operator-posture.test.ts tests/behaviour/dispatch-status-lane-push.test.ts tests/behaviour/dispatch-additive-stability.test.ts tests/golden/dispatch-status-worktree.test.ts
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/dispatch/dispatch-operator-status.test.ts tests/conformance/dispatch/dispatch-operator-posture.test.ts tests/behaviour/dispatch-status-lane-push.test.ts tests/behaviour/dispatch-additive-stability.test.ts tests/behaviour/dispatch-status-park.test.ts tests/golden/dispatch-status-worktree.test.ts
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/operator-contract-invariance.test.ts tests/structure/content-inventory.test.ts
     # Verify (read-only controls, never edited; the last line proves the
     # `dispatch <ref>` goldens are byte-unchanged):
-    # TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-status-park.test.ts tests/behaviour/dispatch-peak-byte-identical.test.ts tests/behaviour/dispatch-operator-latency.test.ts tests/checks/dispatch-doc-conformance.test.ts
+    # TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-peak-byte-identical.test.ts tests/behaviour/dispatch-operator-latency.test.ts tests/checks/dispatch-doc-conformance.test.ts
     # TMPDIR=$PWD/tmp/tmpdir bun test tests/golden/dispatch-text.test.ts
     # Verify (the status fact reaches packages/core/src/app/dispatch-lane-view.ts
     # and its view module through the record, never as a token or verdict
@@ -1630,6 +1735,7 @@ phases:
         - packages/core/src/index.ts
         - tests/behaviour/dispatch-additive-stability.test.ts
         - tests/behaviour/dispatch-status-lane-push.test.ts
+        - tests/behaviour/dispatch-status-park.test.ts
         - tests/conformance/dispatch/dispatch-operator-posture.test.ts
         - tests/conformance/dispatch/dispatch-operator-status.test.ts
         - tests/golden/dispatch-status-worktree.test.ts
@@ -1893,6 +1999,14 @@ phases:
     # `pr_creation` row is current-truth guidance for the eleven-phase table,
     # so phase 7's reconciliation brings the row to the delivered tail; the
     # file is declared by path for that edit.
+    # Declared after delivery (code review iteration 1, F-6; ruling R17):
+    # three pages the reconciliation commit a80bc9928 touched:
+    #   - doc/spec/features/feature-autonomous-delivery.md: its shell-fallback
+    #     divergence sentence names GH-416;
+    #   - doc/guides/opencode-agents-and-commands-guide.md and
+    #     doc/guides/unified-change-convention-tracker-agnostic-specification.md:
+    #     their `pr_creation` step 11 gains the push tail, and their
+    #     `related_changes` gain GH-416.
     # doc/spec/features/feature-closeout.md needs no edit: its contract-module
     # row describes the closeout contract module, which ruling R12 leaves
     # untouched.
@@ -1948,11 +2062,14 @@ phases:
         - doc/00-index.md
         - doc/guides/change-lifecycle.md
         - doc/guides/engine-first-operations.md
+        - doc/guides/opencode-agents-and-commands-guide.md
+        - doc/guides/unified-change-convention-tracker-agnostic-specification.md
         - doc/overview/glossary.md
         - doc/planning/oss-tooling/milestones/m1/commands/dispatch.md
         - doc/quality/test-specs/test-spec-dispatch-engine.md
         - doc/spec/features/feature-adapter-ports.md
         - doc/spec/features/feature-agents-and-commands.md
+        - doc/spec/features/feature-autonomous-delivery.md
         - doc/spec/features/feature-cli-entrypoint.md
         - doc/spec/features/feature-delivery-lifecycle.md
         - doc/spec/features/feature-dispatch-engine.md
@@ -1962,89 +2079,274 @@ phases:
       mergeRequestUrl: "the GH-416 pull request against main-tools, open for review and carrying the release note"
       pipelineId: "the CI pipeline of the GH-416 pull request (the aggregate pnpm check green with every suite executed, and the generated plugin current)"
   - id: 9
-    title: Code Review Remediation (Iteration 1)
+    title: "Code review remediation (iteration 1): a valid push argv with its push-remote resolution, a real-git proof, and the review's test gaps"
     kind: delivery
-    summary: "review-iter-1 (FAIL) remediation: make the lane's push reach a real remote, prove it against real git, and close the review's test gaps. (1) MUST, F-1 (critical): the push seam's fixed argv `git push --ff-only HEAD:refs/heads/<branch>` (packages/adapters/src/git/push.ts:203) is not a valid git invocation; git has no `--ff-only` option for push (the child exits 129, `unknown option`) and a lone refspec positional is read as the repository argument, so the delivered seam refuses every real push (`rejected` / `unclassified`) and `push <ref>` cannot deliver ticket requirement 1. Precondition before any edit: a PM ruling recorded in pm-notes that GH-416 absorbs the seam's argv fix (recommended; the spec's F-1 and section 16 call the argv unchanged and this plan's first escalation trigger forbids a repository argument) or that a predecessor change lands it first. Then replace the argv with a valid non-force invocation that pushes `HEAD` to `refs/heads/<branch>` on the checkout's configured push remote: resolve that remote in one bounded local read (the branch's configured remote, then `remote.pushDefault`, then the checkout's single remote) and pass it as the repository argument or through `--repo`; dropping only the flag is not a fix. No force-capable flag, one refspec, one attempt, the 60 000 ms budget and the non-shell child stay. Amend every statement that calls the argv unchanged or states it as fact (spec F-1, NG-1, NG-4, NFR-6, sections 13, 16 and 21; the push reference page line 63; TDR-0079 lines 103 and 410), and re-run the engine's ensure-push suites, which share the seam. (2) MUST, F-2 (high): add one deterministic real-git suite (temp checkout plus local bare remote; precedents tests/fixtures/closeout/temp-git.ts, tests/fixtures/pilot/repo.ts, tests/fixtures/projects/temp-repos.ts; no network) that drives the seam's default runner through the four real outcomes (accepted on a fast-forward, accepted on an already-equal branch, rejected non-fast-forward on a moved remote, rejected protected-ref on a pre-receive decline), and move the six literal argv pins (tests/behaviour/dispatch-push-parity.test.ts lines 144, 260, 319; tests/behaviour/dispatch-lane-push-command.test.ts lines 129, 263; tests/behaviour/dispatch-lane-push-causes.test.ts line 126) to the corrected argv. (3) MUST, F-3, F-4, F-5 (medium): delete the dead `pushActs` constant and assertion in tests/behaviour/dispatch-lane-push-fold.test.ts (lines 370 and 396) or count real invocations through the parity harness; add the overflowing-slice arm that proves the lane-push references survive a full 16-reference slice (the delivered tests/behaviour/dispatch-push-evidence.test.ts technique at line 119) and drive one classification per recordable cause, or annotate the pm-notes phase-4 entry with the deviation; replace the vacuous `unsafe-branch` case in tests/behaviour/dispatch-lane-push-causes.test.ts (lines 384 to 389) with validator-level refusals (unsafe-branch cause, a ninth token, a cause on pushed, an empty or short head, an oversize payload). (4) SHOULD, each on PM acceptance (F-6 to F-13): amend the phase 3, 5 and 8 scope lists with the eight undeclared paths and their reasons; extend the cause patterns for `No configured push destination`, `does not appear to a git repository` and the HTTPS 403 permission wording; state the push outcome conditionally in doc/guides/change-lifecycle.md line 439 and packages/core/src/domain/dispatch-prompt.ts line 58; read the cause tokens by name and import `spawn-failed`; add the oversize-refusal test and a diagnostic for the append failure code; correct the spec's section 14 and section 10 wording, the two weak prompt pins, and the changeset's one-home sentence."
-    # Precondition: the PM ruling in (1) lands as a pm-notes `notes:` entry before
-    # this phase edits any file. Without it the phase is void and the branch
-    # waits for a predecessor fix, because the seam's argv is outside the
-    # spec's declared scope as written.
+    summary: "correct the push seam to an invocation git accepts, one non-force push of the checkout's HEAD to the change branch on the push remote resolved by one bounded local configuration read, classify a missing destination and an HTTP 403, prove the seam's default runner against a local bare remote, move every argv pin and argv statement, and close the review's test and disclosure gaps."
+    # Scope: code-review/review-iter-1.yaml (FAIL on 13 findings: F-1
+    # critical, F-2 high, F-3 to F-5 medium, F-6 to F-10 low, F-11 to F-13
+    # info), the authority for every item below; spec v1.6 (F-1, NFR-1,
+    # NFR-2, DM-4, section 14, section 16, section 21, Appendix A, Appendix
+    # E); test plan v1.8 (TC-LGIT-001 new; the arms of TC-LPUSH-003,
+    # TC-LFOLD-001, TC-LSTORE-001, TC-LCMD-002, TC-LMSG-001/002,
+    # TC-LCAUSE-001, TC-LBND-001/002 moved); PM ruling R17.
+    # AC: AC-F1-1 and AC-F2-1 (their real-transport proof; the
+    # injected-transport fixtures stay as the ticket's fixture); AC-F3-1 and
+    # AC-F4-1 (the test gaps F-3 to F-5 close); AC-F6-1 (the eight undeclared
+    # paths of F-6, declared in phases 3, 5 and 8 by revision v1.7).
     #
-    # Why this is in scope for GH-416 and not waived as a pre-existing defect:
-    # the change adds a second consumer of the seam, the twenty-ninth
-    # prompt-required command, a `pm` instruction every lane will follow, and a
-    # decision record that states the argv as fact. Merged as delivered, every
-    # lane ends with a refused push named `unclassified` and the ticket's first
-    # required behaviour is not delivered. Evidence: review-iter-1.yaml F-1
-    # (the delivered module with its default runner, probed against git 2.53.0
-    # over a local bare remote with `origin` configured; a scratch copy with
-    # only the argv changed answers accepted, accepted, non-fast-forward and
-    # protected-ref on the same repository). The host state ledger holds no
-    # attempt that ever recorded `push:pushed` or `push:failed`.
+    # PRECONDITION (kept from the reviewer's draft; met): before this phase
+    # edits any file, a PM ruling must stand as a pm-notes entry that GH-416
+    # absorbs the seam's argv fix instead of waiting for a predecessor change,
+    # because the spec as reviewed called the argv unchanged and this plan's
+    # first escalation trigger forbade a repository argument. Ruling R17
+    # (absorbed scope) is that ruling and is recorded in the pm-notes. If it
+    # is withdrawn, this phase is void and the branch waits for a predecessor
+    # fix.
     #
-    # TC ownership: TC-LPUSH-001 and TC-LPUSH-002 gain their real-transport arm
-    # (the injected-transport fixtures stay as the ticket's fixture); TC-LPUSH-003
-    # (the dead assertion), TC-LFOLD-001 steps 1 and 3 (the overflow arm and the
-    # per-cause classification), TC-LCAUSE-001 step 2 and TC-LSTORE-001 (the
-    # validator refusals). The plan's phases 1 to 8 are complete and are not
-    # reopened; their evidence stands.
+    # Why the fix belongs to GH-416 and is not waived as a pre-existing
+    # defect: the change adds a second consumer of the seam, the twenty-ninth
+    # prompt-required command, a `pm` instruction every lane follows, and a
+    # decision record that states the argv as fact. Merged as delivered,
+    # every lane ends with a refused push named `unclassified`, and ticket
+    # requirement 1 is not delivered (review F-1, probed on git 2.53.0 over
+    # a local bare remote: `git push` has no `--ff-only` option, and a lone
+    # refspec positional is read as the repository argument).
     #
-    # Fences in force: no force-capable flag, no second refspec, no shell, no
-    # retry, and no second remote-write path (NFR-1, NFR-6, NG-1, NG-8); the
-    # record payload, the answer contract, the status fact, the eight-token
-    # cause set and every closed vocabulary stay as delivered (NG-2, NG-3);
-    # no pin is weakened to pass; the classification vocabulary tests, the
-    # state-additivity baseline and the closeout contract module stay
-    # untouched; no license headers; no credential-shaped literals; the
-    # bounded local read that resolves the push remote adds no configuration
-    # key.
+    # (1) The act, corrected (F-1; spec v1.6 F-1 and NFR-1).
+    #   - packages/adapters/src/git/push.ts: the argv becomes
+    #     `git push <resolved push remote> HEAD:refs/heads/<branch>`: one
+    #     repository argument, one refspec, no `--ff-only`, no force flag, no
+    #     `+` prefix. Fast-forward-only semantics are git's own default for a
+    #     non-force push, so none is lost. Dropping only the flag is not a fix.
+    #   - The push remote is resolved by ONE bounded local configuration read,
+    #     in this order: `branch.<branch>.pushRemote`, `remote.pushDefault`,
+    #     `branch.<branch>.remote`, then `origin`. A missing or ambiguous
+    #     destination is a typed failure that names `remote-unavailable` and
+    #     starts no push child, never a guess.
+    #   - The guards keep their order: the safe-ref check and the
+    #     protected-name check run before ANY child, the configuration read
+    #     included.
+    #   - Unchanged: the outcome union, the 60 000 ms injectable budget, one
+    #     attempt with no retry, the literal non-shell child, the four
+    #     exported names, and the absence of a new configuration key.
+    #   - Where the read lands is a choice between two declared shapes: inside
+    #     the seam module itself (the expected shape: the seam resolves the
+    #     destination, so both consumers are corrected by one change), or in
+    #     the new sibling module packages/adapters/src/git/push-remote.ts,
+    #     handed to the seam through its input. It is not added to
+    #     packages/adapters/src/git/index.ts, which is outside every scope
+    #     (R10).
+    #   - packages/cli/src/production.ts wires both call sites: the engine's
+    #     ensure-push (:4234, its act at :4278) and the lane command's act
+    #     (:6890, called at :6924). The engine's parity read, act count and
+    #     classification are otherwise unchanged (NG-4).
+    # (2) Classification (F-7; spec v1.6 DM-4 and Appendix E): a missing push
+    #   destination (`No configured push destination`) and a path that is not
+    #   a repository (`does not appear to be a git repository`) are
+    #   `remote-unavailable`; an HTTP 403 and `Write access ... not granted`
+    #   are `auth-rejected` and never fall through to `remote-unavailable` or
+    #   `unclassified` (the auth row is matched before the unavailable row).
+    #   Reporting only: nothing branches on the cause.
+    # (3) The real-git proof (F-2; TC-LGIT-001): one deterministic suite,
+    #   tests/behaviour/dispatch-lane-push-real-git.test.ts (new), drives the
+    #   seam's DEFAULT runner over a temporary checkout and a local bare
+    #   remote: a first push accepted, a repeat push accepted, a moved remote
+    #   `non-fast-forward`, the guard names refused before any child, a
+    #   missing destination `remote-unavailable`, the four precedence sub-arms
+    #   each pushing to the expected remote, and a no-network assertion (every
+    #   configured remote a local path). It is the acceptance probe for (1).
+    #   The suite name is the test plan's; the review's draft name
+    #   (`dispatch-push-seam-real-git.test.ts`) is not used. A repository
+    #   helper for the suite (a checkout, a bare remote, a second clone) is
+    #   expected under tests/fixtures/dispatch/parity/: the two delivered
+    #   helpers are precedent only, because each is hard-coded to another
+    #   change (tests/fixtures/closeout/temp-git.ts: branch constants;
+    #   tests/fixtures/pilot/repo.ts: an `https` origin, which the no-network
+    #   step forbids).
+    # (4) The argv pins: six assertions move to the corrected argv, and no
+    #   other asserts the old form (checked: a search for the flag and the
+    #   refspec across tests finds these six and one planted call):
+    #   - tests/behaviour/dispatch-lane-push-command.test.ts (:129, :263)
+    #   - tests/behaviour/dispatch-lane-push-causes.test.ts (:126)
+    #   - tests/behaviour/dispatch-push-parity.test.ts (:144, :260, :319)
+    #   The planted call at tests/behaviour/dispatch-push-parity.test.ts:554 is
+    #   the guarded runner's by-name shell-refusal arm, not a pin of the
+    #   seam's argv; nothing depends on its arguments.
+    # (5) Test-quality fixes (F-3, F-4, F-5, F-10, F-12):
+    #   - tests/behaviour/dispatch-lane-push-fold.test.ts: the dead `pushActs`
+    #     constant and its assertion (:370, :396) give way to a real count
+    #     from a recording runner through the production composition
+    #     (TC-LPUSH-003); an overflow arm proves the lane-push references
+    #     survive a full 16-reference slice, beside the delivered push
+    #     disclosure (the tests/behaviour/dispatch-push-evidence.test.ts:119
+    #     technique); the seven-cause arm drives one classification per
+    #     recordable cause instead of calling the helper (TC-LFOLD-001).
+    #   - tests/behaviour/dispatch-lane-push-record.test.ts: validator-level
+    #     refusals, one per malformed shape (a guard token, a ninth token, a
+    #     cause on `pushed`, an empty or short head) plus the oversize
+    #     payload, beside the accepted record (TC-LSTORE-001). They replace
+    #     the vacuous `unsafe-branch` case at
+    #     tests/behaviour/dispatch-lane-push-causes.test.ts:384 to :389.
+    #   - tests/behaviour/dispatch-lane-push-command.test.ts: the
+    #     append-failure and oversize-payload arms (TC-LCMD-002); a
+    #     production-shaped payload measures 439 of 512 bytes, so a long
+    #     branch name crosses the bound.
+    #   - packages/cli/src/production.ts: the append wiring (:6925) emits the
+    #     append failure code on a diagnostic channel; the answer keeps
+    #     `recorded: false` and its three-key shape.
+    #   - tests/checks/lane-push-surfaces.test.ts: the two word-presence pins
+    #     (:57 to :63, :72 to :76) pin the prohibition sentence and a
+    #     distinctive fragment of the pre-act sentence, and a planted "retry
+    #     the push" mutation must fail them (TC-LMSG-001/002).
+    # (6) The claims of an unconditional push (F-8):
+    #   - packages/core/src/domain/dispatch-prompt.ts (:58): "`push <ref>`
+    #     pushes that last commit and reports the outcome".
+    #   - doc/guides/change-lifecycle.md (:439): the outcome is "pushed, or
+    #     the refusal is named with its cause".
+    #   The generated projection .ados-claude/agents/pm.md is not touched:
+    #   the `pm` agent file does not change here.
+    # (7) The argv stated as fact, and the release note (F-13):
+    #   - doc/planning/oss-tooling/milestones/m4/commands/push.md (:63) and
+    #     doc/decisions/TDR-0079-lane-push-amends-tdr-0076.md (:103, :410)
+    #     state the corrected argv.
+    #   - doc/spec/features/feature-quality-gates-and-pr.md (:89) and
+    #     doc/quality/test-specs/test-spec-dispatch-engine.md (:123, :158):
+    #     "fixed argv naming only the change branch" becomes the corrected
+    #     act, and the coverage map gains the real-git suite.
+    #   - .changeset/gh-416-lane-pushes-own-evidence-commit-minor.md (:18):
+    #     "the safe-ref predicate moves to the core contracts tier beside the
+    #     unchanged protected-name set", not "one shared home".
+    # (8) Change artifacts this phase's commit may carry, each authored by its
+    #   own agent: spec v1.6, test plan v1.8, the pm-notes, and the review
+    #   record code-review/review-iter-1.yaml, which is untracked and outside
+    #   every scope today, so the commit primitive would report it a stray.
+    #   The code-review folder is declared for the re-review's record too.
+    # (9) Not in this phase, by ruling R17: F-9 (the cause tokens bound to
+    #   the closed array by position at push.ts:87-88 and
+    #   packages/core/src/domain/dispatch-lane-push.ts:23-26, and the re-typed
+    #   `spawn-failed`). packages/core/src/domain/dispatch-lane-push.ts is
+    #   therefore outside this phase's scope; F-9 stays open with the PM.
+    #
+    # Conditional, ONLY IF the named change happens:
+    #   - packages/adapters/src/git/push-remote.ts, when the push-remote read
+    #     lands in a sibling module instead of inside the seam. Then that
+    #     module also joins the static no-shell surface
+    #     (scripts/checks/no-shell-dispatch.ts,
+    #     tests/checks/no-shell-dispatch.test.ts) and the committed
+    #     inventories (tests/structure/inventory.json,
+    #     tests/structure/content-inventory.test.ts), and the module table of
+    #     doc/spec/features/feature-adapter-ports.md gains its row.
+    #   - tests/behaviour/dispatch-push-evidence.test.ts, only to add a
+    #     lane-push disclosure-stress arm; its delivered cells are never
+    #     edited.
+    #
+    # TC ownership: TC-LGIT-001, the one case test plan v1.8 adds, is owned
+    # here. Every other case this phase touches keeps its owner in phases 3
+    # to 6; the phase re-proves arms of TC-LPUSH-001, TC-LPUSH-002,
+    # TC-LPUSH-003, TC-LFOLD-001, TC-LSTORE-001, TC-LCMD-002, TC-LMSG-001,
+    # TC-LMSG-002, TC-LCAUSE-001, TC-LBND-001 and TC-LBND-002. Phases 1 to 8
+    # keep their ids, order, kinds and ownership and are not reopened.
+    #
+    # Fences in force: no force-capable flag, no `+` prefix, no `--ff-only`,
+    # no second refspec, no shell, no retry, and no second remote-write path
+    # (NFR-1, NFR-6, NG-1, NG-8); the record payload, the answer contract,
+    # the status fact, the eight-token cause set and every closed vocabulary
+    # stay as delivered (NG-2, NG-3); no pin is weakened to pass; the
+    # classification vocabulary tests, the state-additivity baseline and the
+    # closeout contract module stay untouched; no license headers; no
+    # credential-shaped literals; the configuration read adds no
+    # configuration key.
+    #
     # Verify: TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
-    # Verify (the real-git suite is the acceptance probe for F-1; the four
-    # outcomes must come from the seam's default runner, never an injected one):
-    # TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-push-seam-real-git.test.ts tests/behaviour/dispatch-lane-push-command.test.ts tests/behaviour/dispatch-lane-push-causes.test.ts tests/behaviour/dispatch-lane-push-fold.test.ts tests/behaviour/dispatch-lane-push-record.test.ts tests/behaviour/dispatch-lane-push-resolution.test.ts tests/behaviour/dispatch-lane-push.test.ts tests/behaviour/dispatch-push-parity.test.ts tests/behaviour/dispatch-push-evidence.test.ts tests/conformance/dispatch/dispatch-parity-push.test.ts tests/structure/dispatch-push-envelope.test.ts tests/checks/dispatch-contract-invariance.test.ts tests/checks/no-shell-dispatch.test.ts tests/checks/lane-push-surfaces.test.ts tests/checks/doc-conformance.test.ts tests/structure/decision-record.test.ts tests/structure/event-state-additivity.test.ts tests/structure/closeout-contract.test.ts
+    # Verify (the real-git suite alone first; it is the acceptance probe, and
+    # its outcomes must come from the seam's default runner, never an
+    # injected one):
+    # TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-lane-push-real-git.test.ts
+    # Verify (the moved pins and the test-quality fixes):
+    # TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-lane-push-command.test.ts tests/behaviour/dispatch-lane-push-causes.test.ts tests/behaviour/dispatch-lane-push-fold.test.ts tests/behaviour/dispatch-lane-push-record.test.ts tests/behaviour/dispatch-push-parity.test.ts tests/checks/lane-push-surfaces.test.ts
+    # Verify (the rest of the lane-push suites, re-run over the corrected
+    # seam):
+    # TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-lane-push.test.ts tests/behaviour/dispatch-lane-push-resolution.test.ts tests/conformance/dispatch/dispatch-parity-push.test.ts
+    # Verify (the engine's ensure-push suites share the seam; re-run, and
+    # edited only where a conditional above applies):
+    # TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-push-evidence.test.ts tests/structure/dispatch-push-envelope.test.ts
+    # Verify (closed vocabularies, the record kind, and the token home):
+    # TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/dispatch-contract-invariance.test.ts tests/structure/dispatch-token-home.test.ts tests/structure/event-state-additivity.test.ts
+    # Verify (pages and records this phase rewords):
+    # TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/doc-conformance.test.ts tests/structure/decision-record.test.ts
     # Verify: TMPDIR=$PWD/tmp/tmpdir pnpm check:no-shell
-    # Verify: TMPDIR=$PWD/tmp/tmpdir ./scripts/lint-commit-range.sh --base origin/main-tools
-    # Verify (once, at the gate, after the last edit): TMPDIR=$PWD/tmp/tmpdir pnpm check
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/no-shell-dispatch.test.ts
+    # Verify: TMPDIR=$PWD/tmp/tmpdir jaiship plan validate GH-416
     # Verify: git diff --check
+    # Verify (once, at the gate, after the last edit):
+    # TMPDIR=$PWD/tmp/tmpdir pnpm check
+    # Verify (at the pull-request boundary):
+    # TMPDIR=$PWD/tmp/tmpdir ./scripts/lint-commit-range.sh --base origin/main-tools
     # Exit criteria:
-    #   - against a local bare remote, the seam's default runner answers
-    #     `accepted` for a fast-forward push and for a repeat push of an equal
-    #     head, `rejected` with `non-fast-forward` for a moved remote branch,
-    #     and `rejected` with `protected-ref` for a pre-receive decline;
-    #   - no test, page or decision record states `git push --ff-only` as the
-    #     seam's argv, and the spec, the test plan and this plan's first
-    #     escalation trigger agree with the corrected invocation;
-    #   - the three vacuous or missing arms named in (3) are real tests that
-    #     fail when the guarded behaviour is broken;
-    #   - every verify line exits 0, and the full battery is green at the gate
-    #     commit;
-    #   - only the declared paths changed, and each accepted item of (4) is
+    #   - the real-git suite passes against the seam's default runner: a first
+    #     push and a repeat push are `accepted`, a moved remote is `rejected`
+    #     with `non-fast-forward`, the guard names are `rejected` before any
+    #     child, a missing destination is `remote-unavailable`, and each of
+    #     the four precedence sub-arms pushes to the expected remote;
+    #   - no argv pin still asserts `--ff-only`: the six named pins read the
+    #     corrected argv, and no test, reference page or decision record
+    #     states the delivered form as the seam's argv;
+    #   - the classification covers the two new cases: a missing destination
+    #     and a non-repository path are `remote-unavailable`; an HTTP 403 and
+    #     a not-granted rejection are `auth-rejected`, never
+    #     `remote-unavailable` or `unclassified`;
+    #   - the two prompt and guide claims are conditional: the lifecycle
+    #     prompt and doc/guides/change-lifecycle.md state the outcome as
+    #     pushed or a named refusal;
+    #   - the vacuous and missing arms are real tests that fail when the
+    #     guarded behaviour breaks: the counted push acts, the overflow arm,
+    #     the per-cause classification, the validator refusals, the
+    #     append-failure and oversize arms, and the two prompt pins;
+    #   - the guards still run before any child, the configuration read
+    #     included, and the first escalation trigger holds as rewritten;
+    #   - every verify line exits 0, the full battery is green at the gate
+    #     commit, and `jaiship plan validate GH-416` returns `valid`;
+    #   - only the declared paths changed, and each accepted review item is
     #     recorded as a pm-notes `notes:` entry.
     scope:
       files:
         - .changeset/gh-416-lane-pushes-own-evidence-commit-minor.md
-        - doc/changes/2026-11/2026-11-27--GH-416--lane-pushes-own-evidence-commit/chg-GH-416-plan.yaml
         - doc/changes/2026-11/2026-11-27--GH-416--lane-pushes-own-evidence-commit/chg-GH-416-pm-notes.yaml
         - doc/changes/2026-11/2026-11-27--GH-416--lane-pushes-own-evidence-commit/chg-GH-416-spec.md
         - doc/changes/2026-11/2026-11-27--GH-416--lane-pushes-own-evidence-commit/chg-GH-416-test-plan.md
+        - doc/changes/2026-11/2026-11-27--GH-416--lane-pushes-own-evidence-commit/code-review/review-iter-1.yaml
         - doc/decisions/TDR-0079-lane-push-amends-tdr-0076.md
         - doc/guides/change-lifecycle.md
         - doc/planning/oss-tooling/milestones/m4/commands/push.md
         - doc/quality/test-specs/test-spec-dispatch-engine.md
         - doc/spec/features/feature-adapter-ports.md
-        - doc/spec/features/feature-dispatch-engine.md
         - doc/spec/features/feature-quality-gates-and-pr.md
-        - doc/spec/nonfunctional.md
+        - packages/adapters/src/git/push-remote.ts
         - packages/adapters/src/git/push.ts
         - packages/cli/src/production.ts
-        - packages/core/src/domain/dispatch-lane-push.ts
         - packages/core/src/domain/dispatch-prompt.ts
+        - scripts/checks/no-shell-dispatch.ts
         - tests/behaviour/dispatch-lane-push-causes.test.ts
         - tests/behaviour/dispatch-lane-push-command.test.ts
         - tests/behaviour/dispatch-lane-push-fold.test.ts
+        - tests/behaviour/dispatch-lane-push-real-git.test.ts
         - tests/behaviour/dispatch-lane-push-record.test.ts
         - tests/behaviour/dispatch-push-evidence.test.ts
         - tests/behaviour/dispatch-push-parity.test.ts
-        - tests/behaviour/dispatch-push-seam-real-git.test.ts
         - tests/checks/lane-push-surfaces.test.ts
+        - tests/checks/no-shell-dispatch.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - doc/changes/2026-11/2026-11-27--GH-416--lane-pushes-own-evidence-commit/code-review
         - tests/fixtures/dispatch/parity
+    interactions:
+      - kind: contract-file
+        target: packages/adapters/src/git/push.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/production.ts
+        role: consumer
+      - kind: contract-file
+        target: packages/core/src/domain/dispatch-prompt.ts
+        role: producer
