@@ -5,7 +5,7 @@ branch: feat/GH-416/lane-pushes-own-evidence-commit
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: null, completed: 2026-11-27T05:46:12.217Z }
-  specification: { started: null, completed: null }
+  specification: { started: null, completed: 2026-11-27T05:54:42.986Z }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
@@ -91,6 +91,26 @@ notes:
       wrapper only, so a lane whose wrapper is gone leaves the PR head one
       commit behind. No contradiction with the spec; the change closes a
       coverage gap and the spec must be reconciled in phase 7."
+    type: info
+    date: "2026-11-27"
+  - text: "Specification accepted at PM validation. chg-GH-416-spec.md (584 lines)
+      decides the three reserved design points as DEC-1 to DEC-7: DEC-1 a new
+      prompt-required typed `push <ref>` command thin over the delivered
+      adapters push seam; DEC-2 one new append-only record kind
+      dispatch.lane-push that the classification folds into reserved attempt
+      evidence lane-push:<verdict> / lane-push-cause:<cause>; DEC-3 dispatch
+      status derives an additive optional lanePush fact from that record with no
+      network call (read count widens to one lane read plus at most two
+      additional record reads); DEC-4 a closed refusal cause set; DEC-5 no
+      classification-vocabulary growth; DEC-6 the ordered pr_creation tail
+      ending in push then the final message; DEC-7 a decision record amending
+      TDR-0076. Ticket AC-1/AC-2/AC-3 and requirement 4 map to
+      AC-F1-1/AC-F2-1/AC-F4-1+AC-F3-1/AC-F5-1, with AC-F1-2 and AC-F6-1 closing
+      the resolution and divergence edges. Open questions: none; four readings
+      are declared in spec section 14. The spec corrected two PM assumptions
+      from code truth: the pm-notes branch key is opaque rather than typed, and
+      the prompt-required set holds 28 commands today (push is the
+      twenty-ninth)."
     type: info
     date: "2026-11-27"
   - text: "Doc-risk inventory for phase 7 (current-truth docs likely to change):
