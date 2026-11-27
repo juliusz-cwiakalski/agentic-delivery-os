@@ -1,7 +1,7 @@
 ---
 id: chg-GH-416-test-plan
 status: Proposed
-version: 1.0
+version: 1.1
 created: 2026-11-27
 last_updated: 2026-11-27
 owners: ["Juliusz Ćwiąkalski"]
@@ -23,15 +23,15 @@ The behaviour under protection is the one the ticket names: a lane's own last ev
 
 The integrity risks this plan pins are the ones where a plausible implementation is silently wrong: a push command that authors, amends, resets, or force-pushes (the evidence would no longer be the evidence); a branch resolution that guesses and pushes a foreign, ambiguous, unsafe, or protected ref (the worst outcome of the whole change); a `dispatch.lane-push` record that grows unbounded, carries git's stderr or a remote URL, or claims a push that never happened because the append preceded the act; a fold that fabricates a lane push for a foreign attempt or an unreadable store, or that turns a recorded refusal into a classification failure the delivered row would not have produced; an operator fact that breaks the surface's declared posture (a network call, a process start, a fence, an append) or perturbs the delivered answer when absent; and a new command that drifts the prompt-required composition, the help/coverage inventory, the reference pages, or the prompt-conformance scan.
 
-The plan is a verification map, not an execution claim: nothing here was run against a new implementation at authoring time, and phase ownership belongs to `chg-GH-416-plan.yaml`, authored in phase 4 after this plan. All seven acceptance criteria (AC-F1-1, AC-F1-2, AC-F2-1, AC-F3-1, AC-F4-1, AC-F5-1, AC-F6-1) are covered by at least one named case; the ticket's three acceptance criteria and requirement 4 each have their own traceability row (§3.1) and their own fixture arms (§5.2 TC-LPUSH-001, TC-LPUSH-002/003, TC-LMSG-001, TC-LSTATUS-001..003). There are no TODO rows and no orphan cases; two spec-side observations and one declared coverage boundary are recorded in §8, not silently resolved.
+The plan is a verification map, not an execution claim: nothing here was run against a new implementation at authoring time, and phase ownership belongs to `chg-GH-416-plan.yaml`, authored in phase 4 after this plan. All seven acceptance criteria (AC-F1-1, AC-F1-2, AC-F2-1, AC-F3-1, AC-F4-1, AC-F5-1, AC-F6-1) are covered by at least one named case; the ticket's three acceptance criteria and requirement 4 each have their own traceability row (§3.1) and their own fixture arms (§5.2 TC-LPUSH-001, TC-LPUSH-002/003, TC-LMSG-001, TC-LSTATUS-001..003). There are no TODO rows and no orphan cases; the three earlier spec-side findings are recorded as closed by spec v1.1 with the location that now decides each, and one accepted coverage boundary remains declared (§8.3).
 
 ### 1.1 In Scope
 
 - **F-1, the lane's own push**: the `push <ref>` grammar and answer (§8.1), one fast-forward act through the delivered seam per invocation, nothing authored/amended/reset/forced, the invocation's own checkout as the working directory, act-then-append ordering with `recorded: false` disclosure, and idempotent re-invocation that never suppresses an act and never escalates to force.
-- **Branch resolution (F-1, NFR-7)**: the change record's `branch:` declaration cross-checked with the delivered convention read (`branchConvention` + `selectMatchingBranch`, the delivered `none | unique | ambiguous` semantics in `packages/core/src/domain/closeout.ts`), where a disagreement, no match, or more than one match is a typed input refusal that performs no act and appends no record, and the seam's own safe-ref/protected-ref guard refuses a resolved name before any child process starts.
+- **Branch resolution and the two refusal arms (F-1, NFR-7)**: the change record's `branch:` declaration cross-checked with the delivered convention read (`branchConvention` + `selectMatchingBranch`, the delivered `none | unique | ambiguous` semantics in `packages/core/src/domain/closeout.ts`), where a disagreement, no match, or more than one match is a typed input refusal that performs no act and appends no record; a uniquely resolved branch name that fails the delivered safe-ref guard or names a ref in the seam's protected set is the same **pre-act resolution refusal** (no child process, no act, no record — AC-F1-2, "arm (a)"), which is distinct from the **seam's own recorded rejection or classification** (verdict `failed`, record appended, closed `detail` cause — DM-4, "arm (b)"). The two arms answer different questions and neither may silently become the other.
 - **F-2, the second idempotent push (regression)**: an already-equal branch is `accepted`/`pushed` with no error at the lane, at the wrapper, and at the engine (`push:clean`, zero engine push invocations), and no delivered push path is removed, reordered, or narrowed.
-- **F-3, the durable fact and its fold**: the `dispatch.lane-push` payload and its bounds, one append per invocation under the store fence, the single bounded read at classification, the newest-record-for-this-attempt rule, the reserved-ahead-of-slice evidence references, the 16-reference budget, and the no-fabrication directions (foreign attempt, no record, unreadable store).
-- **F-4, naming the refusal**: the closed cause vocabulary produced inside the seam, the command's answer, the final-message contract carried by both product surfaces (`pm` agent definition step and the built lifecycle prompt sentence), and the "a disclosure is not a claim" rule against the delivered `push-parity-unmet` row.
+- **F-3, the durable fact and its fold**: the `dispatch.lane-push` payload and its bounds, one append per invocation under the store fence, the single bounded read at classification, the newest-record-for-this-attempt rule, the reserved-ahead-of-slice evidence references (the delivered reservation is five, the fold adds at most two, so the post-change maximum is seven of the sixteen-reference budget), and the no-fabrication directions (foreign attempt, no record, unreadable store).
+- **F-4, naming the refusal**: the closed cause vocabulary produced inside the seam (`protected-ref` — the delivered literal, shared with the closeout ref guard — plus `non-fast-forward`, `auth-rejected`, `remote-unavailable`, `spawn-failed`, `timed-out`, `unsafe-branch`, `unclassified`), the command's answer, the final-message contract carried by both product surfaces (`pm` agent definition step and the built lifecycle prompt sentence), and the "a disclosure is not a claim" rule against the delivered `push-parity-unmet` row.
 - **F-5, the operator fact**: the additive optional `lanePush` member on `dispatch status`, its verbatim projection, its human rendering only when present, its byte-identical absence, and its read posture and widened read count.
 - **F-6, the declared divergence**: the typed/shell reach of the product surface, the typed-only nature of the fold and the status fact, and the bounded residual for a lane that runs no `pr_creation` step.
 - **Delivery guards**: prompt-required composition (28 → 29), help entries, coverage inventory, the M4 reference page, reference-page parity, `check:help`, `check:prompt` (and the prompt inventory's required phrases), the entrypoint restriction, `check:no-shell`, the output-stability surfaces, and the standing five-package minor changeset.
@@ -40,7 +40,7 @@ The plan is a verification map, not an execution claim: nothing here was run aga
 ### 1.2 Out of Scope & Known Gaps
 
 - **Real git, real remotes, real credentials.** Never exercised: the transport is injected (`createParityHarness` / `createGitPushSeam({ childRunner })`) and every observation is a real command-path invocation over injected facts. Zero live network calls, zero real child processes, zero wall-clock assertions.
-- **The session's prose final message as an artifact.** No delivered seam reads a session's final message as a testable value (the transcript read is a declared capability gap on one harness). AC-F4-1's final-message clause is pinned where the spec puts it: as two product-surface assertions (TC-LMSG-001) plus the behavioural cause naming in the command's answer (TC-LCAUSE-001/002). A session that ignores its instruction is the declared RSK-5 residual, not a testable claim; see §8.3 GAP-3.
+- **The session's prose final message as an artifact.** No delivered seam reads a session's final message as a testable value (the transcript read is a declared capability gap on one harness). AC-F4-1's final-message clause is pinned where the spec puts it: as two product-surface assertions (TC-LMSG-001) plus the behavioural cause naming in the command's answer (TC-LCAUSE-001/002). A session that ignores its instruction is the declared RSK-5 residual, not a testable claim; see §8.3's accepted coverage boundary.
 - **The engine's ensure-push behavior.** Unchanged (spec NG-4, AC-F2-1's third clause): the delivered GH-386 suites (`tests/conformance/dispatch/dispatch-parity-push.test.ts`, `tests/behaviour/dispatch-push-parity.test.ts`) stay authoritative and are re-run, not re-pinned. TC-LPUSH-003 asserts only the "zero engine push invocations + `push:clean` evidence" arm the ticket names.
 - **The bash wrappers' own push behavior and their retirement.** Unchanged (NG-10); TC-LDOC-002 asserts only the documentation declaration.
 - **A worktree-cleanliness precondition at the push** (spec §7.3): deferred; a dirty tree is not tested as a refusal.
@@ -70,7 +70,7 @@ Every AC maps to at least one named case and every case traces to at least one A
 | AC ID | Criterion (compressed) | TC ID(s) | Status |
 |-------|------------------------|----------|--------|
 | AC-F1-1 | No wrapper alive, injected accepting transport: PR head equals branch head when the session ends, exactly one push act for that head, zero commits authored or amended | TC-LPUSH-001, TC-LCMD-001, TC-LCMD-002, TC-LRES-005, TC-LMSG-002 | Covered |
-| AC-F1-2 | A resolution refusal (declaration/convention disagreement, no match, more than one match, unsafe or protected ref) is typed, names the observed state, performs no act, appends no record, and never pushes a guessed ref | TC-LRES-001, TC-LRES-002, TC-LRES-003, TC-LRES-004, TC-LRES-005 | Covered |
+| AC-F1-2 | A resolution refusal — declaration/convention disagreement, no match, more than one match, or a uniquely resolved name that fails the safe-ref guard or names a ref in the seam's protected set — is typed, names the observed state, performs no act, appends no record, starts no child process, and never pushes a guessed, ambiguous, unsafe, or protected ref | TC-LRES-001, TC-LRES-002, TC-LRES-003, TC-LRES-004, TC-LRES-005 | Covered |
 | AC-F2-1 | A repeat push of an equal head is accepted with no error; a classification after a successful lane push derives `pr-open` with zero engine push invocations and `push:clean`; no delivered push path removed, reordered, or turned into an error | TC-LPUSH-002, TC-LPUSH-003, TC-LPUSH-004 | Covered |
 | AC-F3-1 | A refused push recorded by the lane reaches the attempt as `lane-push:failed` + `lane-push-cause:<cause>` in the reserved-ahead-of-slice refs within the 16 budget, with no new token/identity/row/reason/source/arm/field; a foreign-attempt record and an unreadable store contribute nothing | TC-LFOLD-001, TC-LFOLD-002, TC-LFOLD-003, TC-LFOLD-004, TC-LCAUSE-001 | Covered |
 | AC-F4-1 | A refused push is named in the command's answer (cause) and the lane's final message (PR URL + refusal cause; `recorded: false` disclosure when the record did not land), the message never claims the branch is on the remote, and the attempt carries the same cause | TC-LMSG-001, TC-LMSG-002, TC-LCAUSE-001, TC-LCAUSE-002, TC-LCMD-001, TC-LFOLD-001 | Covered |
@@ -108,9 +108,9 @@ No HTTP/REST surface and no event-taxonomy kind, message, or control frame is ad
 | ID | Element | TC ID(s) / note |
 |----|---------|-----------------|
 | DM-1 | `dispatch.lane-push` payload (`delivery.dispatch.lane-push.v1`, key `dispatch.lane-pushes:<ref>`): schema, ref, repository, branch, head (full-hex), verdict, cause iff `failed`, attemptId/sessionId when a lane record was readable, recordedAt; whole payload ≤ 512 UTF-8 bytes; identifiers and SHAs only | TC-LSTORE-001 (members, bounds, forbidden content, append-only latest-wins), TC-LSTORE-002 (attempt/session binding and its absence) |
-| DM-2 | `lane-push:<verdict>` / `lane-push-cause:<cause>` evidence references; reserved ahead of the slice; reserved set grows by at most two inside the 16-reference budget | TC-LFOLD-001 (both references, cause form, reservation), TC-LFOLD-002 (`pushed` form), TC-LFOLD-003 (no fabrication), TC-LFOLD-004 (disclosure not a claim) |
+| DM-2 | `lane-push:<verdict>` / `lane-push-cause:<cause>` evidence references; reserved ahead of the slice beside the delivered five (`lane:append-failed`, `lease:not-owned`, `lease:renewal-failed`, `park:recovery-append-failed`, `push:<verdict>`); the fold adds at most two, so at most seven of the 16-reference budget | TC-LFOLD-001 (both references, cause form, reservation and the seven-of-sixteen maximum), TC-LFOLD-002 (`pushed` form), TC-LFOLD-003 (no fabrication), TC-LFOLD-004 (disclosure not a claim) |
 | DM-3 | Additive optional `lanePush` fact on `DispatchStatusData` (`verdict`, `branch`, `head`, `cause?`, `recordedAt`), verbatim from the newest matching record; absent when none stands; human lines only when present | TC-LSTATUS-001, TC-LSTATUS-002, TC-LSTATUS-003 |
-| DM-4 | Closed cause vocabulary on the seam's `detail` member: `protected-branch`, `non-fast-forward`, `auth-rejected`, `remote-unavailable`, `spawn-failed`, `timed-out`, `unsafe-branch`, `unclassified`; the outcome union unchanged | TC-LCAUSE-001 (all eight, mapping arms), TC-LCAUSE-002 (`unclassified` fallback + raw text never leaves the seam) |
+| DM-4 | Closed cause vocabulary on the seam's `detail` member: `protected-ref` (the delivered literal, shared with the closeout ref guard), `non-fast-forward`, `auth-rejected`, `remote-unavailable`, `spawn-failed`, `timed-out`, `unsafe-branch`, `unclassified`; the outcome union unchanged; these tokens name the seam's own recorded rejection (`failed`, record appended) and **not** the command's pre-act resolution refusal | TC-LCAUSE-001 (arm (b): all eight, mapping arms, record appended, distinct from TC-LRES-004's arm (a)), TC-LCAUSE-002 (`unclassified` fallback, no `protected-branch` alias, raw text never leaves the seam) |
 | DM-5 | The `push <ref>` command contract: one positional, the answer keys of §8.1, exits 0/1, no new error identity | TC-LCMD-001 (grammar, both answer forms, exits), TC-LOUT-002 (bounds and redaction), TC-LDOC-001 (registration and page) |
 
 External integration (spec §8.4) is covered at the seam only: the one remote write is asserted through the injected runner's recorded argv, count, and order (TC-LCMD-001, TC-LBND-001), and TC-LBND-002 asserts no provider read class is added. No case opens a network connection or reads a real remote.
@@ -123,7 +123,7 @@ External integration (spec §8.4) is covered at the seam only: the one remote wr
 | NFR-2 | Added cost per lane end: ≤ 1 branch read, 1 lane read, 1 push (≤ 60 000 ms), 1 append; classification adds ≤ 1 record read; 0 added provider reads | TC-LBND-002, TC-LFOLD-003 (single lane-push read), TC-LSTATUS-003 (status read count) |
 | NFR-3 | Operator-surface posture per `dispatch status`: 0 network calls, 0 process starts, 0 fences, 0 appends, 0 deletions; ≤ 1 lane read, 1 park read, 1 lane-push read, 1 artifact/transcript read | TC-LSTATUS-003 (+ the delivered `dispatch-operator-posture.test.ts` cells re-run) |
 | NFR-4 | Output stability: `dispatch <ref>` text byte-identical (four keys); machine envelope unchanged; `dispatch status` members/lines byte-identical when `lanePush` absent; push command human ≤ 16 lines / 2 KiB | TC-LOUT-001, TC-LSTATUS-002, TC-LOUT-002 |
-| NFR-5 | Evidence integrity: at most two references added to the reserved block; 16-reference budget intact under a full slice; record payload ≤ 512 UTF-8 bytes, single-line fields, identifiers and full-hex SHAs | TC-LFOLD-001 (reservation under an overflowing slice), TC-LSTORE-001 (payload bounds) |
+| NFR-5 | Evidence integrity: at most seven references reserved ahead of the slice (the delivered five plus at most two lane-push references); the 16-reference budget intact under a full slice; record payload ≤ 512 UTF-8 bytes, single-line fields, identifiers and full-hex SHAs | TC-LFOLD-001 (reservation under an overflowing slice, membership-based so the property survives a later widening), TC-LSTORE-001 (payload bounds) |
 | NFR-6 | No-shell invariant: the new command and the seam stay inside the declared static surface set (zero script-path literals, zero `shell: true`, fixed argv only) | TC-LBND-001 |
 | NFR-7 | Deterministic resolution: exactly one resolution rule; every unresolvable state a named refusal; no convention-level guess and no current-checkout fallback that names a ref the record does not | TC-LRES-001..005 |
 | NFR-8 | Bound on added reads at classification: ≤ 1 lane-push read; an unreadable store contributes zero references and never blocks classification | TC-LFOLD-003, TC-LFOLD-004 |
@@ -157,7 +157,7 @@ Fixture strategy, applicable to every automated layer: the transport is the inje
 | TC-LRES-001 | Declaration and convention read disagree: typed refusal naming both, no act, no record | Negative | behaviour | High | AC-F1-2, NFR-7 |
 | TC-LRES-002 | The convention read matches no branch: refusal, no current-checkout fallback, no act | Negative | behaviour | High | AC-F1-2, NFR-7 |
 | TC-LRES-003 | The convention read matches more than one branch: ambiguous refusal naming the candidates, no act | Negative | behaviour | High | AC-F1-2, NFR-7 |
-| TC-LRES-004 | An unsafe or protected resolved ref refuses before any child process starts | Negative | behaviour + structure | High | AC-F1-2, NG-1, NFR-6 |
+| TC-LRES-004 | **Arm (a)**: a uniquely resolved unsafe or protected name is a pre-act resolution refusal — no child process, no act, no record | Negative | behaviour + structure | High | AC-F1-2, NG-1, NFR-6 |
 | TC-LRES-005 | The unique-resolution arms: declaration + convention agree; declaration absent and the convention read unique | Happy Path | behaviour | High | AC-F1-2, AC-F1-1, NFR-7 |
 | TC-LSTORE-001 | The `dispatch.lane-push` payload is bounded and identifier-only (≤ 512 UTF-8 bytes; no stderr, URL, diff, credential), one append per invocation, latest-wins | Corner Case | behaviour | High | DM-1, NFR-5, §20 |
 | TC-LSTORE-002 | Record identity binding: attempt/session from the newest readable lane record; absent for a manual run outside a dispatch | Edge Case | behaviour | High | DM-1, RSK-3 |
@@ -165,8 +165,8 @@ Fixture strategy, applicable to every automated layer: the transport is the inje
 | TC-LFOLD-002 | The acceptance fold: `lane-push:pushed` beside the delivered `push:` verdict | Happy Path | behaviour | High | AC-F3-1, DM-2 |
 | TC-LFOLD-003 | No fabrication: a foreign attempt, no record, and an unreadable store each contribute zero references | Edge Case | behaviour + conformance | High | AC-F3-1, NFR-8, RSK-3 |
 | TC-LFOLD-004 | A disclosure is not a claim: recorded `lane-push:failed` + parity holds → truthful `pr-open`; parity fails → the delivered `push-parity-unmet` row | Corner Case | behaviour | High | AC-F3-1, DEC-5, F-3 |
-| TC-LCAUSE-001 | The closed cause vocabulary on the seam's `detail`, one mapping arm per token, from git's bounded failure text | Negative | behaviour + contract | High | DM-4, AC-F3-1, AC-F4-1 |
-| TC-LCAUSE-002 | `unclassified` is the honest fallback; the raw failure text never leaves the seam | Corner Case | behaviour + structure | High | DM-4, AC-F4-1, §20 |
+| TC-LCAUSE-001 | **Arm (b)**: the seam's own recorded rejection — verdict `failed`, record appended, one closed `detail` cause per token, distinct from arm (a) | Negative | behaviour + contract | High | DM-4, AC-F3-1, AC-F4-1 |
+| TC-LCAUSE-002 | `unclassified` is the honest fallback; `protected-ref` is the delivered literal (no alias); the raw failure text never leaves the seam | Corner Case | behaviour + structure | High | DM-4, AC-F4-1, §20 |
 | TC-LSTATUS-001 | `dispatch status` carries the additive `lanePush` fact verbatim (pushed and failed-with-cause arms) | Happy Path | conformance | High | AC-F5-1, DM-3 |
 | TC-LSTATUS-002 | Byte-identical absence: every delivered member and line unchanged when the fact is absent; additive human lines only when present | Regression | conformance + golden | High | AC-F5-1, NFR-4 |
 | TC-LSTATUS-003 | Read posture and count: ≤ 1 additional bounded lane-push read (the delivered two-read cells become three), 0 network/process/fence/append/delete | Corner Case | conformance + behaviour | High | AC-F5-1, NFR-3, DEC-3 |
@@ -446,36 +446,39 @@ Fixture strategy, applicable to every automated layer: the transport is the inje
 
 - Ambiguity is a refusal with the candidates named; exactly one rule exists, and it is the delivered one.
 
-#### TC-LRES-004 - An unsafe or protected resolved ref refuses before any child process starts
+#### TC-LRES-004 - Arm (a): a uniquely resolved unsafe or protected name is a pre-act resolution refusal
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-1, AC-F1-2, NG-1, NFR-6, §21
+**Related IDs**: F-1, AC-F1-2, NG-1, NFR-6, NFR-7, §21
 **Test Type(s)**: Integration (real command path over injected seams), Contract
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/dispatch-lane-push-resolution.test.ts` (new) + the delivered seam guard cells in `packages/adapters/src/git/push.ts`
+**Target Layer / Location**: `tests/behaviour/dispatch-lane-push-resolution.test.ts` (new); the delivered guard predicates in `packages/adapters/src/git/push.ts` (`isSafeRef`, `PROTECTED_REF_NAMES`) reused at resolution time
 **Tags**: @backend
 
 **Preconditions**:
 
-- A resolved branch name that fails the seam's safe-ref grammar (for example one starting with `-`, containing `..`, or containing whitespace), and a second arm naming a protected ref (`main`, `main-tools`, another `PROTECTED_REF_NAMES` member).
-- A recording transport that would report the invocation if one happened.
+- Arm a1: a uniquely resolved branch name that fails the delivered safe-ref grammar (for example one starting with `-`, containing `..`, or containing whitespace).
+- Arm a2: a uniquely resolved branch name that is a member of the delivered protected set (`main`, `main-tools`, another `PROTECTED_REF_NAMES` entry) — the delivered `protected-ref` condition.
+- A recording transport that would report the invocation if one happened, and a counted store that would report an append.
 
 **Steps**:
 
-1. Run `push <ref>` for the unsafe arm.
-2. Assert the typed refusal names the unsafe state, exit `1`, **zero child invocations** (the guard precedes the child), zero appends, and **no record** (per AC-F1-2's declared behavior).
-3. Repeat for the protected arm; assert the same no-act/no-record outcome and that the protected set used is the delivered `PROTECTED_REF_NAMES`.
-4. Assert that the argv, had it run, could not have carried a force flag or a second ref — the guard and the fixed argv are both asserted, not just one.
+1. Run `push <ref>` for arm a1.
+2. Assert the refusal is the typed input refusal of AC-F1-2 that **names the observed branch**, exit `1`, **zero child invocations** (the guard runs during resolution, before any child), zero appends, and **no `dispatch.lane-push` record**.
+3. Repeat for arm a2; assert the same no-act/no-record/no-child outcome and that the protected set tested against is the delivered `PROTECTED_REF_NAMES` (not a re-declared copy).
+4. Assert the argv, had it run, could not have carried a force flag or a second ref — the pre-act guard and the fixed argv are both asserted, not just one.
+5. Assert the refusal does not consume the seam's recorded-rejection vocabulary as its own answer shape: the answer is an input refusal with no verdict/`cause` pair, and no record exists to carry a cause (the distinguishing half of the pair completed by TC-LCAUSE-001).
+6. Assert the same two names are still refused **by the seam** if resolution is bypassed (a direct seam call), so the defence in depth is present but the command never reaches it — the two arms coexist without either substituting for the other.
 
 **Expected Outcome**:
 
-- No protected or unsafe ref is ever pushed, and the refusal is a resolution refusal (no act, no record) rather than a recorded failed act.
+- Arm (a): nothing is pushed, no child starts, and no record is written; the observed branch is named. Per spec F-1 "Two refusal arms, one question each" and AC-F1-2, this arm answers "is this ref pushable at all" and never becomes the recorded-rejection arm.
 
 **Notes / Clarifications**:
 
-- The spec declares this arm a resolution refusal (AC-F1-2) while also listing `unsafe-branch`/`protected-branch` in the closed cause set (DM-4). Where exactly the seam-level rejection (rather than a command-level refusal) is reachable is recorded as OQ-2 in §8.3; the plan asserts the AC-F1-2 outcome for the resolution arm.
+- This case is the first half of the explicit two-arm pair; TC-LCAUSE-001 is the second half (verdict `failed`, record appended, closed `detail` cause). The pair asserts distinguishability in both directions, so a pre-act refusal that writes a record — or a recorded rejection that starts no child — fails by name.
 
 #### TC-LRES-005 - The unique-resolution arms
 
@@ -577,7 +580,7 @@ Fixture strategy, applicable to every automated layer: the transport is the inje
 
 **Preconditions**:
 
-- For each closed cause: a durable lane-push record for the attempt being classified, verdict `failed`, cause = the arm's token.
+- For each closed cause: a durable lane-push record for the attempt being classified, verdict `failed`, cause = the arm's token (`protected-ref` for the protected class).
 - Injected parity facts: the local head is ahead and the engine's ensure-push cannot reconcile (or parity is unreadable per the delivered boundary), so the delivered failure/undecidable path is reachable — the fold is observed beside it, not instead of it.
 - A disclosure-stress fixture: an attempt whose evidence slice is filled toward the 16-reference budget (the delivered `dispatch-push-evidence.test.ts` technique).
 
@@ -586,7 +589,7 @@ Fixture strategy, applicable to every automated layer: the transport is the inje
 1. For each of the eight causes, drive the classification and read the attempt record.
 2. Assert exactly one `lane-push:failed` and exactly one `lane-push-cause:<cause>` reference per attempt, with the cause equal to the recorded token (no paraphrase, no truncation of the token).
 3. Assert the references sit in the **reserved** block: under the overflowing-slice fixture they are still present in the rendered evidence (the reservation holds), while ordinary slice references are the ones that get cut.
-4. Assert the total evidence-reference count is ≤ `DISPATCH_MAX_EVIDENCE_REFS` (16) in every arm, and that the reserved block grew by at most two members over the delivered reservation (NFR-5's property, not a literal count — see OQ-1).
+4. Assert the total evidence-reference count is ≤ `DISPATCH_MAX_EVIDENCE_REFS` (16) in every arm, and that the reserved block grew by at most two members over the delivered reservation — the post-change maximum is seven of sixteen (five delivered disclosures plus at most two lane-push references; spec F-3 "The evidence", DM-2, NFR-5, Appendix C). Asserted as membership and bound, so a correct block is proven by surviving the slice rather than by arithmetic on a literal count.
 5. Assert **no vocabulary growth**: the token, outcome, exit, comparison reason, corroboration map, derivation arms, and attempt key set are byte-identical to the branch point; the only delta is the evidence references (the closure assertions live in TC-LFOLD-003's sibling structural pin).
 6. Assert exactly one lane-push store read occurred for the classification.
 
@@ -679,7 +682,7 @@ Fixture strategy, applicable to every automated layer: the transport is the inje
 
 - The two references answer different questions: the fold is a disclosure, and only a readable inequality or a refused engine act produces the failure.
 
-#### TC-LCAUSE-001 - The closed cause vocabulary on the seam's `detail`
+#### TC-LCAUSE-001 - Arm (b): the seam's own recorded rejection and the closed cause vocabulary
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
@@ -692,20 +695,26 @@ Fixture strategy, applicable to every automated layer: the transport is the inje
 
 **Preconditions**:
 
-- Scripted transport results per class: protected-branch decline text, non-fast-forward text, authentication/permission text, unreachable-host/address text, a spawn-level start failure, a timeout, a safe-ref guard rejection, and an unclassifiable rejection.
-- The closed token set from DM-4 as the expected-value table.
+- Scripted transport results per class: a protection/hook decline git reports and a protected-set guard rejection (the delivered literal `protected-ref`), non-fast-forward text, authentication/permission text, unreachable-host/address text, a spawn-level start failure, a timeout, an unclassifiable rejection — each a seam-side rejection, not a resolution refusal.
+- The closed token set from DM-4 as the expected-value table: `protected-ref`, `non-fast-forward`, `auth-rejected`, `remote-unavailable`, `spawn-failed`, `timed-out`, `unsafe-branch`, `unclassified`.
 
 **Steps**:
 
 1. For each scripted result, run the act and assert the seam's outcome and `detail`: the `detail` **is** the closed cause token, never `git-exit-<n>`, never an exit-code string, never raw text.
-2. Assert the token set asserted over the table is exactly the eight declared members (a structural equality, so a ninth token fails and a missing one fails) and that the outcome union is unchanged (`accepted | rejected | failed | timed-out`).
-3. Assert both consumers name a cause: the lane command's answer and the engine's ensure-push (the engine ignores the cause for classification — its behavior is unchanged, asserted by the delivered parity suites re-run in TC-LPUSH-004).
-4. Assert the lane's answer carries the same token as the record's `cause`, and that the record's `cause` is in the closed set in every arm.
-5. Assert a `spawn-failed` result maps to the `failed` outcome with cause `spawn-failed` (not to `rejected`), and a timeout maps to `timed-out` with cause `timed-out`.
+2. Assert the token set asserted over the table is exactly the eight declared members (a structural equality, so a ninth token, a missing one, or the old `protected-branch` spelling fails by name) and that the outcome union is unchanged (`accepted | rejected | failed | timed-out`).
+3. **Arm (b) artifact set**: for each rejection class assert verdict `failed`, one `dispatch.lane-push` record appended with that cause, and the token carried into the answer — the recorded-rejection arm of spec F-1/DM-4.
+4. **Distinguishability from arm (a)**: for the two guard-shaped classes (`unsafe-branch`, `protected-ref`) assert that reaching the seam produces `failed` + a record + a child invocation, while the resolution-time equivalent (TC-LRES-004) produces neither — so the two arms are told apart by artifact presence, not by intent.
+5. Assert both consumers name a cause: the lane command's answer and the engine's ensure-push (the engine ignores the cause for classification — its behavior is unchanged, asserted by the delivered parity suites re-run in TC-LPUSH-004).
+6. Assert the lane's answer carries the same token as the record's `cause`, and that the record's `cause` is in the closed set in every arm.
+7. Assert a `spawn-failed` result maps to the `failed` outcome with cause `spawn-failed` (not to `rejected`), and a timeout maps to `timed-out` with cause `timed-out`.
 
 **Expected Outcome**:
 
-- One closed vocabulary, produced inside the seam, consumed by both producers, with the declared mapping for each of the ticket's named classes.
+- One closed vocabulary, produced inside the seam, consumed by both producers, with the declared mapping for each of the ticket's named classes — and the recorded-rejection arm cleanly separated from the pre-act resolution refusal.
+
+**Notes / Clarifications**:
+
+- This case is the second half of the explicit two-arm pair whose first half is TC-LRES-004; both are required so neither arm can silently become the other (spec F-1 "Two refusal arms, one question each", DM-4, Appendix E's closing note).
 
 #### TC-LCAUSE-002 - `unclassified` is the honest fallback; raw text never leaves the seam
 
@@ -729,7 +738,8 @@ Fixture strategy, applicable to every automated layer: the transport is the inje
 2. Assert the raw failure text appears in **no** member of the answer, the durable record, the status fact, or the evidence references (a byte-level absence assertion over each serialized artifact).
 3. Assert a pattern-drift arm (unrecognized wording) still yields exactly one closed token and never a thrown error or an empty `detail`.
 4. Assert the pattern table lives in one declared place (a structural assertion that the cause literals appear once in the source and are imported, not re-typed at call sites).
-5. Assert no credential-shaped or URL-shaped substring survives into any artifact.
+5. Assert the protected literal is the delivered `protected-ref` — the same string the closeout ref guard publishes — and that no `protected-branch` alias, mapping, or second spelling exists in the seam, the contracts, the answer, or the record (a vocabulary pin: the eight-member set is the whole set, and a rename is a contract change, not a test detail).
+6. Assert no credential-shaped or URL-shaped substring survives into any artifact.
 
 **Expected Outcome**:
 
@@ -1168,10 +1178,10 @@ Ranked by (a) damage if wrong and (b) likelihood of a plausible-but-wrong implem
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| The fold's reserved-block arithmetic is asserted against a stale number (spec says three delivered reservations; the code reserves up to five today), so a correct implementation fails the test or a wrong one passes | M | Every fold assertion is written as a **property** (the lane-push references sit in the pre-slice reserved block; the total is ≤ 16; the block grows by at most two), never as a literal reserved count. OQ-1 records the discrepancy for the spec. |
-| The refusal-vs-recorded-failure boundary for `unsafe-branch`/`protected-branch` is ambiguous (AC-F1-2 wants no record; DM-4 lists both as causes), so the implementation could record a failed act where the test expects a refusal | M | TC-LRES-004 asserts the AC-F1-2 outcome for the resolution arm only; the seam-level guard cells assert the token without asserting a record. OQ-2 keeps the boundary explicit instead of letting two readings coexist silently. |
+| The reserved block is already at seven of sixteen after this change, so the fold's growth must stop at two and a later delivery could push the block past its room | M | DM-2 and NFR-5 pin the fold at "at most two references"; TC-LFOLD-001 asserts membership of the pre-slice block plus the ≤ 16 total and the at-most-two growth, so a third reference fails by name while the delivered block's own history stays free to be what it is. |
+| The two refusal arms collapse into one in implementation — a pre-act refusal that writes a record, or a recorded rejection that starts no child process | H | The explicit pair TC-LRES-004 (arm (a): no child, no act, no record) and TC-LCAUSE-001 (arm (b): `failed`, record appended, closed cause) asserts distinguishability by artifact presence in both directions; spec F-1 "Two refusal arms, one question each" and DM-4 make either collapse a defect, not a style choice. |
 | The `TC-STATUS-007` read-count update is the one delivered assertion that must change, so a later delivery could read it as a regression | L | Called out twice (§7 broad note, TC-LSTATUS-003) with the declared DEC-3 reason; the new count is asserted as "delivered two plus at most one", so a future family addition has an obvious place to update. |
-| The ticket's "named in the lane's last message" has no machine-observable artifact, so a test could over-claim | M | TC-LMSG-001 asserts the two product surfaces separately and the plan declares the residual (GAP-3) rather than inventing a transcript assertion. |
+| The ticket's "named in the lane's last message" has no machine-observable artifact, so a test could over-claim | M | TC-LMSG-001 asserts the two product surfaces separately and §8.3 declares the residual as an accepted coverage boundary rather than inventing a transcript assertion. |
 | A new prompt-required command drifts the help/coverage/reference inventory, and a coder "fixes" it by rewriting an M1 snapshot page | L | TC-LDOC-001 asserts the M4 page root and the byte-unchanged earlier-milestone pages; `check:help` + `reference-page-parity` + `entrypoint-help-coverage` fail by name. |
 | The keep-the-battery-green pressure tempts a golden regeneration for `dispatch <ref>` | M | TC-LOUT-001 asserts byte-identity and explicitly forbids golden churn for this change; the testing-strategy rule forbids blanket rewrites. |
 | The change edits `packages/**` but the changeset is added after the first gate run, failing TC-RELEASE-001 | L | The delivery notes already order the changeset first; TC-LGATE-001 makes it a named case with its own command. |
@@ -1186,22 +1196,30 @@ Ranked by (a) damage if wrong and (b) likelihood of a plausible-but-wrong implem
 - **The companion decision record lands inside this change** (spec DEC-7), so TC-LDOC-002 can assert its presence as an artifact of the change.
 - **The bash wrappers are out of test scope beyond documentation.** Their behavior is unchanged and their suites stay authoritative.
 
-### 8.3 Open Questions and Recorded Gaps
+### 8.3 Resolved by Spec v1.1 and the Accepted Coverage Boundary
 
-| # | Question / gap | Blocking? | Proposed resolution / owner |
-|---|----------------|-----------|------------------------------|
-| OQ-1 (**spec gap**) | Spec F-3 and NFR-5 bound the reserved block as "three delivered references plus at most two new = at most five". Code truth in `packages/core/src/app/dispatch.ts` reserves up to **five** disclosures today (`lane:append-failed`, `lease:not-owned`, `lease:renewal-failed`, `park:recovery-append-failed`, `push:<verdict>`), so the post-change maximum is seven of sixteen. The invariant (never truncated, ≤ 16) still holds; the stated number does not. | No — the property is testable as written | The plan asserts the property (reserved-ahead-of-slice, ≤ 16 total, at most two added) and never the literal "five". Recommendation: the spec's F-3/NFR-5 wording be corrected to the delivered reservation in a spec revision or recorded as a phase-7 doc reconciliation item. Owner: `@pm` (spec) / `@doc-syncer` (feature page). |
-| OQ-2 (**spec gap**) | AC-F1-2 declares an unsafe/protected resolved ref to be an input refusal that "performs no act, appends no record", while DM-4 lists `unsafe-branch` and `protected-branch` as cause tokens on recorded `failed` verdicts. The spec does not say which path wins when the guard lives inside the seam (the delivered seam rejects with `detail: "unsafe-branch"` / `"protected-ref"`). | No — non-blocking; resolvable at implementation | The plan asserts the AC-F1-2 outcome for the resolution arm (no act, no record) and the token set separately (TC-LCAUSE-001), so either implementation passes the declared contract only if it refuses before the act. If the coder cannot satisfy both, the AC-F1-2 reading wins (it is the criterion) and the seam token stays reserved for a transport-side rejection; record the resolution in the plan's revision log. Owner: `@coder` asserts, `@pm` disposes at the DoR gate. |
-| OQ-3 (**observation**) | The delivered seam's token for a protected ref is `protected-ref`; DM-4 declares `protected-branch` and keeps `unsafe-branch` unchanged. It is unstated whether `protected-ref` remains an accepted alias for the seam's own consumers. | No — reporting-only | Assert only the closed eight-token set at the vocabulary pin; do not assert alias behaviour in either direction. A lingering `protected-ref` would fail TC-LCAUSE-001's table by name, which is the intended detection. Owner: `@coder`. |
-| GAP-3 (**declared coverage boundary, not a defect**) | AC-F4-1's "the lane's final message names …" cannot be machine-observed: no delivered seam exposes a session's final message as a value. | No | Pinned as two product-surface assertions (TC-LMSG-001) plus the answer-level cause (TC-LCAUSE-001/002); the unobservable remainder is exactly spec RSK-5's declared residual. No transcript assertion is invented. |
+**Resolved by spec v1.1** (correction pass, no scope change; recorded here as closed, with the location that now decides each):
 
-None of the rows blocks the Definition of Ready: OQ-1 and OQ-2 have proposed resolutions that keep both the closed vocabulary and the acceptance criterion intact, and both are visible at the DoR gate rather than discovered in phase 6.
+| # | Earlier finding | Now decided by | Effect on this plan |
+|---|-----------------|----------------|---------------------|
+| OQ-1 | The reserved-evidence count was stated as "three delivered plus at most two = at most five", against code truth of five delivered. | Spec v1.1 F-3 "The evidence", DM-2, NFR-5, §4.1 success metrics, Appendix A, Appendix C: the delivered reservation is five (`lane:append-failed`, `lease:not-owned`, `lease:renewal-failed`, `park:recovery-append-failed`, `push:<verdict>`), the fold adds at most two, and the post-change maximum is seven of sixteen. | The plan now states seven of sixteen as the declared maximum and keeps the assertions property-based (membership of the pre-slice reserved block, ≤ 16 total, at most two added) in TC-LFOLD-001 and §3.2/§3.3. |
+| OQ-2 | The pre-act resolution refusal and the seam's recorded rejection were both partly described by AC-F1-2 and DM-4, leaving the boundary unstated. | Spec v1.1 F-1 "Two refusal arms, one question each", DM-4, AC-F1-2, Appendix E's closing note: arm (a) is the command's pre-act resolution refusal (safe-ref guard and protected-set membership — no child, no act, no record, typed input refusal naming the observed branch); arm (b) is the seam's own rejection or classification (verdict `failed`, record appended, closed `detail` cause). Neither may silently become the other. | TC-LRES-004 and TC-LCAUSE-001 are now an explicit pair asserting distinguishability by artifact presence in both directions; the "ambiguous boundary" risk row became the "the arms collapse" risk with that pair as its mitigation. |
+| OQ-3 | The protected cause token was declared `protected-branch` while the delivered seam emits `protected-ref`, with alias behaviour unstated. | Spec v1.1 DM-4, DEC-4, F-4, the glossary, Appendix E: `protected-ref` is the delivered literal, shared with the closeout ref guard, so no delivered string changes and no alias exists. | TC-LCAUSE-001's table asserts the eight-member set with `protected-ref` and fails on the old spelling; TC-LCAUSE-002 step 5 pins the literal and forbids a `protected-branch` alias anywhere. |
+
+**Accepted coverage boundary** (one, and not a spec defect):
+
+| # | Boundary | Why it stands | How this plan covers what is coverable |
+|---|----------|---------------|----------------------------------------|
+| CB-1 | AC-F4-1's "the lane's final message names the pull request URL and the push outcome" cannot be machine-observed: no delivered seam exposes a session's final message as a value, and the transcript read is a declared capability gap on one harness. | Spec F-4/F-1 §7.1 place the contract on two product surfaces, each with its own assertion; the spec's RSK-5 declares the residual (a session that ignores its instruction). Asserting a transcript would invent a capability the system does not have. | TC-LMSG-001 asserts both product surfaces separately and TC-LMSG-002 asserts the ordered tail; the behavioural half — the cause being named in the command's answer and carried verbatim into the record and the attempt — is TC-LCAUSE-001/002 and TC-LFOLD-001. The unobservable remainder is declared, not hidden. |
+
+No open question remains. Every earlier finding is either closed by a named spec location above or is the single accepted boundary; none blocks the Definition of Ready.
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-27 | @test-plan-writer (DeepSeek V4.1 Flash 1017) | Initial test plan: 31 cases (TC-LCMD-001..002, TC-LPUSH-001..004, TC-LRES-001..005, TC-LSTORE-001..002, TC-LFOLD-001..004, TC-LCAUSE-001..002, TC-LSTATUS-001..003, TC-LMSG-001..002, TC-LOUT-001..002, TC-LDOC-001..002, TC-LBND-001..002, TC-LGATE-001) covering AC-F1-1, AC-F1-2, AC-F2-1, AC-F3-1, AC-F4-1, AC-F5-1, AC-F6-1; the ticket's three acceptance criteria and requirement 4 mapped in §3.1; two spec-side gaps (OQ-1 reserved-count wording, OQ-2 refusal-versus-recorded-cause boundary) and one observation (OQ-3 token name) recorded, plus one declared coverage boundary (GAP-3, the unobservable final message). |
+| 1.1 | 2026-11-27 | @test-plan-writer (DeepSeek V4.1 Flash 1017) | Reconcile with change spec v1.1 (correction pass, no scope change). No TC id, AC mapping, or coverage row removed. Reserved-evidence statements now read five delivered plus at most two, seven of sixteen (F-3 "The evidence", DM-2, NFR-5, Appendix C), with assertions kept property-based. TC-LRES-004 and TC-LCAUSE-001 became the explicit two-arm pair (arm (a) pre-act resolution refusal — no child, no act, no record; arm (b) seam rejection — verdict `failed`, record appended, closed cause) and assert distinguishability in both directions (F-1 "Two refusal arms, one question each", DM-4, AC-F1-2, Appendix E). The protected token is the delivered literal `protected-ref` everywhere, with TC-LCAUSE-002 additionally pinning the literal and forbidding a `protected-branch` alias (DM-4, DEC-4, F-4, glossary, Appendix E). §8.3 replaced by "Resolved by Spec v1.1 and the Accepted Coverage Boundary": OQ-1/OQ-2/OQ-3 closed against their deciding locations, and the unobservable final message kept as the single accepted coverage boundary (CB-1). §8.1 risk rows updated to the corrected maximum and to the arm-collapse risk. |
 
 ## 10. Test Execution Log
 
