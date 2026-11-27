@@ -23,6 +23,11 @@ The contract:
   it must have, the facts it may fetch on demand, and the facts it never needs.
 - **Measured.** Every on-demand fetch is an event. The miss rate is the share of bundles after
   which the agent fetched more.
+- **Path-free.** The agent-facing envelope never contains the change folder or an artifact
+  path. It contains repository paths for code only; the tool resolves the change from the
+  worktree registry.
+- **Declared.** The context requirement is in the plan's `contextFor` map, not hidden in the
+  tool. The tool has a mandatory set per role; the plan can add, never remove.
 
 ## The role and phase matrix
 
@@ -42,6 +47,9 @@ The contract:
 
 ## The filtering algorithm
 
+0. **Read the declaration.** Read the phase's `contextFor` for the role. The tool's mandatory
+   set is always included; the plan's additions are included; the plan's exclusions are honored
+   only if they do not remove a mandatory section.
 1. **Anchor.** Start from the role and the phase. The coder anchors on the plan phase; the
    reviewer on the diff and the specification contract; the PM on the PM context; readiness on
    the specification and the coverage table.
@@ -228,6 +236,24 @@ None.
 - spec prose, test steps, plan steps: not needed for the verdict.
 ```
 
+## Templates, overlays, and the feedback loop
+
+The context contract is a **hypothesis that converges**, not a truth declared once. The model
+has three parts:
+
+1. **A phase template** per role: the mandatory set plus a generous default for the phase.
+2. **A role overlay** from the plan's `contextFor`: the phase can add a section (for example
+   the specification rationale) or exclude one that is not mandatory.
+3. **A measured miss rate**: the share of bundles after which the agent fetched more. If a
+   section is fetched in more than 20 percent of the bundles for a role, promote it into the
+   template. If a section is never fetched, remove it. After three to five changes, the
+   template converges.
+
+The tool perfects the **contract** (goal, criteria, paths, tests, verify, handover, invariants,
+next). It does not perfect the **judgment** (the code, the existing tests, the design
+rationale). The coder still reads the code. The goal is "the agent never reads the artifact
+files", not "the agent never reads anything".
+
 ## Miss handling and measurement
 
 - Every bundle ends with `missing`. The agent fetches a section with
@@ -248,6 +274,13 @@ None.
   amplification again, one bundle at a time.
 - **A bundle that is complete but huge.** Budgets exist for a reason; a 60KB coder bundle is
   a plan problem, not a bundle problem.
+
+## Deferred: deltas and the push model
+
+The `--since` delta protocol and the push model are deferred by the owner's review decision
+(section 14). The first version is stateless full bundles per role and phase. The delta idea
+stays as a future option; the push model belongs to `../inter-agent-communication.md`, not to
+this lifecycle.
 
 ## The one-command ideal, and its limit
 

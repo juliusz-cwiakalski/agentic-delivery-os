@@ -9,13 +9,14 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 
 | Family | Reads | Writes | Notes |
 |---|---|---|---|
-| `jaiship change` | `get`, `lint`, `audit`, `history` | `init`, `re-tier`, `migrate`, `import` | the change is the unit |
+| `jaiship change` | `get`, `lint`, `audit`, `history` | `init`, `re-tier`, `migrate`, `import`, `repair` | the change is the unit |
 | `jaiship spec` | `get`, `get --section` | `set`, `ac add`, `decision add`, `interface add`, `path add`, `risk add`, `oq add`, `gap add` | the contract |
 | `jaiship test` | `get`, `get --case` | `case add`, `precondition add`, `coverage rebuild` | cases as data |
 | `jaiship plan` | `get`, `phase get`, `conflicts` | `phase add`, `phase complete`, `step add`, `path add`, `verify add`, `conflict add` | the scheduler's input |
 | `jaiship pm` | `brief` | `loop add`, `loop close`, `next add`, `next done`, `blocker add`, `blocker clear` | working memory only |
 | `jaiship handover` | `get` | `record` | one bounded entry per phase |
-| `jaiship context` | `bundle`, `get` | none | the only read path for agents |
+| `jaiship context` | `bundle`, `get`, `get --depth` | none | the only read path for agents |
+| `jaiship workflow` | `next`, `status` | none | the gated state machine; the PM uses `next` for the happy path and `pm brief` for exceptions |
 | `jaiship readiness` | `assess` | none | the DoR and DoD gate |
 | `jaiship review` | `bundle`, `finding list` | `finding add`, `finding resolve`, `verdict` | structured findings |
 | `jaiship milestone` | `get`, `verify` | `init`, `goal add` | the milestone contract |
@@ -33,6 +34,7 @@ jaiship context bundle --for pm --change GH-416
 jaiship context bundle --for spec-writer --change GH-416 --gaps AC-3,AC-1
 jaiship context bundle --for coder --change GH-416 --phase P3 --findings RF-1,RF-2
 jaiship context get --change GH-416 --section spec.acceptanceCriteria.AC-1
+jaiship context get --change GH-416 --section spec.AC-1 --depth rationale
 ```
 
 `--gaps` narrows a bundle to the named gaps and their related criteria and decisions.
@@ -111,13 +113,30 @@ sequence of uncommitted edits.
   and a draft is not readable by downstream roles.
 - **Never mix code and artifacts.** The pathspec is the artifact file only. Code changes keep
   the commit primitive and the one-conventional-commit-per-change rule.
-- **Squash at merge.** Tool commits are history, not review material. The pull request shows
-  the final facet, and the squash merge collapses the tool commits into the change's commit.
+- **Many branch commits, one squash merge.** The change branch carries the tool commits; the
+  integration branch receives one squash commit per change. The one-commit-per-change rule
+  applies to the merge, not to the branch. The tool commits are the audit trail; the squash
+  is the history.
 - **No rebase inside a write.** If the branch is behind, the command fails with
   `change.branch.behind`; the PM syncs first. A write never rewrites history.
 - **Batch when possible.** `spec set --from-file`, `plan phase add --from-file`, and
   `handover record --from-file` commit once for a whole facet revision. Field-level commands
   are for small, auditable edits.
+
+## Visibility and permissions
+
+The default is **invisible by default, detect, deny writes later**:
+
+1. The agent-facing envelope never contains the change folder or an artifact path. It contains
+   only repository paths for code. The tool resolves the change from the worktree registry.
+2. The bundle is more convenient than the file; a well-meaning agent uses it because it is
+   easier, not because it is forbidden.
+3. A lint and CI check detect hand edits; telemetry counts `read` calls on artifact paths.
+4. A path deny is added for **writes** only after the pilot shows accidental edits. Reads are
+   behavior, not a security boundary; a hard read deny breaks legitimate work and is easy to
+   bypass.
+
+Keep `context get --raw` for debugging and a recorded human import for emergencies.
 
 ## Provenance and hand-edit detection
 
@@ -134,6 +153,10 @@ Three layers, in order of strength:
    `jaiship change import <ref> --facet <facet> --file <path>`; the tool validates, commits
    with a `Human-Edit` trailer, and records the waiver in the PM context. The edit is not
    silent, and it is not an accusation.
+4. **Repair path (attribution, not prohibition).** A broken artifact repaired by hand or by an
+   agent is recorded through `jaiship change repair <ref> --facet <facet> --file <path>`; the
+   tool validates and commits with a `Repaired-By` trailer. The metric is the tool-written
+   share of artifact changes, target 95 percent or more after the pilot.
 
 Signing is optional and is not a substitute for the path permission. A signature proves who
 committed, not that the content is valid. If the owner wants tamper evidence, sign the merge

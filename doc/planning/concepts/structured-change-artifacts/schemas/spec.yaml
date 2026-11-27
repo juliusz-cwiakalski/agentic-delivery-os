@@ -5,7 +5,6 @@ status: validated
 generatedBy: jaiship spec set@0.1.0
 tier: L
 milestone: M4
-goals: [M4-G3]
 title: A lane pushes its own last evidence commit before it stops
 
 problem: |-
@@ -29,6 +28,12 @@ acceptanceCriteria:
       once and reports `verdict: pushed` with the full remote head.
     evidence: test
     tests: [TC-LCMD-001, TC-LCMD-005]
+    extensions:
+      design-note:
+        text: |-
+          The push is intentionally single-shot; a retry would hide a broken remote.
+        useIn: [coder, reviewer]
+        budgetWords: 80
   - id: AC-2
     statement: |-
       A refused transport is reported as a data-bearing answer with a cause from the closed

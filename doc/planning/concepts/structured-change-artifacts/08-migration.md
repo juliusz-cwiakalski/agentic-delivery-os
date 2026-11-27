@@ -15,6 +15,14 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 - **Do not change the lifecycle and the tooling in the same slice.** A process change and a
   schema change together make a failure hard to attribute.
 
+## Delivery shape: one epic, multiple pull requests, one milestone
+
+The pack is delivered as **one epic with multiple pull requests**, not one big-bang pull
+request. The slices share a schema and a CLI, land behind flags, and are measured. A single
+long-lived branch would be hard to review and risky to land; the epic keeps the coherence the
+owner wants. The recommendation is slice 0 and slice 1 first, then slices 2 to 5 tightly
+sequenced.
+
 ## Slice 0: the typed ledger and the fail-closed write
 
 **Scope.**
@@ -128,7 +136,11 @@ for L, recorded for S and M during the pilot.
 
 **Work item.** #405 (scope locks) and #412 (parallel lanes); this slice is the plan-side input.
 
-## Slice 6: the milestone contract and goal verification
+## Slice 6 (deferred): the milestone contract and goal verification
+
+Deferred by the owner's review decision (section 14). It is not part of this epic; the
+specification's `milestone` field is a free-text label. The section is kept as a future
+slice.
 
 **Scope.**
 
@@ -143,6 +155,15 @@ met" failure.
 time per milestone: measured, target set after the first milestone.
 
 **Rollback.** The contract is a document; the per-ticket flow is unchanged.
+
+## Tier review
+
+Before slice 3, review what goes into each tier. The rule: every tier keeps the safety checks
+(acceptance criteria, tests, a review, the gates, the DoD, the pull request, provenance); the
+tiers slim the artifact volume (specification prose, test-plan depth, plan granularity,
+readiness depth, handover requirement). The review produces a table per tier: which artifacts,
+which phases, which gates, which reviews, which handover. The table is the input to the
+workflow templates in section 12.
 
 ## The pilot
 
@@ -183,6 +204,7 @@ time per milestone: measured, target set after the first milestone.
 - Do not auto-commit code; only artifacts.
 - Do not skip the pilot because the design is obvious; the miss rate is not obvious.
 - Do not remove the old reader in the same slice that introduces the new writer.
+- Do not build the delta protocol or the push model in this epic; both are deferred.
 
 ## Rollout gates
 
@@ -194,4 +216,4 @@ time per milestone: measured, target set after the first milestone.
 | G4: slice 3 | specification at 40KB or less for L; reopens at 1 or less |
 | G5: slice 4 | miss rate at 10 percent or less; PM context at 8KB or less |
 | G6: slice 5 | misprediction rate at 20 percent or less; no undeclared path on L |
-| G7: slice 6 | every milestone goal has a measure and an evidence trail |
+| G7: slice 6 (deferred) | not in this epic; revisit with the milestone contract |

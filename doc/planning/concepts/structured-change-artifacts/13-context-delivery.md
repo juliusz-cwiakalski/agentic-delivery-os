@@ -81,6 +81,9 @@ P4 needs the command registered in the composed program and the help inventory u
 
 ### Why this works
 
+- **Semantic keys stay; YAML structure keys go.** A table keeps the keys that carry meaning
+  (ID, statement, evidence, path, kind) and drops the syntax (`acceptanceCriteria:`, `- id:`,
+  indentation). The agent reads meaning, not YAML.
 - **Projection, not stripping.** The envelope contains only the sections the role needs. The
   raw YAML contains every field of every facet; the envelope contains the facts. Removing YAML
   keywords from a full document saves a few percent; removing unrelated sections saves most of
@@ -187,7 +190,10 @@ went wrong".
   the artifact is the committed truth.
 - Do not version the form by hand. The tool owns `formVersion` and `basedOnRevision`.
 
-## Versioning and deltas
+## Versioning and deltas (deferred)
+
+**Deferred by the owner's review decision (section 14).** The first version is stateless full
+bundles per role and phase. The `--since` protocol below is a future option, not a slice.
 
 ### The problem
 
@@ -250,7 +256,11 @@ Do not build a mind-reading seen-state store; build a clear protocol.
 
 When it is not worth it: a fresh agent, a small S change, a one-shot read.
 
-## The push model
+## The push model (out of scope)
+
+**Out of scope for this pack** by the owner's review decision (section 14). The messaging
+system is a separate concept for loosely coupled coordination, not the strict single-change
+lifecycle; see `../inter-agent-communication.md`. The design is kept for reference.
 
 ### The idea
 
@@ -313,6 +323,9 @@ brief with sources; the team prototypes the envelope and the delta on the pilot.
 
 ## Challenges to part 2
 
+The owner's answers to these challenges are in `14-review-decisions.md`. The bullets below are
+the challenges as first written; the decisions file records what changed.
+
 - **Auto-discovery is convenient but the branch name is untrusted.** Use the registry first,
   the branch second, and fail closed on ambiguity. Keep an explicit `--change` for CI and the
   main checkout.
@@ -339,8 +352,11 @@ Answer inline under each question.
 
 Priority: **P1**.
 
-Default: registry first, branch second, explicit `--change` for CI and the main checkout; fail
-closed on ambiguity.
+Default: the worktree registry is primary, the branch is a legacy fallback, explicit `--change`
+for CI and the main checkout; fail closed on ambiguity; one lane, one change.
+
+**Owner decision (2026-11-27):** the worktree registry, not the branch name, is the primary
+resolution. The branch is a fallback for a manual or legacy worktree.
 
 Answer:
 
@@ -389,7 +405,10 @@ Answer:
 
 Priority: **P1**.
 
-Default: stateless first; a store only if the pilot shows a need.
+Default: deferred. The first version is stateless full bundles; `--since` is a future option.
+
+**Owner decision (2026-11-27):** deltas are parked; focus on slicing what is provided in the
+context.
 
 Answer:
 
@@ -397,7 +416,9 @@ Answer:
 
 Priority: **P2**.
 
-Default: zero false `unchanged`; any false `unchanged` is a correctness bug, not a metric.
+Default: deferred with the delta protocol; when it is built, zero false `unchanged`.
+
+**Owner decision (2026-11-27):** deferred.
 
 Answer:
 
@@ -405,7 +426,9 @@ Answer:
 
 Priority: **P2**.
 
-Default: later, after the bundle miss rate is low; the `since` protocol comes first.
+Default: out of scope for this pack; the messaging system is a separate concept.
+
+**Owner decision (2026-11-27):** out of scope.
 
 Answer:
 

@@ -8,7 +8,7 @@ tier: L
 
 phases:
   - id: P1
-    title: Contracts and changeset
+    title: Declare the contracts and the changeset
     goal: Declare the push answer contract, the record kind, and the changeset before any
       consumer is written.
     acceptance: [AC-3]
@@ -43,7 +43,7 @@ phases:
       nextInputs: [API-1, API-2]
 
   - id: P2
-    title: The push use case and the record append
+    title: Implement the push use case and the record append
     goal: Implement the act, the record, and the status projection behind injected ports.
     acceptance: [AC-2]
     tests: [TC-LCMD-002, TC-LCMD-004]
@@ -77,7 +77,7 @@ phases:
       nextInputs: [API-1]
 
   - id: P3
-    title: The command, the renderer, and the edge wiring
+    title: Add the push command and wire it into the composed program
     goal: Expose `push <ref>` as a prompt-required command and wire it into the composed
       program.
     acceptance: [AC-1, AC-2, AC-3]
@@ -113,9 +113,17 @@ phases:
     handover:
       required: true
       nextInputs: [API-1]
+    contextFor:
+      coder:
+        include: [phase.goal, phase.acceptance, phase.paths, phase.tests, phase.verify,
+                   handover.prev, invariants, next]
+        exclude: [plan.otherPhases, pm.history]
+      reviewer:
+        include: [diff.summary, phase.acceptance, phase.tests, decisions, handover.prev]
+        exclude: [plan.steps, pm.loops]
 
   - id: P4
-    title: Surfaces, prompts, and docs
+    title: Update the surfaces, prompts, and docs
     goal: Update the PM definition, the prompt inventory, the current-truth pages, and the
       decision record.
     acceptance: [AC-1]

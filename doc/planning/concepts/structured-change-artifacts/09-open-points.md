@@ -290,6 +290,10 @@ Default: A.
 
 If wrong: a blocked lane or a silent hand edit.
 
+
+**Owner decision (2026-11-27):** detection first; deny writes after the pilot. A manual
+edit is attribution, not prohibition; a broken artifact may be repaired through the repair
+path.
 Answer:
 
 ### Q15. Does the harness support a path-scoped deny for `edit`, `write`, and `read`?
@@ -463,6 +467,9 @@ Default: A.
 
 If wrong: friction or a silent drift.
 
+
+**Owner decision (2026-11-27):** record and learn. Fail only a path outside the change's
+scope or a protected area; the merge authority resolves an ordinary conflict.
 Answer:
 
 ### Q24. Should read-only contract overlap allow parallel?
@@ -503,6 +510,9 @@ Default: A.
 
 If wrong: a contract without authority or a bottleneck.
 
+
+**Owner decision (2026-11-27):** deferred. No milestone contract in this epic; the
+specification's `milestone` field is a free-text label.
 Answer:
 
 ### Q26. Should the milestone verifier be a separate agent?
@@ -522,6 +532,8 @@ Default: A.
 
 If wrong: a biased verification.
 
+
+**Owner decision (2026-11-27):** deferred with the milestone contract.
 Answer:
 
 ## Migration and metrics
@@ -598,5 +610,49 @@ Options:
 Default: A.
 
 If wrong: a boil-the-ocean failure or a missed opportunity.
+
+
+**Owner decision (2026-11-27):** one epic, multiple pull requests, one milestone. Slice 0
+and slice 1 first, then slices 2 to 5 tightly sequenced; slice 6 is deferred.
+Answer:
+
+## Part 3 and 4 additions
+
+### Q41. How many extension slots should a facet have, and what is the budget?
+
+Priority: **P1**.
+
+Why it matters: the extension slot is the backdoor that keeps the specification from becoming
+a rigid form. Too many slots recreate the prose dump; too few remove the rationale.
+
+Options:
+
+- A: at most three slots per facet, 80 words each, with a `useIn` audience or `archive: true`.
+- B: one slot per major section, 150 words each.
+- C: no limit, but every slot must declare an audience.
+
+Default: A.
+
+If wrong: a form with forty textareas, or a specification that cannot explain itself.
+
+Answer:
+
+### Q42. What should the handover prompt say?
+
+Priority: **P1**.
+
+Why it matters: the handover is the next coder's memory. The prompt decides whether it is an
+essence or an essay.
+
+Options:
+
+- A: the tool drafts the five fields from the evidence; the coder edits with a three-bullet
+  limit per field; the prompt names the fields and the audience (the next coder).
+- B: the coder writes the handover from scratch with a template.
+- C: the tool generates the handover and the coder only approves it.
+
+Default: A.
+
+If wrong: a missing handover, a prose dump, or a handover that does not match the evidence.
 
 Answer:

@@ -62,22 +62,28 @@ the change from the environment.
 
 1. **Explicit `--change <ref>`.** Highest priority. Required in CI, in the main checkout, and
    whenever the caller is not inside a registered lane.
-2. **The dispatch registry.** The lane record knows the ref, the worktree path, and the branch.
-   If the agent's working directory is a registered lane worktree, the ref is the lane's ref.
-   This is the strongest signal because the product wrote it.
-3. **The branch name.** If the branch matches the registered change-branch pattern, the ref is
-   extracted and validated. The pattern is configuration, not a hard-coded convention.
-4. **The environment.** `JAISHIP_CHANGE`, set by the dispatcher for the lane.
+2. **The worktree registry (primary).** The dispatch record knows the ref, the worktree path,
+   and the branch. If the agent's working directory is a registered lane worktree, the ref is
+   the lane's ref. This is the strongest signal because the product wrote it, and it is the
+   normal path: the delivery start creates the worktree and records the binding.
+3. **The environment.** `JAISHIP_CHANGE`, set by the dispatcher for the lane.
+4. **The branch name (legacy fallback).** If the branch matches the registered change-branch
+   pattern, the ref is extracted and validated. This path is for a manual or legacy worktree
+   that the registry does not know.
 5. **Fail closed.** If two candidates disagree, the command refuses with
    `change.resolve.ambiguous` and names the candidates. It never guesses.
 
+The invariant is **one lane, one change**. A lane worktree is bound to exactly one change; the
+tool refuses a write to another change from that worktree unless the caller is explicitly
+authorized (for example a reviewer comparing two changes, or the CEO).
+
 ### The trust boundary
 
-The branch name is **untrusted input**. It can contain anything, including a path traversal or
-an instruction-like string. The tool uses it only as a lookup key, validates the ref against a
-strict pattern and the tracker, resolves the change folder from the registry rather than from
-the branch string, and never executes or follows anything found in the name. A branch that
-does not resolve is a refusal, not a search.
+The branch name is **untrusted input**, and it is only the legacy fallback. It can contain
+anything, including a path traversal or an instruction-like string. The tool uses it only as a
+lookup key, validates the ref against a strict pattern and the tracker, resolves the change
+folder from the registry rather than from the branch string, and never executes or follows
+anything found in the name. A branch that does not resolve is a refusal, not a search.
 
 ### What the agent sees
 
@@ -98,7 +104,9 @@ next: P3 (coder)
 
 The agent never searches for the folder. It says "the current change", "the next phase", "the
 acceptance criteria". The ID is in the envelope, so the agent can name it when it reports a
-problem, but it does not need it to navigate.
+problem, but it does not need it to navigate. The ID is **implicit by default, explicit when
+needed**: the commands default to the current change, and `--change` is available for a
+cross-change operation.
 
 ### What stays explicit
 
@@ -115,6 +123,17 @@ problem, but it does not need it to navigate.
 The lifecycle is a known workflow. The tool knows the states, the transitions, the guards, and
 the agent for each state. The agent asks "what is next" and gets the phase, the bundle, and the
 guards. The PM stops navigating and starts handling exceptions.
+
+### Workflow selection and templates
+
+The state machine is **parameterized by a workflow template**, not one fixed graph. At intake
+the PM or the CEO classifies the change (tier, risk, type) and selects a template: S, M, L, or
+a named workflow (feature, fix, refactor, docs, security). The template defines the states, the
+gates, the artifacts, and the review depth.
+
+The PM can **add** a state with a recorded reason (for example an extra review for a risky
+change). It cannot remove a mandatory gate. The tier review in `08-migration.md` produces the
+template table: which artifacts, which phases, which gates, which reviews, which handover.
 
 ### States and transitions
 
@@ -220,7 +239,10 @@ Handover: P3
 
 - The tool never invents a summary. If the phase has no title, the subject is the command and
   the ref: `chore(GH-416): P3 complete`.
-- The body is capped at 72 characters per line and at ten lines. It is a summary, not an essay.
+- The body is the phase's acceptance criteria, then the handover's `done` and `deviations`. It
+  is capped at 72 characters per line and at ten lines. It is a summary, not an essay.
+- The phase title is a verb phrase with an object and a goal; a noun phrase fails lint with
+  `change.phase.title.invalid`.
 - A fix commit names the finding and the phase; a revert names the reason from the PM context.
 - A phase that spans several commits names the step: `feat(GH-416): P3-S2 add the renderer`.
 - A squash merge derives its subject from the change title and its body from the phase list and
@@ -244,6 +266,14 @@ useful sentence.
 The code commit still goes through the commit primitive; the primitive can accept
 `--subject-from <phase>` and `--body-from <handover>` so the model is not asked to invent a
 subject it already has.
+
+## The exception budget
+
+A deterministic rule that needs more than three exception cases is a judgment task, not a
+rule. The budget prevents the tool from accumulating a pile of special cases that nobody can
+maintain. When a rule hits the budget, move the decision to the agent and record the reason.
+This is the operational form of the owner's point: use scripting and algorithms where they
+fit, and do not push program everywhere until the code is dozens of exceptions.
 
 ## The deterministic 80 percent
 

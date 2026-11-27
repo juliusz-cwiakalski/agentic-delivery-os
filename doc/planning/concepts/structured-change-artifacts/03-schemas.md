@@ -5,7 +5,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 ---
 # 03. Schemas and invariants
 
-The six examples in `schemas/` are the concrete shapes. This file states the rules they obey,
+The five core examples in `schemas/` (plus the deferred milestone example in
+`schemas/deferred/`) are the concrete shapes. This file states the rules they obey,
 so a reviewer can judge the model without reading six files at once.
 
 ## General rules
@@ -31,10 +32,11 @@ so a reviewer can judge the model without reading six files at once.
 | Field | Kind | Written by | Rules |
 |---|---|---|---|
 | `tier` | enum S, M, L | PM at init, raised by a gate | determines the artifact set |
-| `milestone`, `goals` | IDs | PM | every goal must exist in the milestone contract |
+| `milestone` | free-text label | PM | a label only; goal links are deferred (section 14) |
 | `problem` | prose, 150 words | spec-writer | what is broken, for whom, with what evidence |
 | `scope.in`, `scope.out` | lists | spec-writer | `out` is as binding as `in` |
 | `acceptanceCriteria` | list of `AC-` | spec-writer | every AC has an evidence kind and at least one test |
+| `extensions` | map of slots | spec-writer | at most three per facet; each slot has `text`, `useIn` or `archive: true`, and `budgetWords` |
 | `decisions` | list of `DEC-` | spec-writer, decision-advisor | a durable decision links a decision record |
 | `interfaces` | list of `API-` | spec-writer | kind, surface, change, contract |
 | `affectedPaths` | list | spec-writer | high-level; the plan owns the precise paths |
@@ -85,6 +87,7 @@ Invariants:
 | `phases[].verify` | list | plan-writer | command, cwd, expected exit |
 | `phases[].dependsOn` | phase IDs | plan-writer | explicit order |
 | `phases[].handover` | object | plan-writer | `required`, `nextInputs` |
+| `phases[].contextFor` | map by role | plan-writer | `include` and `exclude` per role; the tool's mandatory set cannot be excluded |
 | `affectedPaths` | generated | tool | union of the phases |
 | `conflicts.serializeWith` | change refs | tool or PM | scheduler input |
 
@@ -136,7 +139,11 @@ Invariants:
 - A handover is required when `phases[].handover.required` is true; `phase complete` refuses
   without it.
 
-## Milestone contract (`milestone.contract.v1`)
+## Milestone contract (`milestone.contract.v1`, deferred)
+
+The milestone contract is **deferred** by the owner's review decision (section 14). It is kept
+as a future example, not a core facet. The example is in
+`schemas/deferred/milestone.yaml`.
 
 | Field | Kind | Written by | Rules |
 |---|---|---|---|
@@ -154,6 +161,22 @@ Invariants:
 - Every ticket in the milestone is reachable from a goal.
 - The dependency graph is acyclic.
 - The contract is at most 16KB.
+
+## Extension slots and context declarations
+
+- An extension slot is a declared free-text field: `text`, `useIn` (a list of roles) or
+  `archive: true`, and `budgetWords`. At most three slots per facet. The default `useIn` is
+  empty, so an unused slot is not served. Extension text is never used for control flow.
+- A `contextFor` map is declared per plan phase and role. It has `include` and `exclude`.
+  The tool's mandatory set for the role cannot be excluded; the lint enforces it. The plan can
+  add a section (for example the specification rationale) when a phase needs it.
+- The phase title is a verb phrase with an object and a goal, because it is also the commit
+  subject. A noun phrase fails lint with `change.phase.title.invalid`.
+
+## What is mandatory in every tier
+
+Every tier keeps the safety checks: acceptance criteria, tests, a review, the gates, the DoD,
+the pull request, and provenance. The tiers slim the artifact volume, never the safety checks.
 
 ## Validation and error codes
 
@@ -188,7 +211,7 @@ Error codes are stable and typed:
 |---|---|
 | specification fields, test cases, plan phases, PM loops and actions | `coverage`, `affectedPaths` union, `status`, `revision`, `generatedBy` |
 | handover `done`, `deviations`, `openRisks`, `nextInputs` | handover `evidence`, `completedAt` |
-| milestone goals and scope | `definitionOfDone` checks, goal verification results |
+| milestone goals and scope (deferred) | `definitionOfDone` checks, goal verification results (deferred) |
 
 A tool-generated field is overwritten on the next write. An author who needs to change it
 changes the source field, not the generated one. This is what keeps the facets from drifting.

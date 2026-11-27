@@ -36,8 +36,8 @@ The pack does six things:
    change auto-discovery from the worktree, a lifecycle state machine with a `next` command,
    and commit messages derived from the artifacts without a model call (section 12).
 6. **Part 2** designs the delivery of context: a projection envelope instead of raw YAML,
-   flags for facts and generated forms for facets, a `--since` delta protocol, and an
-   artifact-centric push model (section 13).
+   flags for facts and generated forms for facets, and a `--since` delta protocol. The delta
+   protocol and the push model are deferred (section 13, decisions in section 14).
 
 ## How to review it
 
@@ -46,7 +46,8 @@ Read in this order:
 1. `01-analysis.md` for the verdict and the challenges. If you disagree with the challenges,
    the rest of the pack changes.
 2. `02-artifact-model.md` for the model: facets, IDs, budgets, tiers.
-3. `03-schemas.md` and the six examples in `schemas/` for the concrete shapes.
+3. `03-schemas.md` and the five core examples in `schemas/` (plus the deferred
+   milestone example) for the concrete shapes.
 4. `04-cli.md` and `05-context-bundles.md` for the tool surface and the filtering rules.
 5. `06-workflows.md` and `07-parallelism.md` for the mental experiments.
 6. `08-migration.md` for how to get there in slices.
@@ -57,6 +58,8 @@ Read in this order:
    machine, and deterministic commit messages.
 10. `13-context-delivery.md` for the output envelope, the input forms, the delta protocol, and
     the research plan. Its open points are Q31 to Q40, answered in the same file.
+11. `14-review-decisions.md` for the owner's answers to the challenges and the resulting design
+    changes. Where a core file and this file disagree, the decisions file wins.
 
 Answer inline in `09-open-points.md`: each question ends with `Answer:` on its own line.
 If you prefer to comment on a pull request instead, the pack is on the branch
@@ -64,10 +67,10 @@ If you prefer to comment on a pull request instead, the pack is on the branch
 
 ## The proposal in one page
 
-- **Facets, not documents.** One change owns six facets: specification, test plan, delivery
-  plan, PM context, handover, and (for a milestone) the milestone contract. Each facet owns
-  one kind of fact; the others reference it by ID. The same acceptance criterion is written
-  once, in the specification, and referenced from the test plan and the plan.
+- **Facets, not documents.** One change owns five core facets: specification, test plan,
+  delivery plan, PM context, and handover. Each facet owns one kind of fact; the others
+  reference it by ID. The same acceptance criterion is written once, in the specification, and
+  referenced from the test plan and the plan. The milestone contract is deferred (section 14).
 - **Machine first, prose bounded.** The machine fields are typed and validated (acceptance
   criteria, decisions, interfaces, affected paths, test cases, verify commands, handovers).
   The prose fields are short, word-budgeted, and never used for control flow.
@@ -83,9 +86,9 @@ If you prefer to comment on a pull request instead, the pack is on the branch
 - **Tiered depth.** S, M, and L changes carry different artifact requirements. A 200-line
   fix gets a one-page contract and a checklist; a 9,000-line contract change gets the full
   set. The current 25-section specification template is the default for L only.
-- **Milestone memory.** A milestone contract holds the shared goals, architecture,
-  dependency graph, and definition of done once. Each ticket carries a delta. At the end, an
-  independent verifier checks the goals, not only the tickets.
+- **Context is declared, not guessed.** Each plan phase carries a `contextFor` map: what the
+  coder and the reviewer need, and what they do not. The tool has a mandatory set per role;
+  the plan can add, never remove. The milestone contract is deferred.
 
 ## What is settled, what is open
 
@@ -96,7 +99,12 @@ Settled in this pack, subject to your veto:
 - The tiering principle and the budgets.
 - The auto-commit and provenance model (commit trailer plus CI lint; signing is optional and
   not a substitute for path permissions).
-- The phased migration with a measured pilot.
+- The phased migration with a measured pilot, delivered as one epic with multiple pull
+  requests.
+- The review decisions in `14-review-decisions.md`: extension slots, the worktree registry as
+  the primary change resolution, one lane and one change, a template-driven state machine,
+  deterministic commits from the phase title, attribution instead of prohibition for hand
+  edits, the audit as a learning signal, and the milestone contract deferred.
 
 Open, with defaults in `09-open-points.md`:
 
@@ -113,10 +121,12 @@ Open, with defaults in `09-open-points.md`:
 - The context bundle budgets and the acceptable miss rate.
 - Who owns the milestone contract.
 - Whether the retrospective log lives in the repository or outside it.
-- Part 2: change resolution from the registry or the branch (Q31), whether `workflow next`
-  becomes the PM's only navigation command (Q33), deterministic versus model-assisted commit
-  messages (Q34), the default output format (Q35), stateless versus stateful deltas (Q37),
-  and whether to launch the external researcher now (Q40).
+- The exact contents of each tier (Q1, Q2, Q9).
+- The number and budget of extension slots (Q41).
+- The audit policy for a path outside the change's scope (Q23).
+- The handover prompt wording (Q42).
+- Whether to launch the external researcher now (Q40).
+- The pilot ticket and the token-reduction threshold (Q27, Q28).
 
 ## File index
 
@@ -130,7 +140,7 @@ Open, with defaults in `09-open-points.md`:
 | `schemas/delivery-plan.yaml` | Example delivery plan (phases, paths, tests, verify, handover) |
 | `schemas/pm-context.yaml` | Example PM context (working memory only) |
 | `schemas/handover.yaml` | Example phase handover (bounded, typed) |
-| `schemas/milestone.yaml` | Example milestone contract (goals, scope, dependency graph, DoD) |
+| `schemas/deferred/milestone.yaml` | Deferred example of a milestone contract (goals, scope, dependency graph, DoD) |
 | `04-cli.md` | Command surface, write pipeline, provenance, error model, examples |
 | `05-context-bundles.md` | Role/phase matrix, filtering algorithm, budgets, example bundles, miss handling |
 | `06-workflows.md` | Eight mental experiments with exact commands and failure paths |
@@ -140,7 +150,8 @@ Open, with defaults in `09-open-points.md`:
 | `10-evidence.md` | Measurements from GH-416 and GH-413, method, caveats, success metrics |
 | `11-glossary.md` | Terms used consistently across the pack |
 | `12-deterministic-core.md` | Part 2: the deterministic inventory, change auto-discovery, the lifecycle state machine, commit messages without a model call |
-| `13-context-delivery.md` | Part 2: the projection envelope, flags and forms, the `--since` delta protocol, the push model, the research plan, Q31 to Q40 |
+| `13-context-delivery.md` | Part 2: the projection envelope, flags and forms, the `--since` delta protocol (deferred), the push model (out of scope), the research plan, Q31 to Q40 |
+| `14-review-decisions.md` | Owner review decisions from parts 3 and 4, the resulting design changes, and the remaining open points |
 
 ## Related concepts and work items
 

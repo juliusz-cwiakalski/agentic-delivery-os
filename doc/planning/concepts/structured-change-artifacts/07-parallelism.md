@@ -87,19 +87,24 @@ evidence about the declaration, not a mystery.
 jaiship change audit GH-416 --base origin/main-tools
 ```
 
-The audit compares the declared `affectedPaths` with the diff:
+The audit compares the declared `affectedPaths` with the diff. It is a **learning signal**,
+not a gate for an ordinary miss:
 
-- A modified path that was not declared: `change.paths.undeclared`. Policy: fail the audit, or
-  record it as drift and let the PM decide. The pack recommends fail for L, record for S and
-  M during the pilot.
+- A modified path that was not declared: `change.paths.undeclared`. Recorded as drift. The
+  merge authority resolves any conflict, and the retro compares the planned manifest with the
+  actual diff.
 - A declared `modify` path that is unchanged: `change.paths.unmodified`. Usually a stale plan;
   the plan-writer updates it.
 - A declared `add` path that exists: a duplicate or a rename; the plan-writer resolves it.
-- A path outside the change's scope: `change.paths.out-of-scope`.
+- A path outside the change's scope: `change.paths.out-of-scope`. This one fails the audit,
+  because it is a scope breach, not a planning miss.
+- A path in a protected area (a security-sensitive file, a merge policy, a permission file):
+  fails the audit.
 
-The audit result is appended to the retrospective log with the plan revision, the actual
-diff, and the conflict class. The misprediction rate is the share of audits with an undeclared
-path or a false parallel.
+The audit result is appended to the retrospective log with the plan revision, the actual diff,
+and the conflict class. The misprediction rate is the share of audits with an undeclared path
+or a false parallel. The rate is the learning loop: it improves the plan templates, the
+path-suggestion tooling, and the conflict strategy.
 
 ## Example
 

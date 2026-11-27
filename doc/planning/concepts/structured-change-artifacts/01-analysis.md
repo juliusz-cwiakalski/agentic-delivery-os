@@ -110,6 +110,11 @@ a generated-by header in the file; a CI check that any commit touching an artifa
 the trailer; a path-scoped deny for agent writes where the harness supports it. Signing is
 optional and not a substitute.
 
+**Owner decision (2026-11-27):** attribution, not prohibition. Manual editing is acceptable
+when it repairs a broken artifact, through the repair path; the target is a tool-written share
+of 95 percent or more. The commit trailer is the attribution; a missing trailer is an untyped
+edit to detect and correct, not an accusation.
+
 ### 5. Auto-commit on every write changes the history and can fight the commit discipline
 
 The repository's rule is one conventional commit per change, through the commit primitive.
@@ -123,6 +128,10 @@ or changes nothing. The agent never runs `git commit` for an artifact. Code comm
 commit primitive and the one-commit-per-change rule. If a write must span several fields, the
 command accepts a file or a batch and commits once.
 
+**Owner decision (2026-11-27):** many tool commits on the change branch, one squash commit on
+the integration branch. The one-commit-per-change rule applies to the merge, not to the
+branch. The tool commits are the audit trail; the squash is the history.
+
 ### 6. The plan's structured fields are only as good as the plan-writer's declarations
 
 The parallelism promise depends on affected paths being right. A plan that omits one file
@@ -135,6 +144,11 @@ actual diff and fails or records the drift; tool-assisted path suggestions from 
 and test coverage at plan time; a lint that every phase has at least one path, one acceptance
 criterion, and one verify command; retro evidence on misprediction rates. Conservative
 default: undeclared scope serializes.
+
+**Owner decision (2026-11-27):** the audit is a learning signal, not a gate for an ordinary
+miss. It records the drift, the merge authority resolves an ordinary conflict, and the retro
+compares the planned manifest with the actual diff. A path outside the change's scope or in a
+protected area still fails.
 
 ### 7. Phase handovers can become the new 500KB artifact
 
@@ -156,6 +170,10 @@ is justified, but it should be introduced after the per-ticket slices prove them
 against the per-ticket savings, and keep it to goals, scope, architecture, dependency graph,
 shared test strategy, and definition of done. It is not a second specification.
 
+**Owner decision (2026-11-27):** deferred. No milestone contract in this epic; milestones are
+planned in free text, and the structured contract is a future iteration for long autonomous
+deliveries.
+
 ### 9. Eleven phases are too heavy for small changes
 
 A 200-line fix does not need a 25-section specification, a 31-case test plan, a 135KB plan,
@@ -165,6 +183,10 @@ single-change flow; unattended dozens-of-tickets delivery needs proportionality.
 **Mitigation:** tiers. S: a one-page contract and a checklist, with clarify and specification
 collapsed, the test plan as a list of cases, and the plan as a file list. M: a structured
 contract, a test table, and a short plan. L: the full set. Tier thresholds are an open point.
+
+**Owner decision (2026-11-27):** the tiers slim the artifact volume, never the safety checks.
+A tier review table decides what goes into each tier: acceptance criteria, tests, a review,
+the gates, the DoD, the pull request, and provenance stay in every tier.
 
 ### 10. This is a significant product change, and boiling the ocean is the fastest way to fail
 
@@ -177,6 +199,10 @@ ledger and lint (small, immediate, removes the corruption class), then the data-
 the coder and reviewer bundles on one pilot ticket, then the test table, then the
 specification contract, then handovers, then affected-path parallelism, then the milestone
 contract.
+
+**Owner decision (2026-11-27):** one epic, multiple pull requests, one milestone. Not one
+big-bang pull request. Slice 0 and slice 1 first, then slices 2 to 5 tightly sequenced; slice
+6 is deferred.
 
 ## Design principles
 

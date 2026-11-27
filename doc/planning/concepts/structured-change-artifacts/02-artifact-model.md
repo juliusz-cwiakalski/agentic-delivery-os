@@ -5,7 +5,7 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 ---
 # 02. The artifact model
 
-## One change, six facets
+## One change, five core facets
 
 A change is not a folder of documents that restate each other. It is a set of **facets**,
 each owning one kind of fact. A facet is written by one role, through one command family, and
@@ -13,15 +13,22 @@ read by others through a projection. The same fact is written once and reference
 
 | Facet | Owns | Written by | Read by (projection) | Budget |
 |---|---|---|---|---|
-| Specification | The contract: acceptance criteria, decisions, interfaces, affected components, risks, open questions, non-goals, bounded context and rationale | `spec-writer` | test-plan-writer, plan-writer, readiness, coder, reviewer, doc-syncer | prose 300/700/1,200 words for S/M/L |
+| Specification | The contract: acceptance criteria, decisions, interfaces, affected components, risks, open questions, non-goals, bounded context and rationale, and declared extension slots | `spec-writer` | test-plan-writer, plan-writer, readiness, coder, reviewer, doc-syncer | prose 300/700/1,200 words for S/M/L |
 | Test plan | Test cases, shared preconditions, coverage of acceptance criteria | `test-plan-writer` | plan-writer, readiness, coder, reviewer | 40KB |
-| Delivery plan | Phases, steps, affected paths, acceptance and test links, verify commands, dependencies, handover requirements | `plan-writer` | PM, coder, reviewer, scheduler | 35KB, comments at most 20 percent |
+| Delivery plan | Phases, steps, affected paths, acceptance and test links, verify commands, dependencies, handover requirements, and a `contextFor` map per phase | `plan-writer` | PM, coder, reviewer, scheduler | 35KB, comments at most 20 percent |
 | PM context | Working memory: open loops, next actions, blockers, decision and risk references, handover references | `pm` | PM brief, CEO brief, retrospective (log only) | 8KB |
-| Handover | What the next phase needs: done, deviations, open risks, next inputs, evidence | `coder` (tool-generated) | next coder, PM, reviewer | 1KB per phase |
-| Milestone contract | Goals, scope, architecture, dependency graph, shared test strategy, definition of done, milestone risks | `pm` with `decision-advisor` | every ticket bundle, goal verifier | 16KB |
+| Handover | What the next phase needs: done, deviations, open risks, next inputs, evidence | `coder` (tool-drafted, coder-confirmed) | next coder, PM, reviewer | 1KB per phase |
+
+The **milestone contract** is deferred (section 14). The specification's `milestone` field is a
+free-text label, not a link to a goal graph. The deferred example is in
+`schemas/deferred/milestone.yaml`.
 
 The phase registry remains the source of phase state. The PM context does not duplicate phase
-timestamps; it points at the registry. The retrospective log is a separate append-only facet,
+timestamps; it points at the registry. The specification's **extension slots** are declared
+free-text fields with an audience (`useIn`) and a word budget, at most three per facet; the
+default audience is empty, so an unused slot costs nothing at read time. The delivery plan's
+**`contextFor`** map declares what each role needs for each phase; the tool has a mandatory set
+per role, and the plan can add to it but never remove from it. The retrospective log is a separate append-only facet,
 not part of the PM context, and is read only by the retrospective agent.
 
 ## Change folder layout
@@ -86,7 +93,6 @@ Rules:
 | Phase state | phase registry | PM brief, board, queue |
 | Open loop, next action, blocker | PM context | PM brief, CEO brief |
 | Phase handover | handovers file | next phase bundle, PM brief, review |
-| Goal | milestone contract | ticket specification, goal verifier |
 
 A projection selects and orders facts; it never rewrites them. If a projection needs a fact
 that is not in a facet, the facet is missing a field, not the projection.
@@ -116,10 +122,15 @@ decision recorded in the PM context.
 |---|---|---|---|---|---|
 | S | up to 300 | up to 10 | none | no | one-page specification, test list, file-list plan, PM context, handover only if multi-phase |
 | M | up to 3,000 | up to 40 | local | no | structured specification, test table (up to 40 cases), phased plan with handovers, PM context |
-| L | above 3,000 | above 40 | cross-cutting | possible | full set, decision records, milestone link, independent verification |
+| L | above 3,000 | above 40 | cross-cutting | possible | full set, decision records, independent verification |
 
 Thresholds are a proposal; the owner decides them (open point 1). A change that exceeds its
 tier is re-tiered by the readiness gate, and the re-tier is evidence.
+
+Every tier keeps the **safety checks**: acceptance criteria, tests, a review, the gates, the
+DoD, the pull request, and provenance. The tiers slim the **artifact volume**: the
+specification prose, the test-plan depth, the plan granularity, the readiness depth, and the
+handover requirement. A tier never removes a safety check.
 
 ## Budgets and enforcement
 
