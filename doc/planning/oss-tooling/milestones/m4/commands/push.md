@@ -116,6 +116,12 @@ guard-only: the predicate refuses such a name before any child, so the command
 refuses it pre-act and no lane-push record carries it. `protected-ref` is one token
 with two sources; the layer and the child count tell them apart.
 
+The seam adds two classification boundaries to the table: a missing or ambiguous
+push destination, and a remote path that no longer resolves to a repository, are
+`remote-unavailable`; an HTTP 403 or a `Write access … not granted` rejection is
+`auth-rejected`, matched before the unavailable row and never reported as
+`remote-unavailable` or `unclassified`.
+
 ## Idempotence and reporting
 
 A second invocation performs another single act and appends another record; a

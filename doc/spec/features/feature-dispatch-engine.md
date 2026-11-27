@@ -379,6 +379,18 @@ record whose `attemptId` equals the attempt being read: an unreadable store, no
 record, a record for another attempt, and a record without an identity each
 contribute nothing and never fabricate a push.
 
+The cause set is the closed eight-token vocabulary (`protected-ref`,
+`non-fast-forward`, `auth-rejected`, `remote-unavailable`, `spawn-failed`,
+`timed-out`, `unsafe-branch`, `unclassified`), with `unsafe-branch` guard-only and
+the other seven recordable; `protected-ref` is recordable only from a server-side
+protection or hook decline, because a resolved convention branch can never equal a
+protected name. The seam classifies git's own bounded failure text:
+a missing or ambiguous push destination, and a remote path that no longer resolves
+to a repository, are `remote-unavailable`; an HTTP 403 or a `Write access … not
+granted` rejection is `auth-rejected`, matched before the unavailable row and
+never reported as `remote-unavailable` or `unclassified`. The raw failure text
+never leaves the seam.
+
 The classification folds that record into the attempt's reserved evidence
 references — `lane-push:pushed` on an accepted act, `lane-push:failed` with
 `lane-push-cause:<cause>` on a refusal — once per terminal classification, and

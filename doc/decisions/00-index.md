@@ -167,9 +167,12 @@ status moves from `Proposed` there rather than in the delivery commits. It autho
 the typed stack's first remote-write operation: at the `pr-open` derivation arm the
 engine evaluates the verify-gates parity definition (local checkout head SHA vs the
 open delivery request's head SHA, full-hex equality) and, when the local head is
-ahead, performs one bounded fast-forward-only push of the change branch to its
-configured upstream — fixed argv, literal non-shell child, 60 000 ms injectable
-timeout, single attempt, no force variant — before the token derives; a rejected,
+ahead, performs one bounded fast-forward-only push of the change branch to the
+push remote one bounded local configuration read resolves (the argv corrected and
+the resolution added by GH-416; [TDR-0079](TDR-0079-lane-push-amends-tdr-0076.md)
+amends this record's push ownership) — fixed argv, literal non-shell child,
+60 000 ms injectable timeout, single attempt, no force variant — before the token
+derives; a rejected,
 failing, or still-unmet push is a typed non-`pr-open` failure through one new
 failure-token-mapping row that retains the PR URL, parity evidence rides the bounded
 `push:<verdict>` references and an additive optional envelope block, text mode stays

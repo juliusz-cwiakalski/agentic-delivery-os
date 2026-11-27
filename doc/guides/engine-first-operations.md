@@ -342,7 +342,8 @@ The shell stack is the documented fallback, not a deprecated path:
 **Parity enforcement is typed-lane behavior (GH-386).** The typed engine
 evaluates the `pr-open` parity precondition at its derivation arm — it reads the
 local branch head against the pull request's head, pushes the change branch
-fast-forward exactly once when the heads are unequal, re-reads parity once, and
+fast-forward exactly once to the push remote the seam resolves by one bounded
+local configuration read when the heads are unequal, re-reads parity once, and
 classifies an unresolvable push as a typed failure that retains the PR URL.
 
 **The session-side push is a product surface, not a wrapper convention.** The
@@ -368,6 +369,12 @@ unchanged ([push reference page](../planning/oss-tooling/milestones/m4/commands/
 A refused lane push has three surfaces with one vocabulary: the lane's final
 message, the attempts digest (`lane-push:failed` beside `lane-push-cause:<cause>`),
 and `dispatch status <ref>`. Diagnosis needs no head comparison and no git command.
+The vocabulary is closed: `protected-ref`, `non-fast-forward`, `auth-rejected`,
+`remote-unavailable`, `spawn-failed`, `timed-out`, `unsafe-branch` (never recorded;
+refused before any child), and `unclassified`. A missing or ambiguous push
+destination, or a remote path that no longer resolves to a repository, is
+`remote-unavailable`; an HTTP 403 or a `Write access … not granted` rejection is
+`auth-rejected`, never `remote-unavailable` or `unclassified`.
 The remedy is unchanged in kind — fix the remote state (a protection, a permission,
 a changed remote address) and re-run or resume the push, or re-dispatch; the
 engine's ensure-push still reconciles a pushable branch by itself.
