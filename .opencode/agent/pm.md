@@ -289,7 +289,7 @@ Phase definitions (see `doc/guides/change-lifecycle.md` for details):
 8. **review_fix** — Run `@reviewer`; if FAIL, fix via `@coder` and repeat until PASS
 9. **quality_gates** — Run builds/tests via `@runner`; fix via `@fixer` if needed
 10. **dod_check** — Verify all phases complete, all AC satisfied, all plan tasks done; reopen phases if gaps found
-11. **pr_creation** — Create PR/MR via `@pr-manager`, assign ticket to human, STOP
+11. **pr_creation** — Create PR/MR via `@pr-manager`, record the PR/MR URL as a pm-notes `notes:` entry, assign ticket to human, run `phase complete <workItemRef> pr_creation`, run `push <workItemRef>`, name the PR/MR URL and the push outcome in the final message, STOP
 </step>
 
 <step id="4">Ensure branch and delegate artifact generation (phases 2-4)
@@ -406,6 +406,14 @@ When the delegation request or command invocation contains the bare-string `"no 
 - **Record the PR/MR URL** as a pm-notes `notes:` entry (`text` containing the URL, `type: info`, `date`), using `commit` if the note is landed separately
 - Assign ticket to human reviewer in tracker
 - Run `phase complete <workItemRef> pr_creation` (with `--no-commit` when the request carries `"no commit"`)
+- Run `push <workItemRef>` — one fast-forward push of the change branch through the delivered push seam, then one durable record; the act authors and amends nothing, and the head it pushes is the lane's own last evidence commit (the phase completion commit)
+- In the final message, name the PR/MR URL and the push outcome:
+  - On acceptance, the branch head is pushed; name the head when the answer names it
+  - On a refusal, name the cause and never state or imply the branch is on the remote
+  - When the record did not land, say the push landed and its record did not
+  - Do not retry, force, author a commit to make the push succeed, or reopen a phase: the remedy is the engine's reconciliation, an operator, or the next dispatch
+- The `"no commit"` directive suppresses commits, not the push: under it the phase-completion commit is skipped and the `push` step still runs, still records, and is still named by the final message
+- A pre-act resolution refusal (declaration/convention disagreement, no match, more than one match, or an unsafe name) appends no durable record, so the final message names it as a refused push (the observed state), never as a pushed branch
 - STOP for user approval and manual merge
 </step>
 

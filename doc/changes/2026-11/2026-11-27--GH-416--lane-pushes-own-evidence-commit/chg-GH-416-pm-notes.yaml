@@ -478,3 +478,25 @@ notes:
       fixed-attempt harness, so the dedicated suite proves it directly."
     type: info
     date: "2026-11-27"
+  - text: "Plan phase 5 complete (the `dispatch status` lanePush fact): commit
+      4c64266ea. readOperatorStatus takes one additional bounded read of the
+      lane-push family (total three: lane, park, lane-push), filters to the
+      repository, and matches the addressed lane's exact attempt identity;
+      buildStatusData carries the fact verbatim (verdict, branch, head, cause
+      when failed, recordedAt); the human renderer appends additive
+      lanePush/lanePushBranch/lanePushHead/lanePushCause/lanePushRecordedAt
+      lines only when present. Absence is an absent key and every delivered
+      member is byte-identical. New projection suite dispatch-status-lane-push
+      (7 pass); the golden host gained one cell reading the new
+      tests/golden/status-lane-push.txt (created once through the renderer); the
+      two delivered status goldens are unchanged. Deviation: the read-count
+      assertions in dispatch-status-park (1), dispatch-operator-status
+      (TC-STATUS-001/002/007) and dispatch-operator-posture (TC-RO-004) moved
+      from two to three; the plan named only TC-STATUS-007, but every count
+      assertion that pins the status read had to move with the declared DEC-3
+      widening. Tests: typecheck green; status/golden/additive/invariance/
+      content-inventory 61 pass; read-only controls 12 pass;
+      dispatch-text golden 5 pass; dispatch-token-home 7 pass; git diff --check
+      clean."
+    type: info
+    date: "2026-11-27"
