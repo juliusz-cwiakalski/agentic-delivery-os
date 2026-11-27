@@ -1,0 +1,464 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-416
+branch: feat/GH-416/lane-pushes-own-evidence-commit
+status: PASS
+summary: >
+  Second review, after plan phase 9 (commits 468deaeda..b7823930c), against
+  spec v1.6, test plan v1.8, plan v1.7 and PM ruling R17, at HEAD b7823930c.
+  The blocking defect is fixed, and this review proved the fix on real git
+  rather than taking it from the delivery's note. With the seam's default
+  runner and a PATH shim in front of git, the observed child argv is exactly
+  `git push <resolved remote> HEAD:refs/heads/<branch>`, with no `--ff-only`,
+  no force flag and no `+` prefix; a first push is accepted and the bare
+  remote holds the checkout head, the repeat push is accepted with the ref
+  unmoved, a moved remote is refused `non-fast-forward` with the ref unmoved,
+  and the safe-ref guard, the protected-name guard and a missing destination
+  all answer with zero children started. The push remote followed the
+  declared order in all four positions; the ambiguous, URL-valued and
+  option-shaped destinations and a checkout with neither `origin` nor a
+  branch destination were refused without a child starting. The
+  real-git suite (TC-LGIT-001) drives the default runner with no injection in
+  every outcome arm, passes with every internet connect() blocked by an
+  LD_PRELOAD shim (zero attempts), and fails 9 of its 14 cases when the old
+  argv is restored in a scratch copy. Classification on real git text: a
+  vanished remote path and an undeclared remote name are
+  `remote-unavailable`, a pre-receive `Write access ... not granted` and a
+  local 403 remote helper are `auth-rejected`, a plain hook decline is
+  `protected-ref`; a 111-text corpus differs from the pre-phase-9 seam on
+  exactly the four intended texts and on nothing else; `unsafe-branch` is
+  refused by the record validator and mapped to `unclassified` by the act
+  mapping, so it cannot reach a record. Every iteration-1 finding is closed
+  or dispositioned: F-9 stays open by ruling R17, guarded by the pinned array
+  order, and F-10's diagnostic channel is required by no criterion, the
+  delivered `recorded: false` disclosure carrying the unrecorded case.
+  Nothing blocks. Twelve advisories continue the numbering
+  from iteration 1 (F-14..F-25); F-14, a header line with trailing text that
+  git accepts is skipped and the keys after it re-attributed, is the one
+  worth a small follow-up. Verification by this review at the frozen tree:
+  the `pnpm check` aggregate, run step by step without its two build hooks
+  (the built dist verified current), is green: 13 166 pass, 4 skip, 0 fail
+  across 1 571 files, and lint, format, typecheck, boundaries, the allowlist
+  tripwire, memory lint, forbidden literals, new-code naming, namespace tree,
+  prompt conformance, help-guide coverage, exports parity and the no-shell
+  invariant all pass. Spec section 17 is byte-identical to the iteration-1
+  reviewed revision, `jaiship plan validate GH-416` is valid, the
+  commit-range gate is PASS over 33 commits, the built dist carries the
+  corrected argv, and the plugin projection is in sync with its source.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 7
+  info: 4
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-14
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/git/push.ts:196
+    message: >
+      The configuration parser drops a section-header line it cannot match and
+      keeps the previous section, but git accepts trailing text after the
+      closing bracket. Probed against git 2.53.0 with `git config --local
+      --get-all` as the reference: with `[branch "<branch>"] # lane` above
+      `pushRemote = pushed`, git reads `pushed` and the seam passes `origin`.
+      The same holds for a header with trailing garbage, for `[remote] #
+      defaults` above `pushDefault`, and for a `branch.<branch>.remote` under
+      an annotated header; an annotated `[remote "origin"]` header makes the
+      seam refuse `remote-unavailable` on a checkout git considers configured.
+      In the first four shapes the act goes to a lower-precedence remote and
+      answers `pushed`, against the order spec F-1 declares; the engine's
+      parity check at classification still reports the lagging PR head. The
+      trigger is rare (a hand-annotated header line in `.git/config`) and the
+      first consumer's own configuration has none.
+    suggestion: >
+      Fail closed instead of skipping: a line that starts with `[` and does not
+      match the header grammar should make the whole parse an unresolvable
+      destination (the typed `remote-unavailable`), or the header pattern
+      should tolerate the trailing comment text git tolerates. Add the five
+      shapes as parser cases; an injected runner is enough to observe the
+      resolved name.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-15
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/git/push.ts:280
+    message: >
+      `readBoundedText` stops at the 64 KiB cap without reporting truncation,
+      so a `.git/config` larger than that is parsed partially. A
+      `branch.<branch>.pushRemote` written past the cap (git appends new keys
+      at the end) then resolves to a lower-precedence stage or to `origin`
+      instead of a typed refusal. Submodule-heavy or branch-heavy checkouts
+      are the realistic shape; the bound itself is sound.
+    suggestion: >
+      Read one byte past the cap and treat an oversized configuration as an
+      unresolvable destination (`remote-unavailable`), and name the bound in
+      the seam's contract.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-16
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/git/push.ts:103
+    message: >
+      The destination alphabet `[A-Za-z0-9._/-]` is narrower than git's
+      remote-name grammar: `git remote add` accepts `fork+oss`, `user@fork`,
+      `a%b`, `a=b` and non-ASCII names, and each is refused
+      `remote-unavailable` when it is the configured push remote (probed with
+      an injected runner; fail-closed, never a wrong remote). The restriction
+      is stated in the seam's comment and the pm-notes ("unsafe-shaped") but
+      not in the spec or the reference page, which describe only a missing or
+      an ambiguous destination.
+    suggestion: >
+      Widen the alphabet to what git accepts in a remote nickname while
+      keeping the leading-dash and whitespace refusals, or document the shape
+      as a third `remote-unavailable` condition on the reference page and in
+      spec DM-4.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-17
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/behaviour/dispatch-lane-push-real-git.test.ts:138
+    message: >
+      The order the plan's exit criterion names (both guards before the
+      configuration read) is proven only by reading the code. In a scratch
+      copy, moving the destination read above the guards left all 14 real-git
+      cases, the 102 moved-pin cases and the 49 parity cases green; the one
+      observable difference (an unsafe name on a checkout with no destination
+      answering `remote-unavailable` instead of `unsafe-branch`) has no arm.
+      The other fourteen mutations this review ran were each killed: the old
+      argv, a force flag, a `+` prefix, `--tags`, a hardcoded `origin`, either
+      guard removed, the 403, not-granted and unavailable patterns, the auth
+      row after the unavailable row, the origin fallback without a
+      declaration, and both worktree steps.
+    suggestion: >
+      Add one arm to the ordering probe: an unsafe name and a protected name
+      on the no-remote checkout answer `unsafe-branch` and `protected-ref`
+      with zero children.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-18
+    severity: low
+    confidence: medium
+    category: documentation
+    location: .changeset/gh-416-lane-pushes-own-evidence-commit-minor.md:21
+    message: >
+      The release note never says the shared seam's argv was corrected, yet it
+      says "the engine's ensure-push stays unchanged as the backstop". For the
+      adapters consumer the act changed (a repository argument, a pre-child
+      configuration read, a `remote-unavailable` rejection before any child),
+      and the engine's act now performs a real push for the first time.
+      GH-386's pending note still describes the act as going "to its
+      configured upstream", so a reader of the combined notes cannot learn
+      that the engine's push was non-functional before.
+    suggestion: >
+      Add one sentence: the seam's argv is corrected to a valid non-force push
+      on the push remote resolved by one bounded local configuration read, and
+      the engine's parity read, act count and classification are unchanged.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-19
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/decisions/TDR-0079-lane-push-amends-tdr-0076.md:230
+    message: >
+      Four code citations still point into the pre-phase-9 `push.ts` line
+      layout: `push.ts:60-64, 78, 147-155, 196-218` (:230), `push.ts:103-139,
+      203-218` (:231), `push.ts:203-218` and `push.ts:103-139` (:104), and
+      `push.ts:103-139` (:411); today those ranges are the configuration
+      parser. The executed-evidence rows (:108, :238) still say fourteen
+      suites and 148 passes. The record is Proposed and this change owns it.
+    suggestion: >
+      Cite the module without line ranges, as the three corrected statements
+      already do, and refresh the executed row to the phase-9 suite set.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-20
+    severity: low
+    confidence: medium
+    category: documentation
+    location: doc/spec/features/feature-dispatch-engine.md:716
+    message: >
+      Derivation arm 8 still says the engine "pushes the change branch
+      fast-forward to its configured upstream exactly once". The engine's act
+      now targets the push remote the seam resolves (`branch.<branch>.pushRemote`,
+      `remote.pushDefault`, `branch.<branch>.remote`, then `origin`) and can
+      refuse `remote-unavailable` before any child. Phase 9 reconciled the
+      seam row and the lane's page but not this sentence.
+    suggestion: >
+      Replace "to its configured upstream" with "to the push remote resolved by
+      the seam's one bounded configuration read", and name the pre-child
+      `remote-unavailable` refusal among the non-successful act outcomes.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-21
+    severity: low
+    confidence: medium
+    category: spec-compliance
+    location: .opencode/agent/pm.md:413
+    message: >
+      The unrecorded bullet, "When the record did not land, say the push
+      landed and its record did not", is not conditioned on acceptance, so in
+      the refused-and-unrecorded combination it contradicts the refusal bullet
+      above it ("never state or imply the branch is on the remote"). The
+      combination is reachable: a refused act whose record is oversize or
+      whose fence is busy. Spec F-4 (:168) and AC-F4-1's parenthetical carry
+      the same unconditioned wording, so the pin is faithful to the spec.
+    suggestion: >
+      Condition the sentence: on acceptance, say the push landed and its
+      record did not; on a refusal, name the cause and say its record did not
+      land. Mirror the split in spec F-4 and the AC-F4-1 wording (a wording
+      clarification, not a new criterion).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-22
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: tests/behaviour/dispatch-lane-push-causes.test.ts:418
+    message: >
+      Test plan v1.8 TC-LCAUSE-001 step 4 asks for the missing-destination and
+      HTTP-403 wordings through `push <ref>` on the command path. They are
+      proven at the seam (the boundaries block) and the token-to-answer
+      mapping is proven on the command path with other wordings of the same
+      two tokens; the one combined case per new wording is not there.
+      Coverage is complete by composition. Likewise TC-LGIT-001's location
+      line and the section 7 mapping still name the two precedent helpers,
+      while the delivered fixture is tests/fixtures/dispatch/parity/temp-repo.ts
+      (the plan's phase 9 comment records why).
+    suggestion: >
+      Add the 403 and vanished-path wordings to the command-path table, or
+      record the seam-level placement as the deliberate deviation in the
+      pm-notes, and point the test plan's location lines at the delivered
+      fixture.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-23
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/git/push.ts:139
+    message: >
+      Real transport-failure wordings still fall to `unclassified`, although
+      spec Appendix E describes `remote-unavailable` as a remote or host that
+      cannot be reached: "the remote end hung up unexpectedly", "RPC failed;
+      curl 92 ...", "send-pack: unexpected disconnect while reading sideband
+      packet", "write error: Broken pipe", and "remote helper ... aborted
+      session". The table is GH-386's and is unchanged here; spec section 7.3
+      defers refinement. It matters now because pushes reach a transport for
+      the first time.
+    suggestion: >
+      Record the gap as operator evidence to collect under RSK-4 and extend
+      the unavailable row in the deferred classification refinement.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-24
+    severity: info
+    confidence: medium
+    category: documentation
+    location: packages/adapters/src/git/push.ts:355
+    message: >
+      The resolution reads only the checkout's own `<git-dir>/config`: a
+      user-level `remote.pushDefault` or `branch.*.pushRemote`, any included
+      file and a per-worktree configuration are not consulted, by a decision
+      stated in the seam's comment alone. A plain `git push` in such a
+      checkout honours them. The spec and the reference page say "one bounded
+      local configuration read" without naming the scope.
+    suggestion: >
+      State the scope (the checkout's configuration file; global, system,
+      included and per-worktree configuration excluded) in spec F-1 and on
+      the reference page, so the divergence from a hand-run `git push` is
+      declared rather than discovered.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-25
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: packages/cli/src/production.ts:2915
+    message: >
+      Outside this change and identical at the base: the production
+      composition creates the plan runtime without a diff reader, so the
+      shipped `jaiship plan diff <ref> --against <base>` always answers
+      `input.value.rejected` ("repository diff for <ref> could not be read");
+      only the test harness injects one (tests/fixtures/plan/harness/index.ts:233).
+      Found when this review tried `plan diff` for the scope audit and fell
+      back to a script over the plan's phase scopes.
+    suggestion: >
+      Open-source work item: wire a read-only `git diff --name-status
+      <base>...HEAD` reader into the production composition and add a
+      production-path test. Until then the reviewer runs the scope audit by
+      hand.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-27T19:16:20Z
+next_step: >
+  PROCEED to quality_gates and pr_creation: no remediation phase is needed and
+  the plan needs no phase 10. Recommended, not gating: fold F-14 and F-17's one
+  arm into a small follow-up commit on this branch before the pull request,
+  since both touch files already in phase 9's scope
+  (packages/adapters/src/git/push.ts and
+  tests/behaviour/dispatch-lane-push-real-git.test.ts). Record F-15, F-16,
+  F-21, F-23 and F-24 as PM dispositions, and route F-25 as a separate
+  open-source work item. The lane's own `push GH-416` at pr_creation is the
+  first real run: this worktree resolves `origin` through its `.git` pointer
+  and `commondir`, exactly one local branch matches the convention, and the
+  argv will be `git push origin
+  HEAD:refs/heads/feat/GH-416/lane-pushes-own-evidence-commit`.
+acceptance_criteria:
+  - id: AC-F1-1
+    verdict: satisfied
+    evidence: >
+      tests/behaviour/dispatch-lane-push.test.ts:140 (TC-LPUSH-001: one act,
+      the fake remote's head equals the checkout head, the ledger is unchanged
+      so nothing was authored); tests/behaviour/dispatch-lane-push-real-git.test.ts:65
+      (the default runner, a real bare remote, the remote ref equals HEAD);
+      tests/behaviour/dispatch-lane-push-command.test.ts:273 (one child, the
+      fixed argv, 60 000 ms, no shell); this review's shim probe observed
+      `push origin HEAD:refs/heads/<branch>` and a real accepted push, and its
+      real-worktree probe resolved `origin` for this change's own branch.
+  - id: AC-F1-2
+    verdict: satisfied
+    evidence: >
+      Phase 9 changed no resolution code or test: TC-LRES-001..005 in
+      tests/behaviour/dispatch-lane-push-resolution.test.ts are green in the
+      battery. The seam's guards were re-proven on real git: an unsafe name
+      and each protected name answer with zero children and no remote ref
+      (real-git suite :116 and :138; this review's probe).
+  - id: AC-F2-1
+    verdict: satisfied
+    evidence: >
+      The repeat push is accepted with the ref unmoved on real git (real-git
+      suite :76; TC-LPUSH-002); the classification after a successful lane
+      push derives pr-open from parity with zero engine push invocations and
+      push:clean, counted by a live runner through the production composition
+      (tests/behaviour/dispatch-lane-push-fold.test.ts:483;
+      tests/conformance/dispatch/dispatch-parity-push.test.ts); a moved remote
+      is refused non-fast-forward (real-git suite :91); no wrapper script and
+      no pre-PR push path is in the branch diff.
+  - id: AC-F3-1
+    verdict: satisfied
+    evidence: >
+      One full classification per recordable cause folds lane-push:failed plus
+      its own cause (fold suite :216); both references survive a genuinely
+      overflowing 16-reference slice (:244); a foreign attempt, no record and
+      an unreadable store contribute nothing (:352-413); a disclosure is not a
+      claim (:416-480); the vocabulary is closed
+      (tests/checks/dispatch-contract-invariance.test.ts:275). Phase 9 closed
+      iteration 1's F-4 test gaps.
+  - id: AC-F4-1
+    verdict: satisfied
+    evidence: >
+      The command's answer names the cause for each of the seven recordable
+      causes with one record each (causes suite :343-409); the final-message
+      contract is pinned on both product surfaces by sentence
+      (tests/checks/lane-push-surfaces.test.ts:30, :57, :87 and :118); the
+      attempt record carries the same cause (fold suite).
+      The final-message clause keeps its declared boundary (CB-1). F-10's
+      diagnostic channel is not required by any criterion: `recorded: false`
+      is the declared disclosure and is tested for the failed append and the
+      oversize record (command suite :197 and :213).
+  - id: AC-F5-1
+    verdict: satisfied
+    evidence: >
+      Phase 9 touched no status code or status test. TC-LSTATUS-001..003
+      (tests/behaviour/dispatch-status-lane-push.test.ts,
+      tests/conformance/dispatch/dispatch-operator-status.test.ts,
+      tests/golden/dispatch-status-worktree.test.ts) are green in the battery.
+  - id: AC-F6-1
+    verdict: satisfied
+    evidence: >
+      doc/spec/features/feature-quality-gates-and-pr.md:47 and :97,
+      doc/guides/engine-first-operations.md:348-359,
+      doc/spec/features/feature-dispatch-engine.md:733-737,
+      doc/spec/features/feature-delivery-lifecycle.md:47, and
+      doc/guides/change-lifecycle.md:435-439 (reworded by phase 9 to a
+      conditional outcome) carry the four declarations the criterion names.
+prior_findings_disposition:
+  - id: F-1
+    status: closed
+    evidence: >
+      Shim probe, real-git suite, mutation M1; spec v1.6 and ruling R17
+      absorbed the scope.
+  - id: F-2
+    status: closed
+    evidence: >
+      tests/behaviour/dispatch-lane-push-real-git.test.ts (TC-LGIT-001), 14
+      cases under a blocked network; nine fail on the old argv.
+  - id: F-3
+    status: closed
+    evidence: "Live count through the production composition (fold suite :483)."
+  - id: F-4
+    status: closed
+    evidence: >
+      Per-cause classification and the overflow arm (fold suite :216 and :244).
+  - id: F-5
+    status: closed
+    evidence: >
+      Six validator-level refusals beside an accepted record (record suite
+      :165-263); this review's own validator probe.
+  - id: F-6
+    status: closed
+    evidence: >
+      Plan revision v1.7 declares the eight paths in phases 3, 5 and 8. The
+      scope audit finds 122 of the 127 changed paths declared; the other five
+      are the change's own planning artifacts (the plan file and the four
+      readiness-review records).
+  - id: F-7
+    status: closed
+    evidence: >
+      Real git text through the default runner and the 111-text corpus: the
+      four intended changes and no other.
+  - id: F-8
+    status: closed
+    evidence: >
+      packages/core/src/domain/dispatch-prompt.ts:58 and
+      doc/guides/change-lifecycle.md:439, both pinned.
+  - id: F-9
+    status: open-by-ruling-R17
+    evidence: >
+      Positional bindings remain at push.ts:110 and
+      dispatch-lane-push.ts:26. Not blocking: the array order is pinned
+      (dispatch-contract-invariance test :294) and every token is asserted by
+      name, so a reorder cannot relabel a cause silently.
+  - id: F-10
+    status: partial-by-disclosure
+    evidence: >
+      The oversize and failed-append arms are delivered (command suite :197
+      and :213; record suite :224). The diagnostic channel was not delivered
+      and is disclosed in the pm-notes; no acceptance criterion requires it.
+      Ruling R17 named that diagnostic for phase 9 and, unlike F-9, its
+      non-delivery has no PM disposition line of its own yet.
+  - id: F-11
+    status: closed
+    evidence: "Spec v1.6 section 14, F-4, section 10 and Flow 3."
+  - id: F-12
+    status: closed
+    evidence: >
+      Sentence pins with planted mutations (lane-push-surfaces :57, :87 and
+      :118).
+  - id: F-13
+    status: closed
+    evidence: "The changeset's sentence now names two homes."
