@@ -351,6 +351,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "resolveDispatchDivergence",
     "writeDispatchAuthority",
   ],
+  "core/src/app/dispatch-lane-push.ts": ["runDispatchLanePush"],
   "adapters/src/file/dispatch-authority.ts": [
     "dispatchAuthorityDocumentName",
     "dualRunDispatchAuthority",
@@ -366,6 +367,13 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "ensureDispatchIdentityMarkerText",
     "readDispatchIdentityMarkerText",
     "replaceDispatchIdentityMarkerText",
+  ],
+  "core/src/domain/dispatch-lane-push.ts": [
+    "lanePushEvidenceRefsOf",
+    "lanePushFactOf",
+    "lanePushVerdictOfAct",
+    "newestLanePushForAttempt",
+    "resolveLanePushBranch",
   ],
   "core/src/domain/dispatch-resume.ts": [
     "DISPATCH_RESTART_SCOPES",
@@ -2452,6 +2460,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/state/driver/strategy.ts": ["createJsonlStrategy", "createSqliteStrategy"],
   "cli/src/classify.ts": ["classifyDomainKind", "classifyThrown", "resolveAppErrorCode"],
   "cli/src/commands/config.ts": ["createConfigCommandDefinition"],
+  "cli/src/commands/push.ts": ["createPushCommandDefinition"],
   "cli/src/commands/commit.ts": ["createCommitCommandDefinition", "planPhaseForLifecycle"],
   "cli/src/commands/closeout.ts": ["createCloseoutCommandDefinition"],
   "cli/src/commands/db.ts": ["createDbCommandDefinition"],
@@ -2615,6 +2624,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "resolveHarnessAdmissionBinding",
     "resolveProfileContextFrom",
   ],
+  "cli/src/output/push-text.ts": ["renderPushText"],
   "cli/src/output/commit-text.ts": ["renderCommitHuman"],
   "cli/src/output/plan-text.ts": [
     "serializePlanDiffText",

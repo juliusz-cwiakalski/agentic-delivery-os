@@ -1342,6 +1342,14 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     ],
     "provider",
   ),
+  // GH-416: the lane-push command is the twenty-ninth and last family.
+  m4PageEntry("push")(
+    ["push"],
+    "Push the change branch's head fast-forward once, record the lane's own act, and answer the verdict",
+    ["<binary> push <ref>"],
+    [],
+    ["<binary> push GH-242"],
+  ),
 ];
 
 const ALL_HELP: readonly HelpEntry[] = [ROOT_HELP, ...COMMAND_HELP];

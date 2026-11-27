@@ -399,3 +399,24 @@ notes:
       the conditional contracts/push.ts and inventory.json were not needed."
     type: info
     date: "2026-11-27"
+  - text: "Plan phase 2 complete (the push seam's closed refusal cause): commit
+      b049c408d. The seam's non-zero exit now classifies git's bounded failure
+      text into non-fast-forward, auth-rejected, remote-unavailable,
+      protected-ref (a server-side protection or hook decline), or the honest
+      unclassified fallback; the tokens are imported from
+      DISPATCH_PUSH_RECORDABLE_CAUSES, never re-typed. The guard literals
+      unsafe-branch/protected-ref, the four exported names, the outcome union,
+      the fixed argv, the non-shell spawn, and the 60 000 ms budget are
+      unchanged; the raw text never leaves the seam. New seam-level suite
+      dispatch-lane-push-causes (16 pass): seven recordable outcomes each one
+      child and one closed cause, spawn-failed maps to failed, timed-out keeps
+      its member-less shape, locale-flavoured and URL/token text classified
+      away, guard rejection with zero children for unsafe and each protected
+      member, and the engine arm (two different causes leave verdict, evidence,
+      exit, comparison, push block identical, no cause in the envelope). The
+      existing parity suite gained an additive class table. Tests: typecheck
+      green; new suite 16 pass / 0 fail; GH-386 suites 53 pass / 0 fail;
+      check:no-shell clean (45 surface files) and no-shell-dispatch 14 pass;
+      git diff --check clean. Only the declared paths changed."
+    type: info
+    date: "2026-11-27"

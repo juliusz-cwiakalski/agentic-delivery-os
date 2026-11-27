@@ -422,11 +422,12 @@ const IDENTITY_ROWS: readonly IdentityRow[] = [
       "names neither the bin nor the composition in either of its delivery arrays",
       "then the neutral `delivery-os` default used only for self-description when neither source yields a name",
       "exactly the declared five-site inventory",
+      "twenty-eight families",
     ],
     required: [
       "two executables",
       "exactly the declared five-site product-surface inventory, plus the one declared build-side site under `scripts/` registered with its own scan root",
-      "twenty-eight families",
+      "twenty-nine families",
       "one shared launcher composition",
       "The invoking bin's declared default working name",
       "`--print-install-path`",
@@ -691,10 +692,11 @@ const GH346_ROWS: readonly PageClaimRow[] = [
       "twenty-five families",
       "twenty-six families",
       "twenty-seven families",
+      "twenty-eight families",
       "exactly the declared five-site inventory",
     ],
     required: [
-      "twenty-eight families",
+      "twenty-nine families",
       "exactly the declared five-site product-surface inventory, plus the one declared build-side site under `scripts/` registered with its own scan root",
       "install.identity.not-owning",
       "compile-time constant",
@@ -777,13 +779,14 @@ const GH346_ROWS: readonly PageClaimRow[] = [
       "family count (25)",
       "family count (26)",
       "family count (27)",
+      "family count (28)",
     ],
     required: [
       "173 entries",
       "172 delivered rows",
       "72 allowlisted two-segment codes",
       "BASELINE_ROWS.length + 139",
-      "family count (28)",
+      "family count (29)",
     ],
   },
   {
@@ -1521,7 +1524,7 @@ describe("GH-350 phase 7 the config page carries the watch freshness row", () =>
 
 /**
  * GH-350 phase 8 — the family mount: the count-bearing pages state
- * twenty-eight families: `loop` twenty-seventh, `provider` last, `install` the twenty-sixth,
+ * twenty-nine families: `loop` twenty-seventh, `provider` 28th, `push` last, `install` the twenty-sixth,
  * the reference page carries its required self-description flags and all seven
  * members, and the delivered ordinals are unchanged (TC-MOUNT-009's ordinal
  * half of AC-F8-3).
@@ -1546,13 +1549,15 @@ const GH350_PHASE8_ROWS: readonly GH350Row[] = [
     stale: [
       "twenty-six families",
       "twenty-seven families",
+      "twenty-eight families",
       "the twenty-sixth and last prompt-required family",
+      "The `provider` family is the twenty-eighth and last prompt-required family, appended after `loop`",
       "(`config`, `provider`, `db`, `watchdog`)",
     ],
     required: [
-      "twenty-eight families",
+      "twenty-nine families",
       "The `loop` family is the twenty-seventh prompt-required family, appended after `install`",
-      "The `provider` family is the twenty-eighth and last prompt-required family, appended after `loop`",
+      "The `provider` family is the twenty-eighth prompt-required family, appended after `loop`",
       "ProviderComposition",
       "`provider resolve`, `quota`, `parks list`, `profile resolve`, `watch status`, `simulate`, and `migrate legacy`",
       "the twenty-sixth prompt-required family",
@@ -1560,43 +1565,57 @@ const GH350_PHASE8_ROWS: readonly GH350Row[] = [
   },
   {
     page: "doc/spec/features/feature-install-lifecycle.md",
-    stale: ["exactly 26", "at exactly 26 families", "exactly 27", "at exactly 27 families"],
-    required: ["exactly 28", "at exactly 28 families", "the twenty-sixth prompt-required family"],
+    stale: [
+      "exactly 26",
+      "at exactly 26 families",
+      "exactly 27",
+      "at exactly 27 families",
+      "exactly 28",
+      "at exactly 28 families",
+    ],
+    required: ["exactly 29", "at exactly 29 families", "the twenty-sixth prompt-required family"],
   },
   {
     page: "doc/spec/features/feature-metrics.md",
     stale: [
       "family count (26)",
       "family count (27)",
+      "family count (28)",
       "24-family mount",
+      "28-family mount",
       "family-count pins read 24",
+      "family-count pins read 28",
     ],
     required: [
-      "family count (28)",
-      "28-family mount",
-      "family-count pins read 28",
+      "family count (29)",
+      "29-family mount",
+      "family-count pins read 29",
       "twenty-fourth prompt-required command family",
     ],
   },
   {
     page: "doc/00-index.md",
-    stale: ["twenty-six-family prompt-required set", "twenty-seven-family prompt-required set"],
-    required: [
+    stale: [
+      "twenty-six-family prompt-required set",
+      "twenty-seven-family prompt-required set",
       "twenty-eight-family prompt-required set",
+    ],
+    required: [
+      "twenty-nine-family prompt-required set",
       "the twenty-sixth prompt-required `install` family",
     ],
   },
   {
     page: "doc/overview/glossary.md",
-    stale: ["twenty-six families", "twenty-seven families"],
-    required: ["twenty-eight families", "`supervise`, `install`, `loop`, and `provider`"],
+    stale: ["twenty-six families", "twenty-seven families", "twenty-eight families"],
+    required: ["twenty-nine families", "`supervise`, `install`, `loop`, `provider`, and `push`"],
   },
   {
     page: "doc/planning/oss-tooling/cli-command-registry.md",
     stale: ["Delivered subcommands: `resolve` (one chain decision", "with eight skip reasons"],
     required: [
-      "Mounted as the 28th and last prompt-required family",
-      "the prompt-required inventory is exactly 28 with `loop` 27th and `provider` last",
+      "Mounted as the 28th prompt-required family",
+      "the prompt-required inventory is exactly 29 with `loop` 27th, `provider` 28th, and `push` last",
       "`simulate --fixture <path>`",
       "`migrate legacy",
       "nine skip reasons",
@@ -1617,7 +1636,7 @@ const GH350_PHASE8_ROWS: readonly GH350Row[] = [
       "provider.budget.exceeded",
       "provider.migrate.refused",
       "input.value.rejected",
-      "the twenty-eighth and last prompt-required command family",
+      "the twenty-eighth prompt-required command family",
     ],
   },
 ];
@@ -1733,12 +1752,12 @@ describe("GH-350 phase 8 the mount pages state the delivered truth", () => {
     const missing = (page: string): string | undefined =>
       page === "doc/spec/features/feature-cli-entrypoint.md"
         ? (pageText(page) ?? "").replace(
-            "The `provider` family is the twenty-eighth and last prompt-required family",
+            "The `provider` family is the twenty-eighth prompt-required family",
             "The provider family is registered",
           )
         : pageText(page);
     expect(gh350Phase8Violations(GH350_PHASE8_ROWS, missing).join("\n")).toContain(
-      "missing required phrase: The `provider` family is the twenty-eighth and last",
+      "missing required phrase: The `provider` family is the twenty-eighth prompt-required family",
     );
   });
 
@@ -1938,7 +1957,7 @@ const GH350_PHASE9_ROWS: readonly GH350Row[] = [
     required: [
       "**F2 evidence pointer (GH-350).**",
       "provider simulate --fixture <path>",
-      "twenty-eighth and last prompt-required one",
+      "twenty-eighth prompt-required one",
       "each evaluated on",
       "the mount/reachability/coverage suites, GH-350",
     ],
@@ -2315,22 +2334,28 @@ const GH350_TRUTH_ROWS: readonly GH350Row[] = [
       "the twenty-seventh and last prompt-required one",
       "the twenty-seventh and last prompt-required family",
       "the 27-family mount",
-    ],
-    required: [
       "the twenty-eighth and last prompt-required one, after `loop`",
       "the twenty-eighth and last prompt-required family, after",
       "the 28-family mount",
     ],
+    required: [
+      "the twenty-eighth prompt-required one, after `loop`",
+      "the twenty-eighth prompt-required family, after",
+      "the 29-family mount",
+    ],
   },
   {
     page: "doc/spec/features/feature-board.md",
-    stale: ["27-family counts"],
-    required: ["28-family counts"],
+    stale: ["27-family counts", "28-family counts"],
+    required: ["29-family counts"],
   },
   {
     page: "doc/quality/test-specs/test-spec-loop-supervision.md",
-    stale: ["the prompt-required set at 27 families with `loop` last"],
-    required: ["the prompt-required set at 28 families with `provider` last and `loop` 27th"],
+    stale: [
+      "the prompt-required set at 27 families with `loop` last",
+      "the prompt-required set at 28 families with `provider` last and `loop` 27th",
+    ],
+    required: ["the prompt-required set at 29 families with `push` last, `provider` 28th, and `loop` 27th"],
   },
 ];
 
@@ -2370,7 +2395,7 @@ export const gh350TruthViolations = (
   return failures;
 };
 
-describe("GH-350 documentation truth: the mount pages state 28 families", () => {
+describe("GH-350 documentation truth: the mount pages state 29 families", () => {
   const pageText = (page: string): string | undefined => {
     try {
       return read(page);
@@ -2379,11 +2404,11 @@ describe("GH-350 documentation truth: the mount pages state 28 families", () => 
     }
   };
 
-  test("the three declared pages state the 28-family truth", () => {
+  test("the three declared pages state the 29-family truth", () => {
     expect(gh350TruthViolations(GH350_TRUTH_ROWS, pageText)).toEqual([]);
   });
 
-  test("a reintroduced 27 form and a missing 28 form each fail by name", () => {
+  test("a reintroduced 28 form and a missing 29 form each fail by name", () => {
     const stale = (page: string): string | undefined =>
       page === "doc/spec/features/feature-board.md"
         ? `${pageText(page) ?? ""}\nthe 27-family counts\n`
@@ -2393,10 +2418,10 @@ describe("GH-350 documentation truth: the mount pages state 28 families", () => 
     );
     const missing = (page: string): string | undefined =>
       page === "doc/spec/features/feature-provider-engine.md"
-        ? (pageText(page) ?? "").replace("the 28-family mount", "the current mount")
+        ? (pageText(page) ?? "").replaceAll("the 29-family mount", "the current mount")
         : pageText(page);
     expect(gh350TruthViolations(GH350_TRUTH_ROWS, missing).join("\n")).toContain(
-      "missing required phrase: the 28-family mount",
+      "missing required phrase: the 29-family mount",
     );
   });
 

@@ -102,7 +102,7 @@ split, the `provider.profiles.watch.<name>.maxAgeSeconds` freshness bound with
 `watch-stale`, `provider simulate --fixture <path>` for offline policy replay
 with zero state writes, `provider migrate legacy` as the guided import that
 takes the hook off the delivery path, and the family mounted as the
-twenty-eighth and last prompt-required one. The bar below is evidenced by the
+twenty-eighth prompt-required one; GH-416's `push` is the twenty-ninth and last. The bar below is evidenced by the
 simulation fixtures, the migration refusal battery, and the mount,
 reachability, and coverage suites delivered with GH-350.
 

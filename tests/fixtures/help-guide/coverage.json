@@ -34,7 +34,8 @@
     "doc/planning/oss-tooling/milestones/m2/commands/supervise.md",
     "doc/planning/oss-tooling/milestones/m4/commands/install.md",
     "doc/planning/oss-tooling/milestones/m4/commands/loop.md",
-    "doc/planning/oss-tooling/milestones/m1/commands/provider.md"
+    "doc/planning/oss-tooling/milestones/m1/commands/provider.md",
+    "doc/planning/oss-tooling/milestones/m4/commands/push.md"
   ],
   "commands": [
     "status",
@@ -64,6 +65,7 @@
     "supervise",
     "install",
     "loop",
-    "provider"
+    "provider",
+    "push"
   ]
 }

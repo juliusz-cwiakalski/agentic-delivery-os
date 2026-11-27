@@ -1638,3 +1638,23 @@ export {
   type MetricsLedgerEvidence,
   readMetricsLedger,
 } from "./state/metrics-reads.js";
+// GH-416: the lane's own evidence push (use case + pure rules).
+export {
+  type DispatchLanePushAnswered,
+  type DispatchLanePushPorts,
+  type DispatchLanePushRefusal,
+  type DispatchLanePushResult,
+  type LanePushBranchFact,
+  type LanePushIdentity,
+  runDispatchLanePush,
+} from "./app/dispatch-lane-push.js";
+export {
+  type LanePushActVerdict,
+  type LanePushRefusalReason,
+  type LanePushResolution,
+  lanePushEvidenceRefsOf,
+  lanePushFactOf,
+  lanePushVerdictOfAct,
+  newestLanePushForAttempt,
+  resolveLanePushBranch,
+} from "./domain/dispatch-lane-push.js";

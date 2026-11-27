@@ -123,6 +123,7 @@ import type {
 import {
   type AuthorityEvidence,
   aggregateProjectMemberOutcomes,
+  appendDispatchLanePush,
   artifactAdvancedSince,
   assembleHarnessLiveness,
   bindingEnvironmentRecords,
@@ -237,6 +238,7 @@ import {
   resolveQueueSettings,
   reversibilityOf,
   runDispatchTrackerLadder,
+  runDispatchLanePush,
   type SupervisionEconomicsWritePort,
   type SupervisionRestartAdmission,
   selectDaemonReachability,
@@ -398,6 +400,7 @@ import type {
   ProjectsRuntimeRead,
 } from "./commands/projects.js";
 import type { ReposRuntimeRead } from "./commands/repos.js";
+import type { PushCommandRuntime } from "./commands/push.js";
 import { createDaemonCommandRuntime, resolveProjectDaemonSettings } from "./daemon-compose.js";
 import {
   type ConfigProgramOptions,
@@ -6880,6 +6883,56 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         readDaemonConfiguration(checkoutRoot)?.restartBound ??
         PRODUCTION_DEFAULTS.lane["restart-budget"]);
 
+    // GH-416 — the lane's own evidence push. One use case over the delivered
+    // reads (pm-notes declaration, local branches, checkout head, durable lane
+    // identity) and the delivered push seam; the record is appended under the
+    // store fence. No configuration key exists on any path.
+    const lanePushSeam = createGitPushSeam({
+      cwd,
+      ...(facts.gitPushRunner === undefined ? {} : { childRunner: facts.gitPushRunner }),
+    });
+    const readChangeBranchDeclaration = (changeRef: string): string | undefined => {
+      const read = readPmNotesText({ changeRef, changesDirectory, fs: notesFs });
+      if (!read.ok) return undefined;
+      const value = read.value;
+      if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+      const branch = (value as { readonly branch?: unknown }).branch;
+      return typeof branch === "string" && branch.length > 0 ? branch : undefined;
+    };
+    const pushRuntime: PushCommandRuntime = {
+      run: (changeRef) =>
+        runDispatchLanePush(
+          {
+            repository: resolveProductionRepository(undefined, { persist: false }) ?? "",
+            readBranchDeclaration: readChangeBranchDeclaration,
+            listBranches: (input) =>
+              gitBranches.listBranches({ workItemRef: input.workItemRef }),
+            readCheckoutHead: async (branch) => {
+              const checkout = await gitBranches.readCheckout({
+                baseRef: CLOSEOUT_INTEGRATION_BASE,
+                deliveryBranch: branch,
+              });
+              return checkout.head;
+            },
+            readLaneIdentity: (ref) => {
+              const lanes = readDispatchLanes(store);
+              if (!lanes.ok) return undefined;
+              const latest = latestDispatchLaneFor(lanes.records, ref);
+              return latest === undefined
+                ? undefined
+                : { attemptId: latest.attemptId, sessionId: latest.sessionId };
+            },
+            pushChangeBranch: (input) => lanePushSeam.pushChangeBranch({ branch: input.branch }),
+            appendRecord: (record) => {
+              const appended = appendDispatchLanePush(store, newFenceToken(), record);
+              return { ok: appended.ok };
+            },
+            nowIso,
+          },
+          { ref: changeRef },
+        ),
+    };
+
     const configured: ConfigProgramOptions = {
       workingName: facts.workingName,
       environment,
@@ -6896,6 +6949,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       plan: { changesDirectory, fs: notesFs, readDiff: plan.readDiff },
       phase: committedPhaseRuntime,
       commit: commitOptions,
+      push: pushRuntime,
       // The provider family is registered unconditionally through the delivered
       // config program (GH-350 F-8, TDR-0063): the six declared
       // `ProviderComposition` seams and the Intl-backed zone binder are supplied

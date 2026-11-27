@@ -11,6 +11,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { createGuardedRunner } from "../fixtures/dispatch/parity/process-runner";
 import {
   createGitPushSeam,
   type GitPushChildRunner,
@@ -265,5 +266,111 @@ describe("GH-416 the engine's parity act consumes the outcome only (NG-3)", () =
     // Exactly one engine push invocation per classification; no retry.
     expect(first.invocations.filter((entry) => entry.seam === "push")).toHaveLength(1);
     expect(second.invocations.filter((entry) => entry.seam === "push")).toHaveLength(1);
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* The command-path arms (phase 3): each recordable cause names itself in the  */
+/* answer and in one durable record; `unsafe-branch` never reaches a record.   */
+/* ------------------------------------------------------------------------- */
+
+const HEAD40 = "0123456789abcdef0123456789abcdef01234567";
+
+const runCommandPush = async (
+  push: () => GitPushRunnerResult,
+): Promise<{
+  readonly exit: number;
+  readonly lanePush: Record<string, unknown>;
+  readonly pushes: number;
+  readonly records: readonly unknown[];
+}> => {
+  const guarded = createGuardedRunner({ head: HEAD40, push });
+  const harness = createParityHarness({
+    label: "lane-push-causes-command",
+    localHead: HEAD40,
+    guarded,
+    transport: readableParityTransport(),
+  });
+  try {
+    const run = await harness.run(["push", "GH-347", "--json"]);
+    const raw = harness.store.readRecords();
+    const records =
+      raw.ok === true
+        ? raw.value.records
+            .filter((record) => record.kind === "dispatch.lane-push")
+            .map((record) => record.payload)
+        : [];
+    const data = run.envelope?.data as
+      | { readonly lanePush?: Record<string, unknown> }
+      | undefined;
+    return {
+      exit: run.exit,
+      lanePush: data?.lanePush ?? {},
+      pushes: guarded.pushes,
+      records,
+    };
+  } finally {
+    harness.dispose();
+  }
+};
+
+describe("GH-416 the command records each of the seven causes (TC-LCAUSE-001)", () => {
+  const cases: readonly {
+    readonly cause: string;
+    readonly result: () => GitPushRunnerResult;
+  }[] = [
+    {
+      cause: "non-fast-forward",
+      result: () => ({ stdout: "", stderr: "! [rejected] (non-fast-forward)", status: 1, timedOut: false }),
+    },
+    {
+      cause: "auth-rejected",
+      result: () => ({ stdout: "", stderr: "fatal: Authentication failed", status: 128, timedOut: false }),
+    },
+    {
+      cause: "remote-unavailable",
+      result: () => ({ stdout: "", stderr: "fatal: Could not resolve host: example.invalid", status: 128, timedOut: false }),
+    },
+    {
+      cause: "protected-ref",
+      result: () => ({
+        stdout: "",
+        stderr: "remote rejected (protected branch hook declined)",
+        status: 1,
+        timedOut: false,
+      }),
+    },
+    {
+      cause: "unclassified",
+      result: () => ({ stdout: "", stderr: "unrecognised wording", status: 1, timedOut: false }),
+    },
+    {
+      cause: "spawn-failed",
+      result: () => ({ stdout: "", stderr: "", status: 1, timedOut: false, spawnFailed: true }),
+    },
+    {
+      cause: "timed-out",
+      result: () => ({ stdout: "", stderr: "", status: 1, timedOut: true }),
+    },
+  ];
+
+  for (const entry of cases) {
+    test(`${entry.cause}: failed verdict, one child, one record with the cause`, async () => {
+      const run = await runCommandPush(entry.result);
+      expect(run.exit).toBe(1);
+      expect(run.lanePush.verdict).toBe("failed");
+      expect(run.lanePush.cause).toBe(entry.cause);
+      expect(run.lanePush.recorded).toBe(true);
+      expect(run.pushes).toBe(1);
+      expect(run.records).toHaveLength(1);
+      expect((run.records[0] as { readonly cause?: string }).cause).toBe(entry.cause);
+    });
+  }
+
+  test("`unsafe-branch` is never a record's cause", async () => {
+    for (const entry of cases) {
+      const run = await runCommandPush(entry.result);
+      expect((run.records[0] as { readonly cause?: string }).cause).not.toBe("unsafe-branch");
+    }
   });
 });

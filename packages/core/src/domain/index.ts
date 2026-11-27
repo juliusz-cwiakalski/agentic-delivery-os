@@ -1323,3 +1323,18 @@ export {
   type SupervisionClassification,
   summarizeSupervision,
 } from "./supervise.js";
+/**
+ * The pure lane-push rules (GH-416 F-1, F-3, F-5; DM-1..DM-5): the structural
+ * branch resolution, the act-to-record mapping, the evidence references, the
+ * newest-matching-record selection, and the record-to-status projection.
+ */
+export {
+  type LanePushActVerdict,
+  type LanePushRefusalReason,
+  type LanePushResolution,
+  lanePushEvidenceRefsOf,
+  lanePushFactOf,
+  lanePushVerdictOfAct,
+  newestLanePushForAttempt,
+  resolveLanePushBranch,
+} from "./dispatch-lane-push.js";

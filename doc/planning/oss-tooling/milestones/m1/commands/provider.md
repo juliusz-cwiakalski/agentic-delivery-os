@@ -28,7 +28,7 @@ announcements. Model hosts only (tracker, VCS, and CI providers are adapters,
 not this family). Credentials resolve through the credential port, never direct
 environment reads.
 
-The family is the twenty-eighth and last prompt-required command family. It
+The family is the twenty-eighth prompt-required command family; GH-416's `push` is the twenty-ninth and last. It
 answers `--help` from the static help inventory and `--version` as the
 identity-only read, and every member below is reachable through the installed
 product binary.

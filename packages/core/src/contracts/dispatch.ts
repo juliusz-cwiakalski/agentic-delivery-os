@@ -854,6 +854,17 @@ export type DispatchLanePushRecord = {
   readonly recordedAt: string;
 };
 
+/**
+ * The bounded push-seam outcome the lane-push command consumes (DM-5). The
+ * shape is the delivered seam's outcome union; the owned command maps it to the
+ * lane-push verdict and one closed cause.
+ */
+export type DispatchLanePushActOutcome =
+  | { readonly outcome: "accepted" }
+  | { readonly outcome: "rejected"; readonly detail: string }
+  | { readonly outcome: "failed"; readonly detail: string }
+  | { readonly outcome: "timed-out" };
+
 /** The lane's own push fact on the `push` answer (DM-5, §8.1). */
 export type PushLanePushFact = {
   readonly verdict: DispatchLanePushVerdict;

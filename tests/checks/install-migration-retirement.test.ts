@@ -134,8 +134,8 @@ describe("TC-MIGRATE-011 the retired identity and the retired flag form", () => 
 });
 
 describe("TC-MIGRATE-012 the family surface and the prompt-required inventory", () => {
-  test("the prompt-required inventory stays 28 with install in place", () => {
-    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(28);
+  test("the prompt-required inventory stays 29 with install in place", () => {
+    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(29);
     expect(PROMPT_REQUIRED_COMMANDS).toContain("install");
   });
 

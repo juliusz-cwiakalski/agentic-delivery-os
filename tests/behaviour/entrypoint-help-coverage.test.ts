@@ -177,6 +177,7 @@ describe("TC-ENTRY-004 help coverage", () => {
         "install",
         "loop",
         "provider",
+        "push",
       ].sort(),
     );
   });

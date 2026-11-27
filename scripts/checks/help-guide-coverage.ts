@@ -49,6 +49,8 @@ const pageFor = (command: string): string => {
   // GH-348: the loop family documents itself in the same M4 root; the M1
   // snapshot root must never serve it.
   if (command === "loop") return `${M4_PAGE_ROOT}/loop.md`;
+  // GH-416: the lane-push command documents itself in the M4 root.
+  if (command === "push") return `${M4_PAGE_ROOT}/push.md`;
   return `${PAGE_ROOT}/${command}.md`;
 };
 

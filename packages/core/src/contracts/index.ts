@@ -1153,6 +1153,7 @@ export {
   type DispatchHandoverState,
   type DispatchLaneFacts,
   type DispatchLaneOwner,
+  type DispatchLanePushActOutcome,
   type DispatchLanePushRecord,
   type DispatchLanePushVerdict,
   type DispatchLaneRecord,

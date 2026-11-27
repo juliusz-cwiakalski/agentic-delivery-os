@@ -65,7 +65,7 @@ Upgrade is not a verb: it is an install of a different compiled artifact, so the
   - Self-containment: `--version`, `--help`, and one composed command succeed from an empty directory with a scrubbed `PATH` and no checkout: 3/3.
   - Identity truth: the four declared token situations resolve exactly: 4/4.
   - Read-free self-description: 0 state, git, configuration, and network reads and 0 writes on `--version`, `--help`, and `--print-install-path`.
-  - Prompt-required families: exactly 28, identical in content and order in both bins.
+  - Prompt-required families: exactly 29, identical in content and order in both bins.
   - Lifecycle entry points reachable through the composed program: 6/6 (the family root and its five subcommands).
   - Writes performed by a refused install: 0.
   - Crash points that leave a runnable artifact at a known path: 7/7 replace steps.
@@ -264,7 +264,7 @@ Neither surface deletes the other's artifacts, and each names the other when the
 
 ### 3.14 Declared conformance surface and error rows
 
-The family moves the whole conformance surface in one shape: the prompt-required membership at exactly 28 families: `install` is the twenty-sixth, GH-348's `loop` the twenty-seventh, and GH-350's `provider` the twenty-eighth and last, with every pinned family count and family-tail position in the structural and behavioural suites; the root, family, and subcommand help entries; the reference page at `doc/planning/oss-tooling/milestones/m4/commands/install.md` containing both `--help` and `--version`; the help-coverage page-root branch placing that page in the M4 directory, because the default M1 root must not serve a new family; the help-guide coverage inventory in both directions; one `install` error domain kind with its ten rows, documented on the [result contract](feature-result-contract.md), with the closed two-segment allowlist at 72 declared identities and the declared table total at 173 machine identities; and one declared build-side identity-literal site with the product-surface inventory unchanged at five sites ([Branding Seam](feature-branding-seam.md)).
+The family moves the whole conformance surface in one shape: the prompt-required membership at exactly 29 families: `install` is the twenty-sixth, GH-348's `loop` the twenty-seventh, GH-350's `provider` the twenty-eighth, and GH-416's `push` the twenty-ninth and last, with every pinned family count and family-tail position in the structural and behavioural suites; the root, family, and subcommand help entries; the reference page at `doc/planning/oss-tooling/milestones/m4/commands/install.md` containing both `--help` and `--version`; the help-coverage page-root branch placing that page in the M4 directory, because the default M1 root must not serve a new family; the help-guide coverage inventory in both directions; one `install` error domain kind with its ten rows, documented on the [result contract](feature-result-contract.md), with the closed two-segment allowlist at 72 declared identities and the declared table total at 173 machine identities; and one declared build-side identity-literal site with the product-surface inventory unchanged at five sites ([Branding Seam](feature-branding-seam.md)).
 
 The ten rows are all category `user`, non-retryable, consequence `not_landed`, projection `user-validation` (exit `1`):
 

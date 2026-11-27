@@ -44,21 +44,22 @@ const DELIVERED = [
 
 describe("TC-EVT-060 events production composition", () => {
   test("events is prompt-required exactly once and the delivered families survive", () => {
-    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(28);
+    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(29);
     expect(PROMPT_REQUIRED_COMMANDS.filter((name) => name === "events")).toHaveLength(1);
     for (const name of DELIVERED) expect(PROMPT_REQUIRED_COMMANDS).toContain(name);
     // GH-299 appends metrics after steer, GH-295 appends supervise, GH-346
     // appends install, GH-348 appends loop, and GH-350 appends provider, so the
     // delivered tail keeps its order three positions earlier.
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 9]).toBe("events");
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 8]).toBe("board");
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 7]).toBe("ceremony");
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 6]).toBe("steer");
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 5]).toBe("metrics");
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 4]).toBe("supervise");
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 3]).toBe("install");
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 2]).toBe("loop");
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 1]).toBe("provider");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 10]).toBe("events");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 9]).toBe("board");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 8]).toBe("ceremony");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 7]).toBe("steer");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 6]).toBe("metrics");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 5]).toBe("supervise");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 4]).toBe("install");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 3]).toBe("loop");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 2]).toBe("provider");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 1]).toBe("push");
   });
 
   test("the production composer supplies the runtime with every optional input absent", () => {
@@ -79,7 +80,7 @@ describe("TC-EVT-060 events production composition", () => {
       expect(events?.positionals).toEqual({ max: 2 });
       expect(events?.flags).toBeUndefined();
       const selected = selectPromptRequiredProgram(program);
-      expect(Object.keys(selected.commands)).toHaveLength(28);
+      expect(Object.keys(selected.commands)).toHaveLength(29);
       expect(selected.commands.events).toBeDefined();
     } finally {
       rmSync(root, { recursive: true, force: true });

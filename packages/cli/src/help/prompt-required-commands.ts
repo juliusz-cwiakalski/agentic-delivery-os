@@ -40,6 +40,8 @@ export const PROMPT_REQUIRED_COMMANDS = [
   "loop",
   // GH-350 appends the provider family as the twenty-eighth and last.
   "provider",
+  // GH-416 appends the lane-push command as the twenty-ninth and last.
+  "push",
 ] as const;
 
 export type PromptRequiredCommand = (typeof PROMPT_REQUIRED_COMMANDS)[number];

@@ -43,6 +43,7 @@ const EXPECTED: readonly PromptRequiredCommand[] = [
   "install",
   "loop",
   "provider",
+  "push",
 ];
 
 const withExtras = (): CommandProgram => {
