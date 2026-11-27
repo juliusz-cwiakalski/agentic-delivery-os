@@ -21,6 +21,7 @@ import {
   type DispatchOperatorRefsTruncation,
   type DispatchProbeVerdict,
   type DispatchStatusData,
+  type DispatchStatusLanePushFact,
   type DispatchStatusParkFact,
 } from "#contracts";
 
@@ -121,6 +122,7 @@ export const buildStatusData = (input: {
   readonly record: DispatchLaneRecord | undefined;
   readonly probe: DispatchProbeVerdict | undefined;
   readonly park?: DispatchStatusParkFact;
+  readonly lanePush?: DispatchStatusLanePushFact;
 }): DispatchStatusData => {
   const record = input.record;
   const verdict = operatorLaneVerdictOf(record?.state, input.probe);
@@ -142,6 +144,9 @@ export const buildStatusData = (input: {
       ? {}
       : { worktreePath: record.worktreePath }),
     ...(input.park === undefined ? {} : { park: input.park }),
+    // The lane's own push fact (GH-416 DM-3): carried verbatim from the newest
+    // matching lane-push record; absent renders exactly as today.
+    ...(input.lanePush === undefined ? {} : { lanePush: input.lanePush }),
   };
 };
 

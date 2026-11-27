@@ -229,6 +229,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "boundLastMessage",
     "dispatchRenewalCadenceMs",
     "harnessRefusalDetail",
+    "lanePushEvidenceRefsForAttempt",
     "runDispatch",
   ],
   "core/src/app/dispatch-gate.ts": [

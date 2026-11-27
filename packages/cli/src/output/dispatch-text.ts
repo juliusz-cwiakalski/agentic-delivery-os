@@ -213,6 +213,18 @@ export const renderDispatchStatusText = (data: DispatchStatusData): string => {
           `parkStoppedAt=${data.park.stoppedAt ?? "none"}`,
           `parkPreservation=${data.park.preservation ?? "none"}`,
         ]),
+    // The lane's own push fact (GH-416 DM-3): additive lines only when present.
+    ...(data.lanePush === undefined
+      ? []
+      : [
+          `lanePush=${data.lanePush.verdict}`,
+          `lanePushBranch=${data.lanePush.branch}`,
+          `lanePushHead=${data.lanePush.head}`,
+          ...(data.lanePush.cause === undefined
+            ? []
+            : [`lanePushCause=${data.lanePush.cause}`]),
+          `lanePushRecordedAt=${data.lanePush.recordedAt}`,
+        ]),
   ];
   return `${lines.join("\n")}\n`;
 };

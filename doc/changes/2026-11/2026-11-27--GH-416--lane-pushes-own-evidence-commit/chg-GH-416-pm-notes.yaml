@@ -451,3 +451,30 @@ notes:
       7 pass; git diff --check clean. Only the declared paths changed."
     type: info
     date: "2026-11-27"
+  - text: "Plan phase 4 complete (the classification fold): commit c30fa06d9.
+      packages/core/src/app/dispatch.ts now exports
+      lanePushEvidenceRefsForAttempt (one bounded read of the lane-push family,
+      repository filter first, newest exact-attempt match) and folds at most two
+      references into the reserved block ahead of the slice, beside the five
+      delivered disclosures. The fold adds evidence references only: no token,
+      outcome, comparison reason, corroboration source, derivation arm, or
+      attempt field. New suite dispatch-lane-push-fold (10 pass): the seven
+      recordable causes each fold lane-push:failed plus their cause; the
+      acceptance fold is lane-push:pushed with no cause beside push:clean; a
+      foreign attempt / no record / foreign repository / torn family each
+      contribute zero and never block classification; exactly one bounded read;
+      disclosure-not-a-claim arms A/B/C (truthful pr-open, the delivered
+      push-parity-unmet row once, an unrewritten stale pushed record); and
+      TC-LPUSH-003 (equal heads, zero engine acts, push:clean and
+      lane-push:pushed once each). dispatch-push-envelope gained the no
+      lane-push/no cause assertion. Tests: typecheck green; fold suite 10 pass;
+      the four-file batch 36 pass; tests/conformance/dispatch 182 pass;
+      invariance/additivity 44 pass; read-only controls 378 pass;
+      dispatch-token-home 7 pass; git diff --check clean. Deviation: the
+      TC-LPUSH-003 classification arm lives in the fold suite (it shares the
+      fixed-attempt runDispatch harness) rather than dispatch-lane-push.test.ts;
+      no conformance registry row was added because the existing fourteen-row
+      registry is a delivered assertion and the fold's attempt binding needs the
+      fixed-attempt harness, so the dedicated suite proves it directly."
+    type: info
+    date: "2026-11-27"
