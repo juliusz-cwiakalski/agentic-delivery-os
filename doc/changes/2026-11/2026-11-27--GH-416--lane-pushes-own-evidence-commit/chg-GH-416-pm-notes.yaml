@@ -12,7 +12,7 @@ phases:
   delivery: { started: null, completed: 2026-11-27T16:44:43.170Z }
   system_spec_update: { started: null, completed: 2026-11-27T17:04:22.517Z }
   review_fix: { started: null, completed: 2026-11-27T19:17:58.569Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-27T19:55:54.138Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -457,6 +457,21 @@ notes:
       read scope is stated where the parser lives."
     type: decision
     date: "2026-11-27"
+  - text: "Quality gates on head 954c8f3a (final): pnpm check exit 0 - 13177 pass, 4
+      skip, 0 fail, 13181 tests across 1571 files; lint, format:check,
+      typecheck, boundaries (531 modules), ambient-globals,
+      workspace-entrypoints, secret-read-boundary (496 files),
+      allowlist-tripwire, memory-lint (0 errors), forbidden-literals (7/7, 0
+      violations), new-code-naming (2559 files, 0 violations), namespace-tree,
+      prompt-conformance (5 clean), help-guide coverage and exports-parity all
+      green. Commit-range gate: VERDICT PASS, base origin/main-tools, merge-base
+      043f66540, head 954c8f3a, 35 commits in range, 0 offending, 0 distinct
+      rules hit, mode none (no remediation), commitlint binary resolved from the
+      repository-local node_modules/.bin. Doc distribution: no drift, 96
+      in-scope docs, install set matches the ados_distribution markers. Tree
+      clean before and after."
+    type: info
+    date: "2026-11-27"
   - text: "Doc-risk inventory for phase 7 (current-truth docs likely to change):
       doc/spec/features/feature-dispatch-engine.md (required behaviour 1/2/4,
       the operator lane view's facts and read posture, the push and
@@ -779,21 +794,21 @@ notes:
       header above pushRemote, trailing text after it, annotated bare `[remote]`
       above pushDefault, branch.remote under an annotated header, annotated
       `[remote \"origin\"]`), an unterminated header refusing despite a declared
-      origin, and one real-git oracle in dispatch-lane-push-real-git where
-      `git config --local --get branch.<b>.pushRemote` and the seam both resolve
+      origin, and one real-git oracle in dispatch-lane-push-real-git where `git
+      config --local --get branch.<b>.pushRemote` and the seam both resolve
       `pushed` and only that bare remote receives the ref. F-15 (silent
       truncation at 64 KiB): the configuration read is now exact - one byte past
-      the cap is read, and a larger file is unresolvable - tested by a
-      >64 KiB config whose pushRemote sits past the cap (refused, zero children)
-      beside the same declaration inside the bound (accepted, argv names
-      `pushed`). F-16: the accepted alphabet `[A-Za-z0-9._/-]` with no leading
-      `-` is documented where REMOTE_NAME_PATTERN lives, including the git-legal
-      names the seam refuses (`fork+oss`, `user@fork`, `a%b`, `a=b`, non-ASCII);
-      the alphabet is not widened. F-17: the real-git ordering probe gains the
+      the cap is read, and a larger file is unresolvable - tested by a >64 KiB
+      config whose pushRemote sits past the cap (refused, zero children) beside
+      the same declaration inside the bound (accepted, argv names `pushed`).
+      F-16: the accepted alphabet `[A-Za-z0-9._/-]` with no leading `-` is
+      documented where REMOTE_NAME_PATTERN lives, including the git-legal names
+      the seam refuses (`fork+oss`, `user@fork`, `a%b`, `a=b`, non-ASCII); the
+      alphabet is not widened. F-17: the real-git ordering probe gains the
       guards-before-read arm - on a checkout with no configured destination an
       unsafe name answers `unsafe-branch` and each protected name
-      `protected-ref`, with zero children. F-18: the changeset now names the argv
-      correction and the engine's first real push, and no longer says the
+      `protected-ref`, with zero children. F-18: the changeset now names the
+      argv correction and the engine's first real push, and no longer says the
       ensure-push stays unchanged. F-19: TDR-0079's four pre-phase-9 `push.ts`
       line ranges cite the module instead, and the executed rows read the
       phase-9 suite set (fifteen suites, 187 pass, 0 fail, 2026-11-27). F-20:
@@ -803,9 +818,9 @@ notes:
       the act outcome in the `pm` agent definition (routed through @toolsmith,
       with the Claude projection regenerated), spec F-4 and AC-F4-1, and the
       quality-gates/PR page sentence that carried the same unconditioned form.
-      F-22: the missing-destination and HTTP-403 wordings now run through
-      `push <ref>` on the command path, and the test plan names the delivered
-      fixture tests/fixtures/dispatch/parity/temp-repo.ts. Verification:
+      F-22: the missing-destination and HTTP-403 wordings now run through `push
+      <ref>` on the command path, and the test plan names the delivered fixture
+      tests/fixtures/dispatch/parity/temp-repo.ts. Verification:
       TMPDIR=$PWD/tmp/tmpdir, targeted battery 281 pass / 0 fail across 19 files
       (the fifteen TDR suites plus doc-conformance, lane-push-surfaces,
       dispatch-token-home and no-shell-dispatch); pnpm typecheck green; biome
