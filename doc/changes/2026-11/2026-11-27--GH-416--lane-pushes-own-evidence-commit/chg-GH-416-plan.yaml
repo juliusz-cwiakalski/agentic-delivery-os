@@ -1,13 +1,18 @@
 # ---------------------------------------------------------------------------
 # GH-416: M4-S45: A lane pushes its own last evidence commit before it stops
 #
-# Plan revision v1.4 (2026-11-27): DoR iteration-2 remediation against spec
-# v1.5 and test plan v1.6 (PM rulings R12..R15). v1.3 was the final sync to
-# spec v1.4 and test plan v1.5 (rulings R7..R11); v1.2 was the DoR iteration-1
+# Plan revision v1.5 (2026-11-27): DoR iteration-3 correction against spec
+# v1.5 and test plan v1.6 (PM ruling R16 and its three wording items). v1.4
+# was the DoR iteration-2 remediation (rulings R12..R15); v1.3 the final sync
+# to spec v1.4 and test plan v1.5 (rulings R7..R11); v1.2 the DoR iteration-1
 # remediation against spec v1.3; v1.0 was authored from spec v1.1 and test
 # plan v1.1, and v1.1 re-checked the plan against their v1.2 corrections.
 # Phase ids, order, kinds, and AC/TC ownership are unchanged from v1.0.
-# v1.4 moves two scope entries:
+# v1.5 moves one scope entry: phase 3 gains
+# doc/quality/test-specs/test-spec-loop-supervision.md (ruling R16: its
+# count sentence and its doc-conformance truth row move with the family's
+# tail).
+# v1.4 moved two scope entries:
 #   - phase 1 loses packages/core/src/contracts/closeout.ts (ruling R12: the
 #     safe-ref predicate's home is the dispatch contract module, and the
 #     closeout contract module stays untouched and declaration-only);
@@ -44,10 +49,11 @@
 #   chg-GH-416-test-plan.md (v1.6 as read in the working tree at 14:13; the
 #   one assumption this plan still makes about it is in the "Test plan
 #   landing" block), 31 cases, this folder;
-#   chg-GH-416-pm-notes.yaml, whose DoR rulings R1..R15 bind this plan, beside
+#   chg-GH-416-pm-notes.yaml, whose DoR rulings R1..R16 bind this plan, beside
 #   its intake decisions, doc-risk inventory, and owner delivery notes;
-#   readiness-review/readiness-iter-1.md and readiness-iter-2.md, whose
-#   plan-routed findings are D1, D4, D5, 2-B1, 2-B2, and 2-B3 below.
+#   readiness-review/readiness-iter-1.md, readiness-iter-2.md, and
+#   readiness-iter-3.md, whose plan-routed findings are D1, D4, D5, 2-B1,
+#   2-B2, 2-B3, and 3-B1 below.
 # Precedent plans read for shape and for pinned-surface discipline:
 #   chg-GH-413-plan.yaml (v1.7: the header fences, the per-phase comments, a
 #   planning finalize phase) and chg-GH-350-plan.yaml (phase 8: the
@@ -110,6 +116,18 @@
 #   - tests/checks/provider-alias-baseline.test.ts:186-209: the alias baseline
 #     is pinned at 28 Commands rows and 27 non-install rows with `provider`
 #     last, and its provenance note at exactly the GH-350 clause.
+#   - doc/quality/test-specs/test-spec-loop-supervision.md:158 (a
+#     `status: Current` page) states "the prompt-required set at 28 families
+#     with `provider` last and `loop` 27th", and the GH350_TRUTH_ROWS row at
+#     tests/checks/doc-conformance.test.ts:2331-2334 requires that exact
+#     phrase. GH-350 moved this sentence from 27 to 28 in commit e1ebc76cf.
+#   - packages/adapters/src/git/push.ts:75-79 and :145-148: `isSafeRef` is
+#     the alphabet check alone and returns true for `main`, `main-tools`,
+#     and `HEAD`; the separate `PROTECTED_REF_NAMES` membership check at
+#     :146 is what refuses them.
+#   - tests/structure/dispatch-token-home.test.ts:66-85: the token-literal
+#     scanner covers every dispatch-named module outside the contracts home
+#     and forbids the literal `failed` there.
 #   - packages/core/src/domain/closeout.ts:337-358: `branchConvention` and
 #     `selectMatchingBranch` return `none | unique | ambiguous`.
 #   - packages/adapters/src/git/index.ts:437-451: the git port's `listBranches`
@@ -296,8 +314,11 @@
 #     depth on both layers and structurally unreachable from a resolved
 #     branch: resolution only ever yields a convention match, which always
 #     contains a slash, and no member of PROTECTED_REF_NAMES is
-#     convention-shaped. It is proven by a direct call of the predicate,
-#     never by faking a selection (R13). `protected-ref` is one token with
+#     convention-shaped. It is proven by a direct call of the command's
+#     guard, the alphabet predicate and the protected-name membership check
+#     together, never by faking a selection (R13): the alphabet predicate
+#     alone accepts the protected members, which is why the set check is a
+#     separate second guard. `protected-ref` is one token with
 #     two sources, of which only a protection or hook decline git reports is
 #     command-reachable: that one is classified from the child act (verdict
 #     `failed`, record appended). The token alone never identifies the
@@ -368,7 +389,8 @@
 # was authored against v1.1; part B holds the plan-routed findings of DoR
 # iteration 1; part C holds what revision v1.2 found; part D holds the
 # plan-routed findings of DoR iteration 2; part E holds what revision v1.4
-# found. Each entry records what
+# found; part F holds the plan-routed finding of DoR iteration 3. Each
+# entry records what
 # was reported, what the plan declared meanwhile, and who routes it. An entry
 # marked CLOSED keeps its text as the record; the others stay open with the PM.
 # Part A:
@@ -533,6 +555,23 @@
 #      leading-dash example is unconstructible. This plan cites no `..`
 #      example, so nothing in it depends on the sentence. Route:
 #      test-plan-writer.
+# Part F, DoR iteration 3 (readiness-review/readiness-iter-3.md):
+#   3-B1 (review finding 1; CLOSED by PM ruling R16; owned by phase 3) The
+#      eleventh count-bearing page. Phase 3's count-and-tail movement
+#      covered ten pages and listed
+#      doc/quality/test-specs/test-spec-loop-supervision.md as "never
+#      edited", although its line 158 states the family at 28 with
+#      `provider` last and a doc-conformance truth row requires that phrase.
+#      Owned: phase 3 declares the page, moves the sentence to the
+#      twenty-ninth tail, and moves its GH350_TRUTH_ROWS row in the same
+#      commit, as GH-350 did from 27 to 28 (commit e1ebc76cf).
+#   Advisories reflected (ruling R16): the protected members are refused by
+#      the command's guard, the alphabet predicate and the set check
+#      together, never by the alphabet predicate alone (the fence, phase 3
+#      step 2, and its exit criterion); phase 1's cause-constant clause no
+#      longer calls protected-set membership the command's pre-act refusal;
+#      tests/structure/dispatch-token-home.test.ts runs as a read-only
+#      control in phases 1, 3, 4, and 5.
 # Still open with the PM: I-7 (reach the artifacts do not name), I-8 (the
 # companion record's id is a declared expectation), and I-9 (the naming
 # lock).
@@ -656,9 +695,10 @@ phases:
     #     recordable child-act causes (`non-fast-forward`, `auth-rejected`,
     #     `remote-unavailable`, `spawn-failed`, `timed-out`, `protected-ref`,
     #     `unclassified`). `protected-ref` is the one token with two sources:
-    #     protected-set membership, the command's pre-act refusal (no child,
-    #     no record), and a protection or hook decline git reports, classified
-    #     from the child act (verdict `failed`, record appended). The token
+    #     protected-set membership, defence in depth that no resolved name
+    #     triggers (proven by a direct call), and a protection or hook decline
+    #     git reports, classified from the child act (verdict `failed`,
+    #     record appended). The token
     #     alone never identifies the source; the layer and the child count
     #     do. `protected-ref` is the delivered literal; no `protected-branch`
     #     alias, mapping, or second spelling is declared anywhere. The seam
@@ -746,6 +786,10 @@ phases:
     # declaration-only pins stay green at the predicate's home, and the
     # seam's guard behaviour is unchanged by the import swap):
     # TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/port-neutrality.test.ts tests/structure/closeout-contract.test.ts tests/behaviour/dispatch-push-parity.test.ts tests/behaviour/dispatch-push-evidence.test.ts tests/conformance/dispatch/dispatch-parity-push.test.ts tests/structure/dispatch-push-envelope.test.ts
+    # Verify (the record's verdict reaches the dispatch-named
+    # packages/core/src/app/dispatch-ledger.ts through the contracts
+    # vocabulary, never as a literal):
+    # TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/dispatch-token-home.test.ts
     # Verify (the two release suites, run early and never edited):
     # TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/privacy-release.test.ts tests/structure/changeset-additivity.test.ts
     # Verify: git diff --check
@@ -983,8 +1027,10 @@ phases:
     #    yields a convention match, `^[a-z][a-z0-9-]*/<ref>/.+$`, which always
     #    contains a slash, and no member of `PROTECTED_REF_NAMES` (`main`,
     #    `main-tools`, `HEAD`) is convention-shaped, so no command-path input
-    #    can trigger it. It is proven by a direct call of the shared predicate
-    #    with each protected member and by a structural pin of that shape
+    #    can trigger it. It is proven by a direct call of the command's guard
+    #    with each protected member, the alphabet predicate and the
+    #    protected-name membership check together (the alphabet predicate
+    #    alone accepts those names), and by a structural pin of that shape
     #    rule, never by faking a branch selection (TC-LRES-004 steps 5 and 6).
     #    The identical private predicate copies in the git index, merge, and
     #    watchdog adapters stay as delivered (PM ruling R10): the predicate is
@@ -1130,8 +1176,16 @@ phases:
     #     doc/spec/features/feature-board.md, feature-cli-entrypoint.md,
     #     feature-install-lifecycle.md, feature-metrics.md,
     #     feature-provider-engine.md, doc/planning/oss-tooling/cli-command-registry.md
-    #     (the `push` family row and the inventory statement), and
-    #     doc/planning/oss-tooling/milestones/m4/flip-plan.md.
+    #     (the `push` family row and the inventory statement),
+    #     doc/planning/oss-tooling/milestones/m4/flip-plan.md, and
+    #     doc/quality/test-specs/test-spec-loop-supervision.md.
+    #   - doc/quality/test-specs/test-spec-loop-supervision.md (PM ruling
+    #     R16): its line 158, in a `status: Current` page, states "the
+    #     prompt-required set at 28 families with `provider` last and `loop`
+    #     27th". The sentence moves to the twenty-ninth tail and the new last
+    #     member, and its GH350_TRUTH_ROWS row at
+    #     tests/checks/doc-conformance.test.ts:2331-2334 moves in the same
+    #     commit, exactly as GH-350 moved it from 27 to 28 (commit e1ebc76cf).
     #   - doc/planning/oss-tooling/milestones/m1/commands/provider.md: its
     #     line 31 calls the family "the twenty-eighth and last". PM ruling R5
     #     (finding I-4): the page's tail statement and its doc-conformance
@@ -1140,8 +1194,8 @@ phases:
     #     that lists the old phrase as stale while the page still carries it
     #     fails, and a corrected page with the old required phrase fails too.
     #   - never edited: the decision records that state a family's ordinal,
-    #     doc/quality/test-specs/test-spec-loop-supervision.md, and every
-    #     pre-existing changeset. doc/planning/oss-tooling/milestones/m4/backlog.md
+    #     and every pre-existing changeset.
+    #     doc/planning/oss-tooling/milestones/m4/backlog.md
     #     keeps its true statement and is not touched.
     #
     # Conditional, ONLY IF the named change happens:
@@ -1189,6 +1243,10 @@ phases:
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/no-shell-dispatch.test.ts tests/checks/doc-conformance.test.ts tests/structure/content-inventory.test.ts
     # Verify (read-only controls, never edited):
     # TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/dispatch/dispatch-parity-push.test.ts tests/checks/privacy-release.test.ts tests/structure/changeset-additivity.test.ts tests/behaviour/closeout-branch.test.ts
+    # Verify (the lane-push verdict reaches the new dispatch-named modules,
+    # packages/core/src/app/dispatch-lane-push.ts and its conditional domain
+    # sibling, through the contracts vocabulary, never as a literal):
+    # TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/dispatch-token-home.test.ts
     # Verify: git diff --check
     # Exit criteria:
     #   - every verify line exits 0;
@@ -1202,10 +1260,12 @@ phases:
     #     appends no record; its suites assert the refusal's answer and nothing
     #     asserts a durable fact for it (RSK-10); no guessed ref is ever
     #     pushed, and no record or answer carries `unsafe-branch`;
-    #   - the shared predicate refuses each protected member by direct call,
-    #     the structural pin holds that no resolved name can equal one, and no
-    #     suite fakes a branch selection to reach the command's protected-set
-    #     check (R13);
+    #   - the command's guard, the alphabet predicate and the protected-name
+    #     membership check together, refuses each protected member by direct
+    #     call (the alphabet predicate alone accepts them, which is why the
+    #     set check is a separate second guard); the structural pin holds
+    #     that no resolved name can equal one, and no suite fakes a branch
+    #     selection to reach the command's protected-set check (R13);
     #   - one lane end costs at most one bounded pm-notes document read, one
     #     bounded local branch read, one bounded local checkout/head read, one
     #     bounded lane read, one push, and one record append (NFR-2), each
@@ -1229,6 +1289,7 @@ phases:
         - doc/planning/oss-tooling/milestones/m1/commands/provider.md
         - doc/planning/oss-tooling/milestones/m4/commands/push.md
         - doc/planning/oss-tooling/milestones/m4/flip-plan.md
+        - doc/quality/test-specs/test-spec-loop-supervision.md
         - doc/spec/features/feature-board.md
         - doc/spec/features/feature-cli-entrypoint.md
         - doc/spec/features/feature-install-lifecycle.md
@@ -1409,6 +1470,9 @@ phases:
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/dispatch-contract-invariance.test.ts tests/structure/dispatch-contract.test.ts tests/checks/operator-contract-invariance.test.ts tests/structure/event-state-additivity.test.ts
     # Verify (read-only controls in this phase: delivered cells never edited):
     # TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-push-parity.test.ts tests/behaviour/dispatch-push-evidence.test.ts tests/golden
+    # Verify (the fold adds evidence references only; no token or verdict
+    # literal enters packages/core/src/app/dispatch.ts):
+    # TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/dispatch-token-home.test.ts
     # Verify: git diff --check
     # Exit criteria:
     #   - every verify line exits 0;
@@ -1525,6 +1589,10 @@ phases:
     # `dispatch <ref>` goldens are byte-unchanged):
     # TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-status-park.test.ts tests/behaviour/dispatch-peak-byte-identical.test.ts tests/behaviour/dispatch-operator-latency.test.ts tests/checks/dispatch-doc-conformance.test.ts
     # TMPDIR=$PWD/tmp/tmpdir bun test tests/golden/dispatch-text.test.ts
+    # Verify (the status fact reaches packages/core/src/app/dispatch-lane-view.ts
+    # and its view module through the record, never as a token or verdict
+    # literal):
+    # TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/dispatch-token-home.test.ts
     # Verify: git diff --check
     # Exit criteria:
     #   - every verify line exits 0;

@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-27T05:46:12.217Z }
   specification: { started: null, completed: 2026-11-27T13:30:27.396Z }
   test_planning: { started: null, completed: 2026-11-27T13:30:51.904Z }
-  delivery_planning: { started: null, completed: 2026-11-27T13:31:33.749Z }
+  delivery_planning: { started: null, completed: 2026-11-27T14:02:43.173Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -320,6 +320,32 @@ notes:
       corrected its own iteration-1 advice. Lesson: before moving a symbol, list
       the tests that pin its destination module, not just its source."
     type: retro
+    date: "2026-11-27"
+  - text: "DoR iteration 3 verdict: NOT_READY, one new major blocking finding and no
+      persistent one (readiness-review/readiness-iter-3.md). The finding:
+      doc/quality/test-specs/test-spec-loop-supervision.md:158 states the
+      prompt-required set at 28 families with provider last, and
+      tests/checks/doc-conformance.test.ts:2331-2334 pins that sentence as
+      truth, but phase 3 excluded the page from the count-and-tail movement and
+      listed it as never edited. GH-350 edited the same sentence from 27 to 28
+      and added the row, so the precedent is direct. Every other facet passed,
+      including the predicate home, the structurally unreachable protected-set
+      arm, the phase-3 suite set, the phase-5 golden and all earlier closures."
+    type: decision
+    date: "2026-11-27"
+  - text: "DoR ruling R16 and the iteration-limit decision. R16: add
+      doc/quality/test-specs/test-spec-loop-supervision.md to phase 3 scope and
+      to its count-and-tail list, remove it from the never-edited line, and
+      state that its GH350_TRUTH_ROWS row moves in the same commit. Also fix the
+      three non-blocking wording items from iteration 3 (isSafeRef does not
+      refuse a protected member; the stale phase-1 clause; add
+      dispatch-token-home.test.ts to the phase Verify line). Limit decision:
+      three remediation iterations are exhausted, but this is a single new
+      finding with a mechanical correction and a direct precedent, not a
+      stalemate on a persistent blocker, so the plan is corrected and confirmed
+      narrowly against the delta instead of escalated. The owner is told in the
+      change's final message."
+    type: decision
     date: "2026-11-27"
   - text: "Doc-risk inventory for phase 7 (current-truth docs likely to change):
       doc/spec/features/feature-dispatch-engine.md (required behaviour 1/2/4,
