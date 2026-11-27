@@ -643,3 +643,83 @@ notes:
       the gate."
     type: info
     date: "2026-11-27"
+  - text: "Plan phase 9 (code-review iteration 1 remediation) complete at
+      85447fcd2 (17 files; TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 - 13166 pass /
+      4 skip / 0 fail across 1571 files; typecheck, check:no-shell,
+      doc-conformance, token-home, contract-invariance, decision-record,
+      `jaiship plan validate GH-416` (verdict=valid) and `git diff --check` all
+      green). (1) The act, corrected: packages/adapters/src/git/push.ts now runs
+      `git push <resolved push remote> HEAD:refs/heads/<branch>` - one repository
+      argument, one refspec, no `--ff-only`, no force flag, no `+` prefix - and the
+      push remote comes from ONE bounded local configuration read (a bounded
+      upward git-directory search that follows a linked worktree's .git pointer and
+      commondir, a 64 KiB config read, a minimal config parser) in the declared
+      order `branch.<branch>.pushRemote`, then `remote.pushDefault`, then
+      `branch.<branch>.remote`, then `origin`. A missing, ambiguous, or
+      unsafe-shaped destination is the typed `remote-unavailable` rejection and
+      starts no child; the safe-ref and protected-name guards still run first, so
+      the configuration read is already behind both. Both production call sites
+      (production.ts engine ensure-push and the lane command) already passed the
+      checkout `cwd`, which the resolution now uses, so no wiring change was
+      needed. No new module, no new configuration key, no second remote-write path,
+      no shell. The linked-worktree case was probed by hand before it was armoured
+      by a test. (2) Classification (F-7): `No configured push destination` and
+      `does not appear to be a git repository` classify `remote-unavailable`;
+      `returned error: 403` and `Write access ... not granted` classify
+      `auth-rejected` and never fall through (the auth row is matched before the
+      unavailable row). (3) TC-LGIT-001 (F-2):
+      tests/behaviour/dispatch-lane-push-real-git.test.ts (new) over
+      tests/fixtures/dispatch/parity/temp-repo.ts (new) runs the seam's DEFAULT
+      runner and DEFAULT timeout against a temporary checkout and local bare
+      remotes, with the user and system git configuration neutralized for the
+      suite: first push accepted with the remote ref equal to the checkout HEAD, a
+      repeat push accepted with the ref unmoved, a moved remote refused
+      `non-fast-forward` with the ref unmoved, the guard names refused with no
+      child and no remote ref, a missing destination refused `remote-unavailable`
+      with its configuration unchanged, the four precedence positions each pushing
+      only to the expected remote, every configured remote a local path, two
+      independent runs identical, a linked-worktree arm, and no temporary directory
+      left behind - 14 cases, 0 fail. Mutation-checked: restoring the old
+      `--ff-only` argv in the seam fails 8 of the 13 cases that existed at that
+      point. (4) The argv pins (F-2): dispatch-push-parity :144 :260 :319,
+      dispatch-lane-push-command :129 :263, dispatch-lane-push-causes :126, plus
+      the planted shell-refusal call, now assert the repository argument with the
+      remote the configuration read yields; the seam-level arms declare that
+      destination in a configuration-only fixture checkout instead of inheriting
+      the host checkout's remotes. (5) Test-quality fixes: the vacuous
+      `const pushActs = 0` is gone - TC-LPUSH-003 now counts live push invocations
+      through the production composition (a recording runner, its `pushes` counter
+      and the recorded seam invocations, both 0); TC-LFOLD-001 drives one full
+      classification per recordable cause instead of calling the helper, and gains
+      the full-16-reference overflow arm proving both lane-push references survive
+      an overflowing slice ahead of the sliced evidence; TC-LSTORE-001 gains six
+      validator-level refusals (a guard-only cause, a ninth token, a cause on
+      `pushed`, a short head, an empty head, an oversize payload) plus the
+      production-shaped record accepted beside them; TC-LCMD-002 gains the
+      oversize arm (a 420-character branch measures 779 bytes against the
+      512-byte bound, so the act lands, `recorded` is false, and no record is
+      written) and pins the failed-append answer's member set; the two
+      word-presence prompt pins became sentence pins with planted retry/force
+      mutations and a planted refusal-as-success mutation that each fail the guard.
+      (6) The two unconditional success claims are conditional: the built prompt
+      says `push <ref>` pushes that last commit and reports the outcome, and the
+      lifecycle guide's outcome is pushed or the refusal named with its cause. (7)
+      The argv stated as fact is corrected in the push reference page (:63) and in
+      TDR-0079 (:103, :151, :410), and the changeset now says the safe-ref
+      predicate moves to the core contracts tier beside the unchanged
+      protected-name set. (8) The pages the spec correction invalidates are
+      reconciled: feature-quality-gates-and-pr.md (summary, the act, the
+      pr_creation tail), feature-adapter-ports.md (the seam row and the secret-read
+      boundary row), and the dispatch-engine test-spec coverage map, which gains
+      the real-git suite and the corrected argv wording. NOT delivered, and outside
+      this phase's declared scope: F-10's diagnostic channel for the append
+      failure code (it needs a member on the answered result plus a `warnings` line
+      from packages/cli/src/commands/push.ts, neither in the phase 9 scope list;
+      the disclosure arms ARE delivered and the answer keeps `recorded: false` with
+      its declared member set). F-9 (the cause tokens bound to the closed array by
+      position and the re-typed `spawn-failed`) remains open under ruling R17. F-6
+      and F-11 are closed by plan revision v1.7 and spec v1.6, authored by
+      @plan-writer and @spec-writer. Review items closed with evidence here: F-1,
+      F-2, F-3, F-4, F-5, F-7, F-8, F-10 (the two test arms), F-12, F-13."
+    type: info
+    date: "2026-11-27"
