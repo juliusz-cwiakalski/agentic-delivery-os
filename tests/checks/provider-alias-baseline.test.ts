@@ -34,6 +34,10 @@ const GH348_BASELINE = "ccc83383395fb298396d48afd47b2ab866a9520b";
 const GH350_CLAUSE =
   " Regenerated deliberately on 2026-11-19 for GH-350's provider family, and again after the GH-348 merge: the help cell's Commands list carries GH-348's `loop` line followed by GH-350's `provider` line, and every other cell is byte-unchanged. Recaptured on 2026-11-20 with a gh-free PATH and the absolute Bun executable, so the transport-degradation notice is pinned to provider.cli.unavailable instead of the build host's gh version.";
 
+/** The GH-416 clause the working baseline gained as the twenty-ninth family. */
+const GH416_CLAUSE =
+  " Regenerated deliberately on 2026-11-27 for GH-416's lane-push family as the twenty-ninth and last: only the help cell's Commands list gained one `push` line, and every other cell is byte-unchanged.";
+
 /**
  * The capture environment: a PATH that cannot resolve `gh` (so the transport
  * posture is the declared `provider.cli.unavailable` degradation, always
@@ -168,7 +172,7 @@ describe("TC-MOUNT-008 the alias baseline delta is exactly one provider line", (
     expect(working.cells.help.stderr).toBe(captured().cells.help.stderr);
   });
 
-  test("the Commands list gained loop then provider, and the install row carries the deprecation", () => {
+  test("the Commands list gained loop, provider, then push, and the install row carries the deprecation", () => {
     const before = splitHelp(captured().cells.help.stdout);
     const loopBaseline = splitHelp(gh348().cells.help.stdout);
     const after = splitHelp(working.cells.help.stdout);
@@ -181,30 +185,34 @@ describe("TC-MOUNT-008 the alias baseline delta is exactly one provider line", (
     // `loop` and this branch's `provider`, in that order; the install row is the
     // one changed row (the GH-365 alias deprecation sentence).
     expect(after.prefix).toBe(before.prefix);
-    expect(afterOther).toHaveLength(beforeOther.length + 2);
+    expect(afterOther).toHaveLength(beforeOther.length + 3);
     expect(afterOther.slice(0, beforeOther.length)).toEqual([...beforeOther]);
     const installRow = after.rows.find((row) => row.startsWith("  install  "));
     expect(installRow).toContain("declared compatibility shim removed in release 0.2.0");
     const loopSummary = helpEntryFor(["loop"])?.summary;
     const providerSummary = helpEntryFor(["provider"])?.summary;
+    const pushSummary = helpEntryFor(["push"])?.summary;
     expect(loopSummary).toBeDefined();
     expect(providerSummary).toBeDefined();
-    expect(afterOther.at(-2)).toBe(`  loop  ${loopSummary ?? ""}`);
-    expect(afterOther.at(-1)).toBe(`  provider  ${providerSummary ?? ""}`);
+    expect(pushSummary).toBeDefined();
+    expect(afterOther.at(-3)).toBe(`  loop  ${loopSummary ?? ""}`);
+    expect(afterOther.at(-2)).toBe(`  provider  ${providerSummary ?? ""}`);
+    expect(afterOther.at(-1)).toBe(`  push  ${pushSummary ?? ""}`);
     // Relative to the GH-348 tip (which already carries `loop`), this branch
     // appends exactly one provider line; every other non-install row is unchanged.
     expect(loopOther).toHaveLength(26);
-    expect(afterOther).toHaveLength(27);
+    expect(afterOther).toHaveLength(28);
     expect(afterOther.slice(0, loopOther.length)).toEqual([...loopOther]);
-    expect(afterOther.at(-1)).toBe(`  provider  ${providerSummary ?? ""}`);
+    expect(afterOther.at(-2)).toBe(`  provider  ${providerSummary ?? ""}`);
+    expect(afterOther.at(-1)).toBe(`  push  ${pushSummary ?? ""}`);
     expect(beforeOther).toHaveLength(25);
     expect(before.rows).toHaveLength(26);
-    expect(after.rows).toHaveLength(28);
+    expect(after.rows).toHaveLength(29);
   });
 
   test("the provenance note gained exactly the GH-350 clause", () => {
     expect(working.captureProvenanceNote).toBe(
-      `${captured().captureProvenanceNote}${GH350_CLAUSE}`,
+      `${captured().captureProvenanceNote}${GH350_CLAUSE}${GH416_CLAUSE}`,
     );
   });
 

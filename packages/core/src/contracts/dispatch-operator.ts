@@ -8,7 +8,13 @@
  * bounds only — the queries themselves are pure functions in the app and
  * domain tiers, and every I/O edge is injected.
  */
-import type { DispatchLaneOwner, DispatchLaneState, DispatchToken } from "./dispatch.js";
+import type {
+  DispatchLaneOwner,
+  DispatchLanePushVerdict,
+  DispatchLaneState,
+  DispatchPushRecordableCause,
+  DispatchToken,
+} from "./dispatch.js";
 import type { HarnessKind, HarnessOutcome } from "./harness.js";
 
 /* ------------------------------------------------------------------------- */
@@ -145,6 +151,20 @@ export type DispatchStatusParkFact = {
   readonly preservation?: string;
 };
 
+/**
+ * The additive lane-push fact on a `status` answer (GH-416 DM-3), carried
+ * verbatim from the newest matching lane-push record: the verdict, branch, and
+ * head the lane pushed, the instant it was recorded, and the closed cause when
+ * the verdict is `failed`. A recorded snapshot, never a live equality claim.
+ */
+export type DispatchStatusLanePushFact = {
+  readonly verdict: DispatchLanePushVerdict;
+  readonly branch: string;
+  readonly head: string;
+  readonly cause?: DispatchPushRecordableCause;
+  readonly recordedAt: string;
+};
+
 /** `dispatch status <ref>` (API-1). */
 export type DispatchStatusData = {
   readonly query: "status";
@@ -166,6 +186,8 @@ export type DispatchStatusData = {
   readonly worktreePath?: string;
   /** The open park's additive fact (GH-413 DM-3); absent when no park stands. */
   readonly park?: DispatchStatusParkFact;
+  /** The lane's own push fact (GH-416 DM-3); absent when none stands. */
+  readonly lanePush?: DispatchStatusLanePushFact;
 };
 
 /** `dispatch log <ref> [--tail <n>]` (API-2). */

@@ -93,6 +93,7 @@ export {
   type DispatchTruthReads,
   type DispatchWorktreeProvisioning,
   dispatchRenewalCadenceMs,
+  lanePushEvidenceRefsForAttempt,
   runDispatch,
 } from "./dispatch.js";
 export {
@@ -116,6 +117,20 @@ export {
   type DispatchLaneResolutionInput,
   resolveDispatchLane,
 } from "./dispatch-lane.js";
+/**
+ * The lane's own evidence push (GH-416 F-1..F-4): resolve, act, append, answer
+ * over injected ports; one fast-forward act, one durable record, nothing
+ * authored.
+ */
+export {
+  type DispatchLanePushAnswered,
+  type DispatchLanePushPorts,
+  type DispatchLanePushRefusal,
+  type DispatchLanePushResult,
+  type LanePushBranchFact,
+  type LanePushIdentity,
+  runDispatchLanePush,
+} from "./dispatch-lane-push.js";
 export {
   newestDispatchLaneWorktreePaths,
   type OperatorDeliveringRead,
@@ -135,6 +150,7 @@ export {
   appendDispatchDivergence,
   appendDispatchHandover,
   appendDispatchLane,
+  appendDispatchLanePush,
   type DispatchAppendResult,
   type DispatchLedgerRead,
   foldDispatchDivergences,
@@ -144,6 +160,7 @@ export {
   readDispatchAttempts,
   readDispatchDivergences,
   readDispatchHandover,
+  readDispatchLanePushes,
   readDispatchLanes,
   resolveDispatchDivergence,
   writeDispatchAuthority,

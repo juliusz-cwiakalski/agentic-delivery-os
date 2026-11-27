@@ -37,6 +37,8 @@ const FIXED_SURFACE = [
   "packages/core/src/app/dispatch.ts",
   "packages/core/src/domain/harness-spawn-env.ts",
   "packages/cli/src/commands/dispatch.ts",
+  // GH-416: the lane-push command module joins the fixed surface.
+  "packages/cli/src/commands/push.ts",
   "packages/cli/src/edge.ts",
   "packages/cli/src/production.ts",
   "packages/cli/src/output/dispatch-text.ts",

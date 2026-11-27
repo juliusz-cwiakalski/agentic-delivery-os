@@ -8,18 +8,25 @@
  * invocation and refuses a requested shell by name.
  */
 import { describe, expect, test } from "bun:test";
-import type { GitPushRunnerResult } from "../../packages/adapters/src/git/index";
+import { createGitPushSeam, type GitPushRunnerResult } from "../../packages/adapters/src/git/index";
 import {
   createParityHarness,
   type ParityObservation,
   readableParityTransport,
 } from "../fixtures/dispatch/parity/harness";
 import { createGuardedRunner } from "../fixtures/dispatch/parity/process-runner";
+import { createConfiguredCheckout } from "../fixtures/dispatch/parity/temp-repo";
 
 /** The deterministic full-hex head facts (fixture literals, committed). */
 const LOCAL_HEAD = "0123456789abcdef";
 const REMOTE_HEAD = "fedcba9876543210";
 const BRANCH = "feat/GH-347/parity";
+/**
+ * The push remote the parity checkout declares. The harness checkout carries one
+ * `[remote "origin"]` section, so the seam's one bounded configuration read
+ * resolves `origin` and the act names it as the repository argument.
+ */
+const REMOTE_NAME = "origin";
 
 /** One scripted open pull whose head the parity read compares against. */
 const openPull = (sha: string): unknown => ({
@@ -141,7 +148,7 @@ describe("TC-PUSH-002 local ahead: one push, one re-read, pr-open with push:push
     expect(observation.token).toBe("pr-open");
     const pushes = pushInvocationsOf(observation);
     expect(pushes).toHaveLength(1);
-    expect(pushes[0]?.args).toEqual(["push", "--ff-only", `HEAD:refs/heads/${BRANCH}`]);
+    expect(pushes[0]?.args).toEqual(["push", REMOTE_NAME, `HEAD:refs/heads/${BRANCH}`]);
     const attempt = attemptOf(observation);
     expect(attempt?.evidenceRefs).toContain("push:pushed");
     const data = observation.envelopes[0]?.data;
@@ -257,7 +264,7 @@ describe("TC-PUSH-008 remote ahead type-fails; the act never widens its scope", 
     for (const element of argv) {
       expect(element.startsWith("-f") || element.startsWith("--force"), element).toBe(false);
     }
-    expect(argv).toEqual(["push", "--ff-only", `HEAD:refs/heads/${BRANCH}`]);
+    expect(argv).toEqual(["push", REMOTE_NAME, `HEAD:refs/heads/${BRANCH}`]);
   });
 });
 
@@ -316,7 +323,7 @@ describe("TC-PUSH-012 the act contract: bounded, fixed-argv, non-shell, injectab
     const pushes = pushInvocationsOf(observation);
     expect(pushes).toHaveLength(1);
     expect(pushes[0]?.file).toBe("git");
-    expect(pushes[0]?.args).toEqual(["push", "--ff-only", `HEAD:refs/heads/${BRANCH}`]);
+    expect(pushes[0]?.args).toEqual(["push", REMOTE_NAME, `HEAD:refs/heads/${BRANCH}`]);
     // The 60 000 ms production default is injectable through the seam options;
     // no new configuration key exists on any path.
     expect(pushes[0]?.timeout).toBe(500);
@@ -551,7 +558,7 @@ describe("TC-BND-002 the guarded runner covers the push seam (behaviour half)", 
   test("the recording runner refuses a requested shell or script path by name", async () => {
     const guarded = createGuardedRunner();
     await expect(
-      guarded.pushRunner("bash", ["push", "--ff-only", "HEAD"], {
+      guarded.pushRunner("bash", ["push", REMOTE_NAME, "HEAD"], {
         timeout: 1,
         killSignal: "SIGKILL",
       }),
@@ -564,4 +571,79 @@ describe("TC-BND-002 the guarded runner covers the push seam (behaviour half)", 
     ).rejects.toThrow(/script path recorded/u);
     expect(guarded.violations.length).toBeGreaterThanOrEqual(2);
   });
+});
+
+/* ------------------------------------------------------------------------- */
+/* GH-416 (additive) — the seam-level class table: one closed cause per       */
+/* rejection class, read from the contracts vocabulary, never an exit code.   */
+/* ------------------------------------------------------------------------- */
+
+describe("GH-416 the seam's rejection detail is the closed cause token (TC-LCAUSE-001)", () => {
+  const BRANCH_UNDER_TEST = "feat/GH-416/lane-pushes-own-evidence-commit";
+  const classTable: readonly {
+    readonly label: string;
+    readonly result: GitPushRunnerResult;
+    readonly cause: string;
+  }[] = [
+    {
+      label: "non-fast-forward",
+      result: { stdout: "", stderr: "! [rejected] (non-fast-forward)", status: 1, timedOut: false },
+      cause: "non-fast-forward",
+    },
+    {
+      label: "auth-rejected",
+      result: { stdout: "", stderr: "fatal: Authentication failed", status: 128, timedOut: false },
+      cause: "auth-rejected",
+    },
+    {
+      label: "remote-unavailable",
+      result: {
+        stdout: "",
+        stderr: "fatal: unable to access: Could not resolve host",
+        status: 128,
+        timedOut: false,
+      },
+      cause: "remote-unavailable",
+    },
+    {
+      label: "protected-ref (server-side decline)",
+      result: {
+        stdout: "",
+        stderr: "remote rejected (protected branch hook declined)",
+        status: 1,
+        timedOut: false,
+      },
+      cause: "protected-ref",
+    },
+    {
+      label: "unclassified",
+      result: { stdout: "", stderr: "unrecognised text", status: 1, timedOut: false },
+      cause: "unclassified",
+    },
+  ];
+
+  for (const entry of classTable) {
+    test(`${entry.label} is \`rejected\` with cause ${entry.cause}`, async () => {
+      let calls = 0;
+      // The seam resolves its destination from one bounded configuration read,
+      // so this arm declares that destination itself rather than inheriting the
+      // host checkout's remotes.
+      const checkout = createConfiguredCheckout({ label: "push-class-table" });
+      try {
+        const seam = createGitPushSeam({
+          cwd: checkout.directory,
+          childRunner: async () => {
+            calls += 1;
+            return entry.result;
+          },
+        });
+        const result = await seam.pushChangeBranch({ branch: BRANCH_UNDER_TEST });
+        expect(result).toEqual({ outcome: "rejected", detail: entry.cause });
+        expect(JSON.stringify(result)).not.toContain("git-exit-");
+        expect(calls).toBe(1);
+      } finally {
+        checkout.dispose();
+      }
+    });
+  }
 });

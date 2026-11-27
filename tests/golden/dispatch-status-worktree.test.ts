@@ -11,7 +11,10 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { renderDispatchStatusText } from "../../packages/cli/src/output/dispatch-text";
-import type { DispatchLaneRecord } from "../../packages/core/src/contracts/index";
+import type {
+  DispatchLaneRecord,
+  DispatchStatusLanePushFact,
+} from "../../packages/core/src/contracts/index";
 
 const GOAL = join(process.cwd(), "tests/golden");
 const readGolden = (name: string): string => readFileSync(join(GOAL, name), "utf8");
@@ -31,7 +34,7 @@ const record = (worktreePath?: string): DispatchLaneRecord => ({
   ...(worktreePath === undefined ? {} : { worktreePath }),
 });
 
-const statusFor = (worktreePath?: string): string =>
+const statusFor = (worktreePath?: string, lanePush?: DispatchStatusLanePushFact): string =>
   renderDispatchStatusText({
     query: "status",
     ref: "GH-404",
@@ -51,7 +54,26 @@ const statusFor = (worktreePath?: string): string =>
       recordedAt: "2026-11-25T12:00:00.000Z",
     },
     ...(worktreePath === undefined ? {} : { worktreePath }),
+    ...(lanePush === undefined ? {} : { lanePush }),
   });
+
+const LANE_PUSH: DispatchStatusLanePushFact = {
+  verdict: "pushed",
+  branch: "feat/GH-404/worktree-lane-foundation",
+  head: "0123456789abcdef0123456789abcdef01234567",
+  recordedAt: "2026-11-27T00:00:00.000Z",
+};
+
+describe("GH-416 TC-LSTATUS-002 the lanePush fact renders additive lines only", () => {
+  test("a lane-push fact renders the additive lines byte-identical to its golden", () => {
+    expect(statusFor(undefined, LANE_PUSH)).toBe(readGolden("status-lane-push.txt"));
+  });
+
+  test("the delivered goldens are unchanged when the fact is absent", () => {
+    expect(statusFor()).toBe(readGolden("status-context-less.txt"));
+    expect(statusFor("/repos/checkout-GH-404")).toBe(readGolden("status-worktree.txt"));
+  });
+});
 
 describe("TC-SURFACES-001 dispatch status shows the lane's worktree path", () => {
   test("a worktree lane renders the worktreePath line byte-identical to its golden", () => {

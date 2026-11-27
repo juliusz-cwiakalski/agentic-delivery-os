@@ -181,6 +181,25 @@ export const createGuardedRunner = (options: GuardedRunnerOptions = {}): Guarded
       const head = options.head ?? PARITY_FIXTURE_HEAD;
       return { stdout: `${branch} ${head}\n`, stderr: "", status: 0, timedOut: false };
     }
+    if (verb === "rev-parse") {
+      // GH-416: the lane-push command reads the invocation checkout's HEAD
+      // through the delivered local checkout/head read.
+      const target = args[1];
+      if (target === "--abbrev-ref") {
+        return {
+          stdout: `${options.branch ?? "feat/GH-347/parity"}\n`,
+          stderr: "",
+          status: 0,
+          timedOut: false,
+        };
+      }
+      return {
+        stdout: `${options.head ?? PARITY_FIXTURE_HEAD}\n`,
+        stderr: "",
+        status: 0,
+        timedOut: false,
+      };
+    }
     if (verb === "rev-list") {
       return {
         stdout: `${options.ahead ?? 2}`,

@@ -82,6 +82,11 @@ const NON_TAXONOMY_GROUPS: Readonly<Record<string, KindGroupAllowance>> = {
     reason: "merge-transaction result discriminant",
     kindValues: ["refused"],
   },
+  // The lane-push structural resolution discriminant, not an event kind.
+  "packages/core/src/domain/dispatch-lane-push.ts": {
+    reason: "lane-push resolution discriminant",
+    kindValues: ["refused"],
+  },
   // The queue command runtime's verb-to-handler map: `release` and `remove`
   // are verb names, not a kind group.
   "packages/cli/src/edge.ts": {

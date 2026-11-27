@@ -385,7 +385,7 @@ describe("TC-MOUNT-003 the mount is load-bearing: the removal arm fails closed",
     const { module, setSource, dir } = await makeMutantModule("mutant", true);
     try {
       expect(setSource.includes("provider")).toBe(false);
-      expect(module.PROMPT_REQUIRED_COMMANDS).toHaveLength(27);
+      expect(module.PROMPT_REQUIRED_COMMANDS).toHaveLength(28);
       expect(module.PROMPT_REQUIRED_COMMANDS).not.toContain("provider");
 
       const mutatedHarness = productionHarness(facts);
@@ -472,7 +472,7 @@ describe("TC-MOUNT-003 the mount is load-bearing: the removal arm fails closed",
     const { module, setSource, dir } = await makeMutantModule("control", false);
     try {
       expect(setSource.includes("provider")).toBe(true);
-      expect(module.PROMPT_REQUIRED_COMMANDS).toHaveLength(28);
+      expect(module.PROMPT_REQUIRED_COMMANDS).toHaveLength(29);
       expect(module.PROMPT_REQUIRED_COMMANDS).toContain("provider");
 
       const harness = productionHarness(facts);

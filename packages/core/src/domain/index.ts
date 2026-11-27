@@ -484,11 +484,11 @@ export {
   planLaneLaunch,
 } from "./lane-launch-plan.js";
 export {
-  LANE_PROVISIONING_STDERR_TAIL_CHARS,
   checkoutBasenameOf,
   defaultLaneWorktreeRoot,
   deriveLaneWorktreeEnvironment,
   GATE_TEMPORARY_DIRECTORY_EVIDENCE_LITERAL,
+  LANE_PROVISIONING_STDERR_TAIL_CHARS,
   LANE_PROVISIONING_STEPS,
   LANE_WORKTREE_INSTALL_COMMAND,
   type LaneProvisioningStep,
@@ -1160,6 +1160,21 @@ export {
   evaluateWake,
   wakeKeyFor,
 } from "./coordinator-wake.js";
+/**
+ * The pure lane-push rules (GH-416 F-1, F-3, F-5; DM-1..DM-5): the structural
+ * branch resolution, the act-to-record mapping, the evidence references, the
+ * newest-matching-record selection, and the record-to-status projection.
+ */
+export {
+  type LanePushActVerdict,
+  type LanePushRefusalReason,
+  type LanePushResolution,
+  lanePushEvidenceRefsOf,
+  lanePushFactOf,
+  lanePushVerdictOfAct,
+  newestLanePushForAttempt,
+  resolveLanePushBranch,
+} from "./dispatch-lane-push.js";
 export {
   createEventProjector,
   EVENT_PROJECTION_MAX_PER_TOPIC_PER_TICK,

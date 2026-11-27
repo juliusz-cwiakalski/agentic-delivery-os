@@ -758,3 +758,140 @@ export type DispatchLaneFacts = {
   readonly prefillCost?: number | null;
   readonly uniqueProgress?: number | null;
 };
+
+/* ------------------------------------------------------------------------- */
+/* GH-416 — the lane-push record kind, its closed verdict/cause vocabulary,  */
+/* the evidence builders, the lane's push answer, and the shared safe-ref    */
+/* predicate. Data, types, and pure predicates only.                         */
+/* ------------------------------------------------------------------------- */
+
+/** The lane-push record kind and its self-describing payload schema (DM-1). */
+export const DISPATCH_LANE_PUSH_RECORD_KIND = "dispatch.lane-push" as const;
+export const DISPATCH_LANE_PUSH_PAYLOAD_SCHEMA = "delivery.dispatch.lane-push.v1" as const;
+export const DISPATCH_LANE_PUSH_KEY_PREFIX = "dispatch.lane-pushes:" as const;
+
+/** The closed lane-push verdicts (DM-1): the lane's own act's outcome. */
+export const DISPATCH_LANE_PUSH_VERDICTS = ["pushed", "failed"] as const;
+
+export type DispatchLanePushVerdict = (typeof DISPATCH_LANE_PUSH_VERDICTS)[number];
+
+/**
+ * The closed refusal-cause vocabulary (DM-4): eight tokens split by source.
+ *
+ * `unsafe-branch` is the one guard-only token: the safe-ref predicate rejects
+ * such a name before any child, so it is always the command's pre-act refusal
+ * and no lane-push record can carry it. The other seven are recordable
+ * child-act causes; `protected-ref` is the one token with two sources, of
+ * which only a protection or hook decline git reports is recorded.
+ */
+export const DISPATCH_PUSH_CAUSES = [
+  "protected-ref",
+  "non-fast-forward",
+  "auth-rejected",
+  "remote-unavailable",
+  "spawn-failed",
+  "timed-out",
+  "unsafe-branch",
+  "unclassified",
+] as const;
+
+export type DispatchPushCause = (typeof DISPATCH_PUSH_CAUSES)[number];
+
+/** The one guard-only cause (DM-4): refused pre-act, never on a record. */
+export const DISPATCH_PUSH_GUARD_ONLY_CAUSES = ["unsafe-branch"] as const;
+
+export type DispatchPushGuardOnlyCause = (typeof DISPATCH_PUSH_GUARD_ONLY_CAUSES)[number];
+
+/** The seven recordable child-act causes a lane-push record can carry (DM-4). */
+export const DISPATCH_PUSH_RECORDABLE_CAUSES = [
+  "non-fast-forward",
+  "auth-rejected",
+  "remote-unavailable",
+  "spawn-failed",
+  "timed-out",
+  "protected-ref",
+  "unclassified",
+] as const;
+
+export type DispatchPushRecordableCause = (typeof DISPATCH_PUSH_RECORDABLE_CAUSES)[number];
+
+/** The whole lane-push payload bound (DM-1, NFR-5): 512 UTF-8 bytes. */
+export const DISPATCH_LANE_PUSH_MAX_PAYLOAD_BYTES = 512 as const;
+
+/**
+ * The `lane-push:<verdict>` evidence-reference family (DM-2): identifiers only,
+ * reserved ahead of the evidence slice, distinct from `push:<verdict>`.
+ */
+export const dispatchLanePushEvidenceRef = (verdict: DispatchLanePushVerdict): string =>
+  `lane-push:${verdict}`;
+
+/** The `lane-push-cause:<cause>` evidence reference (DM-2): identifiers only. */
+export const dispatchLanePushCauseEvidenceRef = (cause: DispatchPushRecordableCause): string =>
+  `lane-push-cause:${cause}`;
+
+/** The per-ref lane-push record key: one key per work-item reference (DM-1). */
+export const dispatchLanePushRecordKey = (ref: string): string =>
+  `${DISPATCH_LANE_PUSH_KEY_PREFIX}${ref}`;
+
+/**
+ * The durable lane-push record payload (DM-1, Appendix B), in declaration order.
+ *
+ * Identifiers and full-hex SHAs only. `head` is the invocation checkout's
+ * `HEAD` read at act time, never a transport-reported value. `cause` is present
+ * exactly when the verdict is `failed`; `attemptId`/`sessionId` are present
+ * exactly when a lane record was readable at push time.
+ */
+export type DispatchLanePushRecord = {
+  readonly schema: typeof DISPATCH_LANE_PUSH_PAYLOAD_SCHEMA;
+  readonly ref: string;
+  readonly repository: string;
+  readonly branch: string;
+  readonly head: string;
+  readonly verdict: DispatchLanePushVerdict;
+  readonly cause?: DispatchPushRecordableCause;
+  readonly attemptId?: string;
+  readonly sessionId?: string;
+  readonly recordedAt: string;
+};
+
+/**
+ * The bounded push-seam outcome the lane-push command consumes (DM-5). The
+ * shape is the delivered seam's outcome union; the owned command maps it to the
+ * lane-push verdict and one closed cause.
+ */
+export type DispatchLanePushActOutcome =
+  | { readonly outcome: "accepted" }
+  | { readonly outcome: "rejected"; readonly detail: string }
+  | { readonly outcome: "failed"; readonly detail: string }
+  | { readonly outcome: "timed-out" };
+
+/** The lane's own push fact on the `push` answer (DM-5, §8.1). */
+export type PushLanePushFact = {
+  readonly verdict: DispatchLanePushVerdict;
+  readonly branch: string;
+  readonly head: string;
+  readonly cause?: DispatchPushRecordableCause;
+  readonly recorded: boolean;
+  readonly recordedAt?: string;
+};
+
+/** The `push <ref>` command's success data (DM-5, §8.1): three declared keys. */
+export type PushCommandData = {
+  readonly ref: string;
+  readonly repository: string;
+  readonly lanePush: PushLanePushFact;
+};
+
+const SAFE_REF_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+const SAFE_REF_FORBIDDEN = /(\.\.|~|\^|:|\?|\*|\[|\\|\s)/;
+
+/**
+ * The one safe-ref predicate (DM-4, F-1): the alphabet plus the
+ * forbidden-character rule. It lives here, in the contracts module that
+ * already carries functions, and is imported by the push seam and the `push`
+ * command through the `@delivery-os/core/contracts` barrel. It accepts a
+ * protected name (`main`, `main-tools`, `HEAD`) — those are alphabet-legal —
+ * which is why the protected-name membership check is a separate second guard.
+ */
+export const isSafeRef = (value: string): boolean =>
+  SAFE_REF_PATTERN.test(value) && !SAFE_REF_FORBIDDEN.test(value) && !value.startsWith("-");

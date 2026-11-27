@@ -45,12 +45,13 @@ const writeCoverage = (root: string, coverage: Coverage): void => {
 export const familyViolations = (actual: readonly string[]): readonly string[] => {
   const failures: string[] = [];
   const expected = [...PROMPT_REQUIRED_COMMANDS];
-  if (actual.length !== 28) failures.push(`count ${actual.length} != 28`);
+  if (actual.length !== 29) failures.push(`count ${actual.length} != 29`);
   for (const name of expected) if (!actual.includes(name)) failures.push(`missing ${name}`);
   for (const name of actual) if (!expected.includes(name)) failures.push(`undeclared ${name}`);
-  if (actual.at(-1) !== "provider") failures.push("tail is not provider");
-  if (actual.at(-2) !== "loop") failures.push("loop is not immediately before provider");
-  if (actual.at(-3) !== "install") failures.push("install is not immediately before loop");
+  if (actual.at(-1) !== "push") failures.push("tail is not push");
+  if (actual.at(-2) !== "provider") failures.push("provider is not immediately before push");
+  if (actual.at(-3) !== "loop") failures.push("loop is not immediately before provider");
+  if (actual.at(-4) !== "install") failures.push("install is not immediately before loop");
   return failures;
 };
 
@@ -89,17 +90,15 @@ describe("TC-INST-104 each conformance gate fails by name on an injected fixture
     expect(familyViolations([...PROMPT_REQUIRED_COMMANDS, "doctor"])).toContain(
       "undeclared doctor",
     );
-    expect(familyViolations([...PROMPT_REQUIRED_COMMANDS].reverse())).toContain(
-      "tail is not provider",
-    );
+    expect(familyViolations([...PROMPT_REQUIRED_COMMANDS].reverse())).toContain("tail is not push");
     // The `loop` removal control keeps its named failure (DOD-8) at the merged
     // count, and the `provider` removal control keeps its own.
     const withoutLoop = PROMPT_REQUIRED_COMMANDS.filter((name) => name !== "loop");
     expect(familyViolations(withoutLoop)).toContain("missing loop");
-    expect(familyViolations(withoutLoop)).toContain("count 27 != 28");
+    expect(familyViolations(withoutLoop)).toContain("count 28 != 29");
     const withoutProvider = PROMPT_REQUIRED_COMMANDS.filter((name) => name !== "provider");
     expect(familyViolations(withoutProvider)).toContain("missing provider");
-    expect(familyViolations(withoutProvider)).toContain("count 27 != 28");
+    expect(familyViolations(withoutProvider)).toContain("count 28 != 29");
   });
 
   test("the help-entry mutant names the missing entry", () => {

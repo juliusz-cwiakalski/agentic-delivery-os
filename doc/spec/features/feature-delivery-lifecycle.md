@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-DELIVERY-LIFECYCLE
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-25
+last_updated: 2026-11-27
 owners: ["engineering"]
 service: delivery-os
 summary: "The deterministic 11-phase spec→plan→deliver→review→PR change delivery workflow with PM-led orchestration, Definition of Ready / Definition of Done gating, phase reopening, the per-change artifact set, variant-aware read-only ledger verification at finalization, phase-7 documentation reconciliation that closes documentation gaps in-change across current-truth docs (including feature-spec first-authoring when needed), and the one-lifecycle cross-repository change: one spec, plan, test plan, and shared definition of done over a declared member set with a branch and pull request per member and one review flow."
 links:
-  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178", "GH-226", "GH-225", "GH-242", "GH-313", "GH-310", "GH-347", "GH-404"]
+  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178", "GH-226", "GH-225", "GH-242", "GH-313", "GH-310", "GH-347", "GH-404", "GH-416"]
   guides:
     - "doc/guides/change-lifecycle.md"
     - "doc/guides/definition-of-ready.md"
@@ -44,6 +44,7 @@ ADOS turns a single tracker ticket (`workItemRef`) into a reviewed, tested PR/MR
 ### Capabilities
 
 - **11-phase gated workflow (F-1):** `clarify_scope` → `specification` → `test_planning` → `delivery_planning` → `dor_check` → `delivery` → `system_spec_update` → `review_fix` → `quality_gates` → `dod_check` → `pr_creation`. See the canonical table in [AGENTS.md](../../../AGENTS.md) and the per-phase sections in [change-lifecycle.md](../../guides/change-lifecycle.md).
+- **`pr_creation` tail (GH-416):** the PR/MR is created or updated first, its URL is recorded as a pm-notes note, `phase complete <ref> pr_creation` lands the phase-completion commit, and the typed `push <ref>` command then performs the lane's own single fast-forward push of that last commit and appends one durable `dispatch.lane-push` record. The final message names the PR/MR URL and the push outcome, names the cause on a refusal, never claims the branch is on the remote, and the lane does not retry, force, author a commit, or reopen a phase ([Quality Gates and PR/MR Workflow](feature-quality-gates-and-pr.md) states the tail, its refusals, and its residuals).
 - **PM orchestration (F-2):** `@pm` owns the lifecycle; it delegates each phase to the matching agent (e.g. `specification` → `@spec-writer`, `delivery` → `@coder`, `dor_check` → `@readiness-reviewer`) and manages the ticket via MCP. `@pm` never implements code. (Authoritative: `.opencode/agent/pm.md`.)
 - **Milestone intake precondition (F-2.1):** Within `clarify_scope` (phase 1), and before any artifact phase, `@pm` verifies that the ticket is attached to a milestone and records that milestone title in `chg-<workItemRef>-pm-notes.yaml` under `milestone`. An unattached ticket produces a question naming the milestone the PM proposes, and artifact phases do not begin until the attachment exists; a ticket carrying the capture exemption is still treated as unattached for delivery. The prompt is authoritative and the operating rule is specified in [Milestone Governance](feature-milestone-governance.md).
 - **Definition of Ready gate (F-3):** `dor_check` (phase 5) is a **hard pre-delivery gate**: `@readiness-reviewer` adversarially critiques the **spec + test-plan + plan together against the ticket** and emits `READY` / `NOT_READY`. See [definition-of-ready.md](../../guides/definition-of-ready.md) (a human-readable mirror; the `@readiness-reviewer` prompt is authoritative).

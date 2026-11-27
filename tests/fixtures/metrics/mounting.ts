@@ -47,10 +47,10 @@ export const INSTALL_MOUNTED_FAMILIES = [...SUPERVISE_MOUNTED_FAMILIES, "install
 /** The mounted set after GH-348: loop appended as the twenty-seventh family. */
 export const LOOP_MOUNTED_FAMILIES = [...INSTALL_MOUNTED_FAMILIES, "loop"] as const;
 
-/** The mounted set after GH-350: provider appended as the twenty-eighth and last family. */
-export const MOUNTED_FAMILIES = [...LOOP_MOUNTED_FAMILIES, "provider"] as const;
+/** The mounted set after GH-416: provider at 28th and push as the twenty-ninth and last family. */
+export const MOUNTED_FAMILIES = [...LOOP_MOUNTED_FAMILIES, "provider", "push"] as const;
 
-/** The suites that pin the family count and must all read 28. */
+/** The suites that pin the family count and must all read 29. */
 export const PINNING_FILES = [
   "tests/structure/entrypoint-bin.test.ts",
   "tests/structure/steer-mounting.test.ts",

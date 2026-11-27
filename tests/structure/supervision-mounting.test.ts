@@ -41,7 +41,7 @@ const familyLines = (help: string): readonly string[] =>
   help.split("\n").filter((line) => /^ {2}[a-z][a-z0-9-]* {2}/u.test(line));
 
 describe("TC-SUP-096 supervise is the twenty-fifth prompt-required family", () => {
-  test("the mounted set is the captured 23-entry base plus metrics, supervise, install, loop, and provider, count 28", () => {
+  test("the mounted set is the captured 23-entry base plus metrics, supervise, install, loop, provider, and push, count 29", () => {
     expect(BASE_FAMILIES).toHaveLength(23);
     expect(MOUNTED_FAMILIES).toEqual([
       ...BASE_FAMILIES,
@@ -50,31 +50,35 @@ describe("TC-SUP-096 supervise is the twenty-fifth prompt-required family", () =
       "install",
       "loop",
       "provider",
+      "push",
     ]);
     expect([...PROMPT_REQUIRED_COMMANDS]).toEqual([...MOUNTED_FAMILIES]);
-    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(28);
+    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(29);
     expect(PROMPT_REQUIRED_COMMANDS.filter((name) => name === "supervise")).toHaveLength(1);
-    expect(PROMPT_REQUIRED_COMMANDS.at(-5)).toBe("metrics");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-4)).toBe("supervise");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-3)).toBe("install");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("loop");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("provider");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-6)).toBe("metrics");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-5)).toBe("supervise");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-4)).toBe("install");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-3)).toBe("loop");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("provider");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("push");
   });
 
-  test("root --help lists install third-from-last among 28 families, with loop penultimate, provider last, and supervise still the twenty-fifth", () => {
+  test("root --help lists install fourth-from-last among 29 families, with loop third-from-last, provider penultimate, push last, and supervise still the twenty-fifth", () => {
     const help = renderRootHelp(SYNTHETIC_BRAND);
     const families = familyLines(help);
-    expect(families).toHaveLength(28);
-    expect(families.at(-4)?.trimStart().startsWith("supervise  ")).toBe(true);
-    expect(families.at(-3)?.trimStart().startsWith("install  ")).toBe(true);
-    expect(families.at(-2)?.trimStart().startsWith("loop  ")).toBe(true);
-    expect(families.at(-1)?.trimStart().startsWith("provider  ")).toBe(true);
+    expect(families).toHaveLength(29);
+    expect(families.at(-6)?.trimStart().startsWith("metrics  ")).toBe(true);
+    expect(families.at(-5)?.trimStart().startsWith("supervise  ")).toBe(true);
+    expect(families.at(-4)?.trimStart().startsWith("install  ")).toBe(true);
+    expect(families.at(-3)?.trimStart().startsWith("loop  ")).toBe(true);
+    expect(families.at(-2)?.trimStart().startsWith("provider  ")).toBe(true);
+    expect(families.at(-1)?.trimStart().startsWith("push  ")).toBe(true);
     for (const family of BASE_FAMILIES) {
       expect(families.some((line) => line.trimStart().startsWith(`${family}  `))).toBe(true);
     }
   });
 
-  test("every family-count pin reads 28 and no stale 23, 24, 25, 26, or 27 remains", () => {
+  test("every family-count pin reads 29 and no stale 23, 24, 25, 26, 27, or 28 remains", () => {
     const failures: string[] = [];
     for (const file of PINNING_FILES) {
       const text = readFileSync(join(ROOT, file), "utf8");
@@ -83,11 +87,11 @@ describe("TC-SUP-096 supervise is the twenty-fifth prompt-required family", () =
         .split("\n")
         .filter((line) => !line.includes("BASE_FAMILIES") && !line.includes("MOUNTED_FAMILIES"))
         .join("\n");
-      if (/toHaveLength\(2[34567]\)/u.test(withoutMountingFixture)) {
+      if (/toHaveLength\(2[345678]\)/u.test(withoutMountingFixture)) {
         failures.push(`${file}: stale family-count pin 23, 24, 25, 26, or 27`);
       }
-      if (!/toHaveLength\(28\)|\.toBe\(\s*28\s*,?\s*\)/su.test(text)) {
-        failures.push(`${file}: no family-count pin 28`);
+      if (!/toHaveLength\(29\)|.toBe\(\s*29\s*,?\s*\)/su.test(text)) {
+        failures.push(`${file}: no family-count pin 29`);
       }
     }
     expect(failures).toEqual([]);
@@ -125,8 +129,8 @@ describe("TC-SUP-096 the mount changes no other family", () => {
       .filter((entry) => entry.path.length === 1)
       .map((entry) => entry.path[0]);
     expect([...families].sort()).toEqual([...MOUNTED_FAMILIES].sort());
-    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("loop");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("provider");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("provider");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("push");
   });
 
   test("the delivered families' help text carries no supervision line", () => {

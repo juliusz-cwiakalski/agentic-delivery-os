@@ -1,9 +1,9 @@
 /**
  * GH-350 TC-MOUNT-004..007 — the mount's structural truth: the declarative set
- * is exactly 28 with `loop` 27th and `provider` last, the composition filter drops an extra
+ * is exactly 29 with `provider` 28th and `push` last, the composition filter drops an extra
  * family and keeps the declared keys, the pin set is derived from the fixture,
- * every listed file carries a 28 pin, the tails shift one place, and the
- * stale-detector class is widened to `2[34567]` (AC-F8-4, AC-F8-5; TDR-0063).
+ * every listed file carries a 29 pin, the tails shift one place, and the
+ * stale-detector class is widened to `2[345678]` (AC-F8-4, AC-F8-5; TDR-0063).
  */
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
@@ -33,33 +33,36 @@ const familyRows = (text: string): readonly string[] => {
   return rows;
 };
 
-describe("TC-MOUNT-005 the declarative set is exactly 28 with provider last", () => {
+describe("TC-MOUNT-005 the declarative set is exactly 29 with push last", () => {
   test("the set equals the mounted fixture element for element", () => {
-    expect(MOUNTED_FAMILIES).toHaveLength(28);
+    expect(MOUNTED_FAMILIES).toHaveLength(29);
     expect([...PROMPT_REQUIRED_COMMANDS]).toEqual([...MOUNTED_FAMILIES]);
-    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(28);
+    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(29);
   });
 
-  test("provider is last, loop 27th, install 26th and supervise 25th by index", () => {
-    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("provider");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("loop");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-3)).toBe("install");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-4)).toBe("supervise");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-5)).toBe("metrics");
+  test("push is last, provider 28th, loop 27th, install 26th and supervise 25th by index", () => {
+    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("push");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("provider");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-3)).toBe("loop");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-4)).toBe("install");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-5)).toBe("supervise");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-6)).toBe("metrics");
+    expect(PROMPT_REQUIRED_COMMANDS.indexOf("provider")).toBe(27);
     expect(PROMPT_REQUIRED_COMMANDS.indexOf("loop")).toBe(26);
     expect(PROMPT_REQUIRED_COMMANDS.indexOf("install")).toBe(25);
     expect(PROMPT_REQUIRED_COMMANDS.indexOf("supervise")).toBe(24);
     expect(PROMPT_REQUIRED_COMMANDS.filter((name) => name === "provider")).toHaveLength(1);
   });
 
-  test("both bins render the same 28 family rows in the same order", () => {
+  test("both bins render the same 29 family rows in the same order", () => {
     const alias = familyRows(renderRootHelp(brandOf("delivery-os")));
     const primary = familyRows(renderRootHelp(brandOf("jaiship")));
-    expect(alias).toHaveLength(28);
+    expect(alias).toHaveLength(29);
     expect(primary).toEqual(alias);
-    expect(alias.at(-3)).toBe("install");
-    expect(alias.at(-2)).toBe("loop");
-    expect(alias.at(-1)).toBe("provider");
+    expect(alias.at(-4)).toBe("install");
+    expect(alias.at(-3)).toBe("loop");
+    expect(alias.at(-2)).toBe("provider");
+    expect(alias.at(-1)).toBe("push");
   });
 });
 
@@ -77,7 +80,7 @@ describe("TC-MOUNT-004 the composition guard only advertises the declared set", 
     expect(Object.keys(selected.commands)).toEqual([...PROMPT_REQUIRED_COMMANDS]);
     expect(Object.keys(selected.commands)).not.toContain("synthetic-extra");
     expect(Object.keys(selected.commands)).not.toContain("config");
-    expect(Object.keys(selected.commands)).toHaveLength(28);
+    expect(Object.keys(selected.commands)).toHaveLength(29);
   });
 
   test("a missing declared family throws by name instead of shipping a partial surface", () => {
@@ -91,7 +94,7 @@ describe("TC-MOUNT-004 the composition guard only advertises the declared set", 
   });
 });
 
-describe("TC-MOUNT-006 every PINNING_FILES entry reads 28 and the set is derived", () => {
+describe("TC-MOUNT-006 every PINNING_FILES entry reads 29 and the set is derived", () => {
   const countPins = (path: string): string[] => {
     const text = readFileSync(join(ROOT, path), "utf8");
     const findings: string[] = [];
@@ -105,15 +108,15 @@ describe("TC-MOUNT-006 every PINNING_FILES entry reads 28 and the set is derived
           !line.includes("STEER_MOUNTED_FAMILIES") &&
           !line.includes("-> 28") &&
           !line.includes("→ 28") &&
-          !line.includes("2[34567]") &&
+          !line.includes("2[345678]") &&
           !line.includes("toHaveLength\\("),
       )
       .join("\n");
-    if (!/toHaveLength\(28\)|\.toBe\(\s*28\s*,?\s*\)/su.test(text)) {
-      findings.push(`${path}: no family-count pin 28`);
+    if (!/toHaveLength\(29\)|\.toBe\(\s*29\s*,?\s*\)/su.test(text)) {
+      findings.push(`${path}: no family-count pin 29`);
     }
-    if (/toHaveLength\(2[3-7]\)|\.toBe\(\s*2[3-7]\s*,?\s*\)/su.test(current)) {
-      findings.push(`${path}: current-value pin 23-27 survives`);
+    if (/toHaveLength\(2[3-8]\)|\.toBe\(\s*2[3-8]\s*,?\s*\)/su.test(current)) {
+      findings.push(`${path}: current-value pin 23-28 survives`);
     }
     return findings;
   };
@@ -131,7 +134,7 @@ describe("TC-MOUNT-006 every PINNING_FILES entry reads 28 and the set is derived
     }
   });
 
-  test("every listed file exists and carries a 28 pin with no current 23-27", () => {
+  test("every listed file exists and carries a 29 pin with no current 23-28", () => {
     const findings: string[] = [];
     for (const path of PINNING_FILES) {
       if (!existsSync(join(ROOT, path))) findings.push(`${path}: listed file does not exist`);
@@ -165,24 +168,24 @@ describe("TC-MOUNT-007 the tails shift one place and the stale class widens", ()
     expect(failures).toEqual([]);
   });
 
-  test("operators, metrics (23 of 28), loop, install and provider hold the shifted tail", () => {
+  test("operators, metrics (23 of 29), loop, install, provider and push hold the shifted tail", () => {
     expect(read("tests/structure/supervision-mounting.test.ts")).toContain(
-      "install third-from-last among 28 families",
+      "install fourth-from-last among 29 families",
     );
     expect(read("tests/structure/metrics-mounting.test.ts")).toContain(
-      "metrics mounts at 23 of 28",
+      "metrics mounts at 23 of 29",
     );
     expect(read("tests/structure/install-conformance.test.ts")).toContain(
-      'expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("provider")',
+      'expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("push")',
     );
     expect(read("tests/behaviour/install-family-surface.test.ts")).toContain(
-      'expect(families.at(-2)).toBe("loop")',
+      'expect(families.at(-2)).toBe("provider")',
     );
     expect(read("tests/behaviour/install-family-surface.test.ts")).toContain(
-      'expect(families.at(-1)).toBe("provider")',
+      'expect(families.at(-1)).toBe("push")',
     );
     expect(read("tests/structure/install-conformance.test.ts")).toContain(
-      'expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("loop")',
+      'expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("provider")',
     );
   });
 
@@ -192,13 +195,13 @@ describe("TC-MOUNT-007 the tails shift one place and the stale class widens", ()
       const text = read(path);
       if (text.includes("2[345]")) failures.push(`${path}: stale class is not widened`);
       if (text.includes("toHaveLength\\(2[")) {
-        if (!text.includes("2[34567]")) failures.push(`${path}: stale class is not 2[34567]`);
+        if (!text.includes("2[345678]")) failures.push(`${path}: stale class is not 2[345678]`);
       }
-      if (text.includes("stale family-count pin") && !text.includes("2[34567]")) {
+      if (text.includes("stale family-count pin") && !text.includes("2[345678]")) {
         // The steer suite scans an explicit digit list instead of a character
-        // class; it must name 26 as a surviving count all the same.
-        if (!text.includes("[23, 24, 25, 26, 27]")) {
-          failures.push(`${path}: stale detector does not cover 26`);
+        // class; it must name 28 as a surviving count all the same.
+        if (!text.includes("[23, 24, 25, 26, 27, 28]")) {
+          failures.push(`${path}: stale detector does not cover 28`);
         }
       }
     }

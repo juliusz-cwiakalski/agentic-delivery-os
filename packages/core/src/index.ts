@@ -89,6 +89,7 @@ export {
   type DispatchTruthReads,
   type DispatchWorktreeProvisioning,
   dispatchRenewalCadenceMs,
+  lanePushEvidenceRefsForAttempt,
   runDispatch,
 } from "./app/dispatch.js";
 export {
@@ -113,6 +114,16 @@ export {
   type DispatchLaneResolutionInput,
   resolveDispatchLane,
 } from "./app/dispatch-lane.js";
+// GH-416: the lane's own evidence push (use case + pure rules).
+export {
+  type DispatchLanePushAnswered,
+  type DispatchLanePushPorts,
+  type DispatchLanePushRefusal,
+  type DispatchLanePushResult,
+  type LanePushBranchFact,
+  type LanePushIdentity,
+  runDispatchLanePush,
+} from "./app/dispatch-lane-push.js";
 export {
   newestDispatchLaneWorktreePaths,
   type OperatorDeliveringRead,
@@ -132,6 +143,7 @@ export {
   appendDispatchDivergence,
   appendDispatchHandover,
   appendDispatchLane,
+  appendDispatchLanePush,
   type DispatchAppendResult,
   type DispatchLedgerRead,
   foldDispatchDivergences,
@@ -141,6 +153,7 @@ export {
   readDispatchAttempts,
   readDispatchDivergences,
   readDispatchHandover,
+  readDispatchLanePushes,
   readDispatchLanes,
   resolveDispatchDivergence,
   writeDispatchAuthority,
@@ -741,6 +754,16 @@ export {
   serializeIdentityMarker,
   spawnTitleFor,
 } from "./domain/dispatch-identity.js";
+export {
+  type LanePushActVerdict,
+  type LanePushRefusalReason,
+  type LanePushResolution,
+  lanePushEvidenceRefsOf,
+  lanePushFactOf,
+  lanePushVerdictOfAct,
+  newestLanePushForAttempt,
+  resolveLanePushBranch,
+} from "./domain/dispatch-lane-push.js";
 export {
   DISPATCH_LIVENESS_ABSENCE_REASONS,
   DISPATCH_LIVENESS_SIGNALS,

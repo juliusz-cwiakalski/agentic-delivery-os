@@ -81,7 +81,7 @@ describe("TC-BOARD-041 board help", () => {
     const families = result.stdout
       .split("\n")
       .filter((line) => /^ {2}[a-z][a-z0-9-]* {2}/u.test(line));
-    expect(families).toHaveLength(28);
+    expect(families).toHaveLength(29);
     expect(families.some((line) => line.trimStart().startsWith("board  "))).toBe(true);
   });
 });

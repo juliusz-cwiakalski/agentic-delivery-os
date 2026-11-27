@@ -84,6 +84,9 @@
     "dispatch.ts:DISPATCH_HANDOVER_RECORD_KIND": "dispatch.handover",
     "dispatch.ts:DISPATCH_LANE_KEY_PREFIX": "dispatch.lanes:",
     "dispatch.ts:DISPATCH_LANE_PAYLOAD_SCHEMA": "delivery.dispatch.lane.v1",
+    "dispatch.ts:DISPATCH_LANE_PUSH_KEY_PREFIX": "dispatch.lane-pushes:",
+    "dispatch.ts:DISPATCH_LANE_PUSH_PAYLOAD_SCHEMA": "delivery.dispatch.lane-push.v1",
+    "dispatch.ts:DISPATCH_LANE_PUSH_RECORD_KIND": "dispatch.lane-push",
     "dispatch.ts:DISPATCH_LANE_RECORD_KIND": "dispatch.lane",
     "economics.ts:ECONOMICS_EXHAUSTION_RECORD_KIND": "economics.budget-exhaustion",
     "economics.ts:ECONOMICS_EXHAUSTION_SCHEMA_ID": "delivery.economics.exhaustion.v1",
@@ -98,6 +101,8 @@
     "harness-telemetry.ts:HARNESS_TELEMETRY_RECORD_KEY_PREFIX": "harness.telemetry:",
     "harness-telemetry.ts:HARNESS_TELEMETRY_RECORD_KIND": "harness.telemetry",
     "harness-telemetry.ts:HARNESS_TELEMETRY_SCHEMA_ID": "delivery.harness.telemetry.v1",
+    "install.ts:INSTALL_MIGRATION_MANIFEST_SCHEMA": "install.migration.manifest.v1",
+    "install.ts:INSTALL_MIGRATION_PLAN_SCHEMA": "install.migration.plan.v1",
     "install.ts:INSTALL_RECORD_SCHEMA": "install.record.v1",
     "install.ts:INSTALL_STATUS_SCHEMA": "install.status.v1",
     "loop.ts:LOOP_LOG_OBSERVATION_SCHEMA": "delivery.loop.log.v1",
@@ -178,8 +183,6 @@
     "telemetry.ts:TELEMETRY_CAPTURE_SCHEMA_ID": "delivery.telemetry.capture.v1",
     "telemetry.ts:TELEMETRY_STEP_KEY_PREFIX": "harness.telemetry.step:",
     "telemetry.ts:TELEMETRY_STEP_RECORD_KIND": "harness.telemetry.step",
-    "telemetry.ts:TELEMETRY_STEP_SCHEMA_ID": "delivery.harness.telemetry.step.v1",
-    "install.ts:INSTALL_MIGRATION_MANIFEST_SCHEMA": "install.migration.manifest.v1",
-    "install.ts:INSTALL_MIGRATION_PLAN_SCHEMA": "install.migration.plan.v1"
+    "telemetry.ts:TELEMETRY_STEP_SCHEMA_ID": "delivery.harness.telemetry.step.v1"
   }
 }

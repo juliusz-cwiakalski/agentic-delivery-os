@@ -17,10 +17,12 @@ import type {
   DispatchOwnerProbe,
   DispatchProbeVerdict,
   DispatchStatusData,
+  DispatchStatusLanePushFact,
   DispatchStatusParkFact,
   QueueParkRecord,
   StateStorePort,
 } from "#contracts";
+import { lanePushFactOf, newestLanePushForAttempt } from "../domain/dispatch-lane-push.js";
 import {
   buildRefDeliveringData,
   buildRepositoryDeliveringData,
@@ -28,7 +30,7 @@ import {
   operatorLaneFor,
   operatorLanesInRepository,
 } from "../domain/dispatch-operator-view.js";
-import { readDispatchLanes } from "./dispatch-ledger.js";
+import { readDispatchLanePushes, readDispatchLanes } from "./dispatch-ledger.js";
 import { readQueueParks } from "./queue.js";
 
 /** The store-read failure the query refuses with: the store's own identity. */
@@ -99,7 +101,10 @@ export const dispatchStatusParkFact = (
   return undefined;
 };
 
-/** `dispatch status <ref>` — one bounded lane read, one bounded park read, then the fold. */
+/**
+ * `dispatch status <ref>` — one bounded lane read, one bounded park read, one
+ * additional bounded lane-push read (NFR-3, DEC-3), then the fold.
+ */
 export const readOperatorStatus = (input: {
   readonly store: StateStorePort;
   readonly repository: string;
@@ -119,6 +124,16 @@ export const readOperatorStatus = (input: {
         input.ref,
       )
     : undefined;
+  // The lane's own push fact (GH-416 DM-3): one additional bounded read of the
+  // lane-push family, matched on the addressed lane's exact attempt identity.
+  // An unreadable family, no lane, and a foreign attempt each answer absence.
+  const lanePushes = readDispatchLanePushes(input.store);
+  const lanePushRecord =
+    lanePushes.ok && record !== undefined
+      ? newestLanePushForAttempt(lanePushes.records, input.repository, record.attemptId)
+      : undefined;
+  const lanePush: DispatchStatusLanePushFact | undefined =
+    lanePushRecord === undefined ? undefined : lanePushFactOf(lanePushRecord);
   return {
     ok: true,
     data: buildStatusData({
@@ -127,6 +142,7 @@ export const readOperatorStatus = (input: {
       record,
       probe: probed(input.probe, record),
       ...(park === undefined ? {} : { park }),
+      ...(lanePush === undefined ? {} : { lanePush }),
     }),
   };
 };

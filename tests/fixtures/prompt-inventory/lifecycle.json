@@ -4,7 +4,13 @@
     {
       "path": ".opencode/agent/pm.md",
       "kind": "lifecycle",
-      "required": ["phase complete", "commit", "blockers publish", "phase list"]
+      "required": [
+        "phase complete",
+        "commit",
+        "blockers publish",
+        "phase list",
+        "push <workItemRef>"
+      ]
     },
     {
       "path": ".opencode/agent/coder.md",

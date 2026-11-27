@@ -1,9 +1,9 @@
 /**
  * GH-346 TC-INST-100..103 — the declared conformance surface.
  *
- * The prompt-required set is exactly 28 by name and order with `provider` last,
- * `loop` immediately before it, `install` before that, and `supervise` before
- * that; every lifecycle entry has a full static help entry; the M4 reference page
+ * The prompt-required set is exactly 29 by name and order with `push` last,
+ * `provider` immediately before it, `loop` before that, `install` before that,
+ * and `supervise` before that; every lifecycle entry has a full static help entry; the M4 reference page
  * exists and the page-root mapping resolves it; and the coverage inventory agrees
  * in both directions. A count is asserted exactly, never as a floor.
  */
@@ -28,13 +28,14 @@ const coverage = JSON.parse(
   readFileSync(join(ROOT, "tests/fixtures/help-guide/coverage.json"), "utf8"),
 ) as { readonly commands: readonly string[]; readonly referencePages: readonly string[] };
 
-describe("TC-INST-100 the composed set is exactly 28 by name and order", () => {
-  test("provider is last, loop is immediately before it, install three from last, and supervise four from last", () => {
-    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(28);
-    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("provider");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("loop");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-3)).toBe("install");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-4)).toBe("supervise");
+describe("TC-INST-100 the composed set is exactly 29 by name and order", () => {
+  test("push is last, provider is immediately before it, loop three from last, install four from last, and supervise five from last", () => {
+    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(29);
+    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("push");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("provider");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-3)).toBe("loop");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-4)).toBe("install");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-5)).toBe("supervise");
     expect(PROMPT_REQUIRED_COMMANDS.filter((name) => name === "install")).toHaveLength(1);
     expect([...PROMPT_REQUIRED_COMMANDS]).toEqual([
       "status",
@@ -65,6 +66,7 @@ describe("TC-INST-100 the composed set is exactly 28 by name and order", () => {
       "install",
       "loop",
       "provider",
+      "push",
     ]);
   });
 
@@ -72,18 +74,19 @@ describe("TC-INST-100 the composed set is exactly 28 by name and order", () => {
     const comparator = (actual: readonly string[]): string[] => {
       const failures: string[] = [];
       const expected = [...PROMPT_REQUIRED_COMMANDS];
-      if (actual.length !== expected.length) failures.push(`count ${actual.length} != 28`);
+      if (actual.length !== expected.length) failures.push(`count ${actual.length} != 29`);
       for (const name of expected) if (!actual.includes(name)) failures.push(`missing ${name}`);
       for (const name of actual) if (!expected.includes(name)) failures.push(`undeclared ${name}`);
-      if (actual.at(-1) !== "provider") failures.push("tail is not provider");
-      if (actual.at(-2) !== "loop") failures.push("loop is not immediately before provider");
-      if (actual.at(-3) !== "install") failures.push("install is not immediately before loop");
+      if (actual.at(-1) !== "push") failures.push("tail is not push");
+      if (actual.at(-2) !== "provider") failures.push("provider is not immediately before push");
+      if (actual.at(-3) !== "loop") failures.push("loop is not immediately before provider");
+      if (actual.at(-4) !== "install") failures.push("install is not immediately before loop");
       return failures;
     };
     expect(comparator([...PROMPT_REQUIRED_COMMANDS])).toEqual([]);
     expect(comparator(PROMPT_REQUIRED_COMMANDS.slice(0, 27))).toContain("missing provider");
     expect(comparator([...PROMPT_REQUIRED_COMMANDS, "doctor"])).toContain("undeclared doctor");
-    expect(comparator([...PROMPT_REQUIRED_COMMANDS].reverse())).toContain("tail is not provider");
+    expect(comparator([...PROMPT_REQUIRED_COMMANDS].reverse())).toContain("tail is not push");
   });
 });
 

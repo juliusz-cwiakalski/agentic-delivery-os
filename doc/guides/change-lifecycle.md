@@ -9,7 +9,7 @@ created: 2026-02-03
 owners: ["engineering"]
 summary: "End-to-end change delivery workflow (planning to PR) with PM-led gates and artifacts." 
 links:
-  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242", "GH-268", "GH-313", "GH-300", "GH-366", "GH-404", "GH-413"]
+  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242", "GH-268", "GH-313", "GH-300", "GH-366", "GH-404", "GH-413", "GH-416"]
 ---
 
 # Change Lifecycle
@@ -428,15 +428,20 @@ flowchart TD
 
 **Actions**:
 
-- `@pm` invokes `@pr-manager` to create or update the PR/MR.
+- `@pm` invokes `@pr-manager` to create or update the PR/MR. `@pr-manager` pushes a clean branch before any create or update, and that pre-PR push is unchanged.
+- `@pm` records the PR/MR URL as a pm-notes `notes:` entry, landed by the commit primitive.
 - `@pm` assigns the ticket to a human reviewer in the tracker.
+- `@pm` runs `phase complete <workItemRef> pr_creation`, which lands the phase-completion commit.
+- `@pm` runs `push <workItemRef>`: one non-force push of the change branch's head — the phase-completion commit just landed — to the checkout's configured push remote through the delivered push seam, followed by one durable `dispatch.lane-push` record. A refused push is a data-bearing answer at exit `1` with one closed cause; the lane does not retry, force, author a commit to make it succeed, or reopen a phase. The engine's ensure-push reconciles a pushable branch at the next classification ([push reference page](../planning/oss-tooling/milestones/m4/commands/push.md)).
+- `@pm` states the final message: the PR/MR URL and the push outcome, naming the cause on a refusal and never claiming the branch is on the remote.
 - **STOP**: Do not start another ticket automatically.
 
-**Outcome**: PR/MR is ready for human review; ticket is assigned.
+**Outcome**: PR/MR is ready for human review, the lane's own last commit is pushed (or the refusal is named with its cause), and the ticket is assigned.
 
 **Exit criteria**:
 
 - PR/MR exists and is up to date.
+- The `push <workItemRef>` answer is recorded (`pushed`), or a refusal is reported with its cause.
 - Ticket is assigned to a human reviewer.
 - `@pm` stops and waits for human approval and merge.
 
@@ -552,7 +557,7 @@ Finalization is variant-aware and read-only. `verify change <ref>` checks the ef
 | 8. review_fix | `@reviewer` | `@coder` |
 | 9. quality_gates | `@runner` | `@fixer` |
 | 10. dod_check | `@pm` | — |
-| 11. pr_creation | `@pr-manager` | — |
+| 11. pr_creation | `@pr-manager` | `@pm` (records the PR URL note, lands `phase complete <ref> pr_creation`, runs `push <ref>`) |
 
 ---
 

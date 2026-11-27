@@ -106,6 +106,7 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0076](TDR-0076-engine-ensure-push-first-remote-write.md) | TDR | The Engine-Side Ensure-Push Is the Dispatch Engine's First Remote-Write Act — One Bounded Fast-Forward Push of the Change Branch Before `pr-open` Derives | Proposed | 2026-11-23 | Juliusz Ćwiąkalski |
 | [TDR-0077](TDR-0077-dispatch-owned-window-watch.md) | TDR | A Lane Is Watched by the Composition That Owns It: The Dispatch Run Path Supplies the Profile-Window Watch for the Lanes It Starts | Proposed | 2026-11-26 | Juliusz Ćwiąkalski |
 | [TDR-0078](TDR-0078-lease-heartbeat-amends-tdr-0050.md) | TDR | A Dispatch Lane Keeps Its Repository Lease Live Through the Run and the Park: The Holding Invocation Renews at a Derived Cadence (TDR-0050 DC-3 Amended) | Proposed | 2026-11-26 | Juliusz Ćwiąkalski |
+| [TDR-0079](TDR-0079-lane-push-amends-tdr-0076.md) | TDR | The Lane Pushes Its Own Last Evidence Commit: A Typed `push <ref>` at `pr_creation`, One Durable `dispatch.lane-push` Record, and the Engine's Ensure-Push as the Backstop (TDR-0076 Push Ownership Amended) | Proposed | 2026-11-27 | Juliusz Ćwiąkalski |
 
 Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
 acceptance is that change's pull-request review, and their status moves from
@@ -166,9 +167,12 @@ status moves from `Proposed` there rather than in the delivery commits. It autho
 the typed stack's first remote-write operation: at the `pr-open` derivation arm the
 engine evaluates the verify-gates parity definition (local checkout head SHA vs the
 open delivery request's head SHA, full-hex equality) and, when the local head is
-ahead, performs one bounded fast-forward-only push of the change branch to its
-configured upstream — fixed argv, literal non-shell child, 60 000 ms injectable
-timeout, single attempt, no force variant — before the token derives; a rejected,
+ahead, performs one bounded fast-forward-only push of the change branch to the
+push remote one bounded local configuration read resolves (the argv corrected and
+the resolution added by GH-416; [TDR-0079](TDR-0079-lane-push-amends-tdr-0076.md)
+amends this record's push ownership) — fixed argv, literal non-shell child,
+60 000 ms injectable timeout, single attempt, no force variant — before the token
+derives; a rejected,
 failing, or still-unmet push is a typed non-`pr-open` failure through one new
 failure-token-mapping row that retains the PR URL, parity evidence rides the bounded
 `push:<verdict>` references and an additive optional envelope block, text mode stays

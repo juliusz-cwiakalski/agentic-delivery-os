@@ -190,8 +190,8 @@ describe("TC-RO the read-only posture", () => {
 
       const statusBefore = h.counters.readRecords;
       await h.run(["dispatch", "status", OPERATOR_REF, "--json"]);
-      // GH-413: one bounded lane read plus one bounded park read.
-      expect(h.counters.readRecords - statusBefore).toBe(2);
+      // GH-413 + GH-416: one lane read, one park read, and one lane-push read.
+      expect(h.counters.readRecords - statusBefore).toBe(3);
       expect(logFs.records.filter((record) => record.op === "list")).toHaveLength(0);
       expect(transcript.calls).toHaveLength(0);
 

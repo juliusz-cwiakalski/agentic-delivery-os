@@ -31,4 +31,5 @@ export {
   renderProjectGroupsText,
   renderProjectsText,
 } from "./projects-text.js";
+export { renderPushText } from "./push-text.js";
 export { isReposListData, renderReposText } from "./repos-text.js";

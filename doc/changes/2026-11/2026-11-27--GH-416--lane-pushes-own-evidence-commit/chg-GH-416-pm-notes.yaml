@@ -1,0 +1,855 @@
+change_id: GH-416
+title: "M4-S45: A lane pushes its own last evidence commit before it stops (M4)"
+milestone: "M4: Jaiship-native delivery"
+branch: feat/GH-416/lane-pushes-own-evidence-commit
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-27T05:46:12.217Z }
+  specification: { started: null, completed: 2026-11-27T17:41:37.971Z }
+  test_planning: { started: null, completed: 2026-11-27T17:41:51.808Z }
+  delivery_planning: { started: null, completed: 2026-11-27T14:02:43.173Z }
+  dor_check: { started: null, completed: 2026-11-27T14:17:09.112Z }
+  delivery: { started: null, completed: 2026-11-27T16:44:43.170Z }
+  system_spec_update: { started: null, completed: 2026-11-27T20:01:59.964Z }
+  review_fix: { started: null, completed: 2026-11-27T19:17:58.569Z }
+  quality_gates: { started: null, completed: 2026-11-27T19:55:54.138Z }
+  dod_check: { started: null, completed: 2026-11-27T20:22:57.930Z }
+  pr_creation: { started: null, completed: 2026-11-27T20:25:08.820Z }
+decisions:
+  - text: "Milestone confirmed at intake: the ticket is attached to M4:
+      Jaiship-native delivery (milestone 5). No milestone change proposed."
+    date: "2026-11-27"
+  - text: "Requirements are complete and consistent with the system spec and need no
+      owner question. The ticket body plus the owner's delivery comment
+      (issuecomment-7205540856, 2026-11-26) define four required behaviours and
+      three acceptance criteria, and state that no scope is added or removed.
+      The mechanism is left to the delivery and is the specification phase's
+      design job."
+    date: "2026-11-27"
+  - text: "Scope reading of the four required behaviours. (1) The lane pushes its
+      own last evidence commit at pr_creation, after the pull request is
+      recorded in the pm-notes and before the lane reports; the act authors and
+      amends nothing. (2) The wrapper's push stays as a second idempotent step
+      and an already-up-to-date push is not an error - the delivered
+      adapters/git/push.ts seam already returns accepted on git exit 0. (3) A
+      refused push is named in the lane's last message and in the attempt
+      record, and the lane never reports completion as if the evidence were on
+      the remote. (4) dispatch status reports whether the branch head is on the
+      remote."
+    date: "2026-11-27"
+  - text: "Three design points are reserved for the specification phase and, where
+      precedent-setting, a decision record: (a) which typed seam the session
+      invokes to push, since no CLI push primitive exists today and the
+      delivered push seam is engine-side (TDR-0076, GH-386); (b) how a
+      session-side refused push reaches the dispatch attempt record, which the
+      engine appends at terminal classification and the session cannot write;
+      (c) how dispatch status derives the remote-head fact without breaking its
+      declared record-only read posture. feature-dispatch-engine.md states that
+      the four operator queries 'make no network call' and each take at most one
+      bounded lane read plus at most one bounded artifact or transcript read;
+      the delivered additive optional park fact is the precedent for one extra
+      bounded record read. The spec must ground each point in a delivered seam
+      rather than invent a parallel one, and must reconcile that clause in phase
+      7."
+    date: "2026-11-27"
+  - text: "Owner delivery notes for this lane, taken as part of the brief: add the
+      change's changeset before the first gate run (TC-RELEASE-001 fails a
+      packages change with no changeset); run only the tests this change affects
+      while working and the whole battery once, at the gate; never search the
+      file system outside the checkout and this change folder. Gate evidence
+      uses TMPDIR=$PWD/tmp/tmpdir; commits go through the commit primitive; the
+      pull request targets main-tools."
+    date: "2026-11-27"
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection at session start (2026-11-27): no GH-416 change folder,
+      no phase records (phase list GH-416 returned phases {}), no GH-416 branch,
+      no pull request, and no recorded attempt. The worktree was detached at
+      043f66540, equal to origin/main-tools after fetch (0/0 divergence). This
+      is a fresh lifecycle start, not a resume. Branch
+      feat/GH-416/lane-pushes-own-evidence-commit was created from that tip."
+    type: info
+    date: "2026-11-27"
+  - text: "Recorded lane at session start: dispatch status GH-416 reports one
+      active, non-stale lane in this worktree - marker active, probe live,
+      harness opencode, ownerStartedAt 2026-11-27T05:43:29.693Z, recordedAt
+      2026-11-27T05:43:52.854Z, sessionId ses_de477e1e5ffev3zOfR4lEmhwUT,
+      worktreePath equal to this session's own working directory. That is this
+      session's own acquisition record, so the run continues the recorded lane
+      rather than starting a second one. dispatch attempts reports matched 0,
+      which is the declared absence of a terminal attempt record before the
+      dispatch classifies."
+    type: info
+    date: "2026-11-27"
+  - text: "System-spec cross-check for clarify_scope. feature-dispatch-engine.md
+      (Current, last_updated 2026-11-26) records the GH-386 engine-side
+      ensure-push at the pr-open classification, the push:<verdict> evidence
+      family, the identity-less lifecycle push failure row, and the additive
+      machine-envelope push block. The incident in this ticket is the documented
+      gap: the evidence commit that lands after PR creation is pushed by the
+      wrapper only, so a lane whose wrapper is gone leaves the PR head one
+      commit behind. No contradiction with the spec; the change closes a
+      coverage gap and the spec must be reconciled in phase 7."
+    type: info
+    date: "2026-11-27"
+  - text: "Specification accepted at PM validation. chg-GH-416-spec.md (584 lines)
+      decides the three reserved design points as DEC-1 to DEC-7: DEC-1 a new
+      prompt-required typed `push <ref>` command thin over the delivered
+      adapters push seam; DEC-2 one new append-only record kind
+      dispatch.lane-push that the classification folds into reserved attempt
+      evidence lane-push:<verdict> / lane-push-cause:<cause>; DEC-3 dispatch
+      status derives an additive optional lanePush fact from that record with no
+      network call (read count widens to one lane read plus at most two
+      additional record reads); DEC-4 a closed refusal cause set; DEC-5 no
+      classification-vocabulary growth; DEC-6 the ordered pr_creation tail
+      ending in push then the final message; DEC-7 a decision record amending
+      TDR-0076. Ticket AC-1/AC-2/AC-3 and requirement 4 map to
+      AC-F1-1/AC-F2-1/AC-F4-1+AC-F3-1/AC-F5-1, with AC-F1-2 and AC-F6-1 closing
+      the resolution and divergence edges. Open questions: none; four readings
+      are declared in spec section 14. The spec corrected two PM assumptions
+      from code truth: the pm-notes branch key is opaque rather than typed, and
+      the prompt-required set holds 28 commands today (push is the
+      twenty-ninth)."
+    type: info
+    date: "2026-11-27"
+  - text: "Resume state detection (2026-11-27, session 10:41Z): branch
+      feat/GH-416/lane-pushes-own-evidence-commit at e8bce4aaf, 2 commits ahead
+      and 0 behind origin/main-tools after fetch, clean worktree, no remote
+      branch, no pull request. phase list reports clarify_scope and
+      specification completed and nothing else. dispatch status reports the
+      recorded lane active and live on attempt attempt-GH-416-1795776132924-...
+      iteration 1 in this worktree, so this session continues the recorded lane.
+      Resume point: test_planning."
+    type: info
+    date: "2026-11-27"
+  - text: "Test plan accepted: chg-GH-416-test-plan.md, 31 TCs across 13 families
+      (TC-LCMD, TC-LPUSH, TC-LRES, TC-LSTORE, TC-LFOLD, TC-LCAUSE, TC-LSTATUS,
+      TC-LMSG, TC-LOUT, TC-LDOC, TC-LBND, TC-LGATE), full AC matrix to
+      AC-F1-1..AC-F6-1 and the ticket's three ACs plus requirement 4, with the
+      three ticket fixtures named."
+    type: info
+    date: "2026-11-27"
+  - text: "specification reopened by test_planning findings (phase reopen, variant
+      full): (1) F-3/NFR-5 claim three delivered reserved references, while
+      packages/core/src/app/dispatch.ts reserves five (lane:append-failed,
+      lease:not-owned, lease:renewal-failed, park:recovery-append-failed,
+      push:<verdict>), so the post-change maximum is seven of sixteen; (2)
+      AC-F1-2 requires an unsafe/protected resolution to append no record while
+      DM-4 lists unsafe-branch/protected-branch as causes of recorded failed
+      verdicts - the layer that refuses is unstated; (3) DM-4 declares
+      protected-branch while the delivered seam
+      (packages/adapters/src/git/push.ts:147) emits protected-ref. GAP-3 (the
+      final message is not machine-observable) was accepted as the declared
+      residual, not reopened."
+    type: decision
+    date: "2026-11-27"
+  - text: "retro: the spec asserted a code-truth count (three reserved references)
+      that the test plan disproved, and declared a cause token that differs from
+      the delivered seam's literal. Both were cheap to catch at test planning
+      and expensive if carried into the plan. Lesson: when a spec restates a
+      delivered constant or literal, it must cite the file and line it was read
+      from."
+    type: retro
+    date: "2026-11-27"
+  - text: "Implementation plan accepted: chg-GH-416-plan.yaml, 8 phases, tier full;
+      plan validate GH-416 reports valid and readyForDevelopment true. Phase
+      map: 1 contracts + dispatch.lane-push record kind + changeset; 2 push seam
+      closed cause; 3 push command and its prompt-required mount; 4
+      classification fold; 5 dispatch status lanePush fact; 6 the two product
+      surfaces; 7 decision record amending TDR-0076 (TDR-0079 expected); 8
+      finalize and release with the phase-7 doc input named. All 7 ACs and 31
+      TCs are covered."
+    type: info
+    date: "2026-11-27"
+  - text: "Defect round opened by the plan author (before DoR). Fixed in the change
+      record: a pm-notes note carried an absolute worktree path, which trips the
+      privacy scan private.absolute-user-path and would fail pnpm check; the
+      note now names the directory relationally. Routed for correction: test
+      plan I-1 (pr_creation is step 10 / phase 11, not step 11), I-2
+      (TC-LCAUSE-001 step 4 expects a child invocation, but the seam's guards
+      return before any child starts, so the appended record is what separates
+      the two refusal arms), I-3 (a 29th prompt-required command moves 17
+      PINNING_FILES suites, two mounting fixtures, the alias baseline help cell
+      and phrase rows on about ten pages, not only TC-STATUS-007), I-5 (the help
+      inventory is packages/cli/src/help.ts; help/index.ts does not exist). Held
+      as declared, not corrected: I-6 (RSK-9's unrelated-checkout refusal has no
+      declared rule; the plan declares the four spec refusals only), I-9
+      (ODR-0003 naming; the TDR-0079 amendment carries it)."
+    type: decision
+    date: "2026-11-27"
+  - text: "retro: the test plan asserted a child invocation for a guard-shaped
+      refusal that the seam short-circuits before spawning, and understated the
+      re-pin surface of adding a prompt-required command (TC-STATUS-007 was
+      called the only delivered assertion that must change; 17 pinning suites
+      plus fixtures and phrase rows actually move). Both were caught by the plan
+      author, one phase later than ideal. Lesson: a TC that asserts a process
+      effect must name the code line that decides whether the process starts."
+    type: retro
+    date: "2026-11-27"
+  - text: "Correction round closed. Spec v1.2 corrects RSK-9 and the matching §12
+      assumption: resolution refuses a ref, never a checkout state, and the act
+      pushes the invocation checkout's HEAD to the resolved branch ref; the
+      lane-worktree rule is the guard, and the residual is raised to M with the
+      divergence detection (fast-forward rule) named instead of a refusal that
+      does not exist. Test plan v1.2 corrects I-1 (pr_creation is step id 10,
+      phase 11), I-2 (the seam's two guards return before the child runner, so
+      the appended lane-push record, not a child invocation, separates the two
+      refusal arms), I-3 (the re-pin surface: 17 PINNING_FILES suites, two
+      mounting fixtures, the alias baseline help cell, phrase rows on about ten
+      pages) and I-5 (help inventory is packages/cli/src/help.ts; entrypoint.ts
+      needs no edit)."
+    type: info
+    date: "2026-11-27"
+  - text: "Proposal for the owner, not created as a ticket: a checkout-not-on-branch
+      pre-act refusal for `push <ref>` (the AC-F1-2 arm, no record), so the
+      lane-worktree rule becomes enforced rather than documented. Spec v1.2's
+      RSK-9 records the residual until then. Needs an owner decision on the
+      legitimate non-lane case (detached HEAD, differently named branch) and
+      should be decided together with the deferred dirty-tree precondition.
+      Ticket creation stays with the owner per the tracker policy."
+    type: question
+    date: "2026-11-27"
+  - text: "DoR iteration 1 verdict: NOT_READY (readiness-review/readiness-iter-1.md,
+      5 blocking - 1 critical, 4 major - and 7 advisories). B1 critical: the
+      two-refusal-arms design is unimplementable as written - the plan says
+      resolution reuses the seam's predicates with no copy, but
+      .dependency-cruiser forbids core->adapters and isSafeRef is private at
+      push.ts:78, while TC-LCAUSE-001 demands a guard rejection on the command
+      path that yields a record. B2: the spec says the engine's ensure-push
+      names a cause, but production.ts:4275-4281 branches only on outcome and
+      NG-3 forbids surfacing one. B3: TC-LPUSH-001 asserts a tautology (the
+      fixture double receives the literal HEAD). B4: phase 5's new golden file
+      and its host suite are outside the declared scope, so the commit would
+      omit it. B5: I-4 and the stale AGENTS.md pr_creation row had no recorded
+      ruling."
+    type: decision
+    date: "2026-11-27"
+  - text: "DoR rulings (PM-decided, to be applied in the remediation). R1: one
+      predicate home in core contracts (the safe-ref check and the
+      protected-name set move there); adapters imports it from core, which the
+      dependency rules allow, so the seam keeps its guard as defence in depth
+      with no copy. The command refuses pre-act, so a guard-shaped cause is
+      recorded only when a direct seam invocation rejects - never on the command
+      path; TC-LCAUSE-001 is rewritten accordingly. R2: the engine consumes only
+      the act outcome and surfaces no cause; the cause lives in the lane's
+      answer and record only; spec F-3/F-4 and the test plan step are corrected.
+      R3: TC-LPUSH-001 gets a transport double that records the ref and resolves
+      the head at act time against a per-ref fake remote, so the equality
+      assertion is real. R4: phase 5 declares the golden file and its host suite
+      in scope. R5: the provider.md tail statement and its doc-conformance
+      phrase row move together in phase 3; the AGENTS.md pr_creation row is
+      phase 8's, owned by that phase. R6: add a risk row for the silent pre-act
+      refusal residual, correct the 'engine evaluates the same branch' claim,
+      declare the record's head source (the invocation checkout's HEAD read at
+      act time), state the no-commit interaction (the push is not a commit and
+      still runs), and add a consolidated DoD section. SUPERSEDED in part by
+      R12: the predicate home is packages/core/src/contracts/dispatch.ts,
+      because the closeout contract is declaration-only by pin."
+    type: decision
+    date: "2026-11-27"
+  - text: "retro: the planning chain shipped a design that could not compile in the
+      declared layering, and two artifacts asserted a behaviour (the engine
+      naming a cause) that the delivered code does not have. Both survived spec
+      review, test planning and plan validation; only the adversarial DoR caught
+      them. Lesson: any spec statement of the form 'X names/reports Y' must cite
+      the consumer line that reads Y, and any cross-layer reuse must cite the
+      dependency rule that permits it."
+    type: retro
+    date: "2026-11-27"
+  - text: "DoR rulings R7-R11 (recorded before the gate re-run). R7: `protected-ref`
+      keeps two sources - protected-set membership is the command's pre-act
+      refusal (no child, no record), while a server-side protection or hook
+      decline is classified from the child act into the same token (failed, one
+      record) - so the ticket's 'a protected branch is named' requirement
+      survives; `unsafe-branch` stays guard-only; recordable causes are seven.
+      R8: NFR-2's added cost includes the bounded pm-notes read for the branch
+      declaration alongside the branch, checkout/head and lane reads, the push
+      and the append. R9: the predicate's one home is the closeout contract
+      module, not a dispatch contract. R10: the predicate is unified for the
+      push seam and its command only; the identical private copies in the git
+      index, merge and watchdog adapters stay untouched as a declared residual.
+      R11: the dispatch status golden host is
+      tests/golden/dispatch-status-worktree.test.ts with
+      tests/golden/status-lane-push.txt."
+    type: decision
+    date: "2026-11-27"
+  - text: "DoR iteration 1 remediation closed: spec v1.4, test plan v1.5, plan
+      revalidated (valid, readyForDevelopment true). B1 resolved by the
+      single-predicate layering (core home, adapters import, command pre-act,
+      seam guard as defence in depth); B2 by making the engine outcome-only in
+      every statement; B3 by the act-time fake remote; B4 by declaring the
+      golden and its host in phase 5; B5 by assigning the provider.md phrase row
+      to phase 3 and the AGENTS.md pr_creation row to phase 8. Readiness review
+      iteration 1 is committed with the artifacts."
+    type: info
+    date: "2026-11-27"
+  - text: "DoR iteration 2 verdict: NOT_READY (readiness-review/readiness-iter-2.md;
+      3 blocking, 3 minor advisories). B1 persists in a new form: the predicate
+      home ruled in R1/R9 (packages/core/src/contracts/closeout.ts) cannot hold
+      a function - tests/structure/closeout-contract.test.ts:210-213 pins that
+      module declaration-only and port-neutrality asserts it too, so every
+      function-bearing form is a named violation. B2 of the iteration (new): the
+      protected-set pre-act arm is structurally unreachable, because a
+      convention-resolved branch name always contains a slash and can never
+      equal main, main-tools or HEAD. B3: phase 3 omits
+      tests/checks/provider-alias-baseline.test.ts, which pins the 28-row help
+      baseline the phase regenerates."
+    type: decision
+    date: "2026-11-27"
+  - text: "DoR rulings R12-R15 for iteration 3. R12: the safe-ref predicate moves to
+      packages/core/src/contracts/dispatch.ts, which already carries functions
+      (dispatchAttemptRecordKey, dispatchPushEvidenceRef) and is not pinned
+      declaration-only; PROTECTED_REF_NAMES stays in the closeout contract as
+      `as const` data; the seam and the command both import through the
+      contracts barrel. No new module, no pinned invariant relaxed. R13: the
+      protected-set pre-act arm is declared structurally unreachable on the
+      command path (a resolved name always carries a slash); the predicate keeps
+      running as defence in depth and is tested by a direct unit call, not by
+      faking a branch selection; AC-F1-2's Then is unchanged. R14: phase 3
+      declares tests/checks/provider-alias-baseline.test.ts in scope. R15: fix
+      the F-4 imprecision (the cause reaches the record and the folded
+      reference), the TC-LBND-002 re-invocation contradiction, the plan-wide
+      zero-real-child claim against the fixture's real checkout, the stale DEC-4
+      quote, the Appendix E row, and add feature-adapter-ports.md to phase 8's
+      doc list."
+    type: decision
+    date: "2026-11-27"
+  - text: "retro: two consecutive DoR iterations blocked on the same finding (B1)
+      for different reasons - first an impossible dependency direction, then an
+      impossible home module - because each fix was adopted from a suggestion
+      without replaying the repo's structural pins. The iteration-2 reviewer
+      corrected its own iteration-1 advice. Lesson: before moving a symbol, list
+      the tests that pin its destination module, not just its source."
+    type: retro
+    date: "2026-11-27"
+  - text: "DoR iteration 3 verdict: NOT_READY, one new major blocking finding and no
+      persistent one (readiness-review/readiness-iter-3.md). The finding:
+      doc/quality/test-specs/test-spec-loop-supervision.md:158 states the
+      prompt-required set at 28 families with provider last, and
+      tests/checks/doc-conformance.test.ts:2331-2334 pins that sentence as
+      truth, but phase 3 excluded the page from the count-and-tail movement and
+      listed it as never edited. GH-350 edited the same sentence from 27 to 28
+      and added the row, so the precedent is direct. Every other facet passed,
+      including the predicate home, the structurally unreachable protected-set
+      arm, the phase-3 suite set, the phase-5 golden and all earlier closures."
+    type: decision
+    date: "2026-11-27"
+  - text: "DoR ruling R16 and the iteration-limit decision. R16: add
+      doc/quality/test-specs/test-spec-loop-supervision.md to phase 3 scope and
+      to its count-and-tail list, remove it from the never-edited line, and
+      state that its GH350_TRUTH_ROWS row moves in the same commit. Also fix the
+      three non-blocking wording items from iteration 3 (isSafeRef does not
+      refuse a protected member; the stale phase-1 clause; add
+      dispatch-token-home.test.ts to the phase Verify line). Limit decision:
+      three remediation iterations are exhausted, but this is a single new
+      finding with a mechanical correction and a direct precedent, not a
+      stalemate on a persistent blocker, so the plan is corrected and confirmed
+      narrowly against the delta instead of escalated. The owner is told in the
+      change's final message."
+    type: decision
+    date: "2026-11-27"
+  - text: "DoR gate cleared: narrow confirmation after iteration 3 returned READY
+      (readiness-review/readiness-confirmation.md). R16 was confirmed on the
+      delta: the loop-supervision page is in phase 3 scope and its phrase row,
+      the wording corrections are true against the seams, plan validate is
+      valid, and no AC, phase id, order or ownership moved. Residual wording in
+      the test plan (the predicate versus the protected-name set) was corrected
+      in the same round. The gate ran four review passes - three full iterations
+      and one narrow confirmation - with every blocking finding closed by an
+      artifact correction rather than an override."
+    type: decision
+    date: "2026-11-27"
+  - text: "Phase 7 (system_spec_update) outcome: 16 current-truth docs plus
+      AGENTS.md reconciled; focused doc gates green (tests/checks 1679 pass / 0
+      fail, doc-conformance, lane-push-surfaces,
+      engine-first-doc-reconciliation, identity-docs, test-doc-distribution no
+      drift, forbidden-literals 0, git diff --check clean). Truth sources are
+      the delivered contracts and app modules, not the spec's prose. Residual
+      accepted, not deferred: no standalone feature-lane-push page. The
+      capability is specced where it belongs - record, fold and status fact on
+      feature-dispatch-engine.md, the pr_creation tail and refusals on
+      feature-quality-gates-and-pr.md, surfaces on
+      feature-agents-and-commands.md, composition on feature-cli-entrypoint.md,
+      the seam on feature-adapter-ports.md, and the command contract on its
+      reference page - so no modified feature area is left without a spec. A
+      standalone page would need a
+      scripts/checks/forbidden-literals.registry.json corpus row, which is a
+      check input, and it would duplicate five pages."
+    type: decision
+    date: "2026-11-27"
+  - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml, 1 critical, 1
+      high, 3 medium, 5 low, 3 info). Critical: the delivered push seam's fixed
+      argv is invalid - `git push --ff-only HEAD:refs/heads/<branch>` exits 129
+      because push has no --ff-only, and the lone refspec is parsed as the
+      repository argument. Verified independently on git 2.53.0. The defect is
+      inherited from GH-386, but GH-416 adds a second consumer, the pm
+      instruction, the command and TDR-0079 on top of it, so ticket requirement
+      1 cannot be delivered without fixing it. The host ledger corroborates: 18
+      attempts, only push:clean ever recorded, never push:pushed or push:failed.
+      High: no test runs the seam's default runner against real git, so the
+      battery is green on an act that cannot succeed."
+    type: decision
+    date: "2026-11-27"
+  - text: "Ruling R17 (absorbed scope). The argv correction belongs to GH-416, not a
+      follow-up: fix the seam to a valid non-force push of HEAD to
+      refs/heads/<branch> on the checkout's configured push remote, resolved by
+      one bounded local config read (branch.<branch>.pushRemote, then
+      remote.pushDefault, then branch.<branch>.remote, then origin), with no
+      force flag so a non-fast-forward is still refused by git itself. Add one
+      deterministic real-git suite (temp checkout plus local bare remote, no
+      network; the closeout and pilot temp-repo fixtures are the precedent) and
+      move every argv pin. Corrected obligations: spec F-1/§16 (the seam is no
+      longer 'unchanged'), the push reference page and TDR-0079. Advisories 1-6
+      and 8-11 are also in scope for plan phase 9 (vacuous TC-LPUSH-003 arm, the
+      overflowing-slice fold arm, validator-level cause cases, the eight
+      undisclosed scope entries, classification of a missing destination and a
+      403 permission failure, unconditional success claims in the prompt and a
+      guide, the append-failure diagnostic and oversize test, the spec §14
+      wording, the prompt pins' word-presence weakness, and the changeset's 'one
+      shared home' sentence)."
+    type: decision
+    date: "2026-11-27"
+  - text: "retro: a shipped seam had an argv git has never accepted, and every test
+      around it injected a runner that returned scripted text, so 13 136 passing
+      tests certified an act that always failed. The defect came from the
+      feature that introduced the seam and survived its review. Lesson: a seam
+      whose whole job is to spawn a binary needs at least one deterministic
+      real-binary test; an injected double proves the caller, never the argv."
+    type: retro
+    date: "2026-11-27"
+  - text: "Review iteration 2: PASS (code-review/review-iter-2.yaml). The critical
+      argv defect is fixed and re-probed on real git 2.53.0 with the seam's
+      default runner and no network: first push accepted, repeat accepted, moved
+      branch non-fast-forward, guards before any child, all four
+      remote-precedence positions correct through a linked worktree. The
+      real-git suite passes with every internet connect() blocked and fails 9 of
+      14 cases when the old argv is restored. Classification verified on a
+      111-text corpus with only the four intended differences. All seven ACs
+      satisfied. Range gate PASS (33 commits, 0 offending); full battery 13166
+      pass / 4 skip / 0 fail."
+    type: decision
+    date: "2026-11-27"
+  - text: "Dispositions. F-10's diagnostic channel (an append-failure code on a
+      diagnostic member of the answer): not delivered and not blocking - no
+      criterion requires it, and the declared disclosure (`recorded: false`) is
+      delivered and tested for both the failed append and the oversize record;
+      the additive answer member it would need is outside every phase scope. F-9
+      (cause tokens bound by array position, `spawn-failed` re-typed): open by
+      R17, non-blocking - the array order is pinned and every token is asserted
+      by name, so a reorder cannot relabel silently. F-25 (`plan diff` always
+      answers unreadable) is outside this change and identical at base; proposed
+      to the owner as separate work, not created as a ticket."
+    type: decision
+    date: "2026-11-27"
+  - text: "Polish pass before the quality gate, all from review iteration 2: F-14
+      (the config parser must fail closed or tolerate a section header with
+      trailing text), F-15 (an oversized config is unresolvable, not silently
+      truncated), F-16 (the remote-name character set is documented or widened),
+      F-17 (a guard-before-read arm), F-18 (the changeset names the argv
+      correction and stops calling the ensure-push unchanged), F-19 (TDR-0079's
+      stale line citations and suite count), F-20 (arm 8 says resolved push
+      remote), F-21 (the pm unrecorded bullet and spec F-4 are conditioned on a
+      refusal whose record did not land), F-22 (the 403 and missing-destination
+      wordings are exercised through push <ref>, and the fixture name in the
+      test plan is corrected). F-23 and F-24 stay declared: transport-failure
+      wordings remain `unclassified` per spec 7.3, and the checkout-config-only
+      read scope is stated where the parser lives."
+    type: decision
+    date: "2026-11-27"
+  - text: "Quality gates on head 954c8f3a (final): pnpm check exit 0 - 13177 pass, 4
+      skip, 0 fail, 13181 tests across 1571 files; lint, format:check,
+      typecheck, boundaries (531 modules), ambient-globals,
+      workspace-entrypoints, secret-read-boundary (496 files),
+      allowlist-tripwire, memory-lint (0 errors), forbidden-literals (7/7, 0
+      violations), new-code-naming (2559 files, 0 violations), namespace-tree,
+      prompt-conformance (5 clean), help-guide coverage and exports-parity all
+      green. Commit-range gate: VERDICT PASS, base origin/main-tools, merge-base
+      043f66540, head 954c8f3a, 35 commits in range, 0 offending, 0 distinct
+      rules hit, mode none (no remediation), commitlint binary resolved from the
+      repository-local node_modules/.bin. Doc distribution: no drift, 96
+      in-scope docs, install set matches the ados_distribution markers. Tree
+      clean before and after."
+    type: info
+    date: "2026-11-27"
+  - text: "Final gate re-run at head 302b563e8 after the documentation
+      re-verification (docs changed after the earlier green): pnpm check exit 0,
+      13177 pass, 4 skip, 0 fail, 13181 tests across 1571 files; every stage
+      green (lint, format:check, typecheck, boundaries, ambient-globals,
+      workspace-entrypoints, secret-read, allowlist-tripwire, memory,
+      forbidden-literals, new-code-naming, namespace-tree, prompt-conformance,
+      help-guide coverage, exports-parity). Commit-range gate VERDICT PASS, 37
+      commits, 0 offending, mode none, commitlint from repository-local
+      node_modules/.bin. Doc distribution no drift, 96 in-scope docs. Tree
+      clean."
+    type: info
+    date: "2026-11-27"
+  - text: "Pull request created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/429 (number
+      429, base main-tools, head feat/GH-416/lane-pushes-own-evidence-commit at
+      c0175b415). Title feat(GH-416): a lane pushes its own last evidence
+      commit. Merge authority stays with the owner; the lane does not merge,
+      enable auto-merge, or reopen a phase."
+    type: info
+    date: "2026-11-27"
+  - text: "Doc-risk inventory for phase 7 (current-truth docs likely to change):
+      doc/spec/features/feature-dispatch-engine.md (required behaviour 1/2/4,
+      the operator lane view's facts and read posture, the push and
+      attempt-record evidence, the lifecycle prompt section), the dispatch
+      engine test specification
+      doc/quality/test-specs/test-spec-dispatch-engine.md, the attempt-record
+      and push env blocks in the same feature page, and a decision record
+      amending TDR-0076's push ownership if the spec introduces a session side
+      push seam. .opencode/agent/pm.md and the built lifecycle prompt
+      (packages/core/src/domain/dispatch-prompt.ts) are product surfaces that
+      the behaviour change must reach. The changeset under .changeset/ is
+      required before the first gate run."
+    type: info
+    date: "2026-11-27"
+  - text: "Plan phase 1 complete (contracts: the safe-ref predicate's home in the
+      dispatch contract module, the dispatch.lane-push record kind with its
+      append and read, and the changeset): commit b4a7609ad. isSafeRef landed in
+      packages/core/src/contracts/dispatch.ts and the adapters push seam now
+      imports it and PROTECTED_REF_NAMES through the contracts barrel (its
+      private REF_PATTERN/FORBIDDEN_REF/isSafeRef deleted, guards
+      byte-identical, four exported names unchanged); the closeout contract
+      module is untouched. The record kind, payload schema, key prefix and
+      per-ref key builder, the closed eight-token cause set split as one
+      guard-only token and seven recordable causes, the lane-push evidence
+      builders, the push answer contract, the additive optional lanePush status
+      fact, and the ledger validator/read/append landed. The state-additivity
+      baseline gained exactly the three lane-push constants. Exactly one new
+      five-package minor changeset exists. Tests: pnpm typecheck green; the six
+      pin suites 72 pass / 0 fail (event-state-additivity,
+      port-contract-inventory, content-inventory, dispatch-contract,
+      dispatch-contract-invariance, operator-contract-invariance);
+      check:boundaries clean (527 modules); check:no-shell clean (45 surface
+      files) and no-shell-dispatch 14 pass; read-only controls 63 pass / 0 fail
+      (port-neutrality, closeout-contract, dispatch-push-parity,
+      dispatch-push-evidence, dispatch-parity-push, dispatch-push-envelope);
+      dispatch-token-home 7 pass; release suites 19 pass / 0 fail; git diff
+      --check clean. Only the declared paths changed; the conditional
+      contracts/push.ts and inventory.json were not needed."
+    type: info
+    date: "2026-11-27"
+  - text: "Plan phase 2 complete (the push seam's closed refusal cause): commit
+      b049c408d. The seam's non-zero exit now classifies git's bounded failure
+      text into non-fast-forward, auth-rejected, remote-unavailable,
+      protected-ref (a server-side protection or hook decline), or the honest
+      unclassified fallback; the tokens are imported from
+      DISPATCH_PUSH_RECORDABLE_CAUSES, never re-typed. The guard literals
+      unsafe-branch/protected-ref, the four exported names, the outcome union,
+      the fixed argv, the non-shell spawn, and the 60 000 ms budget are
+      unchanged; the raw text never leaves the seam. New seam-level suite
+      dispatch-lane-push-causes (16 pass): seven recordable outcomes each one
+      child and one closed cause, spawn-failed maps to failed, timed-out keeps
+      its member-less shape, locale-flavoured and URL/token text classified
+      away, guard rejection with zero children for unsafe and each protected
+      member, and the engine arm (two different causes leave verdict, evidence,
+      exit, comparison, push block identical, no cause in the envelope). The
+      existing parity suite gained an additive class table. Tests: typecheck
+      green; new suite 16 pass / 0 fail; GH-386 suites 53 pass / 0 fail;
+      check:no-shell clean (45 surface files) and no-shell-dispatch 14 pass; git
+      diff --check clean. Only the declared paths changed."
+    type: info
+    date: "2026-11-27"
+  - text: "Plan phase 3 complete (the `push` command and its prompt-required mount):
+      commit 4e90a2e9e. Added the pure rules module
+      packages/core/src/domain/dispatch-lane-push.ts (structural resolution over
+      the delivered selectMatchingBranch, the act-to-verdict/cause mapping, the
+      newest-matching-record selection, the evidence builders, and the
+      record-to-status projection), the use case
+      packages/core/src/app/dispatch-lane-push.ts (resolve, act, append, answer
+      over injected ports; one fast-forward act, act-then-append, recorded:false
+      disclosure), the CLI command packages/cli/src/commands/push.ts and
+      renderer packages/cli/src/output/push-text.ts, and the edge/production
+      wiring (pushRuntime over the delivered pm-notes/branch/checkout/lane reads
+      and the delivered push seam; `push` registered in the composed program).
+      The prompt-required set is 29 with push last; the help entry, coverage
+      inventory, M4 reference page, and both pageFor arms landed. The
+      count-and-tail movement moved every pinned family count to 29 and every
+      tail to push (the 17 pinning suites, the two mounting fixtures, the
+      install-conformance/provider-mounting/provider-entrypoint/
+      event-mount/entrypoint suites, the alias baseline help cell and its
+      provenance clause through the deliberate capture path, and the ten
+      declared doc pages plus the doc-conformance GH350 truth rows including the
+      loop-supervision page and its row). New suites: command (12), ticket
+      AC-1/AC-2 fixture over a real temporary checkout and a keyed fake remote
+      (2), resolution (11), record (7), causes command-path arms (24 total in
+      that suite), answer bounds (4). Tests: typecheck green; the six lane-push
+      suites 60 pass / 0 fail; the count movement 106 pass / 0 fail (part 1) and
+      148 pass / 0 fail (part 2); check:help all covered; check:no-shell clean
+      (48 surface files); no-shell-dispatch/doc-conformance/ content-inventory
+      87 pass; read-only controls 46 pass; dispatch-token-home 7 pass; git diff
+      --check clean. Only the declared paths changed."
+    type: info
+    date: "2026-11-27"
+  - text: "Plan phase 4 complete (the classification fold): commit c30fa06d9.
+      packages/core/src/app/dispatch.ts now exports
+      lanePushEvidenceRefsForAttempt (one bounded read of the lane-push family,
+      repository filter first, newest exact-attempt match) and folds at most two
+      references into the reserved block ahead of the slice, beside the five
+      delivered disclosures. The fold adds evidence references only: no token,
+      outcome, comparison reason, corroboration source, derivation arm, or
+      attempt field. New suite dispatch-lane-push-fold (10 pass): the seven
+      recordable causes each fold lane-push:failed plus their cause; the
+      acceptance fold is lane-push:pushed with no cause beside push:clean; a
+      foreign attempt / no record / foreign repository / torn family each
+      contribute zero and never block classification; exactly one bounded read;
+      disclosure-not-a-claim arms A/B/C (truthful pr-open, the delivered
+      push-parity-unmet row once, an unrewritten stale pushed record); and
+      TC-LPUSH-003 (equal heads, zero engine acts, push:clean and
+      lane-push:pushed once each). dispatch-push-envelope gained the no
+      lane-push/no cause assertion. Tests: typecheck green; fold suite 10 pass;
+      the four-file batch 36 pass; tests/conformance/dispatch 182 pass;
+      invariance/additivity 44 pass; read-only controls 378 pass;
+      dispatch-token-home 7 pass; git diff --check clean. Deviation: the
+      TC-LPUSH-003 classification arm lives in the fold suite (it shares the
+      fixed-attempt runDispatch harness) rather than dispatch-lane-push.test.ts;
+      no conformance registry row was added because the existing fourteen-row
+      registry is a delivered assertion and the fold's attempt binding needs the
+      fixed-attempt harness, so the dedicated suite proves it directly."
+    type: info
+    date: "2026-11-27"
+  - text: "Plan phase 5 complete (the `dispatch status` lanePush fact): commit
+      4c64266ea. readOperatorStatus takes one additional bounded read of the
+      lane-push family (total three: lane, park, lane-push), filters to the
+      repository, and matches the addressed lane's exact attempt identity;
+      buildStatusData carries the fact verbatim (verdict, branch, head, cause
+      when failed, recordedAt); the human renderer appends additive
+      lanePush/lanePushBranch/lanePushHead/lanePushCause/lanePushRecordedAt
+      lines only when present. Absence is an absent key and every delivered
+      member is byte-identical. New projection suite dispatch-status-lane-push
+      (7 pass); the golden host gained one cell reading the new
+      tests/golden/status-lane-push.txt (created once through the renderer); the
+      two delivered status goldens are unchanged. Deviation: the read-count
+      assertions in dispatch-status-park (1), dispatch-operator-status
+      (TC-STATUS-001/002/007) and dispatch-operator-posture (TC-RO-004) moved
+      from two to three; the plan named only TC-STATUS-007, but every count
+      assertion that pins the status read had to move with the declared DEC-3
+      widening. Tests: typecheck green; status/golden/additive/invariance/
+      content-inventory 61 pass; read-only controls 12 pass; dispatch-text
+      golden 5 pass; dispatch-token-home 7 pass; git diff --check clean."
+    type: info
+    date: "2026-11-27"
+  - text: "Plan phase 6 complete (the two product surfaces): commit 817196e6d.
+      `.opencode/agent/pm.md` step 10 now orders @pr-manager create/update, the
+      pm-notes URL note, the ticket assignment, `phase complete <ref>
+      pr_creation`, `push <workItemRef>`, the final-message rule, and STOP; the
+      push instruction follows the phase completion; the refusal, unrecorded,
+      no-retry/no-force/no-authored-commit/no-reopen, `no commit`, and pre-act
+      refusal rules are stated; the phase-definition item 11 states the same
+      tail. The edit was delegated to @toolsmith per the repository rule.
+      packages/core/src/domain/dispatch-prompt.ts gained one sentence in the
+      eleven-phase section; the five markers are unchanged. The generated
+      .ados-claude/agents/pm.md was regenerated (second run a no-op). The prompt
+      inventory names `push <workItemRef>` for pm.md; the two feature pages
+      state the same tail. New suite lane-push-surfaces (11 pass, both surfaces
+      asserted separately). Tests: typecheck green; check:prompt 5 clean;
+      doc/prompt conformance 67 pass; GH-386 suites 54 pass; milestone-prompts
+      freshness 15 pass; git diff --check clean. Observation for phase 8: two
+      guides still carry the old phase-11 line
+      (doc/guides/opencode-agents-and-commands-guide.md:248 and
+      doc/guides/unified-change-convention-tracker-agnostic-specification.md:27\
+      9); they are outside every declared scope and are handed to the
+      reconciliation input."
+    type: info
+    date: "2026-11-27"
+  - text: "Plan phase 7 complete (the companion decision record): commit f10a51c05.
+      TDR-0079-lane-push-amends-tdr-0076.md landed as Proposed with a null
+      decision date, R2, and one index row; TDR-0076 is untouched. The record
+      amends TDR-0076's push ownership in substance: the session-side act
+      becomes the typed prompt-required `push <ref>` product surface while the
+      engine's ensure-push stays the backstop and consumes only the outcome; the
+      lane's act runs at `pr_creation` after the phase-completion commit; and
+      exactly one durable record kind is added, `dispatch.lane-push`, folded as
+      `lane-push:<verdict>`/`lane-push-cause:<cause>` with the additive status
+      fact. It records the closed eight-token cause vocabulary, the 512-byte
+      payload bound, the seven-of-sixteen reserved maximum, and the rejected
+      alternatives. Owner acceptance stays at pull-request review. Note: this
+      repo's decision-record suite is the only gate (the jcw-docs lint is not
+      vendored); no `amends:` frontmatter key exists and the TDR-0078 pattern
+      (links.decisions + title + D7) is followed. Tests: decision-record and
+      doc-conformance 73 pass / 0 fail; git diff --check clean."
+    type: info
+    date: "2026-11-27"
+  - text: "Plan phase 8 (finalize and release) is declaration-only and authors no
+      files, per the plan: the current-truth pages are handed to @doc-syncer in
+      lifecycle phase 7 and the pull request to @pr-manager in lifecycle phase
+      11. Handoff input: doc/spec/features/feature-dispatch-engine.md
+      (derivation arm 8, the attempt evidence including the lane-push refs and
+      the reserved block as code truth, the record-kind inventory, the `head`
+      source, the seven recordable causes, the guard-only unsafe-branch, the
+      operator lane view's lanePush fact and widened read posture, the closure
+      note's record-kind sentence), feature-quality-gates-and-pr.md and
+      feature-delivery-lifecycle.md (the phase-6 statements plus the wider
+      reconciliation), feature-agents-and-commands.md,
+      feature-cli-entrypoint.md, feature-adapter-ports.md (the contracts subpath
+      note), the engine-first operations guide (the declared divergence and the
+      three places a refusal is read), the dispatch-engine test-spec coverage
+      map, the glossary, the change-lifecycle guide, AGENTS.md's pr_creation
+      row, and the two guides the surfaces review found still carrying the old
+      phase-11 line (doc/guides/opencode-agents-and-commands-guide.md and
+      doc/guides/unified-change-convention-tracker-agnostic-specification.md).
+      TC-LDOC-002 is the manual content check for that input. The aggregate gate
+      runs once at the lifecycle quality_gates phase."
+    type: info
+    date: "2026-11-27"
+  - text: "Plan phase 8 and aggregate gate evidence (authoritative run on a0a52eb36,
+      TMPDIR=$PWD/tmp/tmpdir): `pnpm check` exit 0 in 1223.9 s - lint pass,
+      format:check pass (3244 files), typecheck pass, tests 13136 pass / 4 skip
+      / 0 fail (13140 tests, 1570 files), boundaries 531 modules clean,
+      ambient-globals 266 clean, workspace-entrypoints ok, secret-read-boundary
+      496 clean, allowlist-tripwire ok, memory-lint 0 errors, forbidden-literals
+      7/7 clean, new-code-naming 2557 clean, namespace-tree ok,
+      prompt-conformance 5 clean, help-guide all covered, exports-parity 5
+      publishables pass. `./scripts/lint-commit-range.sh --base
+      origin/main-tools` VERDICT PASS - 26 commits in range, 0 offending.
+      Release invariant: exactly one added changeset for the five fixed-group
+      packages at minor; no package version and no lockfile edited. Decision
+      record TDR-0079 landed as Proposed with its index row. The phase-7
+      documentation reconciliation input is handed over (see the phase 8 note);
+      TC-LDOC-002 remains the manual content check after that phase. One
+      gate-remediation commit a8b4a9c57 (registry entry for the new M4 page,
+      vocabulary commandPages 43, cli-edge declarers, event-taxonomy allowance,
+      credential-shaped test literals removed, pm-notes YAML escape fixed) and
+      one formatting commit a0a52eb36 precede this run; the tree was clean at
+      the gate."
+    type: info
+    date: "2026-11-27"
+  - text: "Plan phase 9 (code-review iteration 1 remediation) complete at 85447fcd2
+      (17 files; TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 - 13166 pass / 4 skip
+      / 0 fail across 1571 files; typecheck, check:no-shell, doc-conformance,
+      token-home, contract-invariance, decision-record, `jaiship plan validate
+      GH-416` (verdict=valid) and `git diff --check` all green). (1) The act,
+      corrected: packages/adapters/src/git/push.ts now runs `git push <resolved
+      push remote> HEAD:refs/heads/<branch>` - one repository argument, one
+      refspec, no `--ff-only`, no force flag, no `+` prefix - and the push
+      remote comes from ONE bounded local configuration read (a bounded upward
+      git-directory search that follows a linked worktree's .git pointer and
+      commondir, a 64 KiB config read, a minimal config parser) in the declared
+      order `branch.<branch>.pushRemote`, then `remote.pushDefault`, then
+      `branch.<branch>.remote`, then `origin`. A missing, ambiguous, or
+      unsafe-shaped destination is the typed `remote-unavailable` rejection and
+      starts no child; the safe-ref and protected-name guards still run first,
+      so the configuration read is already behind both. Both production call
+      sites (production.ts engine ensure-push and the lane command) already
+      passed the checkout `cwd`, which the resolution now uses, so no wiring
+      change was needed. No new module, no new configuration key, no second
+      remote-write path, no shell. The linked-worktree case was probed by hand
+      before it was armoured by a test. (2) Classification (F-7): `No configured
+      push destination` and `does not appear to be a git repository` classify
+      `remote-unavailable`; `returned error: 403` and `Write access ... not
+      granted` classify `auth-rejected` and never fall through (the auth row is
+      matched before the unavailable row). (3) TC-LGIT-001 (F-2):
+      tests/behaviour/dispatch-lane-push-real-git.test.ts (new) over
+      tests/fixtures/dispatch/parity/temp-repo.ts (new) runs the seam's DEFAULT
+      runner and DEFAULT timeout against a temporary checkout and local bare
+      remotes, with the user and system git configuration neutralized for the
+      suite: first push accepted with the remote ref equal to the checkout HEAD,
+      a repeat push accepted with the ref unmoved, a moved remote refused
+      `non-fast-forward` with the ref unmoved, the guard names refused with no
+      child and no remote ref, a missing destination refused
+      `remote-unavailable` with its configuration unchanged, the four precedence
+      positions each pushing only to the expected remote, every configured
+      remote a local path, two independent runs identical, a linked-worktree
+      arm, and no temporary directory left behind - 14 cases, 0 fail.
+      Mutation-checked: restoring the old `--ff-only` argv in the seam fails 8
+      of the 13 cases that existed at that point. (4) The argv pins (F-2):
+      dispatch-push-parity :144 :260 :319, dispatch-lane-push-command :129 :263,
+      dispatch-lane-push-causes :126, plus the planted shell-refusal call, now
+      assert the repository argument with the remote the configuration read
+      yields; the seam-level arms declare that destination in a
+      configuration-only fixture checkout instead of inheriting the host
+      checkout's remotes. (5) Test-quality fixes: the vacuous `const pushActs =
+      0` is gone - TC-LPUSH-003 now counts live push invocations through the
+      production composition (a recording runner, its `pushes` counter and the
+      recorded seam invocations, both 0); TC-LFOLD-001 drives one full
+      classification per recordable cause instead of calling the helper, and
+      gains the full-16-reference overflow arm proving both lane-push references
+      survive an overflowing slice ahead of the sliced evidence; TC-LSTORE-001
+      gains six validator-level refusals (a guard-only cause, a ninth token, a
+      cause on `pushed`, a short head, an empty head, an oversize payload) plus
+      the production-shaped record accepted beside them; TC-LCMD-002 gains the
+      oversize arm (a 420-character branch measures 779 bytes against the
+      512-byte bound, so the act lands, `recorded` is false, and no record is
+      written) and pins the failed-append answer's member set; the two
+      word-presence prompt pins became sentence pins with planted retry/force
+      mutations and a planted refusal-as-success mutation that each fail the
+      guard. (6) The two unconditional success claims are conditional: the built
+      prompt says `push <ref>` pushes that last commit and reports the outcome,
+      and the lifecycle guide's outcome is pushed or the refusal named with its
+      cause. (7) The argv stated as fact is corrected in the push reference page
+      (:63) and in TDR-0079 (:103, :151, :410), and the changeset now says the
+      safe-ref predicate moves to the core contracts tier beside the unchanged
+      protected-name set. (8) The pages the spec correction invalidates are
+      reconciled: feature-quality-gates-and-pr.md (summary, the act, the
+      pr_creation tail), feature-adapter-ports.md (the seam row and the
+      secret-read boundary row), and the dispatch-engine test-spec coverage map,
+      which gains the real-git suite and the corrected argv wording. NOT
+      delivered, and outside this phase's declared scope: F-10's diagnostic
+      channel for the append failure code (it needs a member on the answered
+      result plus a `warnings` line from packages/cli/src/commands/push.ts,
+      neither in the phase 9 scope list; the disclosure arms ARE delivered and
+      the answer keeps `recorded: false` with its declared member set). F-9 (the
+      cause tokens bound to the closed array by position and the re-typed
+      `spawn-failed`) remains open under ruling R17. F-6 and F-11 are closed by
+      plan revision v1.7 and spec v1.6, authored by @plan-writer and
+      @spec-writer. Review items closed with evidence here: F-1, F-2, F-3, F-4,
+      F-5, F-7, F-8, F-10 (the two test arms), F-12, F-13."
+    type: info
+    date: "2026-11-27"
+  - text: "Code-review iteration 2 (verdict PASS) advisories F-14 to F-22 closed by
+      the remediation commit that carries this note, on top of 75cc3f880 on
+      branch feat/GH-416/lane-pushes-own-evidence-commit; plan phase 9 is the
+      phase whose declared scope this rides, and no phase, task or
+      declared-scope list is added. F-14 (the configuration parser dropped a
+      section header git tolerates and re-attributed its keys): the header
+      grammar now tolerates arbitrary trailing text after the closing bracket,
+      exactly as git 2.53.0 does (probed with `git config --local --get-all`),
+      and a `[`-starting line the grammar still cannot parse makes the whole
+      parse undefined, so the destination is `remote-unavailable` instead of
+      being taken from the previous section. Tested at both layers: five
+      injected-runner shapes in dispatch-lane-push-resolution (annotated branch
+      header above pushRemote, trailing text after it, annotated bare `[remote]`
+      above pushDefault, branch.remote under an annotated header, annotated
+      `[remote \"origin\"]`), an unterminated header refusing despite a declared
+      origin, and one real-git oracle in dispatch-lane-push-real-git where `git
+      config --local --get branch.<b>.pushRemote` and the seam both resolve
+      `pushed` and only that bare remote receives the ref. F-15 (silent
+      truncation at 64 KiB): the configuration read is now exact - one byte past
+      the cap is read, and a larger file is unresolvable - tested by a >64 KiB
+      config whose pushRemote sits past the cap (refused, zero children) beside
+      the same declaration inside the bound (accepted, argv names `pushed`).
+      F-16: the accepted alphabet `[A-Za-z0-9._/-]` with no leading `-` is
+      documented where REMOTE_NAME_PATTERN lives, including the git-legal names
+      the seam refuses (`fork+oss`, `user@fork`, `a%b`, `a=b`, non-ASCII); the
+      alphabet is not widened. F-17: the real-git ordering probe gains the
+      guards-before-read arm - on a checkout with no configured destination an
+      unsafe name answers `unsafe-branch` and each protected name
+      `protected-ref`, with zero children. F-18: the changeset now names the
+      argv correction and the engine's first real push, and no longer says the
+      ensure-push stays unchanged. F-19: TDR-0079's four pre-phase-9 `push.ts`
+      line ranges cite the module instead, and the executed rows read the
+      phase-9 suite set (fifteen suites, 187 pass, 0 fail, 2026-11-27). F-20:
+      derivation arm 8 says the act targets the push remote the seam resolves
+      and names the pre-child `remote-unavailable` refusal among the
+      non-successful outcomes. F-21: the unrecorded disclosure is conditioned on
+      the act outcome in the `pm` agent definition (routed through @toolsmith,
+      with the Claude projection regenerated), spec F-4 and AC-F4-1, and the
+      quality-gates/PR page sentence that carried the same unconditioned form.
+      F-22: the missing-destination and HTTP-403 wordings now run through `push
+      <ref>` on the command path, and the test plan names the delivered fixture
+      tests/fixtures/dispatch/parity/temp-repo.ts. Verification:
+      TMPDIR=$PWD/tmp/tmpdir, targeted battery 281 pass / 0 fail across 19 files
+      (the fifteen TDR suites plus doc-conformance, lane-push-surfaces,
+      dispatch-token-home and no-shell-dispatch); pnpm typecheck green; biome
+      lint/format clean on the four touched TypeScript files; check:prompt 5
+      prompts clean; check:no-shell clean (48 surface files); `jaiship plan
+      validate GH-416` verdict=valid; git diff --check clean. Mutation-checked:
+      the old skip-the-header grammar fails 4 resolution cases and the real-git
+      annotated case, the lenient 64 KiB read fails the oversize case, and the
+      destination read moved above both guards fails the ordering probe.
+      Untouched by declaration: F-9, F-10, F-23, F-24, F-25."
+    type: info
+    date: "2026-11-27"

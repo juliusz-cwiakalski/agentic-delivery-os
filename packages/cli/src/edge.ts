@@ -595,6 +595,7 @@ import {
   createProviderCommandDefinition,
   type ProviderCommandRuntime,
 } from "./commands/provider.js";
+import { createPushCommandDefinition, type PushCommandRuntime } from "./commands/push.js";
 import {
   createQueueCommandDefinition,
   createQueueReadyCommandDefinition,
@@ -4592,6 +4593,7 @@ export type ConfigProgramOptions = {
   readonly plan?: PlanRuntimeOptions;
   readonly phase?: PhaseCommandRuntime;
   readonly commit?: CommitRuntimeOptions;
+  readonly push?: PushCommandRuntime;
   readonly provider?: ProviderComposition;
   readonly verify?: VerifyCommandRuntime;
   readonly dispatch?: DispatchCommandRuntime;
@@ -5480,6 +5482,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
     }
   } else if (options.commit !== undefined) {
     commands.commit = createCommitCommandDefinition(createCommitCommandRuntime(options.commit));
+  }
+  if (options.push !== undefined) {
+    commands.push = createPushCommandDefinition(options.push);
   }
   if (options.provider !== undefined) {
     const provider = options.provider;

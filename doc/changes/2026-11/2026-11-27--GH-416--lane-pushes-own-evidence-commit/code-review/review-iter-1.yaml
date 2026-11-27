@@ -1,0 +1,290 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-416
+branch: feat/GH-416/lane-pushes-own-evidence-commit
+status: FAIL
+summary: >
+  First review of the 28-commit range against spec v1.5, test plan v1.7, plan
+  v1.5, ticket #416 and its owner comment. The orchestration is sound and
+  matches the spec: one safe-ref predicate in the dispatch contract module with
+  the protected-name set left untouched in the closeout contract module, a
+  closed eight-token cause set split as one guard-only token and seven
+  recordable causes, a fold that adds evidence references only, a byte-identical
+  `dispatch status` absence with one additive bounded read, a command whose
+  grammar, act-then-append order and answer shapes are proven through the
+  production composition, and both product surfaces in sync with the generated
+  plugin. One blocking defect defeats the change's purpose: the delivered push
+  seam's fixed argv (`git push --ff-only HEAD:refs/heads/<branch>`) is not a
+  valid git invocation. Probed against real git 2.53.0 over a local bare remote
+  with `origin` configured, the delivered module refuses every push
+  (`rejected` / `unclassified`) because `git push` has no `--ff-only` option
+  (exit 129) and a lone refspec positional is parsed as the repository argument.
+  The lane's `push <ref>` therefore cannot put the lane's last evidence commit
+  on the remote, so AC-F1-1 and the repeat-act clause of AC-F2-1 hold only
+  against injected runners. The defect pre-dates this change (the GH-386 seam)
+  but this branch adds a second consumer, a prompt-required command and a `pm`
+  instruction on top of it, re-pins the argv in three more tests and records it
+  as a fact in TDR-0079 and the reference page. Everything else is non-blocking:
+  two vacuous assertions, an undelivered overflow arm, eight files outside the
+  declared phase scopes, classification gaps on real git wording, and wording
+  that claims an unconditional push. Verification run by this review at HEAD
+  a80bc9928: 475 targeted tests pass across 42 files; prompt-conformance,
+  help-guide-coverage, no-shell, doc-distribution and plan-validate green;
+  commit-range gate PASS (28 commits); plugin projection body-identical to its
+  source.
+severity_breakdown:
+  critical: 1
+  high: 1
+  medium: 3
+  low: 5
+  info: 3
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: critical
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/git/push.ts:203
+    message: >
+      The seam's fixed argv `git push --ff-only HEAD:refs/heads/<branch>` is
+      rejected by real git before any transport work. `git push` has no
+      `--ff-only` option (the flag belongs to merge, pull and fetch), so the
+      child exits 129 with `error: unknown option 'ff-only'`; and a lone
+      `<src>:<dst>` positional is parsed as the `<repository>` argument, not a
+      refspec, so removing only the flag is not a fix. Probed with git 2.53.0
+      over a local bare remote with `origin` configured: the delivered module
+      with its default runner answered `{outcome: rejected, detail:
+      unclassified}` for a push that plain `git push origin
+      HEAD:refs/heads/<branch>` accepts; a scratch copy of the same module with
+      only the argv changed answered accepted, accepted (Everything up-to-date),
+      non-fast-forward and protected-ref on the same repository. Both production
+      consumers use that default runner (`packages/cli/src/production.ts:4234`
+      engine ensure-push, `:6890` lane push; `gitPushRunner` is test-only).
+      Consequence: `push <ref>` refuses every real push (`failed`,
+      `unclassified`, exit 1), the lane's last evidence commit stays local, and
+      ticket requirement 1, goal G-1 and the first KPI are not delivered. The
+      host state ledger holds no attempt that ever recorded `push:pushed` or
+      `push:failed` (5 x `push:clean` only), so no production evidence
+      contradicts the probe.
+    suggestion: >
+      PM ruling first, because the spec declares the seam's argv unchanged
+      (F-1, section 16) and the plan's first escalation trigger forbids a
+      repository argument: absorb the seam fix into GH-416 (recommended, since
+      the change is meaningless without it), or land it as a predecessor and
+      rebase. Then replace the argv with a valid non-force invocation that
+      pushes `HEAD` to `refs/heads/<branch>` on the checkout's configured push
+      remote (resolve the push remote from the branch configuration or
+      `remote.pushDefault` in one bounded local read and pass it as the
+      repository argument or through `--repo`), and amend the argv statements
+      in the spec, the reference page `:63`, TDR-0079 `:103` and `:410`.
+  - id: F-2
+    severity: high
+    confidence: high
+    category: testing
+    location: tests/behaviour/dispatch-lane-push-command.test.ts:129
+    message: >
+      No test in the repository runs the push seam's default runner against
+      real git; every proof of accepted, up-to-date, non-fast-forward and
+      protected-ref is an injected runner returning scripted text, and the
+      guarded fixture validates the declared argv literally rather than git's
+      grammar. This change adds three more pins of the invalid argv
+      (`dispatch-lane-push-command.test.ts:129` and `:263`,
+      `dispatch-lane-push-causes.test.ts:126`), so the full battery is green on
+      an act that cannot succeed. TDR-0079 `:103` and the reference page `:63`
+      state the argv as fact.
+    suggestion: >
+      Land with the F-1 fix: one deterministic real-git suite (temp checkout
+      plus local bare remote; precedents `tests/fixtures/closeout/temp-git.ts`,
+      `tests/fixtures/pilot/repo.ts`, `tests/fixtures/projects/temp-repos.ts`;
+      no network) that drives the default runner through the four real
+      outcomes, and move the literal argv pins (`dispatch-push-parity.test.ts:144`,
+      `:260`, `:319`, and the three new sites) to the corrected argv.
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: tests/behaviour/dispatch-lane-push-fold.test.ts:370
+    message: >
+      TC-LPUSH-003's "zero engine push acts" is a vacuous assertion: `const
+      pushActs = 0` at `:370` is asserted to be `0` at `:396`. The test also
+      drives `runDispatch` over a stubbed parity port rather than the real
+      command path with a recording push runner that the test plan requires
+      (steps 1, 2 and 6), and the pm-notes phase-4 entry reports the case as
+      proven. The zero-push arm is in fact covered by the delivered suites
+      (`tests/behaviour/dispatch-push-parity.test.ts:105`,
+      `tests/conformance/dispatch/dispatch-parity-push.test.ts:134`), so the
+      acceptance clause stands on those.
+    suggestion: >
+      Delete the dead constant and assertion, or count real invocations through
+      the parity harness; annotate the pm-notes phase-4 entry with the
+      deviation.
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: tests/behaviour/dispatch-lane-push-fold.test.ts:168
+    message: >
+      TC-LFOLD-001 steps 1 and 3 are not delivered and the gap is not
+      disclosed. There is no overflowing-slice arm proving the lane-push
+      references survive a full 16-reference slice (NFR-5 "never truncated
+      away"; the plan names the `dispatch-push-evidence.test.ts:119`
+      technique), and the seven-cause arm calls the helper
+      `lanePushEvidenceRefsForAttempt` instead of driving one classification per
+      cause, so only `non-fast-forward` reaches an attempt record. The code is
+      right by construction (`packages/core/src/app/dispatch.ts:1130-1141`:
+      five delivered, at most two lane-push, then the slice).
+    suggestion: >
+      Add the overflow arm beside the delivered push disclosure, and drive the
+      classification for the seven causes or record the deviation in pm-notes.
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: testing
+    location: tests/behaviour/dispatch-lane-push-causes.test.ts:384
+    message: >
+      "`unsafe-branch` is never a record's cause" (`:384-389`) re-runs the
+      seven recordable arms already asserted equal to their own tokens, so it
+      cannot fail. The structural guard the spec relies on (the record
+      validator) has no test. Probed by this review: `appendDispatchLanePush`
+      refuses a record carrying `unsafe-branch`, a ninth token, a cause on
+      `pushed`, an empty or short head, and an oversize payload, each as
+      `state.write.failed`, and accepts the well-formed record.
+    suggestion: >
+      Replace the vacuous case with validator-level cases (test plan TC-LCAUSE-001
+      step 2, TC-LSTORE-001): one refusal per malformed shape plus the oversize
+      refusal.
+  - id: F-6
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-27--GH-416--lane-pushes-own-evidence-commit/chg-GH-416-plan.yaml:1284
+    message: >
+      Eight changed files sit outside every declared phase scope: the phase 3
+      gate-remediation commit `a8b4a9c57` edited
+      `scripts/checks/forbidden-literals.registry.json`,
+      `tests/structure/cli-edge-seam.test.ts`,
+      `tests/structure/event-taxonomy-single-source.test.ts` (a new
+      non-taxonomy allowance for the `kind: "refused"` discriminant) and
+      `tests/structure/vocabulary-conformance.test.ts` (42 to 43); phase 5
+      moved `tests/behaviour/dispatch-status-park.test.ts` (2 to 3 reads); the
+      reconciliation touched `doc/spec/features/feature-autonomous-delivery.md`
+      and the two guides. All are necessary and all are disclosed after the
+      fact in pm-notes, but the plan's scope lists were never amended, which
+      the plan's own rule requires before committing.
+    suggestion: >
+      Add the eight paths to the phase 3, 5 and 8 scope lists in the remediation
+      revision, each with its reason.
+  - id: F-7
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/adapters/src/git/push.ts:108
+    message: >
+      Classification gaps on real git wording. Probed: `fatal: No configured
+      push destination` and a vanished remote path both classify
+      `unclassified`, where the spec's `remote-unavailable` names an address
+      that no longer resolves. `403 forbidden` at `:108` never matches git's
+      wording, so an HTTPS permission failure (`unable to access ...: The
+      requested URL returned error: 403`, or `Write access to repository not
+      granted`) is captured by `unable to access` at `:113` and labelled
+      `remote-unavailable`, the ticket's "missing permission" class. Real
+      non-fast-forward and three protection or hook wordings classify
+      correctly. Reporting only; nothing branches on the cause.
+    suggestion: >
+      Add `no configured push destination|does not appear to be a git
+      repository` to the remote-unavailable pattern and `returned error: 403|not
+      granted` to the auth-rejected pattern.
+  - id: F-8
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/guides/change-lifecycle.md:439
+    message: >
+      Current-truth pages and the built prompt state the push's success as
+      unconditional: the phase outcome "the lane's own last commit is on the
+      remote" (`change-lifecycle.md:439`) and the prompt sentence "`push <ref>`
+      puts that last commit on the remote"
+      (`packages/core/src/domain/dispatch-prompt.ts:58`). Both are false on a
+      refusal, which the same documents go on to describe.
+    suggestion: >
+      State the outcome as "pushed, or the refusal is named with its cause" and
+      the prompt sentence as "pushes that last commit and reports the outcome".
+  - id: F-9
+    severity: low
+    confidence: high
+    category: maintainability
+    location: packages/adapters/src/git/push.ts:87
+    message: >
+      Two modules bind cause tokens to the closed array by position with holes
+      (`push.ts:87-88`, `packages/core/src/domain/dispatch-lane-push.ts:23-26`);
+      reordering `DISPATCH_PUSH_RECORDABLE_CAUSES` compiles and silently
+      relabels causes. The seam still re-types `"spawn-failed"` at `:209`
+      while its comment at `:83-85` says the tokens are never re-typed.
+    suggestion: >
+      Read the tokens by name (an object map or named exports) and import
+      `spawn-failed` beside the others.
+  - id: F-10
+    severity: low
+    confidence: high
+    category: reliability
+    location: packages/cli/src/production.ts:6925
+    message: >
+      The append wiring returns `{ ok }` only, so a busy fence, a failed write,
+      a malformed record and an oversize payload all surface as the same
+      `recorded: false`. The bound is close in practice: a production-shaped
+      payload for this change measures 439 of 512 bytes (the production attempt
+      id is 65 characters), so a long branch name or a SHA-256 repository can
+      push a successful push's record over the bound. No test covers the
+      oversize refusal.
+    suggestion: >
+      Add the oversize-refusal test and emit the append failure code on a
+      diagnostic channel; keep the three-key answer contract.
+  - id: F-11
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-27--GH-416--lane-pushes-own-evidence-commit/chg-GH-416-spec.md:387
+    message: >
+      The spec says an unclassified lane leaves its durable fact "for the next
+      classification" (section 14, section 10). Attempt identity is per
+      `runDispatch` invocation (`packages/cli/src/production.ts:4887`), so only
+      the classification of the same invocation folds the record; a resumed or
+      re-dispatched lane never folds the earlier attempt's push. The code
+      matches F-3 and RSK-3; the wording overstates.
+    suggestion: >
+      Say "for the classification of the same dispatch invocation, and for
+      `dispatch status` until a newer attempt stands".
+  - id: F-12
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/checks/lane-push-surfaces.test.ts:57
+    message: >
+      Two prompt pins pass on the presence of words: "no retry, force, authored
+      commit, or phase reopen is instructed" (`:57-63`) asserts that `retry`,
+      `force`, `reopen` and `commit` occur in step 10, and the pre-act refusal
+      pin (`:72-76`) asserts "refus" and "push". Both would stay green if the
+      prompt instructed a retry.
+    suggestion: >
+      Pin the prohibition phrase ("Do not retry, force") and a distinctive
+      fragment of the pre-act sentence.
+  - id: F-13
+    severity: info
+    confidence: high
+    category: documentation
+    location: .changeset/gh-416-lane-pushes-own-evidence-commit-minor.md:18
+    message: >
+      The release note says the safe-ref predicate and the protected-name set
+      "get one shared home in the core contracts tier"; they have two homes (the
+      predicate in `contracts/dispatch.ts`, the set unchanged in
+      `contracts/closeout.ts`).
+    suggestion: >
+      Reword to "the safe-ref predicate moves to the core contracts tier beside
+      the unchanged protected-name set".
+reviewed_at: 2026-11-27T17:22:05Z
+next_step: >
+  CALL_PM for the scope ruling F-1 needs (absorb the seam fix into GH-416, or
+  land it as a predecessor), then EXECUTE_REMEDIATION_PHASE (plan phase 9) and a
+  re-review that starts from a real-git run of the seam's default runner.

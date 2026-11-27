@@ -124,11 +124,11 @@ export type ParityObservation = {
 const PM_NOTES_MONTH = "2026-11";
 const PM_NOTES_FOLDER = "2026-11-19--GH-347--parity-fixture";
 
-const pmNotesDocument = (deliveryCompleted: string | null): string =>
+const pmNotesDocument = (deliveryCompleted: string | null, branch?: string): string =>
   `change_id: GH-347
 title: "Parity fixture document"
 delivery_mode: autonomous
-phases:
+${branch === undefined ? "" : `branch: "${branch}"\n`}phases:
   clarify_scope: { started: null, completed: "2026-11-19T00:00:00.000Z" }
   specification: { started: null, completed: "2026-11-19T00:00:00.000Z" }
   test_planning: { started: null, completed: "2026-11-19T00:00:00.000Z" }
@@ -151,6 +151,7 @@ export const writePmNotesFixture = (
   checkout: string,
   kind: PmNotesFixtureKind,
   ref = "GH-347",
+  branch?: string,
 ): string | undefined => {
   if (kind === "absent") return undefined;
   const folder = join(checkout, "doc", "changes", PM_NOTES_MONTH, PM_NOTES_FOLDER);
@@ -159,9 +160,13 @@ export const writePmNotesFixture = (
   writeFileSync(
     file,
     kind === "complete"
-      ? COMPLETE_PM_NOTES
+      ? branch === undefined
+        ? COMPLETE_PM_NOTES
+        : pmNotesDocument("2026-11-19T12:00:00.000Z", branch)
       : kind === "incomplete"
-        ? INCOMPLETE_PM_NOTES
+        ? branch === undefined
+          ? INCOMPLETE_PM_NOTES
+          : pmNotesDocument(null, branch)
         : MALFORMED_PM_NOTES,
   );
   return file;
@@ -192,6 +197,8 @@ export type ParityHarnessOptions = {
   readonly onAppend?: (record: { readonly kind: string }) => void;
   /** The on-disk pm-notes fixture; defaults to a complete document. */
   readonly pmNotes?: PmNotesFixtureKind;
+  /** The optional opaque `branch:` declaration the fixture document carries. */
+  readonly pmNotesBranch?: string;
   /**
    * The advisory owner-liveness probe (GH-354 API-10). Absent keeps the
    * delivered dispatch family's behaviour; the operator queries refuse when the
@@ -411,7 +418,7 @@ lane:
   };
 
   const ref = options.ref ?? "GH-347";
-  writePmNotesFixture(checkout, options.pmNotes ?? "complete", ref);
+  writePmNotesFixture(checkout, options.pmNotes ?? "complete", ref, options.pmNotesBranch);
   const seededAt = clock.nowIso();
   for (const seededRef of [ref, ...(options.extraRefs ?? [])]) {
     const seeded = declareQueueEntry(rawStore, {

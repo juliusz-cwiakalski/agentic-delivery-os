@@ -112,8 +112,8 @@ describe("TC-PEAK-011 the status park fact and the three probe arms", () => {
       stoppedAt: NOW,
       preservation: "preserved",
     });
-    // One bounded lane read plus at most one bounded park read.
-    expect(fixture.reads()).toBe(2);
+    // One bounded lane read, one bounded park read, and one lane-push read.
+    expect(fixture.reads()).toBe(3);
   });
 
   test("live and unknown report stale false with delivering true and the park fact present", () => {

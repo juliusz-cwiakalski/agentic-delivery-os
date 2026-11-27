@@ -20,18 +20,26 @@ import {
   DISPATCH_HANDOVER_RECORD_KIND,
   DISPATCH_LANE_KEY_PREFIX,
   DISPATCH_LANE_PAYLOAD_SCHEMA,
+  DISPATCH_LANE_PUSH_KEY_PREFIX,
+  DISPATCH_LANE_PUSH_MAX_PAYLOAD_BYTES,
+  DISPATCH_LANE_PUSH_PAYLOAD_SCHEMA,
+  DISPATCH_LANE_PUSH_RECORD_KIND,
+  DISPATCH_LANE_PUSH_VERDICTS,
   DISPATCH_LANE_RECORD_KIND,
   DISPATCH_MAX_ATTEMPT_RECORDS,
   DISPATCH_MAX_EVIDENCE_REFS,
   DISPATCH_MAX_NOTE_CHARS,
+  DISPATCH_PUSH_RECORDABLE_CAUSES,
   type DispatchAttemptRecord,
   type DispatchAuthorityView,
   type DispatchDivergenceRecord,
   type DispatchHandoverRecord,
+  type DispatchLanePushRecord,
   type DispatchLaneRecord,
   dispatchAttemptRecordKey,
   dispatchDivergenceRecordKey,
   dispatchHandoverRecordKey,
+  dispatchLanePushRecordKey,
   dispatchLaneRecordKey,
   HARNESS_KINDS,
   type StateAppendOutcome,
@@ -519,4 +527,84 @@ export const latestDispatchLaneFor = (
     if (record !== undefined && record.ref === ref) return record;
   }
   return undefined;
+};
+
+/* ------------------------------------------------------------------------- */
+/* GH-416 — the append-only lane-push record (DM-1, EVT/section 8.2).        */
+/* ------------------------------------------------------------------------- */
+
+/** The full-hex head grammar: a 40- or 64-character SHA. */
+const LANE_PUSH_HEAD_PATTERN = /^[0-9a-f]{40,64}$/u;
+
+/** The lane-push verdict that requires a cause; read from the closed pair. */
+const LANE_PUSH_FAILED_VERDICT = DISPATCH_LANE_PUSH_VERDICTS[1];
+
+const isLanePushVerdict = (value: unknown): value is DispatchLanePushRecord["verdict"] =>
+  typeof value === "string" && (DISPATCH_LANE_PUSH_VERDICTS as readonly string[]).includes(value);
+
+/**
+ * The closed lane-push record guard (DM-1): the declared member values, the
+ * `cause`-iff-`failed` rule, the optional identity pair, and the 512-byte bound.
+ * It carries identifiers and full-hex SHAs only; no git text can pass.
+ */
+const isDispatchLanePushRecord = (value: unknown): value is DispatchLanePushRecord => {
+  if (!isRecord(value)) return false;
+  if (value.schema !== DISPATCH_LANE_PUSH_PAYLOAD_SCHEMA) return false;
+  if (typeof value.ref !== "string" || value.ref.length === 0) return false;
+  if (typeof value.repository !== "string" || value.repository.length === 0) return false;
+  if (typeof value.branch !== "string" || value.branch.length === 0) return false;
+  if (typeof value.head !== "string" || !LANE_PUSH_HEAD_PATTERN.test(value.head)) return false;
+  if (!isLanePushVerdict(value.verdict)) return false;
+  if (value.verdict === LANE_PUSH_FAILED_VERDICT) {
+    if (typeof value.cause !== "string") return false;
+    if (!(DISPATCH_PUSH_RECORDABLE_CAUSES as readonly string[]).includes(value.cause)) return false;
+  } else if (value.cause !== undefined) {
+    return false;
+  }
+  if (
+    value.attemptId !== undefined &&
+    (typeof value.attemptId !== "string" || value.attemptId.length === 0)
+  ) {
+    return false;
+  }
+  if (
+    value.sessionId !== undefined &&
+    (typeof value.sessionId !== "string" || value.sessionId.length === 0)
+  ) {
+    return false;
+  }
+  if (!isInstant(value.recordedAt)) return false;
+  return (
+    new TextEncoder().encode(JSON.stringify(value)).length <= DISPATCH_LANE_PUSH_MAX_PAYLOAD_BYTES
+  );
+};
+
+/** Read every lane-push record in append order, bounded and verified (DM-1). */
+export const readDispatchLanePushes = (
+  store: StateStorePort,
+  options: { readonly max?: number } = {},
+): DispatchLedgerRead<DispatchLanePushRecord> =>
+  readLedger(store, {
+    kind: DISPATCH_LANE_PUSH_RECORD_KIND,
+    schema: DISPATCH_LANE_PUSH_PAYLOAD_SCHEMA,
+    keyPrefix: DISPATCH_LANE_PUSH_KEY_PREFIX,
+    isRecord: isDispatchLanePushRecord,
+    max: options.max ?? DISPATCH_MAX_ATTEMPT_RECORDS,
+  });
+
+/**
+ * Append exactly one lane-push record under the store fence: append-only and
+ * latest-wins per reference (a second push appends a new record; nothing is
+ * rewritten). A malformed record is refused rather than written.
+ */
+export const appendDispatchLanePush = (
+  store: StateStorePort,
+  fenceToken: string,
+  record: DispatchLanePushRecord,
+): DispatchAppendResult<DispatchLanePushRecord> => {
+  const recordKey = dispatchLanePushRecordKey(record.ref);
+  if (!isDispatchLanePushRecord(record)) {
+    return { ok: false, code: "state.write.failed", path: recordKey };
+  }
+  return appendLedger(store, fenceToken, DISPATCH_LANE_PUSH_RECORD_KIND, recordKey, record, false);
 };

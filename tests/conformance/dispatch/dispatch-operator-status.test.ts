@@ -63,7 +63,7 @@ describe("TC-STATUS the per-ref status fold", () => {
       expect(lane.lastToken).toBeUndefined();
       expect(lane.lastOutcome).toBeUndefined();
       expect(json.envelope?.error).toBeUndefined();
-      expect(h.counters.readRecords - before).toBe(2);
+      expect(h.counters.readRecords - before).toBe(3);
       expect(probe.calls).toHaveLength(1);
 
       const humanBefore = h.counters.readRecords;
@@ -71,7 +71,7 @@ describe("TC-STATUS the per-ref status fold", () => {
       expect(human.exit).toBe(0);
       expect(human.stdout).toContain("marker=active");
       expect(human.stdout).toContain("probe=live");
-      expect(h.counters.readRecords - humanBefore).toBe(2);
+      expect(h.counters.readRecords - humanBefore).toBe(3);
     } finally {
       h.dispose();
     }
@@ -109,7 +109,7 @@ describe("TC-STATUS the per-ref status fold", () => {
         expect(lane.recordedAt).toBe(LIVE_NOW);
         expect(data.pid).toBe(4242);
         expect(data.sessionId).toBe("ses-final");
-        expect(h.counters.readRecords - before).toBe(2);
+        expect(h.counters.readRecords - before).toBe(3);
         expect(h.counters.append).toBe(0);
         expect(h.counters.acquireFence).toBe(0);
       } finally {
@@ -390,7 +390,7 @@ describe("TC-STATUS the per-ref status fold", () => {
         const ledger = h.ledgerBytes();
         const result = await h.run(["dispatch", "status", OPERATOR_REF, "--json"]);
         expect(result.exit).toBe(0);
-        expect(h.counters.readRecords - before).toBe(2);
+        expect(h.counters.readRecords - before).toBe(3);
         expect(h.ledgerBytes()).toBe(ledger);
       }
       expect(h.counters.append).toBe(0);
@@ -454,7 +454,7 @@ describe("TC-STATUS the per-ref status fold", () => {
       expect(result.data.marker).toBe("terminal");
       expect(result.data.ref).toBe("GH-1500");
     }
-    expect(reads).toBe(2);
+    expect(reads).toBe(3);
   });
 
   test("TC-STATUS-008 an unreadable lane store keeps its typed state.* identity, never a fabricated absent", async () => {
