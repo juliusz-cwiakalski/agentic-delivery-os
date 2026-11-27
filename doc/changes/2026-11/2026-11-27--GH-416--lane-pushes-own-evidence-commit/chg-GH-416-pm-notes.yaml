@@ -6,7 +6,7 @@ delivery_mode: autonomous
 phases:
   clarify_scope: { started: null, completed: 2026-11-27T05:46:12.217Z }
   specification: { started: null, completed: 2026-11-27T13:30:27.396Z }
-  test_planning: { started: null, completed: 2026-11-27T13:30:51.904Z }
+  test_planning: { started: null, completed: 2026-11-27T14:16:32.382Z }
   delivery_planning: { started: null, completed: 2026-11-27T14:02:43.173Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
@@ -243,7 +243,9 @@ notes:
       refusal residual, correct the 'engine evaluates the same branch' claim,
       declare the record's head source (the invocation checkout's HEAD read at
       act time), state the no-commit interaction (the push is not a commit and
-      still runs), and add a consolidated DoD section."
+      still runs), and add a consolidated DoD section. SUPERSEDED in part by
+      R12: the predicate home is packages/core/src/contracts/dispatch.ts,
+      because the closeout contract is declaration-only by pin."
     type: decision
     date: "2026-11-27"
   - text: "retro: the planning chain shipped a design that could not compile in the
@@ -345,6 +347,17 @@ notes:
       stalemate on a persistent blocker, so the plan is corrected and confirmed
       narrowly against the delta instead of escalated. The owner is told in the
       change's final message."
+    type: decision
+    date: "2026-11-27"
+  - text: "DoR gate cleared: narrow confirmation after iteration 3 returned READY
+      (readiness-review/readiness-confirmation.md). R16 was confirmed on the
+      delta: the loop-supervision page is in phase 3 scope and its phrase row,
+      the wording corrections are true against the seams, plan validate is
+      valid, and no AC, phase id, order or ownership moved. Residual wording in
+      the test plan (the predicate versus the protected-name set) was corrected
+      in the same round. The gate ran four review passes - three full iterations
+      and one narrow confirmation - with every blocking finding closed by an
+      artifact correction rather than an override."
     type: decision
     date: "2026-11-27"
   - text: "Doc-risk inventory for phase 7 (current-truth docs likely to change):
