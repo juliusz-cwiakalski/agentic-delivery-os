@@ -184,7 +184,7 @@ Default: A.
 
 If wrong: token waste or a high miss rate.
 
-Answer:
+Answer: to be honest I'm not sure if having strict budgets is proper way to go - the budget would strongly depend on the size of the change. We cannot make it fixed (and this issue works both ways - for small change having a context budget too high would be a poetential waste). What I really think is that we should encode ruels that we put there only things that are really relevant for effective dleivery, we avoid fluff, filler words, we avoid repeating same information in multiple context etc. I really like this test: "would removing this word/phrase/sentence reduce accuracy/value/content of the artifact? if no then it can be removed". In other words we should aim for as small artifacts as possible but not smaller. And this applies to everything we store: ticket content/descriptions/comments, to the specs docs, architectures etc. I'm open to re-discuss it and you can try to convince me we should have strict limits but then also explain how to addres a huge change that would just loose if we set strict limit on artifact.
 
 ### Q9. What is the acceptable bundle miss rate?
 
@@ -203,7 +203,7 @@ Default: A.
 
 If wrong: the bundle is either too thin or too fat.
 
-Answer:
+Answer: No strong preference here - this should come from the data collected and probably we could adjust it form time to time after we introduce the new structure and tooling and see. We can start with A.
 
 ### Q10. Should the bundle be Markdown or JSON?
 
@@ -262,7 +262,7 @@ Default: A.
 
 If wrong: token waste or a re-litigated decision.
 
-Answer:
+Answer: Let's think about it. My gut's feeling is that giving explanation on why we want to do something increases judgement and output quality. But do we have to explain all the alternatives that were rejected with reasoning? probably not (unless this is relevant for delivery or if providing this rationale would change a way how delivery is done). So seems we end up with option A?
 
 ## Tooling and provenance
 
@@ -577,7 +577,7 @@ Default: A.
 
 If wrong: a pilot that proves nothing.
 
-Answer:
+Answer: I'm bit confused here - if we're talknig about testing the approach on pilot tickets then from my perspective we should pilot at least on one change of each size and then re-valuate/tune (or for next 10-20 changes of different size make constant re-evaluation/retro/tuning after each change). 
 
 ### Q28. Is a 20 percent token reduction enough to continue?
 
@@ -596,7 +596,7 @@ Default: A.
 
 If wrong: a premature stop or a false success.
 
-Answer:
+Answer: yeah, 20 % is good starte but I think this tuning process will never change. I'll do periodical retrospectives on all the products that I'm developing using Jaiship and tune whenrever I find some inefficiencies or figure out better way of operations. 
 
 ### Q29. When should the old reader be removed?
 
@@ -633,7 +633,7 @@ Options:
 Default: A.
 
 If wrong: a boil-the-ocean failure or a missed opportunity.
-Answer:
+Answer: To naswer I'd need to understand what is included in each slice -> could you break it down into some sort of roadmap proposal/initial tickets breakdown (each ticket should deliver value alone even if we'd stop on it and park delivery of remaining tickets from this change). Think hard and carefully on how to break it down. In general I'm ok if we break it ito only 1-3 tickets if we see that it makes no sense to deliver only part of the changes. I'd say there is no strict budget - we con work on all the required changes - the only constraint is time and return of investment (and ai/token costs to some extent but I guess if we see it's worth doing then I can pay for hte required tokens unless it takes more than 1000USD etc - then it's worth rethinging for sure).
 
 **Partially answered (2026-11-27):** delivery shape is one epic, multiple pull requests, one milestone; slice 0 and slice 1 first, then slices 2 to 5. The budget itself is still open.
 
@@ -678,7 +678,9 @@ Default: A.
 
 If wrong: a missing handover, a prose dump, or a handover that does not match the evidence.
 
-Answer:
+Answer: I think there is no one answer, or I don't see one answer. I would leave it to the judgment of the coder AI agent. So basically, the coder knows what is relevant in a given context and it should decide what to put there. Of course, it should not put obvious things and not things that are already in the delivery plan in the next phases, right? So it should only put there what is relevant in the context of the next phase delivery that is not yet documented, maybe something changed during delivery, etc. So I would leave this to the judgment of the Coder AI.
+
+And of course, if the tool could supplement it by something that we can, by automation, figure out, maybe list of the files changed in the last phase, things like that could also maybe benefit. 
 
 **Partially answered (2026-11-27):** the tool drafts the five fields from the evidence; the coder edits with a three-bullet limit per field. The exact prompt wording is still open.
 ## Part 5 additions
@@ -705,7 +707,7 @@ Default: A.
 
 If wrong: ceremony on the wrong changes, or a light gate on a risky one.
 
-Answer:
+Answer: A is ok for me. so we could define path patterns by repo and ceo/pm(other?) could maintain it, improve as retros discover discrepancies etc. on top of it PM would be able to decide case by case if thes flag should be triggered for given change. Offcourse the tickets could be flagged by the cerator as well even before PM touches the change. 
 
 ### Q44. Are the round rules and the ceilings right?
 
@@ -726,7 +728,7 @@ Default: A.
 
 If wrong: review rounds that find nothing, or a disagreement ended too early.
 
-Answer:
+Answer: I'm in favour of A with liberty of PM/CEO of overriding the limit in specific cases (huge changes, substantial findings in last review etc). 
 
 ### Q45. Where does evidence live?
 
@@ -768,4 +770,3 @@ Default: A.
 If wrong: a boundary breach, or a design whose evidence nobody can check.
 
 Answer:
-
