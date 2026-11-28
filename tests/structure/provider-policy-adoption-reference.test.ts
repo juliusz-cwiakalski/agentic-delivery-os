@@ -95,6 +95,7 @@ const BASE_FULL = [
 const BASE_FLASH = ["pm", "editor"] as const;
 const BASE_VISION = ["designer", "image-reviewer"] as const;
 const BASE_PAID = [
+  "ceo-assistant",
   "coder",
   "committer",
   "doc-syncer",
@@ -695,7 +696,7 @@ describe("GH-374 TC-POL-CFG-001 the real committed document loads through the de
         expect(window.bufferBeforeSeconds).toBeGreaterThan(0);
         expect(window.bufferAfterSeconds).toBeGreaterThan(0);
       }
-      expect(Object.keys(profile.seats)).toHaveLength(24);
+      expect(Object.keys(profile.seats)).toHaveLength(25);
       expect(name).toBeTruthy();
     }
   });
@@ -1104,7 +1105,7 @@ describe("GH-374 TC-POL-CFG-009 entry peaks are the admission truth, evaluated d
 /* -------------------------------- SEAT-006 ------------------------------- */
 
 describe("GH-374 TC-POL-SEAT-006 every declared seat model is expressible", () => {
-  test("48/48 models match the grammar and the bound, with exactly three distinct models", () => {
+  test("50/50 models match the grammar and the bound, with exactly three distinct models", () => {
     const profiles = realProfiles();
     const models: string[] = [];
     for (const profile of Object.values(profiles.profiles)) {
@@ -1119,7 +1120,7 @@ describe("GH-374 TC-POL-SEAT-006 every declared seat model is expressible", () =
         models.push(seat.model);
       }
     }
-    expect(models).toHaveLength(48);
+    expect(models).toHaveLength(50);
     expect([...new Set(models)].sort()).toEqual([
       "deepseek/deepseek-flash",
       "zai-coding-plan/glm-5.3-flash",
@@ -1192,9 +1193,9 @@ describe("GH-374 TC-POL-DRIFT-001 credentials, entries and chains are pinned at 
 /* ------------------------------- DRIFT-002 ------------------------------- */
 
 describe("GH-374 TC-POL-DRIFT-002 each profile's seat set equals the agent roster in both directions", () => {
-  test("24/24 seats equal the roster and both profiles agree", () => {
+  test("25/25 seats equal the roster and both profiles agree", () => {
     const observedRoster = roster();
-    expect(observedRoster).toHaveLength(24);
+    expect(observedRoster).toHaveLength(25);
     const profiles = realProfiles();
     for (const profile of Object.values(profiles.profiles)) {
       expect(Object.keys(profile.seats).sort()).toEqual([...observedRoster]);
@@ -1228,7 +1229,7 @@ describe("GH-374 TC-POL-DRIFT-002 each profile's seat set equals the agent roste
 /* ------------------------------- DRIFT-003 ------------------------------- */
 
 describe("GH-374 TC-POL-DRIFT-003 the seat matrix and both profiles' peak-window arithmetic are pinned", () => {
-  test("the 48 seat bodies and both peakWindows branches equal the declared values", () => {
+  test("the 50 seat bodies and both peakWindows branches equal the declared values", () => {
     const profiles = realProfiles();
     const delivery = profiles.profiles.delivery;
     const paid = profiles.profiles.paid;

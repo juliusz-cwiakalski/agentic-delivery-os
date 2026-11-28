@@ -22,7 +22,7 @@ const AGENTS_DIRECTORY = ".opencode/agent";
 const AGENTS_INCLUDE = [AGENTS_DIRECTORY] as const;
 const TOOLSMITH_SOURCE = ".opencode/agent/toolsmith.md";
 const TOOLSMITH_GENERATED = ".ados-claude/agents/toolsmith.md";
-const TOOLSMITH_ROSTER_SIZE = 24;
+const TOOLSMITH_ROSTER_SIZE = 25;
 const RESERVED_TMP_ROOT = "tmp/tmpdir";
 
 /* --------------------------- the identifier table ------------------------- */
@@ -196,7 +196,7 @@ const scratch = (label: string): { readonly root: string; cleanup(): void } => {
 /* ------------------------------ SCAN-004 --------------------------------- */
 
 describe("GH-374 TC-POL-SCAN-004 the full roster holds zero provider/model identifiers", () => {
-  test("24 prompts are scanned and report zero findings for all ten classes", () => {
+  test("25 prompts are scanned and report zero findings for all ten classes", () => {
     const roster = readRoster();
     expect(roster).toHaveLength(TOOLSMITH_ROSTER_SIZE);
     expect(roster.filter((entry) => entry.path === TOOLSMITH_SOURCE)).toHaveLength(1);

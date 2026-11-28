@@ -88,6 +88,7 @@ provider:
         seats:
           bootstrapper: { model: zai-coding-plan/glm-5.4, pacingClass: judgment, capability: text-only }
           ceo: { model: zai-coding-plan/glm-5.4, pacingClass: judgment, capability: text-only }
+          ceo-assistant: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
           coder: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
           committer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
           decision-advisor: { model: zai-coding-plan/glm-5.4, pacingClass: judgment, capability: text-only }
@@ -121,6 +122,7 @@ provider:
         seats:
           bootstrapper: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
           ceo: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          ceo-assistant: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
           coder: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
           committer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
           decision-advisor: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }

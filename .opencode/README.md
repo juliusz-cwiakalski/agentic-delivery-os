@@ -31,6 +31,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - PM tracker config: `@pm` reads `.ai/agent/pm-instructions.md` (repo-specific Jira/GitHub workflow).
 - PR/MR platform config: `@pr-manager`, `@reviewer`, `@review-feedback-applier` read `.ai/agent/pr-instructions.md` (repo-specific PR/MR platform and CLI commands).
 - PM delegation: `@pm` delegates debugging to `@fixer`, commits to `@committer`, and command execution to `@runner`.
+- CEO delegation: `@ceo` delegates bounded evidence, research, housekeeping and tracker work to `@ceo-assistant`; it never delegates a decision, a merge or a delivery. The `ceo-assistant` definition sets no model: assign it a cheap one in `opencode*.jsonc`.
 - Pre-PR gate (autopilot): `@pm` runs `@reviewer` + `@doc-syncer` before `@pr-manager`.
 - Model configuration: models are assigned in `opencode*.jsonc` config files, NOT in agent/command definitions. Agent files describe behavior; config files define which model runs them.
 
@@ -40,6 +41,7 @@ Note: OpenCode upstream docs use `.opencode/agents/` and `.opencode/commands/`. 
 - `decision-critic`: independent, read-only decision challenger; tri-state verdict (PASS / PASS_WITH_RISKS / REWORK)
 - `bootstrapper`: run ADOS inception for new or legacy projects
 - `ceo`: autonomous executive for ADOS delivery (Mode A) — manages the backlog, delivers tickets, verifies PM finalization, and merges approved PRs as the inner decision agent of `scripts/ceo-loop.sh`
+- `ceo-assistant`: low-cost executor for `@ceo`: one briefed task per run (research, evidence, housekeeping, tracker work) that returns a short evidence report; the CEO's access and none of its decision authority
 - `coder`: implement plan phases by writing code for a change
 - `committer`: create one Conventional Commit
 - `designer`: visual design and UI implementation
