@@ -26,8 +26,8 @@ T6 can be parked without loss to the others.
 
 - **T1 first.** It removes a failure that exists today, and it turns every later question
   ("was that worth it?") into one that data can answer.
-- **T2 before T3.** The read path is the product, but a contract a fraction of the size is
-  already a read win; bundles then project it. Shipping a schema without the bundle command
+- **T2 before T3.** The read path is where the value is, but a contract a fraction of the size is
+  already a read win; bundles then serve parts of it. Shipping a schema without the bundle command
   would leave the token bill unchanged, so T3 follows immediately.
 - **One process change at a time.** T2 changes what agents write. T3 changes what they read.
   T4 changes how a change is shaped. A failure in any of them can be attributed.
@@ -38,7 +38,7 @@ T6 can be parked without loss to the others.
 
 ## Any prefix is consistent
 
-| Delivered | State of the product |
+| Delivered | State of Jaiship |
 |---|---|
 | T1 | Working state is typed and cost is recorded. Changes still use their earlier artifacts, which every reader understands |
 | T1, T2 | One contract per new change. Agents read the whole contract file until T3; it is a fraction of the earlier three documents |

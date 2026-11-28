@@ -31,7 +31,7 @@ Three things follow:
 | Obligation | The link from a criterion to its proof: method, boundary, test reference or command with its expected output, the expected baseline, whether it is required for merge | The author | Typed data in the contract |
 | Test | The executable check, in the repository's own framework | The coder; for some flags an independent author (section 5) | Native test code |
 
-There is no second copy of a scenario. A project that keeps its examples in feature files
+There is no second copy of a scenario. A repository that keeps its examples in feature files
 references them, and the contract does not restate them. No scenario language is mandated.
 When a rule has many cases, a table of inputs and expected outputs is data.
 

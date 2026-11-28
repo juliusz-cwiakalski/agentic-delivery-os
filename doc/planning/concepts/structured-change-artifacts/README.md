@@ -122,8 +122,7 @@ Settled in this pack, subject to your veto:
 Open:
 
 Every numbered question in `09-open-points.md` and `13-context-delivery.md` now has an answer
-or a confirmed default. Three were explained on 2026-11-28 and carry a proposed answer that
-stands unless the owner objects: Q17 (superseded by Q14), Q29 (when the compatibility reader
+or a confirmed default. Three were explained on 2026-11-28 and accepted by the owner: Q17 (superseded by Q14), Q29 (when the compatibility reader
 is removed) and Q36 (a form for the first write of a contract). The retrospective log follows
 from Q45: the retrospective reads the events, and there is no separate log. The core files 02
 to 06, 08, 12 and 13 still describe the earlier model; sections 14 to 18 win until they are

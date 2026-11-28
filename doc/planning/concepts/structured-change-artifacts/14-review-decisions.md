@@ -483,7 +483,7 @@ paths.
 ### 29. Two classes of evidence
 
 **Owner:** persistent evidence is the audit record (tokens and time per phase and agent);
-exact test evidence lives outside the committed scope, in the product's own store for the
+exact test evidence lives outside the committed scope, in Jaiship's own store for the
 repository and the change, auditable, with housekeeping and archiving rules.
 
 **Decision:** audit facts are events and stay with the change. Evidence bodies live in the
@@ -547,5 +547,4 @@ conclusion (Q40). Ticket hints are a typed block, with labels still allowed (Q49
 Every numbered question now has an answer or a confirmed default in `09-open-points.md`
 and `13-context-delivery.md`. Three were explained to the owner on 2026-11-28 and carry a
 proposed answer: Q17 (superseded by Q14), Q29 (remove the compatibility reader when no open
-change uses the earlier files) and Q36 (a form for the first write of a contract). They stand
-unless the owner objects.
+change uses the earlier files) and Q36 (a form for the first write of a contract). The owner accepted all three on 2026-11-28.

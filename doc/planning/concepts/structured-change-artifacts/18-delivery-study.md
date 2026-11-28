@@ -5,7 +5,7 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 ---
 # 18. Evidence: the delivery study behind sections 15 to 17
 
-Status: **Evidence note** (2026-11-28). The owner agreed that figures from his private projects
+Status: **Evidence note** (2026-11-28). The owner agreed that figures from his private repositories
 may be published (Q46). Names, ticket references and paths stay out; repository types and
 counts stay.
 

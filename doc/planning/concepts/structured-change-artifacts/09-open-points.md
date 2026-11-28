@@ -383,7 +383,7 @@ If wrong: either friction or a silent edit.
 
 Answer:
 
-**Explained and proposed (2026-11-28):** the import is the migration case: bringing a file into the managed form outside the typed commands, for example a hand repair of a broken artifact or a draft written elsewhere. Q14 already answers it: such an edit goes through `change repair`, which validates, commits and records who repaired it, so no separate waiver is needed. Proposed: close Q17 as superseded by Q14.
+**Explained and proposed (2026-11-28):** the import is the migration case: bringing a file into the managed form outside the typed commands, for example a hand repair of a broken artifact or a draft written elsewhere. Q14 already answers it: such an edit goes through `change repair`, which validates, commits and records who repaired it, so no separate waiver is needed. The owner accepted this on 2026-11-28: Q17 is closed as superseded by Q14.
 
 ## Workflow
 
@@ -667,7 +667,7 @@ Answer: To naswer I'd need to understand what is included in each slice -> could
 
 **Roadmap proposed (2026-11-28):** `17-roadmap.md`: six tickets, each worth merging on its own, in dependency order, collapsing to three. Confirm the count and the order.
 
-**Confirmed (2026-11-28):** six tickets, delivered from the top. Each depends only on the tickets above it, and any prefix leaves the product in a consistent state. The CEO is responsible for delivery and optimizes for speed.
+**Confirmed (2026-11-28):** six tickets, delivered from the top. Each depends only on the tickets above it, and any prefix leaves Jaiship in a consistent state. The CEO is responsible for delivery and optimizes for speed.
 
 ## Part 3 and 4 additions
 

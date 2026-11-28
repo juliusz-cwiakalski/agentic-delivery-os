@@ -410,7 +410,7 @@ Default: yes for a facet; flags for a single field.
 
 Answer:
 
-**Explained and proposed (2026-11-28):** a form is the input counterpart of a bundle. For a complex write (a whole contract with its sections) the tool serves a template of the fields to fill, the agent fills it in, and the tool validates it as one write; a single field stays a command flag. Proposed: yes for the first write of a contract, commands for later edits.
+**Explained and proposed (2026-11-28):** a form is the input counterpart of a bundle. For a complex write (a whole contract with its sections) the tool serves a template of the fields to fill, the agent fills it in, and the tool validates it as one write; a single field stays a command flag. Accepted (2026-11-28): yes for the first write of a contract, commands for later edits.
 
 ### Q37. Should deltas be stateless (`--since`) or stateful (a seen-state store)?
 
