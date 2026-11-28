@@ -1,0 +1,1095 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:jaiship:schema:change.contract.v1",
+  "title": "Change contract",
+  "description": "The shape of the contract of one change: a header and seven sections (goal, criteria, facts, decisions, oracle, work, flags), plus the declared free-text slots. The tables in ../03-schemas.md derive from this file. A draft 2020-12 schema: every object closes its properties, so a field that is not declared here fails validation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "changeRef",
+    "revision",
+    "generatedBy",
+    "title",
+    "kind",
+    "goal",
+    "criteria",
+    "facts",
+    "decisions",
+    "oracle",
+    "work",
+    "flags",
+    "slots"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "change.contract.v1"
+    },
+    "changeRef": {
+      "$ref": "#/$defs/changeRef"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Incremented by the tool on every write; a write names the revision it expects."
+    },
+    "generatedBy": {
+      "$ref": "#/$defs/generatedBy"
+    },
+    "title": {
+      "$ref": "#/$defs/line"
+    },
+    "kind": {
+      "$ref": "#/$defs/changeKind"
+    },
+    "milestone": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A free-text label. It is not a link to a goal graph."
+    },
+    "goal": {
+      "$ref": "#/$defs/goal"
+    },
+    "criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/criterion"
+      }
+    },
+    "facts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fact"
+      }
+    },
+    "decisions": {
+      "$ref": "#/$defs/decisions"
+    },
+    "oracle": {
+      "$ref": "#/$defs/oracle"
+    },
+    "work": {
+      "$ref": "#/$defs/work"
+    },
+    "flags": {
+      "$ref": "#/$defs/flags"
+    },
+    "slots": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/$defs/slot"
+      }
+    }
+  },
+  "$defs": {
+    "line": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^\\S(?:[^\\r\\n]*\\S)?$",
+      "description": "One statement on one line, without leading or trailing spaces."
+    },
+    "prose": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Free text. Allowed only in a declared slot."
+    },
+    "changeRef": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*-[0-9]+$"
+    },
+    "generatedBy": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*( [a-z][a-z0-9-]*)*@[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "The command and the tool version that wrote the file. The tool writes it."
+    },
+    "repositoryPath": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "(^/)|(//)|(^|/)\\.\\.(/|$)|[\\r\\n]"
+      },
+      "description": "A path relative to the worktree root. It may name a file, a folder or a glob. It is never absolute and never climbs."
+    },
+    "changeKind": {
+      "enum": ["fix", "feature", "refactor", "behavior-change", "docs", "infra"]
+    },
+    "role": {
+      "enum": [
+        "pm",
+        "contract-author",
+        "pre-code-reader",
+        "reviewer",
+        "coder",
+        "acceptance-author",
+        "doc-syncer",
+        "runner",
+        "pr-manager",
+        "ceo"
+      ]
+    },
+    "flag": {
+      "enum": [
+        "security",
+        "data",
+        "contract",
+        "irreversible",
+        "environment-bound",
+        "first-of-a-kind",
+        "thin-coverage",
+        "protected-path"
+      ],
+      "description": "An enumerated name, not an identifier."
+    },
+    "method": {
+      "enum": ["test", "command", "battery", "rehearsal", "rendered"],
+      "description": "How a proof is executed: a native test; a command with its expected output; a listed set of inputs or faults (the CI job battery, a mutation battery); a scripted scenario run to a command with an expected output (a hostile run, a concurrency rehearsal, a consumer check, a check of the integration branch); a rendered artifact compared with an expected form."
+    },
+    "origin": {
+      "enum": ["tracker", "author", "tool"],
+      "description": "Where a command comes from. A command whose origin is the tracker must name a known gate or an existing test path."
+    },
+    "idAc": {
+      "type": "string",
+      "pattern": "^AC-[0-9]+$"
+    },
+    "idProof": {
+      "type": "string",
+      "pattern": "^PROOF-[0-9]+$"
+    },
+    "idVfact": {
+      "type": "string",
+      "pattern": "^VFACT-[0-9]+$"
+    },
+    "idDec": {
+      "type": "string",
+      "pattern": "^DEC-[0-9]+$"
+    },
+    "idAlt": {
+      "type": "string",
+      "pattern": "^ALT-[0-9]+$"
+    },
+    "idOq": {
+      "type": "string",
+      "pattern": "^OQ-[0-9]+$"
+    },
+    "idNg": {
+      "type": "string",
+      "pattern": "^NG-[0-9]+$"
+    },
+    "idInterface": {
+      "type": "string",
+      "pattern": "^(API|EVT|DM)-[0-9]+$"
+    },
+    "idRisk": {
+      "type": "string",
+      "pattern": "^RSK-[0-9]+$"
+    },
+    "idTest": {
+      "type": "string",
+      "pattern": "^TC-[A-Z0-9]+-[0-9]{3}$"
+    },
+    "idPhase": {
+      "type": "string",
+      "pattern": "^PH-[0-9]{2}$"
+    },
+    "idStep": {
+      "type": "string",
+      "pattern": "^PH-[0-9]{2}_S[0-9]{2}$"
+    },
+    "idInvar": {
+      "type": "string",
+      "pattern": "^INVAR-[0-9]{3}$"
+    },
+    "citation": {
+      "type": "string",
+      "pattern": "^(AC|PROOF|VFACT|DEC|ALT|OQ|NG|API|EVT|DM|RSK)-[0-9]+$|^INVAR-[0-9]{3}$|^PH-[0-9]{2}(_S[0-9]{2})?$|^TC-[A-Z0-9]+-[0-9]{3}$"
+    },
+    "expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["exit"],
+      "properties": {
+        "exit": {
+          "type": "integer"
+        },
+        "output": {
+          "$ref": "#/$defs/line",
+          "description": "A text that the output of the command must contain."
+        }
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argv", "cwd", "expect", "origin"],
+      "properties": {
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/line"
+          },
+          "description": "An argument vector. The tool runs it without a shell."
+        },
+        "cwd": {
+          "type": "string",
+          "pattern": "^\\.|^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$",
+          "description": "Relative to the worktree root. The tool resolves it and refuses a path outside the worktree."
+        },
+        "expect": {
+          "$ref": "#/$defs/expectation"
+        },
+        "origin": {
+          "$ref": "#/$defs/origin"
+        }
+      }
+    },
+    "pathEntry": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "access"],
+          "properties": {
+            "path": {
+              "$ref": "#/$defs/repositoryPath"
+            },
+            "access": {
+              "const": "read"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "access", "kind"],
+          "properties": {
+            "path": {
+              "$ref": "#/$defs/repositoryPath"
+            },
+            "access": {
+              "const": "write"
+            },
+            "kind": {
+              "enum": ["add", "modify", "delete"]
+            }
+          }
+        }
+      ]
+    },
+    "interface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "surface", "change", "contract"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/idInterface"
+        },
+        "surface": {
+          "$ref": "#/$defs/line"
+        },
+        "change": {
+          "enum": ["added", "modified", "removed"]
+        },
+        "contract": {
+          "$ref": "#/$defs/line"
+        }
+      }
+    },
+    "goal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "docs", "scope", "nonGoals"],
+      "properties": {
+        "statement": {
+          "$ref": "#/$defs/line",
+          "description": "What is true after the change and is not true before it."
+        },
+        "docs": {
+          "description": "The current-truth documents the change reconciles, or the literal none.",
+          "oneOf": [
+            {
+              "const": "none"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/repositoryPath"
+              }
+            }
+          ]
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["in", "interfaces"],
+          "properties": {
+            "in": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/line"
+              }
+            },
+            "interfaces": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/interface"
+              }
+            }
+          }
+        },
+        "nonGoals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "statement"],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/idNg"
+              },
+              "statement": {
+                "$ref": "#/$defs/line"
+              }
+            }
+          }
+        }
+      }
+    },
+    "criterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "form", "statement"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/idAc"
+        },
+        "form": {
+          "enum": ["example", "property", "table"]
+        },
+        "statement": {
+          "$ref": "#/$defs/line"
+        },
+        "vectors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["input", "expected"],
+            "properties": {
+              "input": {
+                "$ref": "#/$defs/line"
+              },
+              "expected": {
+                "$ref": "#/$defs/line"
+              }
+            }
+          }
+        },
+        "asserts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/idInvar"
+          }
+        },
+        "supersededBy": {
+          "$ref": "#/$defs/idAc"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "form": {
+                "const": "table"
+              }
+            }
+          },
+          "then": {
+            "required": ["vectors"]
+          },
+          "else": {
+            "not": {
+              "required": ["vectors"]
+            }
+          }
+        }
+      ]
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "check"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/idVfact"
+        },
+        "statement": {
+          "$ref": "#/$defs/line"
+        },
+        "check": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "target", "observed"],
+          "properties": {
+            "kind": {
+              "enum": ["read", "command", "version"]
+            },
+            "target": {
+              "description": "A path with an anchor (path#symbol), a version, or an argument vector.",
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/line"
+                },
+                {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "$ref": "#/$defs/line"
+                  }
+                }
+              ]
+            },
+            "observed": {
+              "$ref": "#/$defs/line"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "command"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "target": {
+                    "type": "array"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "target": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "alternative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "option", "whyNot"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/idAlt"
+        },
+        "option": {
+          "$ref": "#/$defs/line"
+        },
+        "whyNot": {
+          "$ref": "#/$defs/line"
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "question", "choice", "why", "consequences", "status"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/idDec"
+        },
+        "question": {
+          "$ref": "#/$defs/line"
+        },
+        "choice": {
+          "$ref": "#/$defs/line"
+        },
+        "why": {
+          "$ref": "#/$defs/line",
+          "description": "The purpose, in one line. It is served to the PM."
+        },
+        "consequences": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/line"
+          }
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/alternative"
+          },
+          "description": "Only a rejected alternative that changes how the change is delivered."
+        },
+        "record": {
+          "$ref": "#/$defs/line",
+          "description": "The identifier of the decision record, when the decision outlives the change."
+        },
+        "status": {
+          "enum": ["accepted", "superseded"]
+        },
+        "supersededBy": {
+          "$ref": "#/$defs/idDec"
+        }
+      }
+    },
+    "openQuestion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "question", "default"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/idOq"
+        },
+        "question": {
+          "$ref": "#/$defs/line"
+        },
+        "default": {
+          "$ref": "#/$defs/line",
+          "description": "What applies when nobody answers."
+        },
+        "answer": {
+          "$ref": "#/$defs/line"
+        }
+      }
+    },
+    "decisions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taken", "openQuestions"],
+      "properties": {
+        "taken": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/decision"
+          }
+        },
+        "openQuestions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/openQuestion"
+          }
+        }
+      }
+    },
+    "obligation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "criterion",
+        "claim",
+        "observable",
+        "predicate",
+        "method",
+        "boundary",
+        "baseline",
+        "requiredForMerge"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/idProof"
+        },
+        "criterion": {
+          "$ref": "#/$defs/idAc"
+        },
+        "claim": {
+          "$ref": "#/$defs/line",
+          "description": "What this proof establishes for the criterion."
+        },
+        "observable": {
+          "$ref": "#/$defs/line",
+          "description": "What is watched: a return value, a file, an exit code, an output stream, a rendered page."
+        },
+        "predicate": {
+          "$ref": "#/$defs/line",
+          "description": "The condition on the observable that must hold."
+        },
+        "method": {
+          "$ref": "#/$defs/method"
+        },
+        "boundary": {
+          "$ref": "#/$defs/line",
+          "description": "What the proof leaves out."
+        },
+        "test": {
+          "$ref": "#/$defs/idTest"
+        },
+        "command": {
+          "$ref": "#/$defs/command"
+        },
+        "baseline": {
+          "enum": ["red", "green"],
+          "description": "What is expected on the base. red: the proof fails there for a failed assertion. green: it passes there, so it is a guard and needs an added case."
+        },
+        "requiredForMerge": {
+          "type": "boolean"
+        },
+        "addOnOf": {
+          "$ref": "#/$defs/flag",
+          "description": "Set when the obligation is the add-on of a flag."
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "method": {
+              "const": "test"
+            },
+            "test": true,
+            "command": false
+          },
+          "required": ["test"]
+        },
+        {
+          "properties": {
+            "method": {
+              "enum": ["command", "battery", "rehearsal", "rendered"]
+            },
+            "test": false,
+            "command": true
+          },
+          "required": ["command"]
+        }
+      ]
+    },
+    "testCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "case"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/idTest"
+        },
+        "path": {
+          "$ref": "#/$defs/repositoryPath",
+          "description": "An existing or a planned test file."
+        },
+        "case": {
+          "$ref": "#/$defs/line",
+          "description": "The name or the selector of the case inside the file."
+        }
+      }
+    },
+    "oracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["obligations", "tests"],
+      "properties": {
+        "obligations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/obligation"
+          }
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/testCase"
+          }
+        }
+      }
+    },
+    "contextDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["include", "exclude"],
+      "properties": {
+        "include": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/line"
+          }
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/line"
+          }
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "action", "paths", "verify"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/idStep"
+        },
+        "action": {
+          "$ref": "#/$defs/line",
+          "description": "Imperative, one line."
+        },
+        "paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/pathEntry"
+          }
+        },
+        "verify": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/command"
+          }
+        }
+      }
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "goal",
+        "criteria",
+        "paths",
+        "steps",
+        "verify",
+        "dependsOn",
+        "handover"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/idPhase"
+        },
+        "title": {
+          "$ref": "#/$defs/line",
+          "description": "A verb phrase with an object. It is also the commit subject."
+        },
+        "goal": {
+          "$ref": "#/$defs/line"
+        },
+        "criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/idAc"
+          }
+        },
+        "paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/pathEntry"
+          }
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        },
+        "verify": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/command"
+          }
+        },
+        "dependsOn": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/idPhase"
+          }
+        },
+        "handover": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required", "nextInputs"],
+          "properties": {
+            "required": {
+              "type": "boolean",
+              "description": "True when the next phase runs in a fresh session."
+            },
+            "nextInputs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/line"
+              }
+            }
+          }
+        },
+        "contextFor": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/role"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/contextDeclaration"
+          }
+        }
+      }
+    },
+    "work": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phases"],
+      "properties": {
+        "phases": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/phase"
+          }
+        }
+      }
+    },
+    "flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["active", "removed", "risks"],
+      "properties": {
+        "active": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/flag"
+          }
+        },
+        "removed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["flag", "reason"],
+            "properties": {
+              "flag": {
+                "$ref": "#/$defs/flag"
+              },
+              "reason": {
+                "$ref": "#/$defs/line"
+              }
+            }
+          }
+        },
+        "risks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "statement", "mitigation"],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/idRisk"
+              },
+              "statement": {
+                "$ref": "#/$defs/line"
+              },
+              "mitigation": {
+                "$ref": "#/$defs/line"
+              }
+            }
+          }
+        }
+      }
+    },
+    "slot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "text"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "useIn": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/role"
+          }
+        },
+        "archive": {
+          "const": true
+        },
+        "text": {
+          "$ref": "#/$defs/prose"
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["useIn"],
+          "properties": {
+            "archive": false
+          }
+        },
+        {
+          "required": ["archive"],
+          "properties": {
+            "useIn": false
+          }
+        }
+      ]
+    },
+    "newEventKind": {
+      "enum": ["step.done", "review.finding", "gate.run", "round.decision", "cost.record"],
+      "description": "The kinds the event log gains. Four enter the change capsule by a version bump of its envelope; the cost record is stored outside the capsule (../03-schemas.md)."
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "reader", "category", "path", "summary", "resolution"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^RFIND-[0-9]+$",
+          "description": "Allocated by the tool in the change's event log, never by a reader."
+        },
+        "reader": {
+          "enum": ["pre-code-reader", "reviewer", "coder", "lint", "preflight"],
+          "description": "Who raised it. The coder reads first in the light shape. The lint and the preflight mint mechanical findings."
+        },
+        "round": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The reader's round. It is absent on a finding the tool mints."
+        },
+        "category": {
+          "enum": [
+            "design",
+            "contract",
+            "security",
+            "data",
+            "code",
+            "coverage",
+            "fact",
+            "environment",
+            "format",
+            "process"
+          ]
+        },
+        "materiality": {
+          "enum": ["material", "useful", "cosmetic"],
+          "description": "The reader's judgment. A material finding of any category earns a round; a finding that is not material never does. It is absent on a finding the tool mints, which never earns a round."
+        },
+        "nonMaterialReason": {
+          "$ref": "#/$defs/line",
+          "description": "Required when the category is design, contract, security or data and the finding is not material: what would have to be true for it to be material."
+        },
+        "path": {
+          "$ref": "#/$defs/repositoryPath"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "summary": {
+          "$ref": "#/$defs/line"
+        },
+        "cites": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/citation"
+          }
+        },
+        "ticket": {
+          "$ref": "#/$defs/line",
+          "description": "The locator of the part of the ticket the finding is about."
+        },
+        "resolution": {
+          "enum": ["raised", "resolved", "withdrawn"]
+        },
+        "verifiedBy": {
+          "enum": ["lint", "reader"],
+          "description": "Present on a resolved finding: the lint verified a mechanical fix, or a reader confirmed the fix."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "reader": {
+                "enum": ["pre-code-reader", "reviewer", "coder"]
+              }
+            },
+            "required": ["reader"]
+          },
+          "then": {
+            "required": ["materiality", "round"]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": ["materiality"]
+                },
+                {
+                  "required": ["round"]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "category": {
+                "enum": ["design", "contract", "security", "data"]
+              }
+            },
+            "required": ["category"]
+          },
+          "then": {
+            "oneOf": [
+              {
+                "properties": {
+                  "materiality": {
+                    "const": "material"
+                  }
+                },
+                "required": ["materiality"]
+              },
+              {
+                "required": ["nonMaterialReason"]
+              },
+              {
+                "not": {
+                  "required": ["materiality"]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resolution": {
+                "const": "resolved"
+              }
+            },
+            "required": ["resolution"]
+          },
+          "then": {
+            "required": ["verifiedBy"]
+          },
+          "else": {
+            "not": {
+              "required": ["verifiedBy"]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

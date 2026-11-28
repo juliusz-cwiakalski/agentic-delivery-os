@@ -1,0 +1,61 @@
+schemaVersion: milestone.contract.v1
+id: M4
+revision: 1
+status: draft
+generatedBy: jaiship milestone goal add@0.1.0
+title: Jaiship-native delivery
+
+goals:
+  - id: M4-G1
+    statement: Schedule work across the repositories of a product, and inside one repository
+      when changes do not conflict.
+    measure: Two lanes run in sibling worktrees on path-disjoint changes and both land.
+    tickets: [GH-412]
+  - id: M4-G2
+    statement: Plan in parallel up to the readiness gate, within limits per repository and
+      per product.
+    measure: Two changes reach DoR concurrently without exceeding the per-repository cap.
+    tickets: [GH-407, GH-419]
+  - id: M4-G3
+    statement: Compile the paths of a change from its plan and compare change to change.
+    measure: The scheduler computes overlap from the plans and serializes one overlapping pair.
+    tickets: [GH-405, GH-422, GH-416]
+
+scope:
+  in:
+    - The delivery engine, the queue, the lane runtime, and the operator surfaces.
+    - The adapter contracts for GitHub and the CLI.
+  out:
+    - Anything outside the delivery engine and its adapters.
+
+architecture:
+  - One dispatch owns one lane; a lease per repository and work item.
+  - One worktree per lane, removed by closeout after the lane's own merge.
+  - Typed records for lane state, push evidence, and park causes.
+
+dependencyGraph:
+  - from: GH-412
+    to: GH-416
+    kind: requires
+  - from: GH-405
+    to: GH-407
+    kind: requires
+
+sharedTestStrategy:
+  - Behaviour suites over injected ports; no real remote in CI.
+  - One full battery per change at the gate, targeted suites during work.
+  - Pinned inventories updated in the same phase as the contract change.
+
+definitionOfDone:
+  - Every goal has at least one ticket merged and one measured outcome.
+  - Every merged ticket has a green gate, a review, and a closeout.
+  - The milestone verifier reports each goal as met or not met, with evidence.
+
+risks:
+  - id: M4-R1
+    statement: A foundation ticket re-cuts a contract and forces a broad reopen.
+    mitigation: Land the contract phase first and keep the consumers additive.
+    severity: high
+
+sizeBudget:
+  bytes: 16384
