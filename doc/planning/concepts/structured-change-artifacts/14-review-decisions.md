@@ -287,6 +287,76 @@ deterministic 80 percent; the agent does the judgment 20 percent.
 **Design changes:** `12-deterministic-core.md` adds the exception budget; `01-analysis.md`
 references it.
 
+## Part 5: classification, rounds and the contract
+
+Owner review on 2026-11-28, after a study of real deliveries in product repositories. The
+evidence note is kept outside this pack; the design is in `15-classification-and-rounds.md`.
+
+### 11. One author, readers instead of co-authors
+
+**Owner:** merging the writers into one is the right move, and the PM may write the card for a
+light change; the reviewer probably stays a separate adversarial reader.
+
+**Decision:** one contract with typed sections, written in one pass. The PM writes the card of
+a light change at intake; one author subagent writes a larger contract. The test plan and the
+plan become sections of the contract. The test-plan-writer and the plan-writer retire as
+separate agents; their checklists move to two readers: an optional pre-code reader, and the
+reviewer, which every change keeps as a separate agent.
+
+**Design changes:** `02-artifact-model.md`, `03-schemas.md`, `schemas/`, `04-cli.md`,
+`05-context-bundles.md`, `06-workflows.md`; section 15, parts 5 and 6.
+
+### 12. Rounds are earned
+
+**Owner:** cap the readiness rounds at two, and let it depend on scale: a re-review makes
+sense when the previous round was substantial.
+
+**Decision:** a further round is allowed only after a substantial round, one with at least one
+material finding. Ceilings are two rounds for a small change and three for a large one. Past
+the ceiling the PM or the CEO decides between the positions. Mechanical, wording and format
+findings never earn a round. Escalation of the shape keys on the finding's category and
+materiality, not on a severity word.
+
+**Design changes:** `04-cli.md` gains `review rounds allowed`; `12-deterministic-core.md`;
+section 15, part 6; Q20 and Q21 in `09-open-points.md`.
+
+### 13. Low risk by default, flags on the surface
+
+**Owner:** trivial work such as documentation edits and minor translation corrections is low
+risk; the flag approach is accepted, on the condition that the evaluation is done properly.
+
+**Decision:** low risk is the default. Eight starter flags key on the surface a change
+touches. The tool proposes flags from the paths against a per-repository surface map, at
+intake, when the contract is validated, at review and before merge. The PM confirms at
+intake. Hints on the ticket are advisory. There is no classification agent.
+
+**Design changes:** section 15, parts 1 to 4; Q1 and Q43 in `09-open-points.md`.
+
+### 14. State, content and history are separate
+
+**Owner:** timing data belongs in tool-written files that delivery agents never read; the plan
+has phases and steps with stable identifiers; evidence stays out of the main change file; the
+handover carries cross-phase facts; one interface, with the storage free to change.
+
+**Decision:** four kinds of information (state, content, history, learning) and seven read
+contexts. Progress is an event over a stable identifier, not an edit. Evidence is carried by
+reference. The handover is the only cross-phase carrier. The commands and the bundles are the
+interface; the files are implementation.
+
+**Design changes:** section 15, part 7; `13-context-delivery.md`; Q19 and Q45 in
+`09-open-points.md`.
+
+### 15. Measure cost per role and phase
+
+**Owner:** record sessions and tokens per agent per change; the harness session store already
+holds them.
+
+**Decision:** the tool records sessions and tokens per role at every boundary, from the
+session store through the worktree registry, and derives cost per phase and per gate.
+
+**Design changes:** section 15, part 8; the method of `10-evidence.md` becomes a product
+capability.
+
 ## Summary of the design changes
 
 | Area | Change |
@@ -308,15 +378,24 @@ references it.
 | Deltas | Deferred; stateless full bundles first |
 | Push | Out of scope; a related concept |
 | Boundary | Total-function test plus an exception budget of three |
+| Contract | One contract with typed sections, one author, two readers |
+| Rounds | Earned by a material finding; ceilings two and three |
+| Shape | Low risk by default; flags on the surface; the tool proposes, the PM confirms |
+| Information | State, content, history and learning are separate; seven read contexts |
+| Cost | Sessions and tokens recorded per role and phase by the tool |
 
 ## Remaining open points
 
-The following still need an inline answer; the rest have a default that this revision
-implements:
+Answered inline in `09-open-points.md` on 2026-11-27 and 2026-11-28: Q1, Q2 (with its
+contents), Q11, Q19, Q20, Q21, Q23. The following still need an inline answer:
 
-- The exact contents of each tier (Q1, Q2, Q9).
-- The number and budget of extension slots (new, see `09-open-points.md` Q41).
-- The audit policy for a path outside the change's scope (Q23).
-- The handover prompt wording (new, Q42).
+- The starter risk flags and the surface map (Q43).
+- The round rules and their ceilings (Q44).
+- Where evidence lives (Q45).
+- Whether the study's figures may be cited in this pack (Q46).
+- The bundle budgets and the acceptable miss rate (Q8, Q9).
+- The number and budget of extension slots (Q41).
+- The handover prompt wording (Q42).
 - Whether to launch the external researcher now (Q40).
 - The pilot ticket and the token-reduction threshold (Q27, Q28).
+- The budget for building this (Q30).

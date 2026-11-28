@@ -33,6 +33,8 @@ If wrong: either ceremony on small changes or a light gate on a risky one.
 
 Answer:
 
+**Answered (2026-11-28):** Size in lines does not classify. A change is classified at intake on three facts: the surface it touches (risk flags), the number of decisions it needs, and the oracle of its repository. Option A's numbers remain only as an escalation tripwire, counted on non-artifact lines, never as a classifier. See `15-classification-and-rounds.md`, sections 1 to 4.
+
 ### Q2. Should S changes collapse the eleven phases?
 
 Priority: **P2**.
@@ -54,6 +56,8 @@ If wrong: cycle time or rigor.
 Answer:
 
 **Answered (2026-11-27):** Yes. Slimmer versions for S changes, including collapsed phases where it is safe. The contents of each tier still need review; every tier keeps acceptance criteria, tests, a review, the gates, the DoD, the pull request, and provenance.
+
+**Contents (2026-11-28):** Only the light shape collapses. It is one contract card written by the PM at intake, a tool preflight, one reviewer, the gates, the DoD and the pull request. Every other shape uses the same single contract, grown with a decision log and phases, plus an adversarial reader before coding and a review aimed at the risk. The test plan and the plan are sections of the contract, not separate artifacts. See `15-classification-and-rounds.md`, sections 3 and 5.
 
 ### Q3. Is the specification fully structured or a hybrid?
 
@@ -239,6 +243,8 @@ If wrong: token waste or a blind review.
 
 Answer:
 
+**Answered (2026-11-28):** The reviewer's bundle carries the contract sections that frame the diff (goal, acceptance criteria, the oracle with its commands and expected outputs, decisions, risk flags); the diff is read from git. The reviewer reproduces, mutates and tries to break; it does not check the template. Findings about wording or format never earn another round. See `15-classification-and-rounds.md`, sections 5 and 6.
+
 ### Q12. Should the PM brief include decision rationale or only summaries?
 
 Priority: **P2**.
@@ -382,6 +388,11 @@ If wrong: a missing handover or a confusing double state.
 
 Answer:
 
+**Answered (2026-11-28):** Yes, a dedicated command, and it covers steps as well as phases
+(`step done <ref> P2-S3`). It records an event and never edits the contract; the state is a
+fold over the events. At a phase boundary the handover is its argument. See
+`15-classification-and-rounds.md`, section 7.
+
 ### Q19. Should a handover be required for every phase?
 
 Priority: **P2**.
@@ -403,6 +414,8 @@ Answer:
 
 **Partially answered (2026-11-27):** the handover is the essence. Required when the next phase needs it; default true for M and L, false for S.
 
+**Confirmed (2026-11-28):** A handover is required whenever the next phase runs in a fresh session, so never in a one-phase change. It is the only carrier of cross-phase facts: what changed and what the next phase must adjust to. It carries evidence references, not evidence bodies.
+
 ### Q20. Should a review finding that changes the contract reopen the specification?
 
 Priority: **P2**.
@@ -422,6 +435,8 @@ If wrong: a silent contract change or an unnecessary loop.
 
 Answer:
 
+**Answered (2026-11-28):** Yes, as a new revision of the contract with the finding as the reason. Only the forward-useful sections are updated; no retroactive document is written for work already done.
+
 ### Q21. Should the readiness gate be able to raise the tier?
 
 Priority: **P2**.
@@ -439,6 +454,8 @@ Default: A.
 If wrong: a light gate on a risky change.
 
 Answer:
+
+**Answered (2026-11-28):** Yes. Any gate can add a risk flag or move a change to the heavier shape, and nothing is de-escalated without a recorded decision. Escalation keys on the finding's category and materiality (design, contract, security, data, code), never on a severity word alone.
 
 ## Parallelism
 
@@ -664,3 +681,91 @@ If wrong: a missing handover, a prose dump, or a handover that does not match th
 Answer:
 
 **Partially answered (2026-11-27):** the tool drafts the five fields from the evidence; the coder edits with a three-bullet limit per field. The exact prompt wording is still open.
+## Part 5 additions
+
+These came out of the review on 2026-11-28; see `15-classification-and-rounds.md`.
+
+### Q43. Which risk flags form the starter set, and where is the surface map declared?
+
+Priority: **P1**.
+
+Why it matters: the flags decide the add-ons. A flag that fires on wording puts ceremony on
+harness and documentation work; a missing flag lets a risky change through the light shape.
+
+Options:
+
+- A: the eight flags of section 15 (security, data, contract, irreversible,
+  environment-bound, first-of-a-kind, thin-coverage, protected-path), each declared in the
+  repository's configuration as path patterns.
+- B: a shorter set of four (security, data, contract, environment-bound), adding the others
+  from evidence.
+- C: flags from ticket labels only.
+
+Default: A.
+
+If wrong: ceremony on the wrong changes, or a light gate on a risky one.
+
+Answer:
+
+### Q44. Are the round rules and the ceilings right?
+
+Priority: **P1**.
+
+Why it matters: the round rule decides most of the review cost, and the wrong ceiling either
+pays for rounds without findings or cuts off a real disagreement.
+
+Options:
+
+- A: as in section 15: a further round only after a substantial round (one with a material
+  finding); ceilings of two rounds for a small change and three for a large one (three or
+  more phases, or two or more flags); past the ceiling the PM or the CEO decides.
+- B: fixed ceilings of two and three, whatever the previous round found.
+- C: a fixed ceiling of two for every change.
+
+Default: A.
+
+If wrong: review rounds that find nothing, or a disagreement ended too early.
+
+Answer:
+
+### Q45. Where does evidence live?
+
+Priority: **P2**.
+
+Why it matters: gate outputs, logs and screenshots are large. In a tracked change folder every
+agent can read them, and in the study such files made some folders tens of thousands of lines.
+
+Options:
+
+- A: a tool-managed store outside the tracked tree, referenced by hash or URL from events and
+  handovers.
+- B: a tool-owned subfolder of the change folder, excluded from every bundle.
+- C: wherever the agent that produced it chose to put it.
+
+Default: A.
+
+If wrong: large folders and read amplification, or evidence that an audit cannot find.
+
+Answer:
+
+### Q46. May the study's figures be cited in this public pack?
+
+Priority: **P2**.
+
+Why it matters: the rules in section 15 come from a study of private repositories. The pack's
+boundary allows only figures that are already public.
+
+Options:
+
+- A: keep every figure out. Section 15 states the reasoning, and the evidence note stays
+  local.
+- B: add an anonymized evidence note with counts and ratios, without names, paths or ticket
+  references.
+- C: publish the study method and script, without figures.
+
+Default: A.
+
+If wrong: a boundary breach, or a design whose evidence nobody can check.
+
+Answer:
+

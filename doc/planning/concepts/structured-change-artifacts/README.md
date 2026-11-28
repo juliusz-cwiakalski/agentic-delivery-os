@@ -38,6 +38,7 @@ The pack does six things:
 6. **Part 2** designs the delivery of context: a projection envelope instead of raw YAML,
    flags for facts and generated forms for facets, and a `--since` delta protocol. The delta
    protocol and the push model are deferred (section 13, decisions in section 14).
+7. It **decides the shape of a change**: what classifies it, the risk flags, who classifies, when another review round is earned, the single contract, and the split of state, content and history (section 15, decisions in part 5 of section 14).
 
 ## How to review it
 
@@ -60,6 +61,7 @@ Read in this order. If you are resuming after a break, read `HANDOVER-2026-11-28
     the research plan. Its open points are Q31 to Q40, answered in the same file.
 11. `14-review-decisions.md` for the owner's answers to the challenges and the resulting design
     changes. Where a core file and this file disagree, the decisions file wins.
+12. `15-classification-and-rounds.md` for the shape of a change. It carries no figures from the study it rests on; read it with part 5 of the decisions file.
 
 Answer inline in `09-open-points.md`: each question ends with `Answer:` on its own line.
 If you prefer to comment on a pull request instead, the pack is on the branch
@@ -67,10 +69,11 @@ If you prefer to comment on a pull request instead, the pack is on the branch
 
 ## The proposal in one page
 
-- **Facets, not documents.** One change owns five core facets: specification, test plan,
-  delivery plan, PM context, and handover. Each facet owns one kind of fact; the others
-  reference it by ID. The same acceptance criterion is written once, in the specification, and
-  referenced from the test plan and the plan. The milestone contract is deferred (section 14).
+- **One contract, one context, handovers.** One change owns a contract (goal, criteria,
+  verified facts, decisions, oracle, work, flags), a PM context and handovers. Each kind of
+  fact is written once and referenced by ID: the same acceptance criterion is written once, and
+  its oracle, phases and tests reference it. The milestone contract is deferred (section 14);
+  the contract's shape is in section 15.
 - **Machine first, prose bounded.** The machine fields are typed and validated (acceptance
   criteria, decisions, interfaces, affected paths, test cases, verify commands, handovers).
   The prose fields are short, word-budgeted, and never used for control flow.
@@ -83,9 +86,9 @@ If you prefer to comment on a pull request instead, the pack is on the branch
 - **Plan is the scheduler's input.** Each phase declares its affected paths, its acceptance
   criteria, its tests, and its verify commands. Overlap between two changes is computed, not
   predicted. Drift between declared and actual paths is audited at the pull request.
-- **Tiered depth.** S, M, and L changes carry different artifact requirements. A 200-line
-  fix gets a one-page contract and a checklist; a 9,000-line contract change gets the full
-  set. The current 25-section specification template is the default for L only.
+- **Shape follows the change, not its size.** Low risk is the default; risk flags keyed on
+  the surface touched add verification; the contract grows with decisions. The current
+  25-section specification template is an option for a phased change only (section 15).
 - **Context is declared, not guessed.** Each plan phase carries a `contextFor` map: what the
   coder and the reviewer need, and what they do not. The tool has a mandatory set per role;
   the plan can add, never remove. The milestone contract is deferred.
@@ -105,10 +108,14 @@ Settled in this pack, subject to your veto:
   the primary change resolution, one lane and one change, a template-driven state machine,
   deterministic commits from the phase title, attribution instead of prohibition for hand
   edits, the audit as a learning signal, and the milestone contract deferred.
+- The part 5 decisions in `14-review-decisions.md`: one contract with one author and two
+  readers, rounds earned by material findings, low risk by default with flags on the
+  surface, state separate from history, and cost recorded per role and phase.
 
 Open, with defaults in `09-open-points.md`:
 
-- The exact S/M/L thresholds.
+- The starter risk flags and the surface map (Q43).
+- The round rules and their ceilings (Q44).
 - Whether the specification is fully structured or a structured contract plus bounded prose
   (the pack recommends the hybrid).
 - Whether tool writes always auto-commit or batch per phase (the pack recommends always,
@@ -116,12 +123,11 @@ Open, with defaults in `09-open-points.md`:
 - Whether hand-editing is a hard failure from day one or after the pilot (the pack recommends
   hard after the pilot).
 - The ID prefixes to add to the catalog (`AC-`, `RSK-`, `IF-`, `PRE-`, `NA-`, `M-G`).
-- Whether the eleven phases collapse for S changes.
+- Where evidence lives (Q45), and whether the study's figures may be cited here (Q46).
 - Whether test cases become executable specifications or stay documents with links to tests.
 - The context bundle budgets and the acceptable miss rate.
 - Who owns the milestone contract.
 - Whether the retrospective log lives in the repository or outside it.
-- The exact contents of each tier (Q1, Q2, Q9).
 - The number and budget of extension slots (Q41).
 - The audit policy for a path outside the change's scope (Q23).
 - The handover prompt wording (Q42).
@@ -153,6 +159,7 @@ Open, with defaults in `09-open-points.md`:
 | `12-deterministic-core.md` | Part 2: the deterministic inventory, change auto-discovery, the lifecycle state machine, commit messages without a model call |
 | `13-context-delivery.md` | Part 2: the projection envelope, flags and forms, the `--since` delta protocol (deferred), the push model (out of scope), the research plan, Q31 to Q40 |
 | `14-review-decisions.md` | Owner review decisions from parts 3 and 4, the resulting design changes, and the remaining open points |
+| `15-classification-and-rounds.md` | The shape of a change: what classifies it, the risk flags, who classifies, the round rules, the single contract, and the split of state, content and history |
 
 ## Related concepts and work items
 
