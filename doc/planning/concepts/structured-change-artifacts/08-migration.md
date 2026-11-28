@@ -3,217 +3,165 @@
 # Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/doc/planning/concepts/structured-change-artifacts/08-migration.md
 ---
-# 08. Migration: slices, pilot, metrics
+# 08. Migration: tickets, pilot, metrics
+
+Status: governed by `14-review-decisions.md` (decisions 4, 5, 10, 16, 17, 21, 26, 29, 31, 36
+and 40) and by `17-roadmap.md`.
 
 ## Principles
 
-- **Small slices, each with a metric and a rollback.** No big bang.
-- **Read path first, write path second.** The token win is in the read path; the corruption
-  win is in the write path. Both matter, but they can land separately.
-- **Measure on real changes.** A pilot on one M ticket, with a baseline from the same tier.
-- **Keep the old reader until the new shape is proven.** Dual read, new writes only.
-- **Do not change the lifecycle and the tooling in the same slice.** A process change and a
-  schema change together make a failure hard to attribute.
+- **Every ticket delivers value alone.** A ticket is worth merging on its own, and stopping
+  after any of them leaves Jaiship in a consistent state (`17-roadmap.md`).
+- **Measure on real changes.** A pilot on one change of each shape, against a baseline taken
+  with the same method.
+- **Read every shape, write the current one.** A new version reads what the previous version
+  wrote, and writes only its own shape.
+- **One process change at a time.** A ticket changes the write path, the read path or the
+  shape of a change, and never two of them. Do not change the artifacts and the agents in
+  the same slice: a failure must be attributable to one cause.
+- **No schema ships without the bundle command.** The token win is in the read path; a
+  schema on its own moves nothing.
 
-## Delivery shape: one epic, multiple pull requests, one milestone
+## The slices
 
-The pack is delivered as **one epic with multiple pull requests**, not one big-bang pull
-request. The slices share a schema and a CLI, land behind flags, and are measured. A single
-long-lived branch would be hard to review and risky to land; the epic keeps the coherence the
-owner wants. The recommendation is slice 0 and slice 1 first, then slices 2 to 5 tightly
-sequenced.
-
-## Slice 0: the typed ledger and the fail-closed write
-
-**Scope.**
-
-- `jaiship pm loop add`, `pm loop close`, `pm next add`, `pm next done`, `pm blocker add`,
-  `pm blocker clear`, `decision add`.
-- `jaiship phase complete` refuses to write when the PM context does not parse.
-- `jaiship lint change` checks schema, references, budget, and provenance for the PM context.
-- A compatibility writer for the old pm-notes during the migration.
-
-**What it fixes.** The GH-416 corruption class: a hand-edited note with an invalid escape, a
-`verify` that fails, a watcher that reads zero phases.
-
-**Metric.** Artifact-caused verify failures: 1 in the GH-416 lane to 0. Hand-edit incidents:
-1 to 0.
-
-**Rollback.** The old writer stays behind a flag for one milestone; the new files are additive.
-
-**Work item.** Extend #113 from "validate at phase 11" to "typed writer, validate on every
-write, fail closed".
-
-## Slice 1: the data-first plan and the coder and reviewer bundles
-
-**Scope.**
-
-- `delivery.plan.v2` with `phases[].acceptance`, `tests`, `affectedPaths`, `steps`, `verify`,
-  `dependsOn`, `handover`.
-- `jaiship plan phase add`, `plan phase complete`, `plan path add`, `plan verify add`.
-- `jaiship context bundle --for coder` and `--for reviewer`.
-- The plan's comment share is capped; the plan-writer writes `detail` fields, not comments.
-
-**What it fixes.** The coder and the reviewer reading the whole plan and the whole test plan;
-the plan being 86 percent comments.
-
-**Metric.** Read amplification for the coder and the reviewer: from about 35x to 10x or less
-in the pilot. Input tokens per 1k lines: from about 397k to 300k or less.
-
-**Rollback.** The old plan reader stays; the new fields are additive; the bundle command can
-fall back to the file read.
-
-**Work item.** A new M4 item, or an extension of #412 (parallel lanes) if the plan schema is
-delivered there. The pack recommends a separate item so the bundle can be measured on its own.
-
-## Slice 2: the test plan as data
-
-**Scope.**
-
-- `change.test-plan.v1` with `cases`, `preconditions`, `coverage`.
-- `jaiship test case add`, `test precondition add`, `test coverage rebuild`.
-- The readiness bundle reads the coverage table, not the prose.
-
-**What it fixes.** The 156KB test plan with 800 words per case and 26 percent duplicate lines.
-
-**Metric.** Test-plan bytes per case: from about 5KB to 1.2KB or less. Coverage gaps found at
-DoR: from 0 to at least 1 in the pilot (the gate gets teeth).
-
-**Rollback.** The old test plan reader stays for one milestone.
-
-## Slice 3: the specification contract
-
-**Scope.**
-
-- `change.spec.v1` with `acceptanceCriteria`, `decisions`, `interfaces`, `affectedPaths`,
-  `risks`, `openQuestions`, `nonGoals`, bounded `prose`.
-- `jaiship spec set`, `spec ac add`, `spec decision add`, `spec interface add`, `spec risk
-  add`, `spec oq add`.
-- The spec bundle serves the contract, not the 25 sections.
-
-**What it fixes.** The 101KB specification with 25 sections and 131 table rows; the restatement
-of ACs, decisions, and paths across four artifacts.
-
-**Metric.** Specification bytes: from about 101KB to 40KB or less for an L change. Reopens per
-ticket: from 2 to 1 or less.
-
-**Rollback.** The `.md` specification stays readable; the contract is additive.
-
-**Open point.** This is the slice where the hybrid decision matters. Do not formalize the
-rationale; bound it.
-
-## Slice 4: handovers and the full bundle set
-
-**Scope.**
-
-- `delivery.handover.v1`, `jaiship handover record`, `plan phase complete --handover`.
-- Bundles for PM, readiness, plan-writer, test-plan-writer, spec-writer, doc-syncer, runner,
-  pr-manager, retrospective.
-- The `missing` list and the `context fetch` event.
-
-**What it fixes.** The fresh-context reread; the PM context carrying history; the handover
-that is either missing or a prose dump.
-
-**Metric.** Bundle miss rate: 10 percent or less after two iterations. PM context size: 8KB or
-less. Handover size: 1KB or less per phase.
-
-**Rollback.** The bundles are read-only projections; the old read path still works.
-
-## Slice 5: affected-path audit and parallelism
-
-**Scope.**
-
-- `jaiship plan conflicts`, `jaiship change audit`.
-- The queue consumes the conflict verdict; the lane's bundle carries the order note.
-- The retro records the misprediction rate.
-
-**What it fixes.** The prediction-based parallelism and the silent undeclared path.
-
-**Metric.** Misprediction rate: 20 percent or less. Undeclared paths at the pull request: 0
-for L, recorded for S and M during the pilot.
-
-**Rollback.** The queue can ignore the verdict and serialize; the audit can be advisory.
-
-**Work item.** #405 (scope locks) and #412 (parallel lanes); this slice is the plan-side input.
-
-## Slice 6 (deferred): the milestone contract and goal verification
-
-Deferred by the owner's review decision (section 14). It is not part of this epic; the
-specification's `milestone` field is a free-text label. The section is kept as a future
-slice.
-
-**Scope.**
-
-- `milestone.contract.v1`, `jaiship milestone init`, `goal add`, `verify`.
-- The milestone verifier is independent of the PM.
-- The ticket specification references goal IDs.
-
-**What it fixes.** The milestone-level memory and the "all tickets merged but the goal is not
-met" failure.
-
-**Metric.** Goal verification coverage: every goal has a measure and an evidence trail. Cycle
-time per milestone: measured, target set after the first milestone.
-
-**Rollback.** The contract is a document; the per-ticket flow is unchanged.
-
-## Tier review
-
-Before slice 3, review what goes into each tier. The rule: every tier keeps the safety checks
-(acceptance criteria, tests, a review, the gates, the DoD, the pull request, provenance); the
-tiers slim the artifact volume (specification prose, test-plan depth, plan granularity,
-readiness depth, handover requirement). The review produces a table per tier: which artifacts,
-which phases, which gates, which reviews, which handover. The table is the input to the
-workflow templates in section 12.
+The slices are the six tickets of `17-roadmap.md`, T1 to T6, in its order and under its rule
+that any prefix is consistent. Delivery is one epic with multiple pull requests, and T6 can
+be parked without loss to the others. No prefix loses a check: until T4 the readiness gate
+keeps running on every shape, and T4 is what limits the reader to flagged and phased changes
+and gives a light change the coder as its first reader. The check matrix of each prefix is in
+`17-roadmap.md`. This file adds what a ticket cannot hold on its own: the pilot, the metrics,
+the compatibility rules, the two recorded departures from the principles above, and the
+rollback of each ticket.
 
 ## The pilot
 
-- **Ticket:** one M change, not a foundation ticket. A foundation ticket has too many
-  confounders.
-- **Baseline:** the same tier's last three changes, measured with the same method as section
-  10.
-- **Duration:** the whole lifecycle, including one review round.
-- **Measure:** input tokens per 1k lines, read amplification, bundle miss rate, reopens,
-  review edits, cycle time, hand-edit incidents.
-- **Decision:** continue, adjust the bundles, or stop. The kill criteria are in section 01.
+Two stages (decision 17; Q27 and Q28).
 
-## Compatibility
+1. **One change of each shape.** A light, a flagged and a phased change, none of them a
+   foundation ticket, delivered through T1 to T5. Before the surface map is frozen, past
+   diffs are replayed against draft maps and the flagged share is reported.
+2. **The next ten to twenty changes of different shapes.** After each one: a retrospective,
+   then a tuning pass. Tuning does not end with the pilot. Retrospectives across the
+   repositories delivered with Jaiship continue it.
 
-- Dual read: the CLI reads the old `.md` and the new `.yaml`; it writes only the new shape.
-- `jaiship change migrate <ref>` converts an in-flight change in one commit, after a backup
-  commit, and records the migration in the PM context.
-- The compatibility reader is removed after two milestones.
-- A write to a legacy file is refused with `change.facet.legacy`.
+The baseline is the set of changes of the same shape, measured with the method of
+`10-evidence.md`; the study's medians are in `18-delivery-study.md`. Each pilot change
+measures input tokens per 1k changed lines, read amplification, the bundle miss rate, reopens
+per ticket, rounds per gate, edits after review, artifact lines per change, hand-edit
+incidents, and cost per role, phase and gate (`jaiship change cost`).
+
+The retrospective reads the events and the host-local fetch records, and proposes: a section
+to add to or remove from a role's mandatory set; a correction to the surface map, landed as a
+normal repository change; a warning line to reset; a target to re-size. Once T1 has measured
+ten changes, T2 to T5 are re-sized from what it shows.
+
+The decision after each stage is to continue, adjust or stop. Twenty percent fewer input
+tokens is enough to continue. The kill criteria are in `01-analysis.md`.
+
+## The metrics
+
+Each ticket has one numeric criterion. It is the one in `17-roadmap.md`, with the figures it
+rests on and the measures read beside it.
+
+| Ticket | Numeric criterion | Read from |
+|---|---|---|
+| T1 | Zero artifact-caused verification failures over the first ten changes, against 1 in the measured lane. The cost of a change reads correctly after its merge and the removal of its worktree | lint and verify; `change cost` |
+| T2 | Artifact lines per change fall by at least half: the study's medians of 461 lines for a light change and 3,470 for a change with the full lifecycle become 230 and 1,735 or less. Beside it: the tool-written share of artifact changes, 95 percent or more after the pilot | the change folder; the commit trailers |
+| T3 | Read amplification of 5 times the artifact size or less, from about 35x. Beside it: the bundle miss rate, 10 percent or less after two iterations; input tokens per 1k changed lines, about 397k to 250k or less | read tool counts; the host-local store; the session store |
+| T4 | Zero review rounds that follow a round without a material finding. Beside it: proposed flags removed without a reason, 0 | the events |
+| T5 | Every criterion has a recorded run on the merge candidate: 100 percent | the obligation statuses |
+| T6 | Conflict predictions checked against what actually collided: at least 80 percent right | `change audit`; the retrospective |
+
+## Compatibility and migration
+
+Decision 40 states the rules. They are acceptance criteria of T2.
+
+- **Read every shape, write the current one.** A new version reads every shape the previous
+  one wrote and writes only the current one.
+- **One new shape.** The contract is the only new shape. A change folder holds three stored
+  artifacts: the contract, the typed open items and the handovers.
+- **Files in flight stay.** The files of a change in flight stay until it lands. No command
+  converts a change behind its lane.
+- **A migration refuses to drop content.** `jaiship change migrate <ref>` converts a change
+  in one commit, after a backup commit. When a fact has no place in the contract, the
+  migration is refused and the fact is named.
+- **The compatibility reader leaves on evidence.** It goes when no open change uses the
+  earlier files. The tool reports that state; there is no fixed period (Q29).
+
+| Shape in a change folder | Read by | Written by | Until |
+|---|---|---|---|
+| The contract, one YAML file | every version from T2 on | every version from T2 on | stays |
+| The typed open items and the handovers | every version from T1 and T3 on | the same versions | stays |
+| A separate specification, test plan and plan | the compatibility reader, from T2 on | no version from T2 on | the last open change on them lands |
+| A hand-written ledger | the compatibility reader, from T1 on | no version from T1 on | the last open change on it lands |
+
+### A lane that meets a new version mid-flight
+
+The binary and the agent definitions are brought to the tip after a merge and before the next
+lane starts. A lane in flight meets the new version at its next command.
+
+1. **It continues.** Every read works, because the new version reads every shape the
+   previous one wrote. Its state continues, because the state is a fold over events that the
+   new version reads as they are.
+2. **Its files stay.** No command edits or converts the file of a change in flight. The new
+   version writes only the current shape, so it never revises an earlier file; a write to one
+   is refused with `change.file.legacy`.
+3. **A needed revision goes through the migration.** When a state must revise an earlier
+   file, the PM runs `jaiship change migrate <ref>` at the state boundary. The migration
+   converts what has a place and adds the contract; the earlier files stay until the change
+   lands. What has no place is named and the migration is refused. The lane then either
+   gives the fact a place (a decision record, a typed open item, a free-text slot) and
+   migrates, or lands on the files it has.
+4. **Progress is an event.** Steps, rounds, findings and gate results are recorded as events
+   over either set of files. Nothing is written into an earlier document.
+
+### Two recorded departures
+
+T2 departs from two principles of this file. Both are accepted with their reasons (CG-12).
+
+| Departure | Why it is accepted |
+|---|---|
+| T2 changes the artifacts and the agents together, against one process change at a time | The contract has one author and one command family. The file without its author leaves every later ticket to invent its own author; the author without the file has nothing to write. The readiness gate and the reviewer keep running on the one contract, so no check is lost while the process changes. T1 changes only state and cost writes, so a failure in T2 is attributed to the write path. |
+| T2 ships the schema before the bundle command, against the rule that no schema ships without it | One small file read whole is already a read win against three documents, and T2's own criterion is that artifact lines fall by at least half. Bundles over three documents would build the read path twice. T3 follows immediately, and until it lands an agent reads the whole contract. |
+
+## Rollback
+
+A revert of a ticket is a change delivered through the lifecycle. It restores, for changes
+that start after it, the behaviour that stood before the ticket. A change in flight keeps
+what it has.
+
+| Revert | Restores | Must keep |
+|---|---|---|
+| T1 | the ledger as agents wrote it before the typed commands | every event already written; the cost records, readable for a landed change |
+| T2 | the earlier files as what new changes write, with the agents that wrote them | every contract already written, read until its change lands; the migration's refusal to drop content; the repair path |
+| T3 | whole-file reads in place of bundles | every step event and handover, which still fold into the state; the host-local fetch records |
+| T4 | the readiness session before coding, for every change | every flag and finding on record: a revert de-escalates nothing |
+| T5 | gate verdicts as the evidence of done | every recorded run and the evidence store with its retention; a recorded failure still blocks |
+| T6 | a queue that serializes what it cannot compare | the audit records |
+
+Four rules hold for every revert. The event log is append-only and the reverted version reads
+it. The read rule holds in both directions: a reverted version reads every shape, the contract
+included. Nothing on record is de-escalated or dropped. The per-write commits are squashed at
+merge, so the audit trail is the events in the change folder and, as decision 36 proposes to
+the owner, one aggregate cost record per change.
 
 ## Risks and mitigations
 
 | Risk | Mitigation |
 |---|---|
-| The bundle omits a fact and the coder builds the wrong thing | a written context contract, a `missing` list, on-demand fetch, a measured miss rate, generous first bundles |
-| The plan's paths are wrong | tool-assisted suggestions, a lint for at least one path per phase, the audit at the pull request |
-| Hand-edit prevention blocks legitimate work | start with detection and a human import; move to a path deny only after the pilot |
-| Auto-commit noise | squash at merge, pathspec-only commits, never mix code and artifacts |
-| The specification becomes a form | keep the prose budget, keep the decision records, review the contract and the rationale separately |
-| The milestone contract becomes a second specification | cap it at goals, scope, architecture, dependency graph, test strategy, DoD |
-| The tooling is late and the old path stays | time-box each slice, keep the old reader, measure the old path as the control |
+| A bundle omits a fact and the coder builds the wrong thing | the mandatory set, the `missing` list, on-demand fetch, the measured miss rate |
+| A lane in flight loses work at an upgrade | files in flight stay; a backup commit; a migration that refuses to drop content |
+| Hand-edit detection blocks a legitimate repair | the repair path; a path deny for writes only, and only after the pilot shows accidental edits |
+| The tooling is late and the earlier path stays | time-box each ticket; any prefix is consistent; measure the earlier path as the control |
+| A target is wrong | the retrospective after each pilot change resets it |
 
 ## What not to do
 
-- Do not formalize the rationale.
-- Do not ship the schemas without the bundle command; the read path is the product.
+- Do not ship the contract without its author, or the author without the contract.
+- Do not remove the compatibility reader on a date. Remove it when the tool reports that no
+  open change uses the earlier files.
 - Do not make signing a prerequisite; the trailer and the CI check are enough.
-- Do not auto-commit code; only artifacts.
+- Auto-commit artifacts only. Code keeps the commit primitive.
 - Do not skip the pilot because the design is obvious; the miss rate is not obvious.
-- Do not remove the old reader in the same slice that introduces the new writer.
-- Do not build the delta protocol or the push model in this epic; both are deferred.
-
-## Rollout gates
-
-| Gate | Pass when |
-|---|---|
-| G1: slice 0 | no artifact-caused verify failure in one lane |
-| G2: slice 1 | coder and reviewer read amplification at 10x or less; no increase in rework |
-| G3: slice 2 | test-plan bytes per case at 1.2KB or less; at least one coverage gap caught at DoR |
-| G4: slice 3 | specification at 40KB or less for L; reopens at 1 or less |
-| G5: slice 4 | miss rate at 10 percent or less; PM context at 8KB or less |
-| G6: slice 5 | misprediction rate at 20 percent or less; no undeclared path on L |
-| G7: slice 6 (deferred) | not in this epic; revisit with the milestone contract |
+- Do not build the delta protocol or the push model in this epic.
+- Do not narrow a pattern of the surface map in an agent-delivered change.

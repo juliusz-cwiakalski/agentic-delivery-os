@@ -5,8 +5,9 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 ---
 # Concept pack: structured change artifacts and just-in-time context
 
-Status: **Draft** (2026-11-27). Owner review requested. This is a design pack, not a
-specification and not a commitment to build everything at once.
+Status: **Draft**, revised after the critique of 2026-11-28; owner review requested. The
+authority is `14-review-decisions.md`. This is a design pack, not a specification and not a
+commitment to build everything at once.
 
 ## Why this pack exists
 
@@ -19,15 +20,16 @@ it was made by the tool. Phase handovers would let a fresh coder continue withou
 the whole change. Affected paths in the plan would let the scheduler decide parallel versus
 serial before any code exists.
 
-The pack does six things:
+The pack does ten things:
 
 1. It **challenges** the vision where it is over-optimistic, with measurements from real
    changes (section 01).
-2. It proposes an **artifact model** and **YAML schemas** for the change specification, the
-   delivery plan, the test plan, the PM context, the handover, and a milestone contract
-   (sections 02 and 03, plus the `schemas/` examples).
-3. It specifies a **CLI surface** for typed reads and writes, with auto-commit, provenance,
-   and just-in-time context bundles (sections 04 and 05).
+2. It proposes an **artifact model** and **YAML schemas** for the stored artifacts: one
+   contract (goal, criteria, verified facts, decisions, oracle, work, flags), the typed open
+   items and the handovers. The milestone contract is deferred (sections 02 and 03, plus the
+   `schemas/` examples).
+3. It specifies a **CLI surface** for typed reads and writes, with the write transaction,
+   the command policy, provenance, and just-in-time context bundles (sections 04 and 05).
 4. It walks the **whole lifecycle** through mental experiments: the happy path, a failed
    Definition of Ready, a review finding, a spec gap found in test planning, a peak park and
    resume, two lanes that touch the same file, and milestone-level goal verification
@@ -39,54 +41,66 @@ The pack does six things:
    flags for facts and generated forms for facets, and a `--since` delta protocol. The delta
    protocol and the push model are deferred (section 13, decisions in section 14).
 7. It **decides the shape of a change**: what classifies it, the risk flags, who classifies, when another review round is earned, the single contract, and the split of state, content and history (section 15, decisions in part 5 of section 14).
-8. It proposes **how a change manages its tests**: criteria and obligations in the contract,
-   native tests, and red and green runs recorded by the tool (section 16, open for discussion).
+8. It designs **how a change manages its tests**: criteria and obligations in the contract,
+   native tests, and red and green runs recorded by the tool on two legs (section 16,
+   accepted in principle, Q47).
 9. It proposes a **roadmap of tickets that each deliver value alone** (section 17).
 10. It records the figures of the delivery study behind sections 15 to 17 (section 18).
 
 ## How to review it
 
-Read in this order. If you are resuming after a break, read `HANDOVER-2026-11-28.md` first.
+Read in this order. The state of the review is in this file and in `14-review-decisions.md`;
+`HANDOVER-2026-11-28.md` is superseded. The critique of 2026-11-28 and the CEO's disposition
+of it are `REVIEW-2026-11-28-critique-grid.md` and `REVIEW-2026-11-28-ceo-disposition.md`;
+decisions 34 to 42 come from them.
 
 1. `01-analysis.md` for the verdict and the challenges. If you disagree with the challenges,
    the rest of the pack changes.
-2. `02-artifact-model.md` for the model: facets, IDs, budgets, tiers.
-3. `03-schemas.md` and the five core examples in `schemas/` (plus the deferred
-   milestone example) for the concrete shapes.
-4. `04-cli.md` and `05-context-bundles.md` for the tool surface and the filtering rules.
-5. `06-workflows.md` and `07-parallelism.md` for the mental experiments.
-6. `08-migration.md` for how to get there in slices.
-7. `09-open-points.md` to answer inline. Each question has a default, so the design can
-   proceed without a meeting; your answer overrides the default.
-8. `10-evidence.md` for the measurements behind the claims and their caveats.
-9. `12-deterministic-core.md` for what the tool should own: change resolution, the state
-   machine, and deterministic commit messages.
-10. `13-context-delivery.md` for the output envelope, the input forms, the delta protocol, and
-    the research plan. Its open points are Q31 to Q40, answered in the same file.
-11. `14-review-decisions.md` for the owner's answers to the challenges and the resulting design
-    changes. Where a core file and this file disagree, the decisions file wins.
-12. `15-classification-and-rounds.md` for the shape of a change. It carries no figures from the study it rests on; read it with part 5 of the decisions file.
-13. `16-testing-in-a-change.md` for testing inside a change, open for discussion (Q47).
-14. `17-roadmap.md` for the tickets, each valuable on its own (Q30).
+2. `14-review-decisions.md` for the owner's decisions, 1 to 10, and for decisions 11 to 42.
+   Where any other file and this file disagree, the decisions file wins.
+3. `02-artifact-model.md` for the model: the stored artifacts, their identifiers, and the
+   rules that decide their content.
+4. `03-schemas.md` and the examples in `schemas/` (plus the deferred milestone example) for
+   the concrete shapes.
+5. `04-cli.md` and `05-context-bundles.md` for the tool surface (the write transaction, the
+   command policy), the bundles, and the filtering rules.
+6. `06-workflows.md` and `07-parallelism.md` for the mental experiments.
+7. `08-migration.md` for how to get there in slices.
+8. `09-open-points.md` for the questions and the owner's answers; five carry a note that
+   corrects them after the critique.
+9. `10-evidence.md` for the measurements behind the claims and their caveats.
+10. `12-deterministic-core.md` for what the tool should own: change resolution, the state
+    machine, and deterministic commit messages.
+11. `13-context-delivery.md` for the output envelope, the input forms, and the research plan.
+    Its open points are Q31 to Q40, answered in the same file.
+12. `15-classification-and-rounds.md` for the shape of a change. It carries no figures from
+    the study it rests on; read it with part 5 of the decisions file.
+13. `16-testing-in-a-change.md` for testing inside a change (Q47, accepted in principle).
+14. `17-roadmap.md` for the tickets, each valuable on its own (Q30), and the check matrix of
+    every prefix.
 15. `18-delivery-study.md` for the figures behind sections 15 to 17.
+16. `11-glossary.md` for the terms, last.
 
-Answer inline in `09-open-points.md`: each question ends with `Answer:` on its own line.
-If you prefer to comment on a pull request instead, the pack is on the branch
-`docs/concepts/structured-change-artifacts`; the draft PR is opened on request.
+The three points that await your confirmation are under "What is settled, what is open".
+Answer them in `09-open-points.md`, under the question each one belongs to, or as a comment
+on the pull request. The pack is on the branch `docs/concepts/structured-change-artifacts`;
+the draft PR is opened on request.
 
 ## The proposal in one page
 
 - **One contract, one context, handovers.** One change owns a contract (goal, criteria,
-  verified facts, decisions, oracle, work, flags), a PM context and handovers. Each kind of
-  fact is written once and referenced by ID: the same acceptance criterion is written once, and
-  its oracle, phases and tests reference it. The milestone contract is deferred (section 14);
-  the contract's shape is in section 15.
+   verified facts, decisions, oracle, work, flags), typed open items and handovers. Each kind
+   of fact is written once and referenced by ID: the same acceptance criterion is written
+   once, and its oracle, phases and tests reference it. The milestone contract is deferred
+   (section 14); the contract's shape is in section 15.
 - **Machine first, prose bounded.** The machine fields are typed and validated (acceptance
-  criteria, decisions, interfaces, affected paths, test cases, verify commands, handovers).
-  The prose fields are short, word-budgeted, and never used for control flow.
+   criteria, obligations, decisions, affected paths, phases and steps, verify commands,
+   handovers). The prose sits in at most three declared slots and is never used for control
+   flow.
 - **One writer.** Agents never edit the artifacts with `edit` or `write`. They use typed
-  commands that validate, write atomically, commit only that file, and stamp provenance.
-  A hand edit is detectable by lint and CI, and ideally impossible by harness permission.
+   commands that validate, write atomically under the write transaction, commit only that
+   file, and stamp provenance. A hand edit is detectable by lint and CI, and ideally
+   impossible by harness permission.
 - **Read by bundle.** An agent asks for `context bundle --for <role> --change <ref> --phase
   <id>` and receives a bounded, ordered set of sections with a `missing` list. It never reads
   a whole artifact. On-demand `context get --section <id>` is the escape hatch.
@@ -106,7 +120,6 @@ Settled in this pack, subject to your veto:
 
 - The artifact set and the single-writer rule.
 - The read-by-bundle rule and the role/phase matrix.
-- The tiering principle and the budgets.
 - The auto-commit and provenance model (commit trailer plus CI lint; signing is optional and
   not a substitute for path permissions).
 - The phased migration with a measured pilot, delivered as one epic with multiple pull
@@ -115,67 +128,72 @@ Settled in this pack, subject to your veto:
   the primary change resolution, one lane and one change, a template-driven state machine,
   deterministic commits from the phase title, attribution instead of prohibition for hand
   edits, the audit as a learning signal, and the milestone contract deferred.
-- The part 5 decisions in `14-review-decisions.md`: one contract with one author and two
-  readers, rounds earned by material findings, low risk by default with flags on the
-  surface, state separate from history, and cost recorded per role and phase.
+- The part 5 decisions in `14-review-decisions.md`, 11 to 42: one contract with one author,
+  the contract author, and its readers; rounds earned by a material finding; low risk by
+  default with flags on the surface; state separate from history; and cost read from the
+  telemetry Jaiship already captures.
 
 Open:
 
-Every numbered question in `09-open-points.md` and `13-context-delivery.md` now has an answer
-or a confirmed default. Three were explained on 2026-11-28 and accepted by the owner: Q17 (superseded by Q14), Q29 (when the compatibility reader
-is removed) and Q36 (a form for the first write of a contract). The retrospective log follows
-from Q45: the retrospective reads the events, and there is no separate log. The core files 02
-to 06, 08, 12 and 13 still describe the earlier model; sections 14 to 18 win until they are
-rewritten.
+Every numbered question in `09-open-points.md` and `13-context-delivery.md` has an answer
+or a confirmed default. After the critique of 2026-11-28 three points await the owner's
+confirmation: the light shape's pre-code check (decision 35), one base leg per change
+(decision 37), and where the committed token figures live (decision 36). The two renamed
+prefixes are his to name (decision 41). Sections 02 to 13 and the schemas are rewritten to
+this model in this revision.
 
 ## File index
 
 | File | What it holds |
 |---|---|
-| `HANDOVER-2026-11-28.md` | Review handover: what is settled, what is open, how to resume |
+| `HANDOVER-2026-11-28.md` | Superseded on 2026-11-28; the review handover as of 2026-11-27T20:15Z |
 | `01-analysis.md` | The vision, the evidence, where it is right, ten challenges, principles, kill criteria |
-| `02-artifact-model.md` | Facets, ownership, IDs, single source of truth, tiers, budgets, lifecycle |
-| `03-schemas.md` | Field rules and invariants for the six schemas |
-| `schemas/spec.yaml` | Example change specification (structured contract plus bounded prose) |
-| `schemas/test-plan.yaml` | Example test plan (cases as data, shared preconditions, coverage) |
-| `schemas/delivery-plan.yaml` | Example delivery plan (phases, paths, tests, verify, handover) |
-| `schemas/pm-context.yaml` | Example PM context (working memory only) |
-| `schemas/handover.yaml` | Example phase handover (bounded, typed) |
-| `schemas/deferred/milestone.yaml` | Deferred example of a milestone contract (goals, scope, dependency graph, DoD) |
-| `04-cli.md` | Command surface, write pipeline, provenance, error model, examples |
-| `05-context-bundles.md` | Role/phase matrix, filtering algorithm, budgets, example bundles, miss handling |
-| `06-workflows.md` | Eight mental experiments with exact commands and failure paths |
+| `02-artifact-model.md` | The three stored artifacts, the contract's sections, identifiers, single source of truth, lifecycle |
+| `03-schemas.md` | Field rules and invariants for the contract, the open items, the handover and the new event kinds; the persisted-content rules |
+| `schemas/contract.yaml` | A short example contract that follows every rule |
+| `schemas/contract.schema.json` | The machine-readable schema of the contract |
+| `schemas/open-items.yaml` | Example typed open items |
+| `schemas/handover.yaml` | Example phase handover |
+| `schemas/deferred/milestone.yaml` | Deferred example of a milestone contract |
+| `04-cli.md` | Command surface, the write transaction, the command policy, provenance, error model, examples |
+| `05-context-bundles.md` | Roles and their mandatory sets, filtering, measures, example bundles, miss handling |
+| `06-workflows.md` | Experiments A to H with exact commands and failure paths |
 | `07-parallelism.md` | Affected paths, conflict classes, scheduler decision, drift audit |
-| `08-migration.md` | Slices, pilot, metrics, rollback, compatibility |
-| `09-open-points.md` | Numbered questions with defaults and inline answer space |
+| `08-migration.md` | The roadmap's tickets, the pilot, metrics, compatibility, recorded departures, rollback |
+| `09-open-points.md` | Numbered questions with the owner's answers, and the corrections after the critique |
 | `10-evidence.md` | Measurements from GH-416 and GH-413, method, caveats, success metrics |
 | `11-glossary.md` | Terms used consistently across the pack |
-| `12-deterministic-core.md` | Part 2: the deterministic inventory, change auto-discovery, the lifecycle state machine, commit messages without a model call |
-| `13-context-delivery.md` | Part 2: the projection envelope, flags and forms, the `--since` delta protocol (deferred), the push model (out of scope), the research plan, Q31 to Q40 |
-| `14-review-decisions.md` | Owner review decisions from parts 3 and 4, the resulting design changes, and the remaining open points |
-| `15-classification-and-rounds.md` | The shape of a change: what classifies it, the risk flags, who classifies, the round rules, the single contract, and the split of state, content and history |
-| `16-testing-in-a-change.md` | Testing inside a change: criteria, obligations, recorded runs, red and green by kind of change; a proposal |
-| `17-roadmap.md` | Six tickets that each deliver value alone, in dependency order; any prefix is consistent |\n| `18-delivery-study.md` | The figures of the delivery study behind sections 15 to 17, without names or ticket references |
+| `12-deterministic-core.md` | The deterministic inventory, change auto-discovery, the state machine per shape, commit messages without a model call |
+| `13-context-delivery.md` | The projection envelope with origins, forms, the deferred delta protocol and push model, the research plan, Q31 to Q40 |
+| `14-review-decisions.md` | The owner's decisions, 1 to 10, and decisions 11 to 42; the design changes they imply; the points that await the owner's confirmation |
+| `15-classification-and-rounds.md` | The shape of a change: the risk flags, the shapes with their states, gates, agents and writers, the rounds, the stores and the write rules, the identifiers |
+| `16-testing-in-a-change.md` | Testing inside a change: obligations, two legs, red kinds, the watchlist, mutation by the tool |
+| `17-roadmap.md` | Six tickets that each deliver value alone, in dependency order, with a check matrix for every prefix |
+| `18-delivery-study.md` | The figures of the delivery study behind sections 15 to 17 and their reconciliation, without names or ticket references |
+| `REVIEW-2026-11-28-critique-grid.md` | The independent critique of 2026-11-28: its findings, what is good and must not be lost, and the questions for the owner |
+| `REVIEW-2026-11-28-ceo-disposition.md` | The disposition of each finding, finding by finding, and the decisions it produced (34 to 42) |
 
 ## Related concepts and work items
 
 - `../parallel-delivery.md`, strategy 3 (structured plan locations): this pack makes it
-  concrete and adds the drift audit.
+   concrete and adds the drift audit.
 - `../inter-agent-communication.md`: artifacts over messages; the handover and the PM
-  context are artifacts, not chat.
+   context are artifacts, not chat.
 - `../memory-architecture.md`: change capsules and the read gate; the PM context is working
-  memory, the retrospective log is durable memory.
+   memory, the retrospective log is durable memory.
 - `../automated-commit.md`: the automated commit capability; the artifact writer reuses its
-  safety rules for the commit step.
+   safety rules for the commit step.
 - `../id-prefix-catalog.md`: the ID grammar and the catalog-before-create rule; the new
-  prefixes in this pack need catalog entries.
+   prefixes in this pack need catalog entries.
 - `../policy-as-code.md`: the lint rules that make hand edits and undeclared paths visible.
 - Work items: #113 (pm-notes validation), #154 (tiered lifecycle), #367 (queue readiness),
-  #412 (parallel lanes), #405 (scope locks), #423/#424/#427 (gates, battery, search),
-  #65 (structured evidence ledger), #43 (retrospective agent).
+   #412 (parallel lanes), #405 (scope locks), #423/#424/#427 (gates, battery, search),
+   #65 (structured evidence ledger), #43 (retrospective agent).
 
 ## Boundary
 
 This is a public design document for the open-source tooling. It contains no product names,
 ideas, prices, paths, or figures that are not already public. The measurements are from the
-repository's own delivery and are stated as counts and ratios, not costs.
+repository's own delivery (sections 01 and 10) and from a study of eight product
+repositories (section 18), published with the owner's agreement (Q46) as counts and ratios,
+without names, ticket references or paths, and not as costs.

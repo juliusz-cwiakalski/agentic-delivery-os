@@ -26,6 +26,9 @@ A second layer is **progressive depth** on the same fact: `summary` (always serv
 (served to roles that need it), `rationale` (served to the spec-writer, reviewer, and decision
 roles). `jaiship context get --section <id> --depth summary|detail|rationale`.
 
+**Superseded in part by decisions 16 and 23 (2026-11-28).** A fact has one statement, and free
+text lives only in declared slots with a named reader. There is no depth parameter.
+
 **Design changes:** specification schema gains `extensions`; `03-schemas.md` documents the
 slot rules; `05-context-bundles.md` documents the depth parameter; `04-cli.md` documents
 `context get --depth`.
@@ -149,8 +152,11 @@ time; free text is fine; maybe later for autonomous long-term deliveries.
 
 **Decision:** the milestone contract is **deferred**. The core pack has five facets:
 specification, test plan, delivery plan, PM context, handover. The milestone contract and goal
-verification move to a deferred appendix and a future slice. The specification's `milestone`
-field is a free-text label, not a link to a goal graph.
+verification move to a deferred appendix and a future slice. The specification's `milestone` field is a free-text label, not a link to a goal graph.
+
+**Superseded in part by decision 11 (2026-11-28).** The specification, the test plan and the
+delivery plan are sections of one contract. The stored set is the contract, the typed open items
+and the handovers.
 
 **Design changes:** `README.md`, `02-artifact-model.md`, `03-schemas.md`, `08-migration.md`
 and `11-glossary.md` mark the milestone contract deferred; `schemas/milestone.yaml` moves to
@@ -166,6 +172,8 @@ remove something relevant; review what goes into each tier and how they work.
 acceptance criteria, tests, a review, the gates, the DoD, the pull request, and provenance.
 The tiers slim the specification prose, the test-plan depth, the plan granularity, the
 readiness depth, and the handover requirement. A tier review table is added.
+
+**Superseded by decisions 13 and 42 (2026-11-28).** The tier table is replaced by the three shapes.
 
 **Design changes:** `02-artifact-model.md` expands the tier table; `03-schemas.md` states
 what is mandatory in every tier; `08-migration.md` adds a tier review step.
@@ -432,6 +440,8 @@ in the contract, native tests, red and green runs recorded by the tool, expectat
 from the coder, the reviewer's mutation. Q47 decides. Q48 asks whether an emergency shape
 exists.
 
+**Superseded by decision 24 (2026-11-28).**
+
 ### 23. Decided on the owner's behalf
 
 **Owner:** no preference; decide on the best knowledge of the intent.
@@ -508,11 +518,96 @@ A form is the default for the first write of a contract (Q36). A hand repair goe
 `change repair`, so Q17 is superseded by Q14. No external researcher while every point has a
 conclusion (Q40). Ticket hints are a typed block, with labels still allowed (Q49).
 
+### 34. Who writes the contract
+
+**Decision of the CEO under the delegated authority, 2026-11-28, after the critique (CG-09). It
+corrects decisions 11 and 24.** The author is a new agent, the contract author, built from the
+plan-writer's prompt (paths, steps, verify commands) and the specification writer's contract
+sections. The specification writer and the plan-writer retire. The test-plan-writer becomes the
+acceptance author (decision 24). Section 15 carries the table of states, gates, agents and
+writers.
+
+### 35. The light shape keeps a pre-code check
+
+**Decision of the CEO, 2026-11-28 (CG-10).** No reader session for every change. In the light
+shape the coder is the first reader: its bundle carries the ticket and the card, and it does
+not start on a card that does not cover the ticket; a typed finding returns the card to its
+author. When the ticket carries a typed block, the tool checks that every check in it has an
+obligation. Intake has an explicit diagnosis step: the PM traces the code until the mechanism
+is established, or verifies a diagnosis the ticket carries, and records the verified facts.
+Every reader's bundle carries the ticket and the non-goals.
+
+### 36. Cost comes from the telemetry the product already captures
+
+**Decision of the CEO, 2026-11-28 (CG-13, CG-14). One point is the owner's to confirm.** The
+tool does not build a second telemetry. It reads the state-layer telemetry (ticket,
+repository, lane, agent role, model) per change, phase and role, and adds the phase and gate
+dimensions. Live cost is read from the host-local store. Token figures never enter the
+committed capsule. Proposal to the owner: one aggregate cost record per change is committed at
+closeout in the repository's measurement log, the pattern of the committed comparisons.
+Decision 29 is refined once he answers.
+
+### 37. How a proof is recorded and checked
+
+**Decision of the CEO, 2026-11-28 (CG-05, CG-06, CG-07, CG-08).** An obligation names the
+observable and the predicate. A run has a base leg and a candidate leg; the base leg runs on
+the merge-base tree with the change's test files added, once per change, for the acceptance
+obligations. A red has a kind: a failed assertion counts; a missing symbol, an unresolved
+import or a harness error is recorded and is not a red. Mutation is a tool command in a copy
+of the tree; the reviewer requests it and reads it. The watchlist of an obligation covers its
+test, its imports, its configuration and its CI workflow. Only the author revises an
+obligation.
+
+### 38. Materiality decides, and the map is protected
+
+**Decision of the CEO, 2026-11-28 (CG-11, CG-21).** A material finding of any category earns a
+round; a finding that is not material never does. Mechanical findings are verified by the tool
+after the fix. A large change has three phases, two flags, or crosses the line tripwire. The
+flags are scripted in part and the PM confirms; a removed proposed flag carries a reason. The
+surface map is read from the merge base, in the lane and in CI. A change that touches it
+always takes the policy flag and needs the owner's sign-off, and it may widen a pattern and
+never narrow one.
+
+### 39. The write pipeline and the command policy
+
+**Decision of the CEO, 2026-11-28 (CG-19, CG-22, CG-23, CG-24).** Every write takes a
+per-change lock, an expected revision and an idempotency key, and is refused when the file
+differs from the committed version. A repair starts from a failing lint. Each write records
+the session and the role. The trailer proves attribution by convention, not identity. The
+tool runs a cited command only under a policy: an allowlist of command prefixes per
+repository, no shell, a working directory confined to the worktree, an environment without
+credentials, ticket hints limited to known gates and existing test paths, and every command
+marked with its origin. Persisted content is YAML 1.2 core without duplicate keys, under a
+byte cap, in one canonical form, read by one pinned parser, and scanned for secrets.
+
+### 40. Migration
+
+**Decision of the CEO, 2026-11-28 (CG-15).** A new version reads every shape the previous one
+wrote and writes only the current one. The contract is the only new shape. The files of a
+change in flight stay until it lands. A migration refuses to drop content. The compatibility
+reader goes when no open change uses the earlier files (Q29). These are acceptance criteria
+of T2.
+
+### 41. Identifiers
+
+**Decision of the CEO, 2026-11-28 (CG-25). The names are the catalog owner's.** One grammar,
+`PH-<nn>_S<nn>`, everywhere. Rule R5 is read at the letter level, as it was for `ACT-`: the
+verified-fact and finding prefixes are proposed as `VFACT-` and `RFIND-`. The contract
+allocates `AC-`, `PROOF-`, `VFACT-`, `PH-` and `RSK-`; the tool allocates findings in the
+change's event log.
+
+### 42. Entry documents, levers and evidence
+
+**Decision of the CEO, 2026-11-28 (CG-01 to CG-04, CG-12, CG-16 to CG-18).** Decisions 8 and
+22 carry inline supersession notes. The README and the handover are corrected. Section 17
+states the size of each lever honestly, adds a check matrix for every prefix and one numeric
+criterion per ticket, and makes T5 depend on T4. Section 18 reconciles its counts.
+
 ## Summary of the design changes
 
 | Area | Change |
 |---|---|
-| Facets | Five core facets; the milestone contract is deferred to an appendix |
+| Facets | Three stored artifacts: the contract, the typed open items and the handovers; the milestone contract is deferred |
 | Specification | Typed contract plus declared extension slots and progressive depth |
 | Delivery plan | `contextFor` per phase and role; the phase title is the commit subject |
 | Handover | Tool-drafted, coder-confirmed, five fields, 1KB |
@@ -536,15 +631,24 @@ conclusion (Q40). Ticket hints are a typed block, with labels still allowed (Q49
 | Cost | Sessions and tokens recorded per role and phase by the tool |
 | Budgets | No fixed budget per role; the removal test decides content |
 | Storage | Written by the tool: YAML; served to an agent: the Markdown envelope |
-| Testing | Criteria and obligations in the contract; runs recorded by the tool (proposal) |
+| Author | A new contract author; the specification writer and the plan-writer retire; the test-plan-writer becomes the acceptance author |
 | Roadmap | Six tickets that each deliver value alone, in dependency order |
-| Identifiers | From the catalog: `AC-`, `PROOF-`, `FACT-`, `PH-`, `FIND-`, `RSK-` |
-| Evidence | Audit facts are events; evidence bodies live in the tool's store |
+| Identifiers | From the catalog: `AC-`, `PROOF-`, `VFACT-`, `PH-`, `RSK-`; findings `RFIND-` |
+| Evidence | Audit facts stay with the change; evidence bodies live in the tool's store; cost comes from the existing telemetry |
+| Proof | An obligation names the observable and the predicate; a base leg and a candidate leg; mutation by the tool |
+| Trust | A command policy, a write transaction, the map read from the merge base |
+| Migration | Read every earlier shape, write only the contract; never drop content |
 | Testing | The coder writes the tests; an acceptance author for `security` and `data` |
+| Light shape | The coder is the first reader; the ticket coverage and the preflight; no reader session for every change |
 
 ## Remaining open points
 
-Every numbered question now has an answer or a confirmed default in `09-open-points.md`
-and `13-context-delivery.md`. Three were explained to the owner on 2026-11-28 and carry a
-proposed answer: Q17 (superseded by Q14), Q29 (remove the compatibility reader when no open
-change uses the earlier files) and Q36 (a form for the first write of a contract). The owner accepted all three on 2026-11-28.
+Every numbered question has an answer or a confirmed default. After the critique of
+2026-11-28 (`REVIEW-2026-11-28-critique-grid.md`, disposition in
+`REVIEW-2026-11-28-ceo-disposition.md`), three points are the owner's to confirm or veto:
+
+- The light shape keeps a pre-code check through the coder as first reader (decision 35).
+- The base leg runs once per change for the acceptance obligations (decision 37).
+- The committed token figures live as one aggregate record per change in the measurement log,
+  not in the capsule events (decision 36).
+- The names of the two renamed prefixes (decision 41).

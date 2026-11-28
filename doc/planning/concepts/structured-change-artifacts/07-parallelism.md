@@ -6,7 +6,7 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 # 07. Affected paths and parallelism
 
 `../parallel-delivery.md` already names the mechanism as strategy 3, "structured plan
-locations": the delivery plan lists the exact locations each phase will modify, and the
+locations": the contract's Work section lists the exact locations each phase will modify, and the
 scheduler computes overlap mechanically. This file makes that concrete and adds the audit
 that keeps the declaration honest.
 
@@ -31,7 +31,7 @@ that keeps the declaration honest.
 - **Kind.** `add`, `modify`, `delete`. A delete is a write for conflict purposes.
 - **Globs are conservative.** A glob expands to the files it matches at plan time; an
   unmatched glob is a lint warning. A glob that matches a large tree serializes the change;
-  the plan-writer is encouraged to enumerate.
+  the contract author is encouraged to enumerate.
 - **Generated files and lockfiles** are declared as `generated` and serialize by default.
 
 ## Conflict classes
@@ -94,8 +94,8 @@ not a gate for an ordinary miss:
   merge authority resolves any conflict, and the retro compares the planned manifest with the
   actual diff.
 - A declared `modify` path that is unchanged: `change.paths.unmodified`. Usually a stale plan;
-  the plan-writer updates it.
-- A declared `add` path that exists: a duplicate or a rename; the plan-writer resolves it.
+  the contract author updates it.
+- A declared `add` path that exists: a duplicate or a rename; the contract author resolves it.
 - A path outside the change's scope: `change.paths.out-of-scope`. This one fails the audit,
   because it is a scope breach, not a planning miss.
 - A path in a protected area (a security-sensitive file, a merge policy, a permission file):

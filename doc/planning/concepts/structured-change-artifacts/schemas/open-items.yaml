@@ -1,0 +1,39 @@
+# Example of the typed open items: the PM's working state.
+#
+# The tool writes this file on the PM's typed commands. It holds open items
+# only: an item that is closed leaves the file, and the commit that removed
+# it is the record. State that the tool derives from the event log (the
+# current phase and step, the flags with unmet add-ons, the last handover) is
+# never written here.
+#
+# Lines that start with # are documentation for this example. A file the tool
+# emits carries no comment.
+schemaVersion: change.open-items.v1
+changeRef: GH-77
+revision: 5
+generatedBy: jaiship pm next add@0.1.0
+blockers: []
+questions:
+  - ref: 1
+    text: May the JSON document carry a version field from the first release?
+    default: No. A later change adds it when a consumer asks for it.
+    owner: pm
+    oq: OQ-1
+    askedAt: 2026-11-28T09:10:00Z
+    answer: null
+    answeredAt: null
+decisions:
+  - ref: 2
+    text: Decide whether the export guide needs a note for scripts that parse the text output.
+    owner: pm
+    cites:
+      - RSK-1
+    due: PH-01_S02
+    raisedAt: 2026-11-28T09:12:00Z
+nextActions:
+  - ref: 3
+    text: Ask the doc-syncer for the export guide before the pull request is opened.
+    owner: pm
+    blocking: false
+    due: PH-01_S02
+    raisedAt: 2026-11-28T09:12:00Z

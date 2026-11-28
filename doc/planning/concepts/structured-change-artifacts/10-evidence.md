@@ -20,8 +20,11 @@ states the method, the numbers, and what they do and do not prove.
   lines, measured on the files in the change folder. For the plan, the comment share was
   measured as the bytes of lines beginning with `#`.
 - **Diff size.** `git show --shortstat` for merged changes; `git diff --shortstat` against the
-  base for the in-flight change.
-- **Phase intervals.** The phase ledger, read with the product's parser. On GH-416 the ledger
+  base for the in-flight change. GH-416 was in flight when it was measured, before its final
+  commit: 108 files and 9.3k changed lines. Its merged diff is 129 files, about 12.6k inserted
+  lines and 383 deleted. Every ratio in this file that rests on the 9.3k figure is kept as it
+  was measured.
+- **Phase intervals.** The phase ledger, read with Jaiship's parser. On GH-416 the ledger
   was malformed (see below), so a repaired copy was used for the phase split; the totals come
   from the session store and do not depend on the repair.
 - **Comparison.** The last pre-native changes (delivered with the earlier wrapper) and the
@@ -36,7 +39,7 @@ states the method, the numbers, and what they do and do not prove.
 | test plan | 156KB, 24.8k words | 31 cases, about 800 words per case, 10 metadata fields per case, 26 percent duplicate lines |
 | delivery plan | 135KB | 86 percent comments; 19.5KB of data; 1,666 comment lines |
 | PM context | 37KB, 5.7k words | hand-written prose notes |
-| total | 435KB, about 67k words | for 9.3k changed lines, about 7 words of planning per line |
+| total | 435KB, about 67k words | for 9.3k changed lines measured before the final commit, about 7 words of planning per line |
 
 The specification's 25 sections include rollout, data migration, privacy, security,
 maintenance, glossary, appendices, document history, authoring guidelines, and a validation
@@ -68,11 +71,11 @@ most. Every fresh subagent starts with zero context and reads the whole set.
 
 The PM wrote the PM context by hand five times in the lane: a `write` at 05:45:10, then `edit`
 at 05:45:42, 05:46:00, 05:54:33, and 10:43:03. One note contained a backslash before a
-backtick, an invalid escape in a YAML double-quoted scalar. The product's strict parser
+backtick, an invalid escape in a YAML double-quoted scalar. Jaiship's strict parser
 rejected the document at line 434. `verify change` failed with `lint.notes.malformed`; the
-watcher read zero phases; the landing chain would have refused. The product had typed commands
+watcher read zero phases; the landing chain would have refused. Jaiship had typed commands
 for phase state and blockers but no typed command for notes or decisions, and lint was not a
-gate on the write. The design gap is the evidence for slice 0.
+gate on the write. The design gap is the evidence for T1 (`17-roadmap.md`).
 
 ## The reopen loop on GH-416
 
@@ -101,12 +104,14 @@ self-check against the acceptance criteria could reduce it.
 | GH-350 | earlier wrapper | 185 / 28.3k | 29.1h | 6.06M | 2.03M | 214k |
 | GH-404 | native | 98 / 12.4k | 17.3h | 19.45M | 632k | 1,572k |
 | GH-413 | native | 137 / 15.6k | 12.9h | 12.82M | 1.79M | 822k |
-| GH-416 | native, partial | 108 / 9.3k | 9.7h with a 4.8h park | 3.69M | 736k | 397k |
+| GH-416 | native, in flight when measured | 108 / 9.3k | 9.7h with a 4.8h park | 3.69M | 736k | 397k |
 
 The two foundation tickets (GH-404, GH-413) are the outliers, not the pipeline. GH-416 is
 leaner per line than both native predecessors and inside the earlier-wrapper band. The
 comparison is confounded by ticket scope, model and seat changes, and the park; it is
-descriptive, not causal.
+descriptive, not causal. The per-line figures of the GH-416 row use the diff measured before
+its final commit (Method); the merged diff is 129 files, about 12.6k inserted lines and 383
+deleted.
 
 ## What the evidence proves
 
@@ -139,4 +144,5 @@ descriptive, not causal.
 | Hand-edit incidents | 1 in this lane | 0 after the pilot | lint and CI |
 | Artifact-caused verify failures | 1 in this lane | 0 | verify and lint |
 
-The baseline is one lane, not a benchmark. The pilot establishes the comparison.
+The baseline is one lane, not a benchmark. The pilot establishes the comparison. Its per-line
+figures use the diff of GH-416 as measured before the final commit.

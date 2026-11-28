@@ -1,0 +1,214 @@
+# Example contract: short and neutral.
+#
+# It obeys every rule in ../03-schemas.md and in contract.schema.json beside
+# it: registered identifiers only; phase titles that are verb phrases with an
+# object; every criterion with an obligation that names its observable and its
+# predicate; commands as argument vectors with an origin; free text only in a
+# declared slot.
+#
+# Lines that start with # are documentation for this example. A file the tool
+# emits carries no comment and follows the canonical emission rule.
+#
+# Full worked examples of real changes are added later under examples/.
+schemaVersion: change.contract.v1
+changeRef: GH-77
+revision: 3
+generatedBy: jaiship contract set@0.1.0
+title: Add a JSON output to the export command
+kind: feature
+goal:
+  statement: The export command prints one JSON document when --json is passed, so a script can use a finished export without parsing progress lines.
+  docs:
+    - doc/guides/export.md
+  scope:
+    in:
+      - A --json flag on the export command.
+      - A JSON renderer for the export summary.
+    interfaces:
+      - id: API-1
+        surface: export --json
+        change: added
+        contract: Stdout carries one JSON document with a jobs array; the exit codes are unchanged.
+  nonGoals:
+    - id: NG-1
+      statement: This change does not alter the text output or any exit code.
+criteria:
+  - id: AC-1
+    form: example
+    statement: Given a finished export, when --json is passed, stdout is one JSON document that parses.
+  - id: AC-2
+    form: property
+    statement: With --json, no progress line reaches stdout, whatever the export writes to the terminal.
+  - id: AC-3
+    form: example
+    statement: When --help is passed, the help text lists --json.
+facts:
+  - id: VFACT-1
+    statement: The export command prints its progress through the shared logger, which writes to stdout.
+    check:
+      kind: read
+      target: src/cli/export.ts#run
+      observed: run calls log.progress three times, and log writes to process.stdout.
+  - id: VFACT-2
+    statement: No JSON renderer for the export summary exists in src/cli.
+    check:
+      kind: command
+      target:
+        - git
+        - grep
+        - -n
+        - render-json
+        - src/cli
+      observed: No match.
+decisions:
+  taken:
+    - id: DEC-1
+      question: Where does the JSON document go?
+      choice: Stdout, with every progress line moved to stderr while --json is passed.
+      why: A script reads stdout and nothing else.
+      consequences:
+        - Progress lines change stream only while --json is passed.
+      status: accepted
+  openQuestions:
+    - id: OQ-1
+      question: Does the JSON document carry a version field?
+      default: No. A later change adds it when a consumer asks for it.
+oracle:
+  obligations:
+    - id: PROOF-1
+      criterion: AC-1
+      claim: The JSON branch produces a document that a script can parse.
+      observable: The stdout of export --json, captured as one string.
+      predicate: The string parses as one JSON object whose jobs array is not empty.
+      method: test
+      boundary: It does not cover a failed export; that case belongs to a later change.
+      test: TC-EXPORT-001
+      baseline: red
+      requiredForMerge: true
+    - id: PROOF-2
+      criterion: AC-2
+      claim: Progress stays off stdout while --json is passed.
+      observable: The stdout of export --json for an export of three jobs.
+      predicate: The stdout holds no line that starts with the progress prefix.
+      method: test
+      boundary: It does not check stderr.
+      test: TC-EXPORT-002
+      baseline: red
+      requiredForMerge: true
+    - id: PROOF-3
+      criterion: AC-3
+      claim: The help text names the flag.
+      observable: The stdout and stderr of export --help, captured as one string.
+      predicate: The string contains the text --json.
+      method: command
+      boundary: It does not check the position of the flag in the help text.
+      command:
+        argv:
+          - node
+          - bin/export.js
+          - --help
+        cwd: .
+        expect:
+          exit: 0
+          output: --json
+        origin: author
+      baseline: red
+      requiredForMerge: true
+  tests:
+    - id: TC-EXPORT-001
+      path: tests/cli/export-json.test.ts
+      case: prints one JSON document for a finished export
+    - id: TC-EXPORT-002
+      path: tests/cli/export-json.test.ts
+      case: keeps progress lines off stdout
+work:
+  phases:
+    - id: PH-01
+      title: Add the JSON output to the export command
+      goal: Ship the flag, the renderer and the tests in one phase.
+      criteria:
+        - AC-1
+        - AC-2
+        - AC-3
+      paths:
+        - path: src/cli/export.ts
+          access: write
+          kind: modify
+        - path: src/cli/render-json.ts
+          access: write
+          kind: add
+        - path: src/cli/logger.ts
+          access: read
+        - path: tests/cli/export-json.test.ts
+          access: write
+          kind: add
+      steps:
+        - id: PH-01_S01
+          action: Write the acceptance tests for the JSON output.
+          paths:
+            - path: tests/cli/export-json.test.ts
+              access: write
+              kind: add
+          verify:
+            - argv:
+                - pnpm
+                - typecheck
+              cwd: .
+              expect:
+                exit: 0
+              origin: author
+        - id: PH-01_S02
+          action: Add the JSON renderer and the --json flag.
+          paths:
+            - path: src/cli/render-json.ts
+              access: write
+              kind: add
+            - path: src/cli/export.ts
+              access: write
+              kind: modify
+          verify:
+            - argv:
+                - pnpm
+                - test
+                - tests/cli/export-json.test.ts
+              cwd: .
+              expect:
+                exit: 0
+              origin: author
+      verify:
+        - argv:
+            - pnpm
+            - test
+            - tests/cli/export-json.test.ts
+          cwd: .
+          expect:
+            exit: 0
+          origin: author
+      dependsOn: []
+      handover:
+        required: false
+        nextInputs: []
+      contextFor:
+        coder:
+          include:
+            - phase.goal
+            - oracle.obligations
+          exclude:
+            - work.otherPhases
+flags:
+  active: []
+  removed:
+    - flag: contract
+      reason: The export command is used by a person at a terminal; no service or client consumes its stdout.
+  risks:
+    - id: RSK-1
+      statement: A script that parses the text output breaks when progress lines change stream.
+      mitigation: The stream changes only while --json is passed; the text output stays as it is.
+slots:
+  - name: renderer-note
+    useIn:
+      - coder
+    text: |-
+      The renderer reads the summary object that the text output already builds.
+      Do not add a second shape: a field added later to the summary then appears
+      in both outputs without another change here.

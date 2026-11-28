@@ -5,222 +5,267 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 ---
 # 04. The command surface
 
-## Families
+Status: **Proposal** (2026-11-28). Governed by part 5 of `14-review-decisions.md` (decisions 11
+to 42) and by sections 15 to 18; where this file and they disagree, they win.
 
-| Family | Reads | Writes | Notes |
+## Commands
+
+Agents read through bundles and write through typed commands. The contract has one family, and
+it is the only way the contract is written.
+
+| Command | Run by | Writes | What it does |
 |---|---|---|---|
-| `jaiship change` | `get`, `lint`, `audit`, `history` | `init`, `re-tier`, `migrate`, `import`, `repair` | the change is the unit |
-| `jaiship spec` | `get`, `get --section` | `set`, `ac add`, `decision add`, `interface add`, `path add`, `risk add`, `oq add`, `gap add` | the contract |
-| `jaiship test` | `get`, `get --case` | `case add`, `precondition add`, `coverage rebuild` | cases as data |
-| `jaiship plan` | `get`, `phase get`, `conflicts` | `phase add`, `phase complete`, `step add`, `path add`, `verify add`, `conflict add` | the scheduler's input |
-| `jaiship pm` | `brief` | `loop add`, `loop close`, `next add`, `next done`, `blocker add`, `blocker clear` | working memory only |
-| `jaiship handover` | `get` | `record` | one bounded entry per phase |
-| `jaiship context` | `bundle`, `get`, `get --depth` | none | the only read path for agents |
-| `jaiship workflow` | `next`, `status` | none | the gated state machine; the PM uses `next` for the happy path and `pm brief` for exceptions |
-| `jaiship readiness` | `assess` | none | the DoR and DoD gate |
-| `jaiship review` | `bundle`, `finding list` | `finding add`, `finding resolve`, `verdict` | structured findings |
-| `jaiship milestone` | `get`, `verify` | `init`, `goal add` | the milestone contract |
-| `jaiship phase` | `list` | `complete`, `reopen` | existing; now fail-closed on a malformed facet |
-| `jaiship blockers` | `list` | `publish`, `answer` | existing; mirrored into the PM context |
+| `contract form <ref>` | author | nothing | prints the form for the first write: the schema as a template, with the tool's proposals filled in |
+| `contract set <ref> --from-file <form> [--section <id>]` | author | the contract | the first write, or a whole section |
+| `contract add <ref> --section <id> --from-file <item>`, or flags | author | the contract | appends one item to a list of the section |
+| `contract revise <ref> --reason <text> [--finding RFIND-<n>] --from-file <form>` | author | the contract | a new revision with a recorded reason; identifiers are kept; an item that stops applying is marked superseded |
+| `pm next add`, `pm next done`, `pm blocker add`, `pm blocker clear`, `pm decision add`, `pm decision close` | PM | open items | the typed working state |
+| `blockers publish`, `blockers answer`, `blockers list` | PM, owner | open items | a question with its default, and its answer |
+| `pm brief` | PM, CEO | nothing | state plus the typed open items |
+| `handover draft <ref> --phase <PH->` | coder | nothing | prints the tool's draft, built from the events of the phase |
+| `step done <ref> PH-02_S03 [--handover <file>]`, `step reopen <ref> PH-02_S03 --reason <text>` | coder, PM | handovers; events | progress and a reopen are events over a stable identifier; the contract is not edited |
+| `preflight <ref>` | any | events | the checks that run before any reader |
+| `lint change <ref>` | any | events | the steps and codes in `03-schemas.md` |
+| `review finding add`, `review finding resolve`, `review finding withdraw`, `review finding list` | a reader | events | typed findings |
+| `review rounds allowed <ref> [--allow --reason <text>]` | reader, PM, CEO | an event with `--allow` | whether a further round is allowed |
+| `review verdict <ref> --round <n> --verdict pass\|fail` | reviewer | events | closes a round |
+| `obligation run <ref> --leg base\|candidate [--id PROOF-<n>] [--scope acceptance]` | gates, reviewer | events | the two legs |
+| `obligation mutate <ref> --id PROOF-<n> [--fault-set <name>]` | reviewer | an event | a mutation in a copy of the tree |
+| `change current` | any | nothing | the resolved change |
+| `change classify <ref> [--confirm <flags>] [--remove <flag> --reason <text>]` | the tool proposes, the PM confirms | the contract, section 7 | the flags, the kind, the shape and the tripwire |
+| `change cost <ref> [--phase <PH->] [--by role\|phase\|gate]` | any | nothing | the cost per role, phase and gate |
+| `change repair <ref> --file <path>` | a person or an agent | that file | the repair path, from a failing lint |
+| `change migrate <ref> [--dry-run]` | PM | the contract, open items | moves a change in flight; never drops content |
+| `context bundle`, `context get` | any | nothing | the only read path for agents (`05-context-bundles.md`) |
+| `workflow next`, `workflow status` | PM | nothing | the gated state machine (`12-deterministic-core.md`) |
+| `phase`, `commit`, `verify` | as today | state | unchanged |
 
-## Reads are bundles, writes are typed
+Every command is `jaiship <command>`. The change is resolved from the worktree registry;
+`--change <ref>` serves CI, the main checkout and a cross-change operation. One lane, one
+change. Every write carries `--role`, `--expect-revision` and `--idempotency-key`. An agent
+reads with `context bundle --for <role> [--phase <PH->] [--step <PH-nn_Snn>] [--findings
+RFIND-...]` and fetches one section on demand with `context get --section <id>`.
 
-An agent never reads an artifact file directly. It calls:
+## The contract family
 
-```bash
-jaiship context bundle --for coder --change GH-416 --phase P3
-jaiship context bundle --for reviewer --change GH-416 --phase P3
-jaiship context bundle --for pm --change GH-416
-jaiship context bundle --for spec-writer --change GH-416 --gaps AC-3,AC-1
-jaiship context bundle --for coder --change GH-416 --phase P3 --findings RF-1,RF-2
-jaiship context get --change GH-416 --section spec.acceptanceCriteria.AC-1
-jaiship context get --change GH-416 --section spec.AC-1 --depth rationale
+- Seven sections, seven values of `--section`: `goal`, `criteria`, `facts`, `decisions`,
+  `oracle`, `work`, `flags`.
+- An option is for one field and a form is for many. A form is a view generated from the
+  schema, prefilled, carrying the revision it is based on. It is edited in a scratch location,
+  never in the change folder.
+- An identifier is minted only by a write to the contract. `contract add` takes the `--id`
+  the author names, when it is free and registered, and otherwise allocates the next number.
+- The oracle is the author's. From another role the write is refused with
+  `change.role.forbidden` and recorded as a finding of the category `contract`.
+
+## Steps and handovers
+
+- `step done` records who completed the step, when, and with what evidence (a reference). A
+  reopened step keeps its identifier.
+- At the last step of a phase the handover is the argument of `step done`: the coder edits the
+  draft from `handover draft` in a scratch location and passes it with `--handover`. The
+  handover and the event land in one transaction.
+
+## Checks, findings and proofs
+
+- `preflight`: every cited path, anchor and version exists; every cited command runs once,
+  under the command policy, and is checked for a pattern that matches itself; every changed
+  literal is searched across the repository, its tests, its CI and its documentation; every
+  named gate exists; every criterion has an oracle entry; every check in a typed block of the
+  ticket has an obligation. Exit 1 on a miss.
+- `review finding add` takes `--category`, `--materiality`, `--path`, `--round` and
+  `--summary`, plus `--non-material-reason` when the category is design, contract, security or
+  data and the finding is not material. The tool allocates `RFIND-`.
+- `review rounds allowed` prints the reader, the rounds run and whether each was substantial,
+  whether the change is large, the ceiling, and `allowed` with the rule that decided. `--allow`
+  records a ceiling raised by the PM or the CEO. The rule is in
+  `15-classification-and-rounds.md`, part 6.
+- `obligation run --leg base --scope acceptance` runs the acceptance obligations once per
+  change, on the merge-base tree taken by digest with the change's test files added. Only a
+  failed assertion is a red. `--leg candidate` runs the required obligations on the merge
+  candidate; a result is `STALE` when the candidate, the obligation or its watchlist changes.
+- `obligation mutate` copies the tree, applies a fault set, runs the obligation and records the
+  result. The reviewer requests it and reads the result; the source stays read-only.
+
+## The change as a unit
+
+- `change classify` prints the proposal: the flags from the paths matched against the surface
+  map read from the merge base, the kind, the shape and the tripwire. `--confirm` writes
+  section 7. `--remove` records a proposal the PM removed, and is refused without a reason.
+  When the contract is validated, at review and before merge the tool computes the flags again:
+  a new flag is a recorded change the PM confirms, and a path on a surface the contract does
+  not flag escalates automatically.
+- `change cost` prints, per role and per phase, the sessions, the tokens and the minutes, and
+  per gate the rounds and the findings by category and materiality. It reads the host-local
+  store live, and it answers for a change after its merge.
+- `change repair` is accepted only on a file that `lint change` rejects, and only if the
+  repaired file passes. It commits with a `Repaired-By` trailer and records the session and the
+  role. The metric is the tool-written share of artifact changes, 95 percent or more after the
+  pilot.
+- `change migrate` reads the files a change in flight carries and writes the contract and the
+  open items in one commit. Content with no slot is named, and the migration refuses
+  (`change.migrate.loss`). `--dry-run` prints the mapping. The earlier files stay until the
+  change lands.
+
+## The write transaction
+
+Every write runs the same steps, in order:
+
+1. Resolve the change, and check one lane, one change.
+2. Take the per-change lock. A lock not taken in bounded attempts is `change.lock.busy`.
+3. Check the idempotency key. A key already applied to this change returns the recorded result
+   and writes nothing.
+4. Compare the file with its committed version. A difference is a hand edit: refuse with
+   `change.file.diverges`.
+5. Check the expected revision. Anything else is `change.revision.stale`.
+6. Check the role. A command the role may not run is `change.role.forbidden`.
+7. Validate against the schema, the references, the command policy and the secret scan. A
+   refusal writes nothing.
+8. Emit the canonical bytes. Write them to a temporary file in the same directory and rename
+   it over the target.
+9. Append the event. When a gating append fails, restore the file and fail the command.
+10. Stage the written files only: the artifact file and, when an event was appended, the event
+    log. Compare the staged blob with what was written. Commit with the trailer.
+11. Release the lock and report the commit, the revision and the lint result.
+
+`--dry-run` prints the diff and the message. Every write commits: the tool commits on the
+branch are the audit trail, the integration branch receives one squash commit per change, and
+code never shares a commit with an artifact.
+
+## Provenance
+
+The tool derives the subject and the body of an artifact commit without a model call
+(`12-deterministic-core.md`). The trailers are:
+
+```text
+Jaiship-Tool: contract add@0.1.0
+Change-Ref: GH-77
+Artifact-Revision: 4
+Session: 018G2E7635NQKQA268RYJJDZ43
+Role: pm
+Idempotency-Key: ef0c971b-be32-4cf8-8900-3801bca0168c
 ```
 
-`--gaps` narrows a bundle to the named gaps and their related criteria and decisions.
-`--findings` narrows a fix bundle to the named review findings and the paths they cite.
+A repair carries `Repaired-By` instead of `Role`.
 
-A write is one intent, one command, one commit:
+| The trailer proves | The trailer does not prove |
+|---|---|
+| Attribution by convention: the blob equals the canonical emission of the parsed file, the commit of the write is in the event log, and the declared session and role can be compared with the lane's session report | Identity. Every lane agent calls the same CLI as the same operating-system user, so the role is a claim and the trailer is a string an agent could write |
+| That a hand edit did not ride into a tool commit: a file that differs from its committed version is refused, and only the written files are staged | That the content is right. The lint and the readers judge it |
+| That a repair was a repair: it starts from a file the lint rejects | Tamper evidence. A signature is optional; signing the merge commit is the owner's choice (Q16) |
 
-```bash
-jaiship spec ac add GH-416 \
-  --id AC-3 \
-  --statement "The dispatch status answer carries the additive lanePush fact." \
-  --evidence test \
-  --tests TC-LCMD-003
+CI fails a commit that touches a stored file, a file carrying `generatedBy`, without the
+trailer (`change.provenance.missing`). Memory candidates, which agents write, are out of its
+scope. On one host with one operating-system user these rules raise the bar and make a bypass
+visible: a commit without an event, a role without a session, a blob that is not the canonical
+emission. They do not make it impossible.
+
+## The command policy
+
+The tool runs a command that a contract or a ticket cites only under this policy. The
+preflight, `obligation run` and `obligation mutate` run under it.
+
+1. **Allowlist.** The argument vector must match a prefix on the repository's allowlist.
+2. **No shell.** The command is an argument vector. The tool never hands it to a shell, so
+   there is no pipe, redirection or substitution.
+3. **Working directory.** `cwd` is resolved and must lie inside the worktree.
+4. **Environment.** A minimal environment without credentials: no tracker token, no git
+   credential, no secret from the host.
+5. **Ticket hints.** A command whose origin is the tracker must name a known gate or an
+   existing test path. It is never a free argument vector.
+6. **Origin.** Every command carries it: `tracker`, `author` or `tool`.
+7. **Shown to the reviewer.** Every command the tool runs, with its origin and its result, is
+   in the reviewer's bundle.
+
+A command that fails the policy is refused with `change.command.not-allowed`, and nothing runs.
+An allowlist is declared per repository, in `.jaiship/config.yaml`; everything else is refused:
+
+```yaml
+commandPolicy:
+  allow:
+    - [pnpm, test]
+    - [pnpm, typecheck]
+    - [node, bin/export.js]
+    - [git, grep]
 ```
 
-```bash
-jaiship test case add GH-416 \
-  --id TC-LCMD-003 \
-  --title "The dispatch status answer carries the additive lanePush fact" \
-  --acceptance AC-3 \
-  --phase P3 \
-  --layer behaviour \
-  --path tests/behaviour/dispatch-status-lane-push.test.ts \
-  --step "Run dispatch status after one recorded push." \
-  --expected "Every pre-existing field is unchanged and lanePush is present."
-```
+## The error model
 
-```bash
-jaiship plan phase add GH-416 \
-  --id P3 \
-  --title "The command, the renderer, and the edge wiring" \
-  --acceptance AC-1,AC-2,AC-3 \
-  --tests TC-LCMD-001,TC-LCMD-003 \
-  --path packages/cli/src/commands/push.ts:add:producer \
-  --path packages/cli/src/production.ts:modify:consumer \
-  --verify "pnpm typecheck:.:0"
-```
-
-```bash
-jaiship pm loop add GH-416 --text "Confirm the changeset before the full gate." --owner pm --due P4
-jaiship handover record GH-416 --phase P2 --from-file /tmp/handover-P2.yaml
-```
-
-## The write pipeline
-
-Every write command does the same six steps, in order:
-
-1. **Parse and validate.** The arguments or the input file are validated against the facet
-   schema and the cross-facet references. A refusal writes nothing.
-2. **Compute generated fields.** Coverage, the affected-path union, the revision, the status,
-   and `generatedBy` are computed, never taken from the author.
-3. **Write atomically.** The new content goes to a temporary file in the same directory, is
-   flushed, and is renamed over the target. A crash leaves the old file intact.
-4. **Commit only that file.** `git add -- <path>` and `git commit -m ... -- <path>`. Unrelated
-   changes in the working tree are not staged.
-5. **Stamp provenance.** The commit carries the tool trailer and the change reference:
-
-   ```text
-   chore(change): add acceptance criterion AC-3 to GH-416
-
-   Jaiship-Tool: spec ac add@0.1.0
-   Change-Ref: GH-416
-   Facet-Revision: 3
-   ```
-
-6. **Report.** The command prints the commit SHA, the facet revision, and the lint result. On
-   any failure it restores the original file and exits non-zero.
-
-`--dry-run` prints the diff and the commit message without writing. There is no `--no-commit`
-for an agent; batching is done with one command that carries several fields, not with a
-sequence of uncommitted edits.
-
-## Auto-commit policy
-
-- **Always commit.** The provenance is the point. A write that does not commit is a draft,
-  and a draft is not readable by downstream roles.
-- **Never mix code and artifacts.** The pathspec is the artifact file only. Code changes keep
-  the commit primitive and the one-conventional-commit-per-change rule.
-- **Many branch commits, one squash merge.** The change branch carries the tool commits; the
-  integration branch receives one squash commit per change. The one-commit-per-change rule
-  applies to the merge, not to the branch. The tool commits are the audit trail; the squash
-  is the history.
-- **No rebase inside a write.** If the branch is behind, the command fails with
-  `change.branch.behind`; the PM syncs first. A write never rewrites history.
-- **Batch when possible.** `spec set --from-file`, `plan phase add --from-file`, and
-  `handover record --from-file` commit once for a whole facet revision. Field-level commands
-  are for small, auditable edits.
-
-## Visibility and permissions
-
-The default is **invisible by default, detect, deny writes later**:
-
-1. The agent-facing envelope never contains the change folder or an artifact path. It contains
-   only repository paths for code. The tool resolves the change from the worktree registry.
-2. The bundle is more convenient than the file; a well-meaning agent uses it because it is
-   easier, not because it is forbidden.
-3. A lint and CI check detect hand edits; telemetry counts `read` calls on artifact paths.
-4. A path deny is added for **writes** only after the pilot shows accidental edits. Reads are
-   behavior, not a security boundary; a hard read deny breaks legitimate work and is easy to
-   bypass.
-
-Keep `context get --raw` for debugging and a recorded human import for emergencies.
-
-## Provenance and hand-edit detection
-
-Three layers, in order of strength:
-
-1. **Path permission (prevention).** If the harness supports path-scoped permissions, deny
-   `edit` and `write` on `doc/changes/**` for every agent. The CLI runs outside the agent's
-   permission scope. This is the only layer that prevents a hand edit rather than detecting
-   it.
-2. **CI lint (detection).** Any commit that touches `doc/changes/**` must carry the
-   `Jaiship-Tool` trailer. A commit without it fails with `change.provenance.missing`. The
-   file also carries `generatedBy`; lint checks that the trailer and the field agree.
-3. **Human import (controlled escape).** A human who edits a file by hand runs
-   `jaiship change import <ref> --facet <facet> --file <path>`; the tool validates, commits
-   with a `Human-Edit` trailer, and records the waiver in the PM context. The edit is not
-   silent, and it is not an accusation.
-4. **Repair path (attribution, not prohibition).** A broken artifact repaired by hand or by an
-   agent is recorded through `jaiship change repair <ref> --facet <facet> --file <path>`; the
-   tool validates and commits with a `Repaired-By` trailer. The metric is the tool-written
-   share of artifact changes, target 95 percent or more after the pilot.
-
-Signing is optional and is not a substitute for the path permission. A signature proves who
-committed, not that the content is valid. If the owner wants tamper evidence, sign the merge
-commit; do not make a signing key a prerequisite for every artifact write.
-
-## Error model
-
-- Exit 0: the command completed and returned its declared verdict.
+- Exit 0: the command completed and returned its declared verdict. Warnings may be present.
 - Exit 1: refused, invalid, or a negative verdict. Nothing was written.
-- Exit 2: a platform, state, or provider failure prevented the operation. The file is
-  unchanged.
+- Exit 2: a platform, state or provider failure prevented the operation. The file is unchanged.
 
-The JSON envelope carries `code`, `detail`, `path`, `field`, and `limit`:
+The JSON envelope carries `code`, `detail`, `path` and `field`, and what applies of `expected`,
+`actual`, `command`, `origin` and `retryable`:
 
 ```json
 {
-  "code": "change.budget.exceeded",
-  "detail": "prose.rationale is 1480 words; the L budget is 1200",
-  "path": "doc/changes/2026-11/2026-11-27--GH-416--lane-pushes-own-evidence-commit/chg-GH-416-spec.yaml",
-  "field": "prose.rationale",
-  "limit": 1200
+  "code": "change.command.not-allowed",
+  "detail": "The command is not on the allowlist of this repository.",
+  "path": "oracle.obligations[2].command",
+  "field": "argv",
+  "command": ["curl", "-s", "https://example.invalid/status"],
+  "origin": "tracker"
 }
 ```
 
+Step 7 of the transaction raises the lint's codes too; their table is in `03-schemas.md`. The
+transaction and the other commands add:
+
+| Code | Meaning |
+|---|---|
+| `change.revision.stale` | the expected revision is not the file's revision |
+| `change.lock.busy` | another write holds the change; retryable |
+| `change.file.diverges` | the file differs from its committed version: a hand edit, which goes through `change repair` |
+| `change.role.forbidden` | the role may not run this command |
+| `change.resolve.ambiguous` | two candidates for the current change; the command never guesses |
+| `change.branch.behind` | the branch is behind its base; the PM syncs first. A write never rewrites history |
+| `change.file.legacy` | a write to a file a change in flight carries |
+| `change.migrate.loss` | the migration would drop content; it names what has no slot |
+
 ## What agents may and may not do
 
-May:
+May: read through `context bundle` and `context get`; write through the typed commands of
+their role; run `lint change`, `preflight` and the gates.
 
-- Read through `context bundle` and `context get`.
-- Write through the typed commands for their role.
-- Run `jaiship lint change`, `jaiship readiness assess`, and the gates.
-- Record a handover and complete a phase.
+May not: edit or write a stored file; run `git add` or `git commit` for one; read a whole
+artifact when a bundle exists; run a command outside the policy through the tool; write the
+oracle unless they are the author.
 
-May not:
+The envelope never contains the change folder or an artifact path. `context get --raw` is for
+debugging. Reads are behavior, not a security boundary; a deny on writes is added if the pilot
+shows accidental edits.
 
-- Call `edit` or `write` on any file under `doc/changes/**`.
-- Run `git add` or `git commit` for an artifact.
-- Read a whole artifact with `read`, `cat`, or `grep` when a bundle exists.
-- Edit a tool-generated field (`coverage`, `affectedPaths`, `status`, `revision`,
-  `generatedBy`).
+## Examples
 
-## What humans may do
+One neutral change: `GH-77`, a `--json` output for an export command. Every write carries
+`--expect-revision` and `--idempotency-key`; the examples show them on the first only.
 
-- Use the same typed commands.
-- Edit a file locally and import it with a recorded waiver.
-- Review the facet diff on the pull request; the tool commits are squashed, so the diff is the
-  final shape, not the noise.
+```bash
+# A criterion and its obligation. AC-1 and PROOF-1 are minted by these two writes.
+jaiship contract add GH-77 --section criteria --role pm --form example --id AC-1 \
+  --statement "Given a finished export, when --json is passed, stdout is one JSON document that parses." \
+  --expect-revision 3 --idempotency-key ef0c971b-be32-4cf8-8900-3801bca0168c
+jaiship contract add GH-77 --section oracle --role pm --id PROOF-1 --criterion AC-1 \
+  --claim "The JSON branch produces a document a script can parse." \
+  --observable "The stdout of export --json, captured as one string." \
+  --predicate "The string parses as one JSON object whose jobs array is not empty." \
+  --method test --test TC-EXPORT-001 --boundary "Not a failed export." \
+  --baseline red --required-for-merge
+```
 
-## Migration and compatibility
+```bash
+# Progress, a finding, and whether another round is earned.
+jaiship step done GH-77 PH-01_S01 --role coder
+jaiship review finding add GH-77 --role reviewer --round 1 --category coverage \
+  --materiality material --path tests/cli/export-json.test.ts --cites PROOF-1 \
+  --summary "The test stays green with the JSON branch removed."
+jaiship review rounds allowed GH-77
+```
 
-- The CLI reads both the old `.md` artifacts and the new `.yaml` facets during migration; it
-  writes only the new shape.
-- `jaiship change migrate <ref>` converts an in-flight change in one commit, after a backup
-  commit, and records the migration in the PM context.
-- The compatibility reader is removed after two milestones.
-- A write to an old file is refused with `change.facet.legacy`.
-
-## Open implementation questions
-
-- Does the harness support a path-scoped deny for `edit`, `write`, and `read`? If not, which
-  of the three can be denied, and what is the fallback for the others?
-- Is one commit per field-level command too noisy for a large change, even with squash at
-  merge? The alternative is one commit per facet revision, with field commands staging to a
-  pending file and `facet commit` writing once. The pack recommends always-commit and
-  measures the noise.
-- Should the tool trailer be a Git trailer or a note? A trailer is machine-readable and
-  survives a squash; a note does not. Recommend a trailer.
+```bash
+# The two legs, then a mutation the reviewer asks for.
+jaiship obligation run GH-77 --leg base --scope acceptance
+jaiship obligation run GH-77 --leg candidate
+jaiship obligation mutate GH-77 --id PROOF-1 --role reviewer
+```

@@ -1,36 +1,32 @@
-schemaVersion: delivery.handover.v1
-changeRef: GH-416
-phase: P2
-revision: 1
-status: validated
-generatedBy: jaiship handover record@0.1.0
-completedAt: 2026-11-27T14:40:00Z
-
-done:
-  - The push use case resolves, acts, appends, and answers over injected ports.
-  - The domain rules select the branch and map the cause without transport or store imports.
-  - The targeted behaviour suite passes (16 cases).
-
-deviations:
-  - The append is attempted after the act even when the act fails, so the record carries the
-    refusal; the plan said act then append, which is what was implemented.
-
-openRisks:
-  - The fence refusal path has no test for a concurrent append; it is covered by the existing
-    store suite, not by a new case.
-
-nextInputs:
-  - The command phase can assume `resolve`, `act`, `append`, and `answer` are exported from
-    the use case module.
-  - The renderer must not add a new error identity for a refusal.
-
-evidence:
-  - kind: test
-    ref: TC-LCMD-002
-    result: pass
-  - kind: test
-    ref: TC-LCMD-004
-    result: pass
-
-sizeBudget:
-  bytes: 1024
+# Example of the handovers: tool-drafted from events, confirmed by the coder.
+#
+# The tool drafts the four coder fields from the events of the phase (steps
+# done, files changed, gate results) and writes the fifth field itself. The
+# coder keeps, by judgment, only what the next phase needs and what is not
+# already in the contract. Three bullets per field are the skeleton of the
+# draft, not a quota. Timings and evidence bodies do not travel in a handover:
+# evidence is a reference, a summary line, and nothing more.
+#
+# Lines that start with # are documentation for this example. A file the tool
+# emits carries no comment.
+schemaVersion: change.handover.v1
+changeRef: GH-78
+revision: 2
+generatedBy: jaiship step done@0.1.0
+handovers:
+  - phase: PH-01
+    done:
+      - The parser is extracted from the import command, and the command calls it.
+      - The parser suite passes, 22 cases.
+    deviations:
+      - The parser takes the reader as an argument; the work section did not list that file.
+    openRisks:
+      - The parser is not exercised on an empty file.
+    nextInputs:
+      - The rewrite can assume that parse returns an array of records and throws on a malformed row.
+    evidence:
+      - kind: gate-run
+        digest: sha256:791b333ece9bea0faaa4fc92198e6b0b1e5caee5d2687889715fa799f1624edb
+        bytes: 4211
+        runId: 018G2E7635NQKQA268RYJJDZ43
+        summary: PROOF-1 candidate leg PASS; 22 executed, 22 passed.

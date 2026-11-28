@@ -45,9 +45,9 @@ is fatal.
   specification has 25 sections, many of them boilerplate for a mid-size change.
 - **Hand editing is a real failure mode.** On GH-416 the PM wrote the PM context by hand five
   times with `write` and `edit`. One note contained a backslash before a backtick, which is
-  an invalid escape in a YAML double-quoted scalar. The product's strict parser rejected the
+  an invalid escape in a YAML double-quoted scalar. Jaiship's strict parser rejected the
   document at line 434; `verify` failed; the watcher read zero phases; the landing chain
-  would have refused. The product had typed commands for phase state and blockers, but no
+  would have refused. Jaiship had typed commands for phase state and blockers, but no
   typed command for notes or decisions, and lint was not a gate on the write. The design gap
   is real, not a one-off mistake.
 - **The plan already carries the seed of affected paths.** The current plan phase has
@@ -67,9 +67,10 @@ blobs, which is the current problem wearing a YAML hat. The machine-readable par
 specification is its **contract**: acceptance criteria, decisions, interfaces, affected
 paths, risks, open questions, non-goals. The rest is bounded prose.
 
-**Mitigation:** a hybrid specification. The contract is typed and validated; the prose is
-word-budgeted and never used for control flow. For S and M changes the prose shrinks to a
-short context and rationale; for L changes it can keep a longer rationale, still budgeted.
+**Mitigation:** a hybrid specification. The contract is typed and validated; the prose sits
+in at most three declared slots and is never used for control flow. A light change keeps a
+short context and rationale; a phased change that needs a longer rationale puts it in a
+decision record.
 
 ### 2. Structure does not reduce tokens by itself
 
@@ -180,15 +181,17 @@ A 200-line fix does not need a 25-section specification, a 31-case test plan, a 
 and a readiness review that reads 6MB. The lifecycle was designed for a human-supervised,
 single-change flow; unattended dozens-of-tickets delivery needs proportionality.
 
-**Mitigation:** tiers. S: a one-page contract and a checklist, with clarify and specification
-collapsed, the test plan as a list of cases, and the plan as a file list. M: a structured
-contract, a test table, and a short plan. L: the full set. Tier thresholds are an open point.
+**Mitigation:** shapes. A light change: a card and a checklist, with clarify and
+specification collapsed, the oracle as a short list, and the work as a file list. A flagged
+change: a structured contract, with the oracle as a table of obligations. A phased change:
+the full contract, with a decision log and phases. The shape follows the surface, the
+decisions and the oracle (section 15).
 
-**Owner decision (2026-11-27):** the tiers slim the artifact volume, never the safety checks.
-A tier review table decides what goes into each tier: acceptance criteria, tests, a review,
-the gates, the DoD, the pull request, and provenance stay in every tier.
+**Owner decision (2026-11-27):** the shape slims the artifact volume, never the safety checks.
+Every shape keeps acceptance criteria, tests, a review, the gates, the DoD, the pull request,
+and provenance.
 
-### 10. This is a significant product change, and boiling the ocean is the fastest way to fail
+### 10. This is a significant change to Jaiship, and boiling the ocean is the fastest way to fail
 
 The pack touches schemas, the CLI, the agent definitions, the harness permissions, the queue,
 the review flow, and the milestone process. Building it all at once would be a large, risky
@@ -215,7 +218,8 @@ big-bang pull request. Slice 0 and slice 1 first, then slices 2 to 5 tightly seq
    on-demand fetch.
 5. **Plan is the scheduler's input.** Paths, acceptance, tests, and verify are declared and
    audited.
-6. **Tiered depth.** The artifact set scales with risk and size.
+6. **Shape follows the change.** The artifact volume scales with the surface and the
+   decisions, never with lines.
 7. **Milestone memory.** Shared context once, per-ticket deltas.
 8. **Measure the read path, not the schema.** Tokens per ticket, read amplification, miss
    rate, reopens, review edits, cycle time.
@@ -254,11 +258,12 @@ Stop or reassess if, after a three-ticket pilot:
 | Artifact-caused verify failures | 1 in this lane | 0 |
 
 The baseline numbers are measurements from one lane, not a benchmark; section 10 states the
-method and the caveats.
+method and the caveats. The per-line baselines use the diff of GH-416 as measured before its
+final commit; the merged diff is 129 files, about 12.6k inserted lines and 383 deleted.
 
 ## Recommendation
 
-Proceed, in slices, and treat the read path as the product. The first slice is small and
+Proceed, in slices, and treat the read path as the main lever. The first slice is small and
 removes a live failure: a typed writer for the PM context, a fail-closed phase completion, and
 a lint that rejects an untyped artifact commit. The second slice proves the bundle idea on one
 M ticket with a data-first plan and coder and reviewer bundles. The rest follows the evidence.

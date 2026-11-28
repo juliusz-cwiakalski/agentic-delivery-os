@@ -5,213 +5,256 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 ---
 # 03. Schemas and invariants
 
-The five core examples in `schemas/` (plus the deferred milestone example in
-`schemas/deferred/`) are the concrete shapes. This file states the rules they obey,
-so a reviewer can judge the model without reading six files at once.
+Status: **Proposal** (2026-11-28). Governed by part 5 of `14-review-decisions.md` (decisions 11
+to 42) and by sections 15 to 18; where this file and they disagree, they win.
 
-## General rules
+## The rules for every stored file
 
-- Every facet starts with `schemaVersion`, `changeRef`, `revision`, `status`, and
-  `generatedBy`. The version is a semantic major; the revision is a monotonic integer.
-- `status` is one of `draft`, `validated`, `committed`, `superseded`. The tool writes it; the
-  author never edits it by hand.
-- `generatedBy` names the command and the tool version that wrote the file. It is the in-file
-  counterpart of the commit trailer; lint checks that both are present and agree.
-- Prose lives in block scalars (`|-`), never in a flow scalar, and never in a field that the
-  tool parses for control flow.
-- There are no comments in a generated file. A rationale that matters is a field; a rationale
-  that does not matter is not written. This is the direct fix for the plan that was 86 percent
-  comments.
-- IDs follow the catalog rules (`../id-prefix-catalog.md`). A reference that cannot be
-  resolved fails lint.
-- A field budget is enforced at write; a file budget is enforced by lint. The tool refuses,
-  it never truncates.
+- The header is `schemaVersion`, `changeRef`, `revision` and `generatedBy`, with the versions
+  `change.contract.v1`, `change.open-items.v1` and `change.handover.v1`. The tool writes the
+  last two fields. No file has a status field: a write that succeeds is committed.
+- A typed field holds one statement on one line. Prose lives only in a declared slot.
+- Identifiers come from the register in `02-artifact-model.md`; a reference that resolves to
+  nothing fails the lint. Coverage, state, the add-ons of a flag and the proposed flags are
+  derived and stored nowhere.
+- `schemas/contract.schema.json` is the machine-readable schema of the contract (JSON Schema,
+  draft 2020-12): required fields, closed enumerations, and no property left undeclared. The
+  examples beside it are `contract.yaml`, `open-items.yaml` and `handover.yaml`.
 
-## Specification (`change.spec.v1`)
+## The contract (`change.contract.v1`)
 
-| Field | Kind | Written by | Rules |
-|---|---|---|---|
-| `tier` | enum S, M, L | PM at init, raised by a gate | determines the artifact set |
-| `milestone` | free-text label | PM | a label only; goal links are deferred (section 14) |
-| `problem` | prose, 150 words | spec-writer | what is broken, for whom, with what evidence |
-| `scope.in`, `scope.out` | lists | spec-writer | `out` is as binding as `in` |
-| `acceptanceCriteria` | list of `AC-` | spec-writer | every AC has an evidence kind and at least one test |
-| `extensions` | map of slots | spec-writer | at most three per facet; each slot has `text`, `useIn` or `archive: true`, and `budgetWords` |
-| `decisions` | list of `DEC-` | spec-writer, decision-advisor | a durable decision links a decision record |
-| `interfaces` | list of `API-` | spec-writer | kind, surface, change, contract |
-| `affectedPaths` | list | spec-writer | high-level; the plan owns the precise paths |
-| `risks` | list of `RSK-` | spec-writer | statement, mitigation, severity |
-| `openQuestions` | list of `OQ-` | spec-writer | each has a default so delivery can proceed |
-| `nonGoals` | list of `NG-` | spec-writer | |
-| `prose.context`, `prose.rationale` | bounded prose | spec-writer | 300/700/1,200 words by tier |
+The header holds `title`; `kind` (`fix`, `feature`, `refactor`, `behavior-change`, `docs`,
+`infra`), which the tool proposes from the paths and which selects the expected baseline
+(`16-testing-in-a-change.md`, section 4); and an optional `milestone` label, never a link to a
+goal graph.
 
-Invariants:
+### Section 1: `goal`, scope and non-goals
 
-- Every `AC-` is referenced by at least one `TC-` in the test plan.
-- Every `DEC-` with `status: accepted` has a `choice` and at least one `consequence`.
-- Every `API-` item has a `change` and a `contract`.
-- `scope.out` and `nonGoals` do not contradict `scope.in`.
-- The prose word count is within the tier budget.
+| Field | Kind | Rules |
+|---|---|---|
+| `goal.statement` | one line | what is true after the change and was not before it |
+| `goal.docs` | `none`, or a list of paths | the current-truth documents the change reconciles |
+| `goal.scope.in` | list | what the change includes |
+| `goal.scope.interfaces` | `id` (`API-`, `EVT-`, `DM-`), `surface`, `change` (`added`, `modified`, `removed`), `contract` | |
+| `goal.nonGoals` | `id` (`NG-`), `statement` | binds like the scope |
 
-## Test plan (`change.test-plan.v1`)
+### Section 2: `criteria`
 
-| Field | Kind | Written by | Rules |
-|---|---|---|---|
-| `preconditions` | list of `PRE-` | test-plan-writer | shared preconditions are written once |
-| `cases` | list of `TC-` | test-plan-writer | one case per behaviour, not per field |
-| `cases[].acceptance` | `AC-` refs | test-plan-writer | at least one |
-| `cases[].phase` | plan phase ID | test-plan-writer | the phase that makes the case true |
-| `cases[].layer` | enum | test-plan-writer | behaviour, structure, check, golden, manual |
-| `cases[].path` | repo path | test-plan-writer | the test file that automates the case |
-| `cases[].steps`, `expected` | lists | test-plan-writer | imperative, one line each |
-| `coverage` | generated | tool | acceptance to cases; never hand-edited |
+| Field | Kind | Rules |
+|---|---|---|
+| `id`, `form` | `AC-<n>`; `example`, `property`, `table` | |
+| `statement` | one line | an example states its given, when and then, and the expected outcome |
+| `vectors` | list of `input`, `expected` | when `form` is `table`, and only then |
+| `asserts` | list of `INVAR-` refs | optional |
+| `supersededBy` | an `AC-` ref | written by a revision |
 
-Invariants:
+### Section 3: `facts`
 
-- Every `AC-` has at least one case.
-- Every case maps to exactly one phase.
-- Every automated case names an existing or planned test path.
-- No two cases have the same title.
-- The file is within the tier budget (20KB S, 40KB M and L).
+| Field | Kind | Rules |
+|---|---|---|
+| `id`, `statement` | `VFACT-<n>`; one line | a fact of the diagnosis |
+| `check.kind` | `read`, `command`, `version` | how it was checked |
+| `check.target` | a path with an anchor (`path#symbol`), an argument vector, or a version | the preflight confirms that it exists or runs |
+| `check.observed` | one line | what was seen |
 
-## Delivery plan (`delivery.plan.v2`)
+### Section 4: `decisions`
 
-| Field | Kind | Written by | Rules |
-|---|---|---|---|
-| `base` | branch | plan-writer | the integration branch |
-| `phases` | list of `Pn` | plan-writer | ordered; each phase is a coherent unit of delivery |
-| `phases[].acceptance` | `AC-` refs | plan-writer | what this phase makes true |
-| `phases[].tests` | `TC-` refs | plan-writer | the cases that prove it |
-| `phases[].affectedPaths` | list | plan-writer | path, kind, role (producer or consumer) |
-| `phases[].steps` | list | plan-writer | `action` is imperative; `detail` is at most 40 words |
-| `phases[].verify` | list | plan-writer | command, cwd, expected exit |
-| `phases[].dependsOn` | phase IDs | plan-writer | explicit order |
-| `phases[].handover` | object | plan-writer | `required`, `nextInputs` |
-| `phases[].contextFor` | map by role | plan-writer | `include` and `exclude` per role; the tool's mandatory set cannot be excluded |
-| `affectedPaths` | generated | tool | union of the phases |
-| `conflicts.serializeWith` | change refs | tool or PM | scheduler input |
+| Field | Kind | Rules |
+|---|---|---|
+| `taken[].id`, `.question`, `.choice` | `DEC-<n>`; one line each | |
+| `taken[].why` | one line | the purpose; served to the PM |
+| `taken[].consequences` | list, at least one | |
+| `taken[].alternatives` | list of `id` (`ALT-<n>`), `option`, `whyNot` | optional; only a rejected alternative that changes how the change is delivered |
+| `taken[].record`, `.status` | a decision record identifier, optional; `accepted` or `superseded` | a decision that outlives the change links its record |
+| `openQuestions[].id`, `.question`, `.default`, `.answer` | `OQ-<n>`; one line each | the default applies when nobody answers; `answer` is optional |
 
-Invariants:
+### Section 5: `oracle`
 
-- Every phase has at least one affected path, one acceptance criterion, and one verify
-  command.
-- Every `AC-` in the specification is covered by at least one phase.
-- Every `TC-` referenced by a phase exists and maps to that phase.
-- The dependency graph is acyclic.
-- The comment share is at most 20 percent (and zero in a generated file).
-- The file is within the tier budget (12KB S, 35KB M and L).
+An obligation links a criterion to its proof. A test reference alone is not a proof.
 
-## PM context (`pm.context.v1`)
+| Field | Kind | Rules |
+|---|---|---|
+| `obligations[].id`, `.criterion` | `PROOF-<n>`; an `AC-` ref | the criterion proved |
+| `.claim` | one line | what this proof establishes for the criterion |
+| `.observable` | one line | what is watched: a return value, a file, an exit code, an output stream, a rendered page |
+| `.predicate` | one line | the condition on the observable that must hold |
+| `.method` | `test`, `command`, `battery`, `rehearsal`, `rendered` | a native test by its `TC-` reference; a command with its expected output; a listed set of inputs or faults with one recorded result per item (the CI job battery, a mutation battery); a scripted scenario run to a command (a hostile run, a concurrency rehearsal, a consumer check, a check of the integration branch); a rendered artifact compared with an expected form |
+| `.boundary` | one line | what the proof leaves out |
+| `.test` | a `TC-` ref | with `method: test` |
+| `.command` | `argv`, `cwd`, `expect` (`exit`, optional `output`), `origin` (`tracker`, `author`, `tool`) | with every other method; run under the command policy (`04-cli.md`) |
+| `.baseline`, `.requiredForMerge` | `red`, `green`; boolean | what is expected on the base: `green` marks a guard, which needs an added case |
+| `.addOnOf` | a flag | optional; set when the obligation is the add-on of a flag |
+| `tests[].id`, `.path`, `.case` | `TC-<FEATURE>-<nnn>`; a test file; one line | the file is existing or planned; `case` is the name or the selector of the case |
 
-| Field | Kind | Written by | Rules |
-|---|---|---|---|
-| `phase` | lifecycle phase | tool | mirrors the phase registry |
-| `openLoops` | list | PM | a loop is a question with an owner and a due phase |
-| `nextActions` | list of `ACT-` | PM | action, owner, blocking |
-| `blockers` | list | PM | typed; mirrors the `blockers` command |
-| `decisions`, `risks` | ID refs | PM | summaries only; the facts live in the specification |
-| `handovers` | phase IDs | tool | the handovers that exist |
+### Section 6: `work`
 
-Invariants:
+| Field | Kind | Rules |
+|---|---|---|
+| `phases[].id`, `.title` | `PH-<nn>`; a verb phrase with an object | the title is also the commit subject; a noun phrase fails the lint |
+| `.goal`, `.criteria` | one line; `AC-` refs, at least one | what the phase is for, and what it makes true |
+| `.paths` | `path`, `access` (`read`, `write`), and for a write `kind` (`add`, `modify`, `delete`) | a file, a folder or a glob; at least one write |
+| `.steps` | `id` (`PH-<nn>_S<nn>`), `action` (imperative, one line), `paths`, `verify` | each step has its paths and its verify command |
+| `.verify` | commands, at least one | |
+| `.dependsOn` | `PH-` refs | the graph is acyclic |
+| `.handover.required`, `.handover.nextInputs` | boolean; a list | required when the next phase runs in a fresh session |
+| `.contextFor` | by role: `include`, `exclude` | optional; the tool's mandatory set for a role cannot be excluded (`05-context-bundles.md`) |
 
-- The file is at most 8KB. A PM context that grows past the budget is a signal that history
-  is being stored in working memory.
-- No free-text note over 200 words. Longer evidence goes to the retrospective log.
-- Every `ACT-` has an owner and a blocking flag.
-- `decisions` and `risks` contain only IDs that exist in the specification.
+### Section 7: `flags`, and the slots
 
-## Handover (`delivery.handover.v1`)
+| Field | Kind | Rules |
+|---|---|---|
+| `flags.active` | the eight flags (`15-classification-and-rounds.md`, part 2) | proposed by the tool, confirmed by the PM |
+| `flags.removed` | `flag`, `reason` | a proposal the PM removed |
+| `flags.risks` | `id` (`RSK-<n>`), `statement`, `mitigation` | |
+| `slots` | `name`, `useIn` (roles) or `archive: true`, `text` | at most three; one of `useIn` and `archive`; about 120 words is a guide that warns |
 
-| Field | Kind | Written by | Rules |
-|---|---|---|---|
-| `phase` | phase ID | coder | one entry per phase |
-| `done` | list | coder | what is true now, with evidence refs |
-| `deviations` | list | coder | what differs from the plan and why |
-| `openRisks` | list | coder | what the next phase must watch |
-| `nextInputs` | list | coder | the interfaces, files, or decisions the next phase consumes |
-| `evidence` | list | tool | test, gate, or review references |
+Invariants, which the lint enforces:
+
+- Every criterion has at least one obligation, and every obligation names its observable and
+  its predicate.
+- Every obligation resolves to a test reference or to a command the policy allows.
+- Every phase has a criterion, a write path and a verify command. Every step has paths and a
+  verify command. A flag is active or removed, never both. Every reference resolves.
+- The watchlist of an obligation is computed by the tool (`16-testing-in-a-change.md`, section 6).
+- A write to `oracle` is accepted only from the author (`04-cli.md`).
+
+## Typed open items (`change.open-items.v1`)
+
+| List | Fields | Written by |
+|---|---|---|
+| `blockers` | `ref`, `text`, `owner`, `due` (a `PH-` ref), `raisedAt` | `pm blocker add`, `pm blocker clear` |
+| `questions` | `ref`, `text`, `default`, `owner`, `oq` (optional), `askedAt`, `answer`, `answeredAt` | `blockers publish`, `blockers answer` |
+| `decisions` | `ref`, `text`, `owner`, `cites` (optional), `due`, `raisedAt` | `pm decision add`, `pm decision close` |
+| `nextActions` | `ref`, `text`, `owner`, `blocking`, `due`, `raisedAt` | `pm next add`, `pm next done` |
 
 Invariants:
 
-- At most 1KB per entry.
-- `done` has at least one item.
-- Every `evidence` ref resolves to a test case, a gate run, or a review finding.
-- A handover is required when `phases[].handover.required` is true; `phase complete` refuses
-  without it.
+- The tool numbers `ref` inside the file; it is not a catalog identifier. The file holds open
+  items only: a closed item leaves it, and the commit that removed it is the record. `cites`
+  and `oq` resolve in the contract.
+- State is never written here: the tool folds it from the event log for the PM brief.
 
-## Milestone contract (`milestone.contract.v1`, deferred)
+## Handovers (`change.handover.v1`)
 
-The milestone contract is **deferred** by the owner's review decision (section 14). It is kept
-as a future example, not a core facet. The example is in
-`schemas/deferred/milestone.yaml`.
+| Field | Written by | Holds |
+|---|---|---|
+| `phase` | the tool | a `PH-` ref; one entry per phase |
+| `done` | the tool drafts, the coder confirms | what is true after the phase |
+| `deviations` | the tool drafts, the coder confirms | what differs from the work section, and why |
+| `openRisks` | the tool drafts, the coder confirms | what the next phase must watch |
+| `nextInputs` | the tool drafts, the coder confirms | the interfaces, files or decisions the next phase consumes |
+| `evidence` | the tool only | references: `kind`, `digest`, `bytes`, `runId` and a one-line `summary` |
 
-| Field | Kind | Written by | Rules |
+- Three items per field are the skeleton of the draft, not a quota. The coder keeps only what
+  the next phase needs and what the contract does not state.
+- An entry is at most 1 KB. Timings and evidence bodies do not travel in it. An entry is
+  required when the next phase runs in a fresh session: the last `step done` of a phase
+  refuses without it.
+
+## Event kinds
+
+The event log is the capsule's `events.jsonl`. Nothing is added inside a version: a new kind
+is a version bump of the envelope. Four of the five kinds below enter it that way; the cost
+record has its own store. Gating and privacy: `15-classification-and-rounds.md`, part 7.
+
+| Kind | Store | Appended through | Payload |
 |---|---|---|---|
-| `goals` | list of `M<n>-G<nn>` | PM with decision-advisor | statement, measure, tickets |
-| `scope` | in and out | PM | |
-| `architecture` | list | PM | the decisions that hold across tickets |
-| `dependencyGraph` | edges | PM | from, to, kind |
-| `sharedTestStrategy` | list | PM | what every ticket reuses |
-| `definitionOfDone` | list | PM | milestone-level, not per ticket |
-| `risks` | list | PM | milestone-level |
+| `step.done` | the event log | `step done` | `step`, `phase`, `role`, `session`, `evidence` (references), `handover` |
+| `review.finding` | the event log | `review finding add`, `resolve`, `withdraw`; the lint and the preflight | the finding record, below |
+| `gate.run` | the event log | `obligation run`, `obligation mutate`, `preflight`, `lint change`, the gates | `subject`, `leg` (`base`, `candidate`, `mutant`), `tree`, `command`, `status`, `counts`, `redKind`, `durationMs`, `evidence` (a reference), `waiver` (`reason`, `expiresAt`, `approvedBy`) |
+| `round.decision` | the event log | `review verdict`; `review rounds allowed --allow` | `reader`, `round`, `materialFindings`, `largeChange`, `ceiling`, `allowed`, `escalation`; for a raised ceiling `raisedBy`, `reason` |
+| `cost.record` | the repository's measurement log, once per change at closeout; never the capsule | `closeout` | per role and per phase: `sessions`, `inputTokens`, `outputTokens`, `cacheTokens`, `minutes`; per gate: `rounds`, `findings` by category and materiality. Aggregates only |
 
-Invariants:
+- An append that carries state (`step.done`, `review.finding`, `round.decision`) is gating: if
+  it fails, the command fails and nothing is written. Any other append is recorded as refused.
+- Token figures never enter the capsule. The cost of each boundary is host-local telemetry,
+  read live by `change cost`. One aggregate per change reaches the measurement log at closeout.
+- `status` and `redKind` follow `16-testing-in-a-change.md`, section 3: only a failed assertion
+  is a red. A missing symbol, an unresolved import and a harness error are recorded as their kind.
+- A payload carries identifiers, references, counts, verdicts and one-line summaries: no
+  transcript, diff, prompt, tool output or credential.
 
-- Every goal has a measurable outcome and at least one ticket.
-- Every ticket in the milestone is reachable from a goal.
-- The dependency graph is acyclic.
-- The contract is at most 16KB.
+The finding record:
 
-## Extension slots and context declarations
+| Field | Kind | Rules |
+|---|---|---|
+| `id` | `RFIND-<n>` | the tool allocates it in the event log; a reader never does |
+| `category` | `design`, `contract`, `security`, `data`, `code`, `coverage`, `fact`, `environment`, `format`, `process` | |
+| `materiality` | `material`, `useful`, `cosmetic` | the reader's judgment; a material finding earns a round and a finding without a materiality never does |
+| `nonMaterialReason` | one line | required when the category is `design`, `contract`, `security` or `data` and the materiality is not `material`: what would have to be true for it to be material |
+| `path`, `line` | a repository path; a line, optional | |
+| `round` | integer from 1 | the reader's round |
+| `reader` | `pre-code-reader`, `reviewer`, `coder`, `lint`, `preflight` | the coder reads first in the light shape |
+| `summary` | one line | |
+| `cites`, `ticket` | contract identifiers; a locator in the ticket | optional |
+| `resolution` | `raised`, `resolved`, `withdrawn` | a later event with the same `id`; `verifiedBy` (`lint`, `reader`) goes with `resolved` |
 
-- An extension slot is a declared free-text field: `text`, `useIn` (a list of roles) or
-  `archive: true`, and `budgetWords`. At most three slots per facet. The default `useIn` is
-  empty, so an unused slot is not served. Extension text is never used for control flow.
-- A `contextFor` map is declared per plan phase and role. It has `include` and `exclude`.
-  The tool's mandatory set for the role cannot be excluded; the lint enforces it. The plan can
-  add a section (for example the specification rationale) when a phase needs it.
-- The phase title is a verb phrase with an object and a goal, because it is also the commit
-  subject. A noun phrase fails lint with `change.phase.title.invalid`.
+A finding the lint or the preflight mints is mechanical: it has no materiality and no round, so
+it never earns one, and the tool resolves it after the fix.
 
-## What is mandatory in every tier
+## Persisted content
 
-Every tier keeps the safety checks: acceptance criteria, tests, a review, the gates, the DoD,
-the pull request, and provenance. The tiers slim the artifact volume, never the safety checks.
+| Rule | Statement |
+|---|---|
+| YAML 1.2 core | No tags, anchors, aliases or merge keys. `true` and `false` are the booleans and nothing else resolves to one |
+| Duplicate keys | The parser rejects them; the last value never wins |
+| Byte cap | The contract 256 KiB, the open items 32 KiB, the handovers 64 KiB (numbers are a proposal). A file over its cap is refused, never truncated |
+| One serialization | The canonical emission below |
+| One parser | One pinned parser version reads every stored file, in the CLI and in CI; CI refuses another |
+| Secret scan | Every persisted string, keys and values, slot prose and summaries included. A hit refuses the write with `change.secret.detected` and names the field; the value is never echoed |
 
-## Validation and error codes
+## Canonical emission
 
-`jaiship lint change <ref>` runs, in order:
+| Aspect | Rule |
+|---|---|
+| Key order | The order of the field tables in this file, at every level |
+| Indent and lists | Two spaces; every list in block style, one item per line; never a flow list |
+| Scalars | Plain by default; double quotes only when a scalar would read as another type or starts with a special character; never single quotes; prose as a literal block (`\|-`) |
+| Width and endings | A block wraps at 100 columns; a one-line field stays on one line; LF endings; one newline at the end |
+| Comments | None |
 
-1. Schema: every facet parses and carries the required header fields.
-2. References: every ID resolves; no duplicate IDs.
-3. Coverage: every AC has a test and a phase; every phase has a path and a verify command.
-4. Budget: every field and file is within its tier budget.
-5. Provenance: every facet has `generatedBy` and every artifact commit has the tool trailer.
-6. Paths: every declared path exists (or is declared `add`); the pull-request audit compares
-   declared with actual.
-7. Tiers: the change is within its declared tier or has a recorded re-tier.
+The tool parses a stored file and emits it again. Equal bytes: the file is as the tool wrote
+it. Different bytes: a hand edit (`change.canonical.diverges`), for `change repair`.
 
-Error codes are stable and typed:
+## Lint steps and error codes
+
+`jaiship lint change <ref>` runs these steps in order and stops at the first that fails:
+
+1. Parse and schema: YAML 1.2 core, duplicate keys, the byte cap, the pinned parser, then
+   `contract.schema.json` and the tables above for the two other files.
+2. Identifiers: registered prefixes, each minted once, every reference resolved.
+3. The proof join: every criterion has an obligation; every obligation names its observable and
+   its predicate and resolves to a test or an allowed command; every phase title is a verb
+   phrase with an object; at most three slots, each with a reader or archived.
+4. Paths: every declared path exists or is declared `add`; none is outside the scope or
+   protected. The map and the protected list are read from the merge base.
+5. Commands: every cited command is on the allowlist, has a working directory inside the
+   worktree and carries its origin. A command from the tracker names a known gate or an
+   existing test path.
+6. Secrets: every persisted string.
+7. Shape: the flags and the tripwire are recomputed from the contract's paths. A new flag or a
+   crossed tripwire is an escalation the tool records and the PM confirms. It is not an error.
+8. Provenance: the file re-emits byte for byte, and the commit that wrote it carries the trailer.
+9. Measures, as warnings that never fail: duplicate line share, free-text words per criterion,
+   the warning line of the shape, a slot over its guide.
 
 | Code | Meaning |
 |---|---|
-| `change.schema.invalid` | a facet does not parse or misses a required field |
-| `change.ref.unresolved` | a reference points at nothing |
-| `change.id.duplicate` | two facets mint the same ID |
-| `change.coverage.missing` | an AC, phase, or path has no test or verify |
-| `change.budget.exceeded` | a field or file is over its budget |
-| `change.provenance.missing` | no `generatedBy` or no tool trailer |
-| `change.paths.undeclared` | the diff touches a path the plan did not declare |
-| `change.paths.unmodified` | a declared `modify` path is unchanged |
-| `change.tier.exceeded` | the change outgrew its tier without a re-tier |
+| `change.schema.invalid` | a file does not parse, misses a required field, or carries an undeclared field |
+| `change.ref.unresolved` | a reference resolves to nothing |
+| `change.id.duplicate` | an identifier is minted twice |
+| `change.coverage.missing` | a criterion has no obligation; a phase or a step has no path or no verify command |
+| `change.obligation.unpinned` | a criterion's obligation names no observable or no predicate |
+| `change.phase.title.invalid` | a phase title is not a verb phrase with an object |
+| `change.paths.undeclared` | the diff touches a path the work section did not declare |
+| `change.paths.unmodified` | a declared write path is unchanged |
+| `change.map.protected` | the diff touches the surface map or another protected path, and the change lacks the `protected-path` flag or the owner's sign-off |
+| `change.map.narrowed` | the diff narrows a pattern of the surface map |
+| `change.command.not-allowed` | a cited command is not on the allowlist, or comes from the tracker and names no known gate or existing test path |
+| `change.secret.detected` | a persisted string holds a secret; the error names the field |
+| `change.provenance.missing` | a commit touched a stored file without the tool trailer, or `generatedBy` is absent |
+| `change.canonical.diverges` | a stored file does not re-emit byte for byte: it was edited by hand |
+| `change.budget.exceeded` | a file is over its byte cap, or a handover entry is over 1 KB |
 
-## What is author-written and what is tool-generated
-
-| Author-written | Tool-generated |
-|---|---|
-| specification fields, test cases, plan phases, PM loops and actions | `coverage`, `affectedPaths` union, `status`, `revision`, `generatedBy` |
-| handover `done`, `deviations`, `openRisks`, `nextInputs` | handover `evidence`, `completedAt` |
-| milestone goals and scope (deferred) | `definitionOfDone` checks, goal verification results (deferred) |
-
-A tool-generated field is overwritten on the next write. An author who needs to change it
-changes the source field, not the generated one. This is what keeps the facets from drifting.
+The write transaction raises its own codes, among them `change.revision.stale` (a stale
+revision) and `change.lock.busy` (a locked change). They are listed in `04-cli.md`.

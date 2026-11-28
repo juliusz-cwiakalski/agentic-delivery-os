@@ -106,6 +106,8 @@ Answer:
 
 **Answered (2026-11-28):** Use the catalog (`../id-prefix-catalog.md`), and register before minting. Reused as they are: `TC-`, `DEC-`, `OQ-`, `NG-`, `F-`, `API-`, `ALT-`, `EVT-`, `DM-`, and the repo-local `INVAR-` when a criterion asserts a repository invariant. To register, all change-local with the contract as the allocator: `AC-` (a criterion: an example, a property or a vector table), `PROOF-` (an obligation; the catalog's own vetted form), `FACT-` (a verified fact of the diagnosis), `PH-` (a phase; a step is `PH-02_S03`), `FIND-` (a reader's finding) and `RSK-` (a risk statement). Not registered: `PRE-` (a precondition is the given of a criterion), `ACT-` (confusable with `AC-` under rule R5, and next actions need no durable reference), and the milestone goals (deferred). Rule R11 is the catalog owner's check; `PH-` is the one to confirm. See `15-classification-and-rounds.md`, section 10.
 
+**Corrected after the critique (2026-11-28):** the verified-fact prefix and the finding prefix are proposed as `VFACT-` and `RFIND-`, so that neither is confusable with an existing prefix under rule R5; the names are the catalog owner's (decision 41). The contract allocates `AC-`, `PROOF-`, `VFACT-`, `PH-` and `RSK-`; the tool allocates `RFIND-` in the change's event log.
+
 ### Q5. Should test cases become executable specifications?
 
 Priority: **P2**.
@@ -410,6 +412,8 @@ Answer:
 (`step done <ref> P2-S3`). It records an event and never edits the contract; the state is a
 fold over the events. At a phase boundary the handover is its argument. See
 `15-classification-and-rounds.md`, section 7.
+
+**Corrected after the critique (2026-11-28):** the step form is `PH-02_S03`, one grammar for phases and steps everywhere: `step done <ref> PH-02_S03` (decision 41).
 
 ### Q19. Should a handover be required for every phase?
 
@@ -747,6 +751,8 @@ Answer: A is ok for me. so we could define path patterns by repo and ceo/pm(othe
 
 **Recorded (2026-11-28):** The surface map is path patterns per repository. The CEO and the PM maintain it through normal changes, and a retrospective proposes a correction when it finds a misfire. The PM decides flag by flag for a change, and the ticket's creator can flag it before the PM touches it.
 
+**Corrected after the critique (2026-11-28):** the map is read from the merge base, in the lane and again in CI. A change that touches it takes the policy flag (`protected-path`) and needs the owner's sign-off; it may widen a pattern and never narrow one (decision 38).
+
 ### Q44. Are the round rules and the ceilings right?
 
 Priority: **P1**.
@@ -791,6 +797,8 @@ If wrong: large folders and read amplification, or evidence that an audit cannot
 Answer:
 
 **Answered (2026-11-28):** Two classes. Persistent: the audit facts (tokens and minutes per phase and role, rounds, findings, verdict summaries); they stay with the change as events. Transient: test outputs, logs and screenshots; they live outside the committed scope, in the tool-managed store organized per repository and per change, auditable, with retention and archiving rules.
+
+**Corrected after the critique (2026-11-28):** token figures never enter the committed capsule. They stay in the host-local telemetry; at closeout one aggregate cost record per change goes to the repository's measurement log, which is the owner's to confirm (decision 36).
 
 ### Q46. May the study's figures be cited in this public pack?
 
@@ -864,6 +872,8 @@ If wrong: hotfixes bypass the process silently, or an incident waits on ceremony
 Answer:
 
 **Answered (2026-11-28):** No emergency shape. An urgent code fix is a light-shape change and still goes through CI and the gates. A quick configuration fix outside the change process is out of scope.
+
+**Corrected after the critique (2026-11-28):** an urgent fix takes the shape its surface dictates: light when no flag fires, flagged otherwise. CI and the gates always run.
 
 ### Q49. How are ticket hints expressed?
 
