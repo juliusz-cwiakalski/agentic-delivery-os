@@ -7,8 +7,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 
 Status: **Proposal** (2026-11-28), written at the owner's request after a study of real
 deliveries in product repositories. Where this file and a core file disagree, this file and
-`14-review-decisions.md` win until the core files are updated. The study's evidence note is
-kept outside this public pack (Q46).
+`14-review-decisions.md` win until the core files are updated. The study's figures are in
+`18-delivery-study.md`.
 
 ## 1. Three facts decide the shape of a change
 
@@ -47,6 +47,11 @@ Each flag adds one specific thing. Nothing is removed.
 | `thin-coverage` | Code whose tests would not catch a regression | Characterization tests first |
 | `protected-path` | A path the repository declares protected; derived by the tool | A deep review |
 
+The surface map is path patterns declared per repository. The CEO and the PM maintain it
+through normal changes, and a retrospective proposes a correction when it finds a misfire.
+The PM decides flag by flag for a change, and the creator of a ticket can flag it before the
+PM touches it.
+
 Low risk by default: documentation, guides, comments and decision records; interface wording
 and translations; test helpers and fixtures; dependency bumps with green tests; formatting;
 mechanical bulk such as renames, moves and data batches.
@@ -73,7 +78,7 @@ several. The diagnosis is part of every shape.
 
 | Step | Who | What |
 |---|---|---|
-| Ticket | Whoever writes the ticket | Optional hints: labels or fields naming a surface. Advisory only. |
+| Ticket | Whoever writes the ticket | Optional hints: the areas to modify (paths or classes), the checks expected, the stages, and any flag. Advisory only (Q49). When a ticket already carries the diagnosis, the card is mostly a transcription: the PM verifies instead of discovering. |
 | Intake | The tool proposes, the PM confirms in the intake session | Flags from the paths the ticket names, matched against the repository's surface map; the oracle from the repository type; the kind from the paths |
 | Contract validated | The tool | Recomputes the flags from the contract's paths; a new flag is a recorded change |
 | Review and before merge | The tool | Compares the diff with the declared paths and the surface map; a path on a surface that the contract does not flag escalates automatically |
@@ -99,10 +104,14 @@ The contract is one file with typed sections:
    the plan.
 7. Risk flags and the add-ons they trigger.
 
+Free text lives only in declared slots: at most three per contract, each naming its reader
+or archived, with a guide of about 120 words. A slot without a reader is never served.
+
 One author writes it in one pass. For a light change the PM writes the card in the intake
 session. For a larger change one author subagent writes it, so the PM's context stays light.
-The test-plan-writer and the plan-writer retire as separate agents; their checklists move to
-the readers.
+The plan-writer retires. The test-plan-writer becomes the acceptance author: it is invoked
+only by the `security` and `data` flags, and writes the acceptance tests before the coder
+starts (`16-testing-in-a-change.md`, section 5). The checklists of both move to the readers.
 
 Two readers, on the same contract:
 
@@ -181,6 +190,9 @@ packaging, and the reviewer rightly kept the light shape.
 The tool decides whether a round is allowed (`review rounds allowed`), from the typed
 findings. The reader supplies the judgment of materiality; the rule is deterministic.
 
+The PM or the CEO may raise a ceiling for one change with a recorded reason, for example a
+very large change or a substantial finding in the last round.
+
 ## 7. State, content, history, learning
 
 Four kinds of information live around a change. They have different writers and different
@@ -210,21 +222,32 @@ fact constrains a decision it makes now. Everything else is fetch-on-demand or a
 Timestamps, durations, token counts and retrospective notes are never served during
 delivery.
 
+There is no fixed budget per role. Content follows the removal test: if removing a word, a
+sentence or a section would not lower accuracy, value or content, it is removed. Nothing is
+repeated across sections. A ceiling scales with the contract and warns rather than refuses.
+
 Two levels of work with stable identifiers. The Work section always has phases, and each
 phase has steps. A light change has one phase with a few steps. Identifiers are stable
 (`P2`, `P2-S3`); a reopened step keeps its identifier. Completion is an event (`step done
 P2-S3`), not an edit to the contract. The tool records who completed it, when, and with what
 evidence, and the state is a fold over the events. The contract stays as written.
 
-Evidence lives outside the contract. Gate outputs, logs and screenshots are stored by the
-tool under an evidence reference (Q45). An event and a handover carry the reference and a
-one-line summary. No bundle carries an evidence body.
+Evidence comes in two classes. The audit facts (tokens and minutes per phase and role,
+rounds, findings, verdict summaries) are persistent and stay with the change as events. The
+bodies (gate outputs, logs, screenshots) are transient: the tool stores them outside the
+committed scope, per repository and per change, under an evidence reference, with retention
+and archiving rules. An event and a handover carry the reference and a one-line summary. No
+bundle carries a body.
 
 The handover is the only carrier of cross-phase facts: what changed and what the next phase
-must adjust to. Timings and evidence bodies do not travel in it.
+must adjust to. Timings and evidence bodies do not travel in it. The tool drafts it from
+events (steps done, files changed, gate results); the coder keeps, by judgment, only what the
+next phase needs and what is not already in the contract.
 
 The interface is the commands and the bundles, not the files. Agents never open the stored
 files. How the tool stores state, content and history may change without touching an agent.
+Everything the tool writes is YAML; an agent receives the Markdown envelope; tools exchange
+JSON.
 
 ## 8. Measure what you optimize
 
@@ -252,7 +275,27 @@ These edits are pending; the decisions are recorded in part 5 of `14-review-deci
 | `12-deterministic-core.md` | The template is a function of flags, phases and decisions; the round rule is deterministic; classification hints are prepared by the tool |
 | `13-context-delivery.md` | The PM brief is state plus typed open items |
 
+## 10. Identifiers
+
+Identifiers follow `../id-prefix-catalog.md`: register before minting, one allocator per space,
+monotonic, references by ID.
+
+| Prefix | Identifies | Scope | Allocator |
+|---|---|---|---|
+| `AC-` | A criterion: an example, a property or a table of vectors | change-local | The contract |
+| `PROOF-` | An obligation: the link from a criterion to its proof | change-local | The contract |
+| `FACT-` | A verified fact of the diagnosis, with how it was checked | change-local | The contract |
+| `PH-` | A phase; a step is `PH-02_S03` | change-local | The Work section |
+| `FIND-` | A reader's finding, with its category and materiality | change-local | The tool, in the events |
+| `RSK-` | A risk statement with its mitigation | change-local | The contract |
+| `TC-` | A test case, as today | change-local | The contract |
+| `DEC-`, `OQ-`, `NG-`, `F-`, `API-`, `ALT-`, `EVT-`, `DM-` | As today | change-local | The contract |
+| `INVAR-` | A repository invariant a criterion asserts | repo-local | The repository's register |
+
+Traceability is the join `AC-` to `PROOF-` to `TC-`. Flags are enumerated names, not IDs.
+Event names are code-native and never numbered. A step keeps its identifier when reopened.
+
 ## Open points
 
-Q43 to Q46 in `09-open-points.md`: the starter flags and the surface map, the round rules
-and ceilings, where evidence lives, and whether the study's figures may be cited here.
+All of its questions are answered in `09-open-points.md`: Q1 and Q43 to Q49. Testing is in
+`16-testing-in-a-change.md`; the figures are in `18-delivery-study.md`.

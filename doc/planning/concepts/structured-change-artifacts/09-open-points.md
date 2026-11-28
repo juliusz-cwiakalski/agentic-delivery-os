@@ -104,6 +104,8 @@ If wrong: a prefix collision or a rename later.
 
 Answer:
 
+**Answered (2026-11-28):** Use the catalog (`../id-prefix-catalog.md`), and register before minting. Reused as they are: `TC-`, `DEC-`, `OQ-`, `NG-`, `F-`, `API-`, `ALT-`, `EVT-`, `DM-`, and the repo-local `INVAR-` when a criterion asserts a repository invariant. To register, all change-local with the contract as the allocator: `AC-` (a criterion: an example, a property or a vector table), `PROOF-` (an obligation; the catalog's own vetted form), `FACT-` (a verified fact of the diagnosis), `PH-` (a phase; a step is `PH-02_S03`), `FIND-` (a reader's finding) and `RSK-` (a risk statement). Not registered: `PRE-` (a precondition is the given of a criterion), `ACT-` (confusable with `AC-` under rule R5, and next actions need no durable reference), and the milestone goals (deferred). Rule R11 is the catalog owner's check; `PH-` is the one to confirm. See `15-classification-and-rounds.md`, section 10.
+
 ### Q5. Should test cases become executable specifications?
 
 Priority: **P2**.
@@ -122,6 +124,8 @@ Default: A.
 If wrong: duplication or drift.
 
 Answer:
+
+**Under discussion (2026-11-28):** the proposal is `16-testing-in-a-change.md`; the decision is tracked as Q47.
 
 ### Q6. Should the specification's prose live in the YAML or in a separate Markdown file?
 
@@ -144,6 +148,8 @@ Answer:
 
 **Partially answered (2026-11-27):** in the same artifact as declared extension fields; no separate prose file by default. A separate rationale file remains an L-tier option.
 
+**Answered by Q35 (2026-11-28):** everything the tool writes is YAML, so the contract is one YAML file with declared free-text slots and no separate prose file.
+
 ### Q7. Should coverage be stored or derived?
 
 Priority: **P2**.
@@ -162,6 +168,8 @@ Default: A.
 If wrong: drift or latency.
 
 Answer:
+
+**Answered (2026-11-28):** Coverage in this pack is traceability: every criterion has at least one obligation, and every obligation resolves to a test that executed. It is not line or branch coverage. With one contract it is a join inside one file, so the lint derives it and nothing is stored (option B). Line and mutation coverage are optional obligations. See `16-testing-in-a-change.md`, section 7.
 
 ## Context
 
@@ -186,6 +194,8 @@ If wrong: token waste or a high miss rate.
 
 Answer: to be honest I'm not sure if having strict budgets is proper way to go - the budget would strongly depend on the size of the change. We cannot make it fixed (and this issue works both ways - for small change having a context budget too high would be a poetential waste). What I really think is that we should encode ruels that we put there only things that are really relevant for effective dleivery, we avoid fluff, filler words, we avoid repeating same information in multiple context etc. I really like this test: "would removing this word/phrase/sentence reduce accuracy/value/content of the artifact? if no then it can be removed". In other words we should aim for as small artifacts as possible but not smaller. And this applies to everything we store: ticket content/descriptions/comments, to the specs docs, architectures etc. I'm open to re-discuss it and you can try to convince me we should have strict limits but then also explain how to addres a huge change that would just loose if we set strict limit on artifact.
 
+**Recorded (2026-11-28):** No fixed budget per role. Content follows the removal test: if removing a word, a sentence or a section would not lower accuracy, value or content, it goes. Nothing is repeated across sections. A ceiling scales with the contract (per criterion, decision and phase) and warns rather than refuses.
+
 ### Q9. What is the acceptable bundle miss rate?
 
 Priority: **P1**.
@@ -205,6 +215,8 @@ If wrong: the bundle is either too thin or too fat.
 
 Answer: No strong preference here - this should come from the data collected and probably we could adjust it form time to time after we introduce the new structure and tooling and see. We can start with A.
 
+**Recorded (2026-11-28):** Start with A; set it from the data and adjust it over time.
+
 ### Q10. Should the bundle be Markdown or JSON?
 
 Priority: **P2**.
@@ -223,6 +235,8 @@ Default: A.
 If wrong: tokens or tooling complexity.
 
 Answer:
+
+**Confirmed (2026-11-28):** Markdown for agents, JSON for tools.
 
 ### Q11. Should the reviewer's bundle include the diff or only a summary?
 
@@ -263,6 +277,8 @@ Default: A.
 If wrong: token waste or a re-litigated decision.
 
 Answer: Let's think about it. My gut's feeling is that giving explanation on why we want to do something increases judgement and output quality. But do we have to explain all the alternatives that were rejected with reasoning? probably not (unless this is relevant for delivery or if providing this rationale would change a way how delivery is done). So seems we end up with option A?
+
+**Recorded (2026-11-28):** Option A. The brief carries the purpose of a decision in one line, because the why improves judgment. Rejected alternatives stay out unless they change how the change is delivered.
 
 ## Tooling and provenance
 
@@ -366,6 +382,8 @@ Default: A.
 If wrong: either friction or a silent edit.
 
 Answer:
+
+**Explained and proposed (2026-11-28):** the import is the migration case: bringing a file into the managed form outside the typed commands, for example a hand repair of a broken artifact or a draft written elsewhere. Q14 already answers it: such an edit goes through `change repair`, which validates, commits and records who repaired it, so no separate waiver is needed. Proposed: close Q17 as superseded by Q14.
 
 ## Workflow
 
@@ -478,6 +496,8 @@ If wrong: over-serialization or a missed conflict.
 
 Answer:
 
+**Answered (2026-11-28):** Both, and the planner decides: one file in a large folder is listed as a file; most of a folder is listed as the folder. The existing scope keys stay (files, folders, packages), and any overlap of write scopes is a conflict.
+
 ### Q23. Should an undeclared path fail the pull-request audit?
 
 Priority: **P2**.
@@ -516,6 +536,8 @@ Default: A.
 If wrong: throughput or a stale consumer.
 
 Answer:
+
+**Answered (2026-11-28):** Model reads and writes separately on each path. Default: overlapping writes serialize, and a read-only overlap may run in parallel with a re-sync note. Then experiment with the agents' prompts (separate roles against writes only) and keep what the evidence supports.
 
 ## Milestone
 
@@ -579,6 +601,8 @@ If wrong: a pilot that proves nothing.
 
 Answer: I'm bit confused here - if we're talknig about testing the approach on pilot tickets then from my perspective we should pilot at least on one change of each size and then re-valuate/tune (or for next 10-20 changes of different size make constant re-evaluation/retro/tuning after each change). 
 
+**Recorded (2026-11-28):** The pilot runs on at least one change of each shape, then on the next ten to twenty changes of different shapes, with a retrospective and a tuning pass after each.
+
 ### Q28. Is a 20 percent token reduction enough to continue?
 
 Priority: **P1**.
@@ -597,6 +621,8 @@ Default: A.
 If wrong: a premature stop or a false success.
 
 Answer: yeah, 20 % is good starte but I think this tuning process will never change. I'll do periodical retrospectives on all the products that I'm developing using Jaiship and tune whenrever I find some inefficiencies or figure out better way of operations. 
+
+**Recorded (2026-11-28):** Twenty percent to continue. Tuning is permanent, through periodic retrospectives across the products built with Jaiship.
 
 ### Q29. When should the old reader be removed?
 
@@ -617,6 +643,8 @@ If wrong: maintenance or a broken migration.
 
 Answer:
 
+**Answered (2026-11-28):** The old reader is the compatibility code that reads the earlier files (a separate specification, test plan, plan and ledger) for changes in flight. Remove it when no open change uses those files: the tool reports that state, and in-flight changes are migrated first. No fixed period.
+
 ### Q30. What is the budget for building this?
 
 Priority: **P1**.
@@ -636,6 +664,10 @@ If wrong: a boil-the-ocean failure or a missed opportunity.
 Answer: To naswer I'd need to understand what is included in each slice -> could you break it down into some sort of roadmap proposal/initial tickets breakdown (each ticket should deliver value alone even if we'd stop on it and park delivery of remaining tickets from this change). Think hard and carefully on how to break it down. In general I'm ok if we break it ito only 1-3 tickets if we see that it makes no sense to deliver only part of the changes. I'd say there is no strict budget - we con work on all the required changes - the only constraint is time and return of investment (and ai/token costs to some extent but I guess if we see it's worth doing then I can pay for hte required tokens unless it takes more than 1000USD etc - then it's worth rethinging for sure).
 
 **Partially answered (2026-11-27):** delivery shape is one epic, multiple pull requests, one milestone; slice 0 and slice 1 first, then slices 2 to 5. The budget itself is still open.
+
+**Roadmap proposed (2026-11-28):** `17-roadmap.md`: six tickets, each worth merging on its own, in dependency order, collapsing to three. Confirm the count and the order.
+
+**Confirmed (2026-11-28):** six tickets, delivered from the top. Each depends only on the tickets above it, and any prefix leaves the product in a consistent state. The CEO is responsible for delivery and optimizes for speed.
 
 ## Part 3 and 4 additions
 
@@ -660,6 +692,8 @@ Answer:
 
 **Partially answered (2026-11-27):** declared extension fields with `useIn`; the count and budget still need confirmation. The default is at most three slots per facet and 80 words each.
 
+**Decided by the CEO on the owner's behalf (2026-11-28):** at most three free-text slots per contract. Each names its reader or is archived, and is never served without a reader. A guide of about 120 words each; a warning, not a refusal. A decision that needs a longer rationale belongs in a decision record.
+
 ### Q42. What should the handover prompt say?
 
 Priority: **P1**.
@@ -683,6 +717,8 @@ Answer: I think there is no one answer, or I don't see one answer. I would leave
 And of course, if the tool could supplement it by something that we can, by automation, figure out, maybe list of the files changed in the last phase, things like that could also maybe benefit. 
 
 **Partially answered (2026-11-27):** the tool drafts the five fields from the evidence; the coder edits with a three-bullet limit per field. The exact prompt wording is still open.
+**Recorded (2026-11-28):** The tool drafts the handover from events (steps done, files changed, gate results). The coder keeps, by judgment, only what the next phase needs and what is not already in the contract: nothing obvious, nothing the later phases already state, only what changed or must be adjusted to.
+
 ## Part 5 additions
 
 These came out of the review on 2026-11-28; see `15-classification-and-rounds.md`.
@@ -709,6 +745,8 @@ If wrong: ceremony on the wrong changes, or a light gate on a risky one.
 
 Answer: A is ok for me. so we could define path patterns by repo and ceo/pm(other?) could maintain it, improve as retros discover discrepancies etc. on top of it PM would be able to decide case by case if thes flag should be triggered for given change. Offcourse the tickets could be flagged by the cerator as well even before PM touches the change. 
 
+**Recorded (2026-11-28):** The surface map is path patterns per repository. The CEO and the PM maintain it through normal changes, and a retrospective proposes a correction when it finds a misfire. The PM decides flag by flag for a change, and the ticket's creator can flag it before the PM touches it.
+
 ### Q44. Are the round rules and the ceilings right?
 
 Priority: **P1**.
@@ -730,6 +768,8 @@ If wrong: review rounds that find nothing, or a disagreement ended too early.
 
 Answer: I'm in favour of A with liberty of PM/CEO of overriding the limit in specific cases (huge changes, substantial findings in last review etc). 
 
+**Recorded (2026-11-28):** Option A. The PM or the CEO may raise a ceiling for one change with a recorded reason, for example a very large change or a substantial finding in the last round.
+
 ### Q45. Where does evidence live?
 
 Priority: **P2**.
@@ -749,6 +789,8 @@ Default: A.
 If wrong: large folders and read amplification, or evidence that an audit cannot find.
 
 Answer:
+
+**Answered (2026-11-28):** Two classes. Persistent: the audit facts (tokens and minutes per phase and role, rounds, findings, verdict summaries); they stay with the change as events. Transient: test outputs, logs and screenshots; they live outside the committed scope, in the tool-managed store organized per repository and per change, auditable, with retention and archiving rules.
 
 ### Q46. May the study's figures be cited in this public pack?
 
@@ -770,3 +812,76 @@ Default: A.
 If wrong: a boundary breach, or a design whose evidence nobody can check.
 
 Answer:
+
+**Answered (2026-11-28):** Yes. Figures from the owner's private projects may be published; they are in `18-delivery-study.md`, without names, ticket references or paths.
+
+### Q47. Is the testing proposal right?
+
+Priority: **P1**.
+
+Why it matters: testing is where most delivery effort and most escaped defects meet. The
+proposal decides what the coder may change, what the tool records, and who writes an
+acceptance test.
+
+Options:
+
+- A: `16-testing-in-a-change.md` as written. Criteria and obligations live in the contract;
+  tests are native; the tool records the red and the green run; the coder may not weaken an
+  expectation without a contract revision; the reviewer mutates; for the `security` and `data`
+  flags an independent author writes the acceptance tests first.
+- B: the same, without the independent acceptance author. Every change relies on the recorded
+  red evidence and on the reviewer.
+- C: the same as A, with acceptance tests first by an independent author for every flagged and
+  phased change.
+
+Default: A.
+
+If wrong: tests that pass without the fix, or a test process heavier than the change.
+
+Answer:
+
+**Answered (2026-11-28):** Option A. The coder writes the tests. For the `security` and `data` flags an independent author writes the acceptance tests first: the acceptance author, which is the existing test-plan-writer with that job instead of writing a test-plan document. The two remaining points stand as proposed unless objected to: one extra targeted run per obligation, and no edit of an acceptance test by the coder without a contract revision (a harness repair excepted).
+
+### Q48. Is there an emergency shape?
+
+Priority: **P2**.
+
+Why it matters: a production hotfix cannot wait for the normal shape, and an ungoverned
+shortcut becomes the normal route.
+
+Options:
+
+- A: none in this epic. A hotfix uses the flagged shape with the `irreversible` flag and a
+  mandatory follow-up ticket.
+- B: a named emergency shape: a card, the reproducing test, one reviewer, merge on call, and a
+  mandatory retrospective within a week.
+- C: no rule.
+
+Default: A.
+
+If wrong: hotfixes bypass the process silently, or an incident waits on ceremony.
+
+Answer:
+
+**Answered (2026-11-28):** No emergency shape. An urgent code fix is a light-shape change and still goes through CI and the gates. A quick configuration fix outside the change process is out of scope.
+
+### Q49. How are ticket hints expressed?
+
+Priority: **P2**.
+
+Why it matters: a ticket that already carries the diagnosis (the areas to modify, the checks
+expected, the stages) can pre-fill the card, but only if the tool can find them.
+
+Options:
+
+- A: a typed block in the ticket body (areas, checks, stages, flags) that the tool parses;
+  labels as a fallback.
+- B: labels only.
+- C: free text; the PM reads it.
+
+Default: A.
+
+If wrong: hints that nobody can use, or a ticket format that people avoid.
+
+Answer:
+**Answered (2026-11-28):** A typed block in the ticket (areas, checks, stages, flags), with labels still allowed. Later, ticket management may add typed blocks for whatever the tracker lacks.

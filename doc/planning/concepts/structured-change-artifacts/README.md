@@ -39,6 +39,10 @@ The pack does six things:
    flags for facts and generated forms for facets, and a `--since` delta protocol. The delta
    protocol and the push model are deferred (section 13, decisions in section 14).
 7. It **decides the shape of a change**: what classifies it, the risk flags, who classifies, when another review round is earned, the single contract, and the split of state, content and history (section 15, decisions in part 5 of section 14).
+8. It proposes **how a change manages its tests**: criteria and obligations in the contract,
+   native tests, and red and green runs recorded by the tool (section 16, open for discussion).
+9. It proposes a **roadmap of tickets that each deliver value alone** (section 17).
+10. It records the figures of the delivery study behind sections 15 to 17 (section 18).
 
 ## How to review it
 
@@ -62,6 +66,9 @@ Read in this order. If you are resuming after a break, read `HANDOVER-2026-11-28
 11. `14-review-decisions.md` for the owner's answers to the challenges and the resulting design
     changes. Where a core file and this file disagree, the decisions file wins.
 12. `15-classification-and-rounds.md` for the shape of a change. It carries no figures from the study it rests on; read it with part 5 of the decisions file.
+13. `16-testing-in-a-change.md` for testing inside a change, open for discussion (Q47).
+14. `17-roadmap.md` for the tickets, each valuable on its own (Q30).
+15. `18-delivery-study.md` for the figures behind sections 15 to 17.
 
 Answer inline in `09-open-points.md`: each question ends with `Answer:` on its own line.
 If you prefer to comment on a pull request instead, the pack is on the branch
@@ -112,27 +119,15 @@ Settled in this pack, subject to your veto:
   readers, rounds earned by material findings, low risk by default with flags on the
   surface, state separate from history, and cost recorded per role and phase.
 
-Open, with defaults in `09-open-points.md`:
+Open:
 
-- The starter risk flags and the surface map (Q43).
-- The round rules and their ceilings (Q44).
-- Whether the specification is fully structured or a structured contract plus bounded prose
-  (the pack recommends the hybrid).
-- Whether tool writes always auto-commit or batch per phase (the pack recommends always,
-  squashed at merge).
-- Whether hand-editing is a hard failure from day one or after the pilot (the pack recommends
-  hard after the pilot).
-- The ID prefixes to add to the catalog (`AC-`, `RSK-`, `IF-`, `PRE-`, `NA-`, `M-G`).
-- Where evidence lives (Q45), and whether the study's figures may be cited here (Q46).
-- Whether test cases become executable specifications or stay documents with links to tests.
-- The context bundle budgets and the acceptable miss rate.
-- Who owns the milestone contract.
-- Whether the retrospective log lives in the repository or outside it.
-- The number and budget of extension slots (Q41).
-- The audit policy for a path outside the change's scope (Q23).
-- The handover prompt wording (Q42).
-- Whether to launch the external researcher now (Q40).
-- The pilot ticket and the token-reduction threshold (Q27, Q28).
+Every numbered question in `09-open-points.md` and `13-context-delivery.md` now has an answer
+or a confirmed default. Three were explained on 2026-11-28 and carry a proposed answer that
+stands unless the owner objects: Q17 (superseded by Q14), Q29 (when the compatibility reader
+is removed) and Q36 (a form for the first write of a contract). The retrospective log follows
+from Q45: the retrospective reads the events, and there is no separate log. The core files 02
+to 06, 08, 12 and 13 still describe the earlier model; sections 14 to 18 win until they are
+rewritten.
 
 ## File index
 
@@ -160,6 +155,8 @@ Open, with defaults in `09-open-points.md`:
 | `13-context-delivery.md` | Part 2: the projection envelope, flags and forms, the `--since` delta protocol (deferred), the push model (out of scope), the research plan, Q31 to Q40 |
 | `14-review-decisions.md` | Owner review decisions from parts 3 and 4, the resulting design changes, and the remaining open points |
 | `15-classification-and-rounds.md` | The shape of a change: what classifies it, the risk flags, who classifies, the round rules, the single contract, and the split of state, content and history |
+| `16-testing-in-a-change.md` | Testing inside a change: criteria, obligations, recorded runs, red and green by kind of change; a proposal |
+| `17-roadmap.md` | Six tickets that each deliver value alone, in dependency order; any prefix is consistent |\n| `18-delivery-study.md` | The figures of the delivery study behind sections 15 to 17, without names or ticket references |
 
 ## Related concepts and work items
 

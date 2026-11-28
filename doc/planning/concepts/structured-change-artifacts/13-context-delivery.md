@@ -400,6 +400,8 @@ Answer:
 
 **Partially answered (2026-11-27):** the Markdown envelope with semantic keys; keys that help understanding stay; JSON for tools.
 
+**Recorded (2026-11-28):** It depends on the direction. Written by the tool: YAML, the balance between human and agent readability and full machine readability. Served to an agent: the Markdown envelope. Between tools: JSON.
+
 ### Q36. Should the form be the default for complex writes?
 
 Priority: **P2**.
@@ -407,6 +409,8 @@ Priority: **P2**.
 Default: yes for a facet; flags for a single field.
 
 Answer:
+
+**Explained and proposed (2026-11-28):** a form is the input counterpart of a bundle. For a complex write (a whole contract with its sections) the tool serves a template of the fields to fill, the agent fills it in, and the tool validates it as one write; a single field stays a command flag. Proposed: yes for the first write of a contract, commands for later edits.
 
 ### Q37. Should deltas be stateless (`--since`) or stateful (a seen-state store)?
 
@@ -445,3 +449,5 @@ Priority: **P2**.
 Default: yes, with the six questions in this file; the owner decides the scope.
 
 Answer:
+
+**Answered (2026-11-28):** skip it while every point has a conclusion. Use the external researcher only where a decision is stuck.

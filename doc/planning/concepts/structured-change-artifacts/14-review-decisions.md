@@ -301,7 +301,8 @@ light change; the reviewer probably stays a separate adversarial reader.
 a light change at intake; one author subagent writes a larger contract. The test plan and the
 plan become sections of the contract. The test-plan-writer and the plan-writer retire as
 separate agents; their checklists move to two readers: an optional pre-code reader, and the
-reviewer, which every change keeps as a separate agent.
+reviewer, which every change keeps as a separate agent. Refined by decision 24: the plan-writer
+retires, and the test-plan-writer becomes the acceptance author.
 
 **Design changes:** `02-artifact-model.md`, `03-schemas.md`, `schemas/`, `04-cli.md`,
 `05-context-bundles.md`, `06-workflows.md`; section 15, parts 5 and 6.
@@ -357,6 +358,156 @@ session store through the worktree registry, and derives cost per phase and per 
 **Design changes:** section 15, part 8; the method of `10-evidence.md` becomes a product
 capability.
 
+### 16. Budgets are rules, not fixed numbers
+
+**Owner:** strict budgets do not fit; the right size depends on the change, and a ceiling that
+is too high for a small change is waste. Put in only what effective delivery needs, without
+filler or repetition. The test: would removing this word, sentence or section lower accuracy,
+value or content? If not, it goes.
+
+**Decision:** no fixed budget per role. Content follows the removal test. A ceiling scales with
+the contract and warns rather than refuses. The lint flags duplication and boilerplate. The
+miss rate starts at its default and is set from data.
+
+**Design changes:** `02-artifact-model.md` (budgets), `05-context-bundles.md`,
+`13-context-delivery.md`; Q8 and Q9.
+
+### 17. Pilot and tuning
+
+**Owner:** pilot on at least one change of each size, then re-evaluate after each of the next
+ten to twenty changes of different sizes. Twenty percent is a good start; tuning never ends.
+
+**Decision:** as stated. The retrospective across products is the tuning mechanism.
+
+**Design changes:** `08-migration.md` (the pilot); Q27 and Q28.
+
+### 18. The handover's content is the coder's judgment
+
+**Owner:** no single answer; the coder decides what the next phase needs and what is not
+already in the plan. The tool may add what it can derive, such as the files changed.
+
+**Decision:** the tool drafts the handover from events; the coder keeps only what the next
+phase needs and what changed. The five-field, three-bullet shape is the skeleton of the draft,
+not a quota.
+
+**Design changes:** `03-schemas.md` (handover), `06-workflows.md`; Q42.
+
+### 19. The surface map and the ceiling override
+
+**Owner:** path patterns per repository, maintained by the CEO and the PM and improved as
+retrospectives find discrepancies; the PM decides flag by flag; the creator of a ticket may
+flag it first. The round rules as proposed, with the PM or the CEO free to override a ceiling
+in a specific case.
+
+**Decision:** as stated. A retrospective proposes a correction to the map; the correction
+lands as a normal repository change.
+
+**Design changes:** section 15, parts 2, 4 and 6; Q43 and Q44.
+
+### 20. What the tool writes is YAML
+
+**Owner:** it depends: anything written through a tool should be YAML, the balance between
+human and agent readability and full machine readability.
+
+**Decision:** written by the tool, YAML; served to an agent, the Markdown envelope; between
+tools, JSON. The contract is one YAML file; there is no separate prose file.
+
+**Design changes:** `03-schemas.md`, `schemas/`, `13-context-delivery.md`; Q35 and Q6.
+
+### 21. Tickets that each deliver value alone
+
+**Owner:** a roadmap with an initial ticket breakdown, where every ticket delivers value on
+its own even if the rest is parked. One to three tickets are acceptable where splitting makes
+no sense. No strict budget: time and return decide.
+
+**Decision:** `17-roadmap.md`: six tickets in dependency order, each worth merging alone,
+collapsing to three. Open for confirmation (Q30).
+
+### 22. Testing inside a change
+
+**Owner:** not yet clear; to be discussed in detail.
+
+**Decision:** none yet. The proposal is `16-testing-in-a-change.md`: criteria and obligations
+in the contract, native tests, red and green runs recorded by the tool, expectations protected
+from the coder, the reviewer's mutation. Q47 decides. Q48 asks whether an emergency shape
+exists.
+
+### 23. Decided on the owner's behalf
+
+**Owner:** no preference; decide on the best knowledge of the intent.
+
+**Decision:** Q41: at most three free-text slots per contract, each naming its reader or
+archived, with a guide of about 120 words; a warning and not a refusal. Q7: coverage is
+traceability, derived by the lint, nothing stored.
+
+### 24. Testing inside a change
+
+**Owner:** the coder writes the tests, plus an independent author for `security` and `data`.
+
+**Decision:** `16-testing-in-a-change.md` as proposed. The independent author is the acceptance
+author: the existing test-plan-writer with this job instead of a test-plan document. It is
+invoked only by those two flags and writes the acceptance tests before the coder starts. This
+refines decision 11: the plan-writer retires; the test-plan-writer changes its job.
+
+### 25. Identifiers come from the catalog
+
+**Owner:** traceability needs well-scoped identifiers; use the identifier catalog and start
+introducing it.
+
+**Decision:** reuse the catalog's change-local prefixes. Register `AC-`, `PROOF-`, `FACT-`,
+`PH-`, `FIND-` and `RSK-`, all change-local with the contract as the allocator. Do not
+register `PRE-`, `ACT-` or the milestone goals. Section 15, part 10.
+
+### 26. The roadmap is confirmed
+
+**Owner:** six tickets, each deliverable alone from the top, and any prefix must leave a
+consistent solution. The CEO is responsible for delivery and optimizes for a fast delivery,
+because this work improves every later delivery.
+
+**Decision:** `17-roadmap.md`, six tickets in order, with the prefix statement.
+
+### 27. No emergency shape
+
+**Owner:** an urgent code fix goes through a light version of the change process, still through
+CI and the gates. A quick configuration fix outside the change process is out of scope.
+
+**Decision:** no emergency shape (Q48).
+
+### 28. The study's figures may be published
+
+**Owner:** the private projects are the owner's; real figures may be published.
+
+**Decision:** `18-delivery-study.md` carries the figures, without names, ticket references or
+paths.
+
+### 29. Two classes of evidence
+
+**Owner:** persistent evidence is the audit record (tokens and time per phase and agent);
+exact test evidence lives outside the committed scope, in the product's own store for the
+repository and the change, auditable, with housekeeping and archiving rules.
+
+**Decision:** audit facts are events and stay with the change. Evidence bodies live in the
+tool-managed local store, per repository and per change, with retention rules. Section 15,
+part 7; Q45.
+
+### 30. Scope granularity, reads and writes
+
+**Owner:** allow files and folders; the planning agent decides. Reads and writes may be modeled
+separately; make it possible in the tool and experiment with the prompts.
+
+**Decision:** the scope keys stay (files, folders, packages). Each path carries read or write.
+Overlapping writes serialize; a read-only overlap may run in parallel with a re-sync note. The
+pilot compares the two prompt policies. Q22 and Q24.
+
+### 31. Removal, forms, imports, research, hints
+
+**Owner:** remove what is no longer in use, never what is. The rest was explained and proposed.
+
+**Decision:** the compatibility reader goes when no open change uses the earlier files (Q29).
+A form is the default for the first write of a contract (Q36). A hand repair goes through
+`change repair`, so Q17 is superseded by Q14. No external researcher while every point has a
+conclusion (Q40). Ticket hints are a typed block, with labels still allowed (Q49).
+
 ## Summary of the design changes
 
 | Area | Change |
@@ -383,19 +534,18 @@ capability.
 | Shape | Low risk by default; flags on the surface; the tool proposes, the PM confirms |
 | Information | State, content, history and learning are separate; seven read contexts |
 | Cost | Sessions and tokens recorded per role and phase by the tool |
+| Budgets | No fixed budget per role; the removal test decides content |
+| Storage | Written by the tool: YAML; served to an agent: the Markdown envelope |
+| Testing | Criteria and obligations in the contract; runs recorded by the tool (proposal) |
+| Roadmap | Six tickets that each deliver value alone, in dependency order |
+| Identifiers | From the catalog: `AC-`, `PROOF-`, `FACT-`, `PH-`, `FIND-`, `RSK-` |
+| Evidence | Audit facts are events; evidence bodies live in the tool's store |
+| Testing | The coder writes the tests; an acceptance author for `security` and `data` |
 
 ## Remaining open points
 
-Answered inline in `09-open-points.md` on 2026-11-27 and 2026-11-28: Q1, Q2 (with its
-contents), Q11, Q19, Q20, Q21, Q23. The following still need an inline answer:
-
-- The starter risk flags and the surface map (Q43).
-- The round rules and their ceilings (Q44).
-- Where evidence lives (Q45).
-- Whether the study's figures may be cited in this pack (Q46).
-- The bundle budgets and the acceptable miss rate (Q8, Q9).
-- The number and budget of extension slots (Q41).
-- The handover prompt wording (Q42).
-- Whether to launch the external researcher now (Q40).
-- The pilot ticket and the token-reduction threshold (Q27, Q28).
-- The budget for building this (Q30).
+Every numbered question now has an answer or a confirmed default in `09-open-points.md`
+and `13-context-delivery.md`. Three were explained to the owner on 2026-11-28 and carry a
+proposed answer: Q17 (superseded by Q14), Q29 (remove the compatibility reader when no open
+change uses the earlier files) and Q36 (a form for the first write of a contract). They stand
+unless the owner objects.
