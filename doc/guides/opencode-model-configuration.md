@@ -62,7 +62,7 @@ Model assignments go in the `"agent"` section of your config:
     "coder":            { "model": "github-copilot/gpt-5.3-codex" },
     "decision-advisor":  { "model": "github-copilot/claude-opus-4.6" },
     "committer":        { "model": "github-copilot/gpt-5-mini" }
-    // ... all 22 agents
+    // ... all 25 agents
   }
 }
 ```
@@ -146,7 +146,7 @@ Create `.opencode/opencode-<provider>.jsonc`:
     "pm": { "model": "anthropic/claude-sonnet-4-6" },
     "coder": { "model": "anthropic/claude-sonnet-4-6" },
     "decision-advisor": { "model": "anthropic/claude-opus-4-6" }
-    // ... configure all 22 agents
+    // ... configure all 25 agents
   }
 }
 ```
@@ -229,7 +229,7 @@ ADOS agents have different complexity levels. Match model capability to task:
 | **Core work** | `coder`, `fixer`, `plan-writer`, `spec-writer`, `test-plan-writer` | Claude Sonnet 4.6, GPT-5.2-Codex |
 | **Well-scoped** | `committer`, `doc-syncer`, `pr-manager`, `editor` | Claude Haiku 4.5, Gemini 3 Flash |
 | **Light** | `external-researcher` | Grok Code Fast 1 |
-| **Trivial** | `runner` | Free models (GPT-5 mini, GPT-4o) |
+| **Trivial** | `runner`, `ceo-assistant` | Free models (GPT-5 mini, GPT-4o) |
 
 ### Provider and model policy
 
@@ -296,6 +296,7 @@ This must be a primary agent (not a subagent).
 | `editor` | Scoped | haiku |
 | `external-researcher` | Light | grok-fast |
 | `runner` | Trivial | free |
+| `ceo-assistant` | Trivial | free |
 
 ---
 

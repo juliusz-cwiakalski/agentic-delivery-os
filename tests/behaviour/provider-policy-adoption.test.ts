@@ -629,8 +629,8 @@ describe("GH-374 TC-POL-CFG-010 both watch targets answer one closed condition w
 
 /* -------------------------------- SEAT-001 ------------------------------- */
 
-describe("GH-374 TC-POL-SEAT-001 all 24 roles resolve a base seat and a binding", () => {
-  test("24/24 roles resolve on delivery and bind their declared model", async () => {
+describe("GH-374 TC-POL-SEAT-001 all 25 roles resolve a base seat and a binding", () => {
+  test("25/25 roles resolve on delivery and bind their declared model", async () => {
     const composed = harness({ label: "seat001" });
     try {
       const profiles = declaredProfileConfig();
@@ -668,7 +668,7 @@ describe("GH-374 TC-POL-SEAT-001 all 24 roles resolve a base seat and a binding"
     }
   });
 
-  test("a removed seat surfaces as a 23-entry record and an unassigned binding", async () => {
+  test("a removed seat surfaces as a 24-entry record and an unassigned binding", async () => {
     const documents = readDocuments();
     const provider = asRecord(documents.provider);
     const profiles = asRecord(provider.profiles);
@@ -691,9 +691,9 @@ describe("GH-374 TC-POL-SEAT-001 all 24 roles resolve a base seat and a binding"
       expect(result.exitCode).toBe(0);
       const entries = asRecord(asRecord(asRecord(result.data).envRecord)).entries;
       if (!Array.isArray(entries)) throw new Error("expected the env-record entries");
-      // One role lost its seat: the record carries 23 entries and the per-spawn
+      // One role lost its seat: the record carries 24 entries and the per-spawn
       // binding for that role is `unassigned`.
-      expect(entries).toHaveLength(23);
+      expect(entries).toHaveLength(24);
       const missing = asRecord(asRecord(asRecord(documents.provider).profiles).profiles);
       const mutatedDelivery = asRecord(asRecord(missing).delivery);
       const binding = resolveBinding(
@@ -713,7 +713,7 @@ describe("GH-374 TC-POL-SEAT-001 all 24 roles resolve a base seat and a binding"
 
 /* -------------------------------- SEAT-002 ------------------------------- */
 
-describe("GH-374 TC-POL-SEAT-002 all 24 roles bind on the paid profile", () => {
+describe("GH-374 TC-POL-SEAT-002 all 25 roles bind on the paid profile", () => {
   test("the paid profile binds every role on the paid model and repeats the seat set", () => {
     const profiles = declaredProfileConfig();
     const delivery = profiles.profiles.delivery;
@@ -739,7 +739,7 @@ describe("GH-374 TC-POL-SEAT-002 all 24 roles bind on the paid profile", () => {
 /* -------------------------------- SEAT-003 ------------------------------- */
 
 describe("GH-374 TC-POL-SEAT-003 the --for-spawn env record is valid data-v1 and branded", () => {
-  test("24 sorted records, derived names, declared values and both bounds", async () => {
+  test("25 sorted records, derived names, declared values and both bounds", async () => {
     const composed = harness({ label: "seat003" });
     try {
       const result = await composed.run([
@@ -755,7 +755,7 @@ describe("GH-374 TC-POL-SEAT-003 the --for-spawn env record is valid data-v1 and
       const record = asRecord(asRecord(result.data).envRecord);
       const entries = record.entries;
       if (!Array.isArray(entries)) throw new Error("expected the env-record entries");
-      expect(entries).toHaveLength(24);
+      expect(entries).toHaveLength(25);
       const delivery = declaredProfileConfig().profiles.delivery;
       if (delivery === undefined) throw new Error("expected the delivery profile");
       const seats = Object.keys(delivery.seats).sort();
@@ -872,7 +872,7 @@ describe("GH-374 TC-POL-SEAT-004 both visual seats are vision-capable and the vi
 /* -------------------------------- SEAT-005 ------------------------------- */
 
 describe("GH-374 TC-POL-SEAT-005 the per-seat model and pacing map is the recorded legacy intent", () => {
-  test("the base 10/2/12 split, the paid all-flash map and the 14/10 pacing split", () => {
+  test("the base 10/2/13 split, the paid all-flash map and the 14/11 pacing split", () => {
     const profiles = declaredProfileConfig();
     const delivery = profiles.profiles.delivery;
     const paid = profiles.profiles.paid;
@@ -902,7 +902,7 @@ describe("GH-374 TC-POL-SEAT-005 the per-seat model and pacing map is the record
       "toolsmith",
     ]);
     expect(flash).toEqual(["editor", "pm"]);
-    expect(paidModels).toHaveLength(12);
+    expect(paidModels).toHaveLength(13);
     const judgment = Object.entries(delivery.seats)
       .filter(([, seat]) => seat.pacingClass === "judgment")
       .map(([seat]) => seat)
@@ -925,7 +925,7 @@ describe("GH-374 TC-POL-SEAT-005 the per-seat model and pacing map is the record
     ]);
     expect(
       Object.values(delivery.seats).filter((seat) => seat.pacingClass === "execution"),
-    ).toHaveLength(10);
+    ).toHaveLength(11);
     for (const [seat, declaration] of Object.entries(paid.seats)) {
       expect([seat, declaration.model]).toEqual([seat, "deepseek/deepseek-flash"]);
       expect([seat, declaration.pacingClass]).toEqual([seat, delivery.seats[seat]?.pacingClass]);
@@ -1633,8 +1633,8 @@ describe("GH-374 TC-POL-NOM-003 no real dispatch and the typed-attempt substitut
 
 /* -------------------------------- NOM-004 -------------------------------- */
 
-describe("GH-374 TC-POL-NOM-004 nomination, resolve and the env record agree for all 24 roles", () => {
-  test("24/24 roles agree on profile, seat and model across the three surfaces", async () => {
+describe("GH-374 TC-POL-NOM-004 nomination, resolve and the env record agree for all 25 roles", () => {
+  test("25/25 roles agree on profile, seat and model across the three surfaces", async () => {
     const providers = declaredProviderConfig();
     const profiles = declaredProfileConfig();
     const delivery = profiles.profiles.delivery;

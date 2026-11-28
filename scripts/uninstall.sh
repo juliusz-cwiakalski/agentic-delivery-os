@@ -72,6 +72,7 @@ readonly ADOS_AGENT_FILES=(
   toolsmith.md committer.md designer.md reviewer.md runner.md coder.md
   fixer.md pr-manager.md external-researcher.md editor.md
   meeting-organizer.md review-feedback-applier.md
+  ceo.md ceo-assistant.md
 )
 
 # Known ADOS command files (installed globally)

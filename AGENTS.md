@@ -56,6 +56,8 @@ Detail: [doc/guides/change-lifecycle.md](doc/guides/change-lifecycle.md)
 ### Orchestration
 - `pm` — orchestrate changes; manage tickets via MCP; never implements code
 - `decision-advisor` — decisions of all types (architecture, product, business, technical, operating); decision record authoring (ADR/PDR/TDR/BDR/ODR)
+- `ceo` — autonomous executive for unattended delivery (Mode A): picks tickets, verifies PM finalization, merges approved PRs
+- `ceo-assistant` — low-cost executor for `@ceo`: one briefed task per run with evidence back; no decision authority
 
 ### Decision review
 - `decision-critic` — independent, read-only decision challenger; tri-state verdict (PASS / PASS_WITH_RISKS / REWORK)

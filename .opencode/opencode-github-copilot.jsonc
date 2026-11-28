@@ -61,6 +61,7 @@
     // example models: "github-copilot/grok-code-fast-1"
 
     // --- Tier 5 (free) — trivial: command execution, log capture ---
+    "ceo-assistant":           { "model": "github-copilot/gpt-5-mini" },
     "committer":               { "model": "github-copilot/gpt-5-mini" },
     "external-researcher":     { "model": "github-copilot/gpt-5-mini" },
     "runner":                  { "model": "github-copilot/gpt-5-mini" }
